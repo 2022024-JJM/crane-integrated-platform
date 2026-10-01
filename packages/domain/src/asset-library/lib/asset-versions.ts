@@ -66,9 +66,56 @@ export function getCurrentAssetVersion(asset: AssetRecord): AssetVersion {
   );
 }
 
-/** 다음 버전 번호 — 지금까지의 최댓값 + 1. 번호는 재사용하지 않는다. */
+/**
+ * 다음 버전 번호 — 지금까지의 최댓값 + 1. 번호는 재사용하지 않는다: 지운
+ * 버전의 번호도 이력에 남아 있으므로 이력까지 본다(같은 번호가 두 번 쓰이면
+ * 이력의 "v3" 이 어느 파일인지 알 수 없다).
+ */
 export function getNextAssetVersionNumber(asset: AssetRecord): number {
-  return asset.versions.reduce((max, v) => Math.max(max, v.version), 0) + 1;
+  const fromVersions = asset.versions.reduce(
+    (max, v) => Math.max(max, v.version),
+    0,
+  );
+  const fromHistory = asset.history.reduce(
+    (max, entry) => Math.max(max, entry.version ?? 0),
+    0,
+  );
+  return Math.max(fromVersions, fromHistory) + 1;
+}
+
+/**
+ * 이 버전을 지울 수 있는가. 잘못 올린 것을 걷어내는 용도라, 게시된 적 없는
+ * 버전(초안·반려)만 지운다. 현재 버전과 마지막 남은 버전은 지울 수 없다.
+ */
+export function canRemoveAssetVersion(
+  asset: AssetRecord,
+  version: number,
+): boolean {
+  const target = getAssetVersion(asset, version);
+  if (!target || asset.versions.length <= 1) return false;
+  if (asset.currentVersion === version) return false;
+  return target.status === 'draft' || target.status === 'rejected';
+}
+
+/** 버전을 지운다(파일은 호출부가 지운다). 지울 수 없으면 그대로 돌려준다. */
+export function removeAssetVersion(
+  asset: AssetRecord,
+  version: number,
+  context: AssetChangeContext,
+): AssetRecord {
+  if (!canRemoveAssetVersion(asset, version)) return asset;
+  return {
+    ...asset,
+    versions: asset.versions.filter((item) => item.version !== version),
+    updatedAt: context.at,
+    history: pushHistory(asset.history, {
+      id: context.entryId,
+      at: context.at,
+      actor: context.actor,
+      action: 'version-removed',
+      version,
+    }),
+  };
 }
 
 function pushHistory(

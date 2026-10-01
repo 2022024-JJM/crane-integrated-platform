@@ -75,12 +75,15 @@
     "retry": "Iterum tempta",
     "download": "Depone",
     "delete": "Dele",
-    "add": "Adde"
+    "add": "Adde",
+    "reload": "Iterum lege",
+    "apply": "Applica"
   },
   "save": {
     "saving": "Servatur",
     "failed": "Mutationes servari non potuerunt. Iterum tempta, aliter pagina renovata peribunt.",
-    "localOnly": "Servitor rerum nondum est; quae hic addis vel mutas in hoc navigatore tantum servantur. Alii et aliae machinae ea non videbunt."
+    "localOnly": "Servitor rerum nondum est; quae hic addis vel mutas in hoc navigatore tantum servantur. Alii et aliae machinae ea non videbunt.",
+    "conflict": "Bibliotheca alibi mutata est; mutatio tua novissima servata non est. Iterum lege, deinde iterum muta."
   },
   "rail": {
     "label": "Cola rerum",
@@ -136,7 +139,15 @@
     "bothSites": "Okpo et Philly",
     "addTag": "Notam adde",
     "addToCollection": "Collectioni adde",
-    "clear": "Electionem tolle"
+    "clear": "Electionem tolle",
+    "changeStatus": "Statum muta",
+    "assignCategory": "Classem assigna",
+    "categoryPlaceholder": "Classis (vacua: nulla)",
+    "removeTag": "Notam tolle",
+    "remove": "Dele ({{count}})",
+    "removeTitle": "{{count}} res additas delere vis?",
+    "removeHint": "Fasciculi et historia delentur neque restitui possunt. Res editae non delentur.",
+    "statusTitle": "Res electas: {{action}}?"
   },
   "form": {
     "siteCommonHint": "Nullo navali electo, res toti societati communis est.",
@@ -188,7 +199,8 @@
     "deleteTitle": "{{name}} delere vis?",
     "deleteDescription": "Fasciculi et acta {{count}} versionum delebuntur. Hoc revocari non potest.",
     "previousAsset": "Res prior (←)",
-    "nextAsset": "Res sequens (→)"
+    "nextAsset": "Res sequens (→)",
+    "deletePlaced": "{{count}} in scaenis posita. Si deles, ex illis scaenis evanescet."
   },
   "titleBlock": {
     "size": "Latitudo × profunditas × altitudo"
@@ -258,7 +270,11 @@
     "kindMismatch": "Hic fasciculus alterius generis est. Rebus 3D GLB, delineationibus PDF vel SVG vel imaginem, CAD fasciculum CAD mitte.",
     "sameContent": "Hic fasciculus idem contentum habet ac versio quam haec res iam habet.",
     "catalogNotice": "Scaenae fasciculo edito versionis 1 utuntur. Ut nova versio in scaenis adhibeatur, fasciculum editum per fistulam rerum (assets-src → optimize:glb) muta.",
-    "revisionShort": "Rec. {{revision}}"
+    "revisionShort": "Rec. {{revision}}",
+    "paletteNotice": "Palaestra editoris 3D fasciculum versionis praesentis ponit. Iam posita versionem qua posita sunt retinent.",
+    "remove": "Versionem dele",
+    "removeTitle": "Versionem v{{version}} delere vis?",
+    "removeHint": "Fasciculus huius versionis deletur neque restitui potest. Tantum versiones numquam editae deleri possunt."
   },
   "usage": {
     "loading": "Scaenae inspiciuntur",
@@ -267,11 +283,12 @@
     "none": "In nulla scaena posita",
     "noneCatalogHint": "Ex palaestra editoris 3D in scaena poni potest.",
     "noneRuntimeHint": "Codex paginae hanc rem directe arcessit neque in scaena ponit. Noli delere, etsi nulla scaena ea utitur.",
-    "noneUserHint": "Res in hac pagina additae nondum in palaestra editoris apparent.",
+    "noneUserHint": "Edita in palaestra editoris 3D apparet et in scaenis poni potest.",
     "versionHeading": "Scaenae v{{version}} utentes",
     "count": "{{count}} positae",
     "openEditor": "In editore 3D aperi",
-    "drawing": "Delineationes et CAD in scaenis non ponuntur. Res conexas in scheda Notitia vide."
+    "drawing": "Delineationes et CAD in scaenis non ponuntur. Res conexas in scheda Notitia vide.",
+    "noneUserMapHint": "Tabulae hic additae nondum in scheda Tabula editoris 3D apparent."
   },
   "activity": {
     "created": "Rem addidit",
@@ -293,7 +310,8 @@
       "drawingNo": "numerum delineationis",
       "relatedAssetIds": "res conexas",
       "defaultScale": "scalam praefinitam"
-    }
+    },
+    "versionRemoved": "Versio v{{version}} deleta"
   },
   "viewer": {
     "loading": "Exemplar arcessitur {{percent}}%",
@@ -349,7 +367,8 @@
     "collectionRejected": "Collectio eiusdem nominis exstat, aut plures creari non possunt",
     "pathCopied": "Via exscripta",
     "linkCopied": "Nexus exscriptus",
-    "copyFailed": "Exscribi non potuit"
+    "copyFailed": "Exscribi non potuit",
+    "saveConflict": "Non servatum — bibliotheca alibi mutata est"
   },
   "attention": {
     "review": {
@@ -366,7 +385,7 @@
     },
     "newer": {
       "label": "Versio recentior",
-      "hint": "Versio praesenti recentior exstat. Inspice, deinde praesentem fac."
+      "hint": "Versio recentior recognitionem transiit. Fac eam praesentem."
     },
     "over-budget": {
       "label": "Modum excedit",
@@ -410,12 +429,20 @@
     "closeHint": "Praevisionem claude (Esc)",
     "modeImage": "Imago",
     "mode3d": "3D",
-    "modeLabel": "Modus praevisionis"
+    "modeLabel": "Modus praevisionis",
+    "outOfList": "Haec res indici praesenti iam non congruit",
+    "currentIs": "praesens v{{version}}"
   },
   "lifecycle": {
     "label": "Progressus v{{version}}",
     "heading": "Progressus v{{version}}",
-    "currentVersion": "Versio praesens"
+    "currentVersion": "Versio praesens",
+    "settled": "Omnes gradus peracti",
+    "confirmTitle": "v{{version}} — {{action}}",
+    "confirmHint": {
+      "rejected": "Versio reiecta adhiberi non potest donec iterum ad recognitionem mittatur.",
+      "withdrawn": "Res retracta ex palaestra editoris 3D poni iam non potest. Quae in scaenis iam posita sunt manent."
+    }
   },
   "compare": {
     "title": "Versiones compara",

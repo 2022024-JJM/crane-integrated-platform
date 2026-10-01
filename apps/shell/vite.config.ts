@@ -15,6 +15,8 @@ import {
   ASSET_LIBRARY_DIR,
   DEV_ASSET_LIBRARY_API_PATH,
   parseAssetLibraryFileKey,
+  ASSET_LIBRARY_REVISION_HEADER,
+  hashAssetLibraryText,
 } from '../../packages/domain/src/asset-library/model/asset-library-paths';
 
 const DEV_SCENE_API_PATH = '/__dev/scene';
@@ -333,13 +335,32 @@ function devAssetLibraryPlugin(): Plugin {
                 });
                 return;
               }
+              // 보낸 쪽이 읽은 판과 지금 파일이 다르면 쓰지 않는다 — 문서를
+              // 통째로 받으므로, 그대로 쓰면 다른 탭·다른 사람·git pull 의
+              // 변경을 덮는다. 헤더가 없는 요청(판을 모르는 쪽)은 견주지 않는다.
+              const documentPath = path.join(libraryDir, 'library.json');
+              const baseRevision = req.headers[ASSET_LIBRARY_REVISION_HEADER];
+              if (typeof baseRevision === 'string') {
+                const currentText = await fs
+                  .readFile(documentPath, 'utf8')
+                  .catch(() => null);
+                const currentRevision =
+                  currentText === null ? '' : hashAssetLibraryText(currentText);
+                if (currentRevision !== baseRevision) {
+                  jsonResponse(res, 409, {
+                    message:
+                      'Asset library changed on disk since it was loaded.',
+                  });
+                  return;
+                }
+              }
+              const nextText = `${JSON.stringify(body, null, 2)}\n`;
               await fs.mkdir(libraryDir, { recursive: true });
-              await fs.writeFile(
-                path.join(libraryDir, 'library.json'),
-                `${JSON.stringify(body, null, 2)}\n`,
-                'utf8',
-              );
-              jsonResponse(res, 200, { ok: true });
+              await fs.writeFile(documentPath, nextText, 'utf8');
+              jsonResponse(res, 200, {
+                ok: true,
+                revision: hashAssetLibraryText(nextText),
+              });
               return;
             }
 
@@ -380,7 +401,21 @@ function devAssetLibraryPlugin(): Plugin {
                 return;
               }
               await fs.mkdir(path.dirname(filePath), { recursive: true });
-              await fs.writeFile(filePath, body);
+              // 버전 파일은 "없을 때만" 쓴다(wx) — 위의 존재 확인과 쓰기
+              // 사이에 다른 요청이 끼어들어도 덮어쓰지 않는다.
+              try {
+                await fs.writeFile(filePath, body, {
+                  flag: parsed.kind === 'version' ? 'wx' : 'w',
+                });
+              } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+                  jsonResponse(res, 409, {
+                    message: `Version file already exists: "${key}".`,
+                  });
+                  return;
+                }
+                throw error;
+              }
               jsonResponse(res, 200, { key, bytes: body.length });
               return;
             }
@@ -392,6 +427,22 @@ function devAssetLibraryPlugin(): Plugin {
                 jsonResponse(res, 400, {
                   message: `Invalid asset id: "${assetId}".`,
                 });
+                return;
+              }
+              // version 이 있으면 그 버전의 파일만 지운다(지운 버전의 뒷정리).
+              const versionParam = requestUrl.searchParams.get('version');
+              if (versionParam !== null) {
+                if (!/^[1-9]\d{0,5}$/.test(versionParam)) {
+                  jsonResponse(res, 400, {
+                    message: `Invalid version: "${versionParam}".`,
+                  });
+                  return;
+                }
+                await fs.rm(
+                  path.join(libraryDir, 'files', assetId, `v${versionParam}`),
+                  { recursive: true, force: true },
+                );
+                jsonResponse(res, 200, { ok: true });
                 return;
               }
               await fs.rm(path.join(libraryDir, 'files', assetId), {

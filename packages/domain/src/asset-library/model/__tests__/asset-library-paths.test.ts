@@ -7,6 +7,7 @@ import {
   parseAssetLibraryFileKey,
   sanitizeAssetFileName,
   toAssetLibraryPublicPath,
+  hashAssetLibraryText,
 } from '../asset-library-paths';
 
 describe('getFileExtension', () => {
@@ -111,5 +112,34 @@ describe('toAssetLibraryPublicPath', () => {
     expect(toAssetLibraryPublicPath('files/a/v1/a.glb')).toBe(
       '/asset-library/files/a/v1/a.glb',
     );
+  });
+});
+
+describe('파일명의 이어진 점', () => {
+  it('하나로 접는다 — 경로에 .. 이 남지 않는다', () => {
+    expect(sanitizeAssetFileName('crane..v2.glb')).toBe('crane.v2.glb');
+    expect(sanitizeAssetFileName('a...b....c.GLB')).toBe('a.b.c.glb');
+    expect(sanitizeAssetFileName('..hidden..glb')).not.toContain('..');
+  });
+
+  it('파일 키는 .. 이 든 이름을 받지 않는다', () => {
+    expect(parseAssetLibraryFileKey('files/a/v1/crane..v2.glb')).toBeNull();
+    expect(parseAssetLibraryFileKey('files/a/v1/crane.v2.glb')).not.toBeNull();
+  });
+});
+
+describe('hashAssetLibraryText', () => {
+  it('같은 글자는 같은 지문, 한 글자만 달라도 다른 지문', () => {
+    const text = '{"assets":[]}\n';
+    expect(hashAssetLibraryText(text)).toBe(hashAssetLibraryText(text));
+    expect(hashAssetLibraryText(text)).not.toBe(
+      hashAssetLibraryText('{"assets":[] }\n'),
+    );
+  });
+
+  it('16자리 16진수이고, 빈 글자와 한글도 받는다', () => {
+    for (const text of ['', 'a', '옥포조선소 크레인', 'x'.repeat(100_000)]) {
+      expect(hashAssetLibraryText(text)).toMatch(/^[0-9a-f]{16}$/);
+    }
   });
 });

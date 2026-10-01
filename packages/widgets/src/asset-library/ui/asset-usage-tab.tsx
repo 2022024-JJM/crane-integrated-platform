@@ -76,7 +76,9 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
                 ? 'asset-library:usage.noneCatalogHint'
                 : asset.origin === 'builtin'
                   ? 'asset-library:usage.noneRuntimeHint'
-                  : 'asset-library:usage.noneUserHint',
+                  : asset.kind === 'map'
+                    ? 'asset-library:usage.noneUserMapHint'
+                    : 'asset-library:usage.noneUserHint',
             )}
           </p>
         </div>

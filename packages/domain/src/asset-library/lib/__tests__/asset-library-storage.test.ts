@@ -3,11 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerAssetHashManifest } from '@crane/core/lib/asset-url';
 import {
   ASSET_LIBRARY_DOCUMENT_PATH,
+  ASSET_LIBRARY_REVISION_HEADER,
   DEV_ASSET_LIBRARY_API_PATH,
+  hashAssetLibraryText,
 } from '../../model/asset-library-paths';
 import { createMemoryBlobStore } from '../asset-blob-store';
 import {
   ASSET_LIBRARY_STORAGE_KEY,
+  AssetLibraryConflictError,
   createBrowserAssetLibraryRepository,
   createDevAssetLibraryRepository,
 } from '../asset-library-storage';
@@ -20,6 +23,7 @@ function respond(body: unknown, status = 200) {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body)),
   } as Response;
 }
 
@@ -118,7 +122,7 @@ describe('브라우저 저장소 — save·파일', () => {
     await repo.save(local);
     expect(
       JSON.parse(window.localStorage.getItem(ASSET_LIBRARY_STORAGE_KEY) ?? ''),
-    ).toEqual({ baseVersion: 'hash-now', document: local });
+    ).toEqual({ baseVersion: 'hash-now', revision: 1, document: local });
   });
 
   it('용량 초과는 삼키지 않고 던진다', async () => {
@@ -252,5 +256,126 @@ describe('dev 저장소', () => {
         key: 'files/a/v1/a.glb',
       }),
     ).toBeNull();
+  });
+});
+
+describe('읽을 수 없는 문서·레코드', () => {
+  it('모양이 틀린 배포 문서는 빈 문서로 열지 않고 던진다', async () => {
+    for (const body of [[], 'x', { assets: 'no' }, { schemaVersion: 99, assets: [] }]) {
+      fetchMock.mockResolvedValue(respond(body));
+      const repo = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+      await expect(repo.load()).rejects.toThrow();
+    }
+  });
+
+  it('읽지 못한 레코드는 저장할 때 원본 그대로 도로 붙는다(브라우저)', async () => {
+    const broken = { id: 'BAD ID', keep: 'me' };
+    fetchMock.mockResolvedValue(
+      respond({ schemaVersion: 1, assets: [asset({ id: 'ok' }), broken] }),
+    );
+    const repo = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+    const loaded = await repo.load();
+    expect(loaded.assets.map((a) => a.id)).toEqual(['ok']);
+    await repo.save(loaded);
+    const stored = JSON.parse(
+      window.localStorage.getItem(ASSET_LIBRARY_STORAGE_KEY)!,
+    );
+    expect(stored.document.assets).toHaveLength(2);
+    expect(stored.document.assets[1]).toEqual(broken);
+  });
+
+  it('읽지 못한 레코드는 저장할 때 원본 그대로 도로 붙는다(dev)', async () => {
+    const broken = { id: 'BAD ID', keep: 'me' };
+    fetchMock.mockResolvedValueOnce(
+      respond({ schemaVersion: 1, assets: [asset({ id: 'ok' }), broken] }),
+    );
+    const repo = createDevAssetLibraryRepository();
+    const loaded = await repo.load();
+    fetchMock.mockResolvedValueOnce(respond({ ok: true, revision: 'r2' }));
+    await repo.save(loaded);
+    const body = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
+    expect(body.assets[1]).toEqual(broken);
+  });
+});
+
+describe('다른 곳에서 바뀐 문서를 덮어쓰지 않는다', () => {
+  it('브라우저 — 다른 탭이 그사이 저장했으면 충돌로 던지고 쓰지 않는다', async () => {
+    storeEnvelope('hash-now');
+    const mine = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+    const other = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+    const myCopy = await mine.load();
+    const otherCopy = await other.load();
+    await other.save({ ...otherCopy, assets: [asset({ id: 'theirs' })] });
+    await expect(mine.save(myCopy)).rejects.toBeInstanceOf(
+      AssetLibraryConflictError,
+    );
+    const stored = JSON.parse(
+      window.localStorage.getItem(ASSET_LIBRARY_STORAGE_KEY)!,
+    );
+    expect(stored.document.assets.map((a: { id: string }) => a.id)).toEqual([
+      'theirs',
+    ]);
+  });
+
+  it('브라우저 — 혼자 이어서 저장하면 충돌이 아니다', async () => {
+    fetchMock.mockResolvedValue(respond(deployed));
+    const repo = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+    const copy = await repo.load();
+    await repo.save(copy);
+    await repo.save(copy);
+    await expect(repo.save(copy)).resolves.toBeUndefined();
+  });
+
+  it('브라우저 — 다시 읽으면 충돌이 풀린다', async () => {
+    storeEnvelope('hash-now');
+    const mine = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+    const other = createBrowserAssetLibraryRepository(createMemoryBlobStore());
+    await mine.load();
+    await other.save(await other.load());
+    const fresh = await mine.load();
+    await expect(mine.save(fresh)).resolves.toBeUndefined();
+  });
+
+  it('dev — 읽은 글자의 지문을 헤더로 싣고, 받은 새 지문으로 이어 쓴다', async () => {
+    fetchMock.mockResolvedValueOnce(respond(deployed));
+    const repo = createDevAssetLibraryRepository();
+    const copy = await repo.load();
+    fetchMock.mockResolvedValueOnce(respond({ ok: true, revision: 'rev-2' }));
+    await repo.save(copy);
+    fetchMock.mockResolvedValueOnce(respond({ ok: true, revision: 'rev-3' }));
+    await repo.save(copy);
+    const headerOf = (call: number) =>
+      (fetchMock.mock.calls[call][1]!.headers as Record<string, string>)[
+        ASSET_LIBRARY_REVISION_HEADER
+      ];
+    expect(headerOf(1)).toBe(hashAssetLibraryText(JSON.stringify(deployed)));
+    expect(headerOf(2)).toBe('rev-2');
+  });
+
+  it('dev — 409 는 충돌로, 그 밖의 실패는 일반 오류로 던진다', async () => {
+    fetchMock.mockResolvedValueOnce(respond(deployed));
+    const repo = createDevAssetLibraryRepository();
+    const copy = await repo.load();
+    fetchMock.mockResolvedValueOnce(respond({}, 409));
+    await expect(repo.save(copy)).rejects.toBeInstanceOf(
+      AssetLibraryConflictError,
+    );
+    fetchMock.mockResolvedValueOnce(respond({}, 500));
+    const failure = await repo.save(copy).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(AssetLibraryConflictError);
+  });
+
+  it('dev — 문서가 없던 곳(404)에서 시작하면 빈 지문을 싣는다', async () => {
+    fetchMock.mockResolvedValueOnce(respond({}, 404));
+    const repo = createDevAssetLibraryRepository();
+    const copy = await repo.load();
+    fetchMock.mockResolvedValueOnce(respond({ ok: true, revision: 'r' }));
+    await repo.save(copy);
+    expect(
+      (fetchMock.mock.calls[1][1]!.headers as Record<string, string>)[
+        ASSET_LIBRARY_REVISION_HEADER
+      ],
+    ).toBe('');
   });
 });

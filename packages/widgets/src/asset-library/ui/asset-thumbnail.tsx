@@ -45,7 +45,7 @@ export const AssetThumbnail = memo(function AssetThumbnail({
       className={cn(
         // 가운데가 살짝 밝은 받침 — 물체가 놓인 자리로 읽히고, 모눈처럼 그림과
         // 다투는 무늬가 없다.
-        'relative overflow-hidden bg-[radial-gradient(85%_70%_at_50%_42%,var(--background)_0%,var(--muted)_100%)] dark:bg-[radial-gradient(85%_70%_at_50%_42%,var(--muted)_0%,var(--background)_100%)]',
+        'relative overflow-hidden bg-[radial-gradient(85%_70%_at_50%_42%,var(--background)_0%,var(--muted)_100%)] dark:bg-[radial-gradient(85%_70%_at_50%_42%,color-mix(in_oklab,var(--foreground)_22%,var(--background))_0%,var(--card)_100%)]',
         className,
       )}
     >

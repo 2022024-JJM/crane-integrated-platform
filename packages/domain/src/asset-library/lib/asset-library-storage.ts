@@ -1,10 +1,12 @@
 import { getAssetContentHash, withBaseUrl } from '@crane/core/lib/asset-url';
 import {
   ASSET_LIBRARY_DOCUMENT_PATH,
+  ASSET_LIBRARY_REVISION_HEADER,
   ASSET_LIBRARY_STATS_PATH,
   buildAssetThumbnailKey,
   buildAssetVersionFileKey,
   DEV_ASSET_LIBRARY_API_PATH,
+  hashAssetLibraryText,
   toAssetLibraryPublicPath,
 } from '../model/asset-library-paths';
 import type {
@@ -19,6 +21,8 @@ import {
   type AssetBlobStore,
 } from './asset-blob-store';
 import {
+  assertReadableAssetLibraryDocument,
+  collectUnreadableAssetRecords,
   createEmptyAssetLibraryDocument,
   sanitizeAssetLibraryDocument,
   sanitizeAssetStatsTable,
@@ -40,11 +44,27 @@ import {
 
 export const ASSET_LIBRARY_STORAGE_KEY = 'crane:asset-library';
 
+/**
+ * 내가 읽은 뒤로 다른 곳(다른 탭·다른 사람·git pull·손편집)에서 문서가
+ * 바뀌었다. 저장은 문서를 통째로 쓰므로, 이대로 쓰면 그 변경을 덮는다 —
+ * 쓰지 않고 이 오류로 알린다. 다시 읽어야 풀린다.
+ */
+export class AssetLibraryConflictError extends Error {
+  constructor() {
+    super('Asset library changed elsewhere since it was loaded.');
+    this.name = 'AssetLibraryConflictError';
+  }
+}
+
 export interface AssetLibraryRepository {
   /** 저장이 이 브라우저 안에만 남는 환경인지. */
   readonly localOnly: boolean;
   load(): Promise<AssetLibraryDocument>;
   loadStatsTable(): Promise<AssetStatsTable>;
+  /**
+   * 문서를 통째로 쓴다. 읽은 뒤로 다른 곳에서 바뀌었으면 쓰지 않고
+   * `AssetLibraryConflictError` 를 던진다.
+   */
   save(document: AssetLibraryDocument): Promise<void>;
   /** 버전 파일을 저장하고 그 위치를 돌려준다. 같은 위치에 덮어쓰지 않는다. */
   putVersionFile(
@@ -54,6 +74,8 @@ export interface AssetLibraryRepository {
   putThumbnail(assetId: string, blob: Blob): Promise<AssetFileRef>;
   /** 자산의 모든 파일(버전·썸네일)을 지운다. */
   removeAssetFiles(assetId: string): Promise<void>;
+  /** 한 버전의 파일만 지운다(지운 버전의 뒷정리). */
+  removeVersionFiles(assetId: string, version: number): Promise<void>;
   /** 화면에서 읽을 수 있는 URL. 브라우저 저장분은 object URL 이다. */
   resolveUrl(ref: AssetFileRef): Promise<string | null>;
 }
@@ -64,17 +86,49 @@ function isBrowser() {
   );
 }
 
-async function fetchDeployedDocument(): Promise<AssetLibraryDocument> {
+interface LoadedDocument {
+  document: AssetLibraryDocument;
+  /** 읽은 글자의 지문. 파일이 없으면 빈 문자열. */
+  revision: string;
+  /** 이 앱이 읽지 못한 자산 레코드(원본 그대로). 저장할 때 도로 붙인다. */
+  unreadable: unknown[];
+}
+
+async function fetchDeployedDocument(): Promise<LoadedDocument> {
   const response = await fetch(withBaseUrl(ASSET_LIBRARY_DOCUMENT_PATH), {
     cache: 'no-store',
   });
   // 문서가 아직 없는 배포(404)는 "저장된 메타데이터 없음" 이다 — builtin
   // 자산만으로 라이브러리가 성립하므로 빈 문서로 본다.
-  if (response.status === 404) return createEmptyAssetLibraryDocument();
+  if (response.status === 404) {
+    return {
+      document: createEmptyAssetLibraryDocument(),
+      revision: '',
+      unreadable: [],
+    };
+  }
   if (!response.ok) {
     throw new Error(`Failed to load asset library. HTTP ${response.status}`);
   }
-  return sanitizeAssetLibraryDocument(await response.json());
+  const text = await response.text();
+  const raw: unknown = JSON.parse(text);
+  // 읽을 수 없는 문서는 빈 문서로 받아들이지 않고 실패로 알린다 — 빈 문서로
+  // 열리면 다음 저장이 내용을 덮는다.
+  assertReadableAssetLibraryDocument(raw);
+  return {
+    document: sanitizeAssetLibraryDocument(raw),
+    revision: hashAssetLibraryText(text),
+    unreadable: collectUnreadableAssetRecords(raw),
+  };
+}
+
+/** 읽지 못한 레코드를 문서 끝에 도로 붙여, 쓸 때 사라지지 않게 한다. */
+function withUnreadable(
+  document: AssetLibraryDocument,
+  unreadable: readonly unknown[],
+): unknown {
+  if (unreadable.length === 0) return document;
+  return { ...document, assets: [...document.assets, ...unreadable] };
 }
 
 async function fetchStatsTable(): Promise<AssetStatsTable> {
@@ -107,18 +161,48 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
     return { storage: 'public', path: toAssetLibraryPublicPath(key) };
   };
 
+  // 마지막으로 읽거나 쓴 문서의 지문 — 저장할 때 서버의 현재 파일과 견준다.
+  let revision: string | null = null;
+  let unreadable: unknown[] = [];
+
   return {
     localOnly: false,
-    load: fetchDeployedDocument,
+    load: async () => {
+      const loaded = await fetchDeployedDocument();
+      revision = loaded.revision;
+      unreadable = loaded.unreadable;
+      if (unreadable.length > 0) {
+        console.warn(
+          `[asset-library-storage] ${unreadable.length} asset record(s) could not be read. They are kept as-is on save.`,
+        );
+      }
+      return loaded.document;
+    },
     loadStatsTable: fetchStatsTable,
     save: async (document) => {
       const response = await fetch(DEV_ASSET_LIBRARY_API_PATH, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(document),
+        headers: {
+          'Content-Type': 'application/json',
+          // 읽은 적이 없으면 견줄 판이 없다 — 헤더를 싣지 않는다.
+          ...(revision === null
+            ? {}
+            : { [ASSET_LIBRARY_REVISION_HEADER]: revision }),
+        },
+        body: JSON.stringify(withUnreadable(document, unreadable)),
       });
+      if (response.status === 409) throw new AssetLibraryConflictError();
       if (!response.ok) {
         throw new Error(`Failed to save asset library. HTTP ${response.status}`);
+      }
+      const result: unknown = await response.json().catch(() => null);
+      if (
+        typeof result === 'object' &&
+        result !== null &&
+        'revision' in result &&
+        typeof result.revision === 'string'
+      ) {
+        revision = result.revision;
       }
     },
     putVersionFile: (target, blob) =>
@@ -142,13 +226,28 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
         throw new Error(`Failed to remove asset files. HTTP ${response.status}`);
       }
     },
+    removeVersionFiles: async (assetId, version) => {
+      const params = new URLSearchParams({
+        assetId,
+        version: String(version),
+      });
+      const response = await fetch(
+        `${DEV_ASSET_LIBRARY_API_PATH}/file?${params.toString()}`,
+        { method: 'DELETE' },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to remove version files. HTTP ${response.status}`);
+      }
+    },
     resolveUrl: async (ref) => resolvePublicUrl(ref),
   };
 }
 
 interface StoredEnvelope {
   baseVersion: string | null;
-  document: AssetLibraryDocument;
+  /** 저장할 때마다 1 씩 오른다 — 다른 탭이 그사이 썼는지 견준다. */
+  revision?: number;
+  document: unknown;
 }
 
 function isEnvelope(value: unknown): value is StoredEnvelope {
@@ -162,7 +261,26 @@ function isEnvelope(value: unknown): value is StoredEnvelope {
 
 interface StoredRecord {
   document: AssetLibraryDocument;
+  unreadable: unknown[];
+  revision: number;
   isCurrent: boolean;
+}
+
+function readStoredRevision(): number {
+  if (!isBrowser()) return 0;
+  try {
+    const parsed: unknown = JSON.parse(
+      window.localStorage.getItem(ASSET_LIBRARY_STORAGE_KEY) ?? 'null',
+    );
+    if (!isEnvelope(parsed)) return 0;
+    // 낡은 봉투(배포가 바뀐 것)는 없는 것과 같다.
+    if (parsed.baseVersion !== getAssetContentHash(ASSET_LIBRARY_DOCUMENT_PATH)) {
+      return 0;
+    }
+    return typeof parsed.revision === 'number' ? parsed.revision : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** 삭제 없이 읽고 신선도만 판정한다 — 삭제는 배포본 fetch 성공 뒤에만. */
@@ -181,8 +299,19 @@ function readStoredRecord(): StoredRecord | null {
     return null;
   }
   if (!isEnvelope(parsed)) return null;
+  try {
+    assertReadableAssetLibraryDocument(parsed.document);
+  } catch (error) {
+    console.warn(
+      '[asset-library-storage] Stored document is unreadable. Falling back to deployed file.',
+      error,
+    );
+    return null;
+  }
   return {
     document: sanitizeAssetLibraryDocument(parsed.document),
+    unreadable: collectUnreadableAssetRecords(parsed.document),
+    revision: typeof parsed.revision === 'number' ? parsed.revision : 0,
     isCurrent:
       parsed.baseVersion === getAssetContentHash(ASSET_LIBRARY_DOCUMENT_PATH),
   };
@@ -210,23 +339,36 @@ export function createBrowserAssetLibraryRepository(
     return { storage: 'browser', key };
   };
 
+  // 내가 마지막으로 읽거나 쓴 봉투의 판. 다른 탭이 그사이 쓰면 달라진다.
+  let revision: number | null = null;
+  let unreadable: unknown[] = [];
+
   return {
     localOnly: true,
     load: async () => {
       const stored = readStoredRecord();
-      if (stored?.isCurrent) return stored.document;
+      if (stored?.isCurrent) {
+        revision = stored.revision;
+        unreadable = stored.unreadable;
+        return stored.document;
+      }
       try {
         const deployed = await fetchDeployedDocument();
         if (stored && isBrowser()) {
           window.localStorage.removeItem(ASSET_LIBRARY_STORAGE_KEY);
         }
-        return deployed;
+        revision = 0;
+        unreadable = deployed.unreadable;
+        return deployed.document;
       } catch (error) {
         if (stored) {
           console.warn(
             '[asset-library-storage] Failed to load deployed library. Falling back to stale local copy.',
             error,
           );
+          // 낡은 봉투는 저장할 때 "없는 것" 으로 센다(readStoredRevision).
+          revision = 0;
+          unreadable = stored.unreadable;
           return stored.document;
         }
         throw error;
@@ -237,9 +379,14 @@ export function createBrowserAssetLibraryRepository(
       if (!isBrowser()) {
         throw new Error('localStorage is not available in this environment.');
       }
+      const current = readStoredRevision();
+      if (revision !== null && current !== revision) {
+        throw new AssetLibraryConflictError();
+      }
       const envelope: StoredEnvelope = {
         baseVersion: getAssetContentHash(ASSET_LIBRARY_DOCUMENT_PATH),
-        document,
+        revision: current + 1,
+        document: withUnreadable(document, unreadable),
       };
       // 용량 초과(QuotaExceededError)는 그대로 던진다 — 호출부가 저장 실패로
       // 알린다. 조용히 삼키면 사용자는 저장된 줄 안다.
@@ -247,6 +394,7 @@ export function createBrowserAssetLibraryRepository(
         ASSET_LIBRARY_STORAGE_KEY,
         JSON.stringify(envelope),
       );
+      revision = current + 1;
     },
     putVersionFile: (target, blob) =>
       put(
@@ -263,6 +411,15 @@ export function createBrowserAssetLibraryRepository(
       const thumbnailKey = buildAssetThumbnailKey(assetId);
       for (const key of await blobStore.keys()) {
         if (key.startsWith(prefix) || key === thumbnailKey) {
+          await blobStore.delete(key);
+          revoke(key);
+        }
+      }
+    },
+    removeVersionFiles: async (assetId, version) => {
+      const prefix = `files/${assetId}/v${version}/`;
+      for (const key of await blobStore.keys()) {
+        if (key.startsWith(prefix)) {
           await blobStore.delete(key);
           revoke(key);
         }

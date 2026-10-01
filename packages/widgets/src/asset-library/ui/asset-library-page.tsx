@@ -7,7 +7,6 @@ import {
   Loader2,
   Plus,
   Search,
-  TriangleAlert,
   Upload,
   X,
 } from 'lucide-react';
@@ -78,20 +77,29 @@ import {
   writeAssetQuery,
 } from '../lib/asset-library-url';
 import { ASSET_CARD_GRID } from '../lib/asset-presentation';
+import { isAssetSaveFailed } from '../model/use-asset-save-report';
+import {
+  listBulkTags,
+  listBulkTransitions,
+  withoutTag,
+  withTag,
+} from '../lib/bulk-selection';
 import { copyText } from '../lib/copy-text';
 import {
   findNeighbors,
   rangeBetween,
-  stepInList,
+  stepFromRemembered,
   writeResultOrder,
 } from '../lib/result-navigation';
 import { AssetKindIcon } from './asset-badges';
 import { AssetBreadcrumb } from './asset-breadcrumb';
 import { AssetBulkBar } from './asset-bulk-bar';
+import { AssetConfirmDialog } from './asset-confirm-dialog';
 import { AssetFilterRail } from './asset-filter-rail';
 import { AssetGrid } from './asset-grid';
 import { AssetImportDialog } from './asset-import-dialog';
 import { AssetPreviewPanel } from './asset-preview-panel';
+import { AssetSaveBanner } from './asset-save-banner';
 import { AssetTable } from './asset-table';
 
 const VIEW_STORAGE_KEY = 'crane:asset-library:view';
@@ -129,10 +137,17 @@ function SearchBox({
   const { t } = useTranslation();
   const [draft, setDraft] = useState(value);
   const [syncedValue, setSyncedValue] = useState(value);
+  // 내가 마지막으로 URL 에 보낸 검색어. URL 반영은 전환(transition)이라 늦게
+  // 돌아올 수 있다 — 돌아온 값이 내가 보낸 것이면 그사이 더 친 글자를 덮지
+  // 않는다. 밖에서 바뀐 값(필터 초기화 등)만 입력란에 옮긴다.
+  const [committed, setCommitted] = useState(value);
   const timerRef = useRef<number | null>(null);
   if (value !== syncedValue) {
     setSyncedValue(value);
-    if (value.trim() !== draft.trim()) setDraft(value);
+    if (value.trim() !== committed.trim()) {
+      setDraft(value);
+      setCommitted(value);
+    }
   }
 
   useEffect(
@@ -155,10 +170,10 @@ function SearchBox({
           const next = event.target.value;
           setDraft(next);
           if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-          timerRef.current = window.setTimeout(
-            () => onCommit(next),
-            SEARCH_DEBOUNCE_MS,
-          );
+          timerRef.current = window.setTimeout(() => {
+            setCommitted(next);
+            onCommit(next);
+          }, SEARCH_DEBOUNCE_MS);
         }}
       />
     </div>
@@ -183,8 +198,15 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   const localOnly = useAssetLibraryStore((state) => state.localOnly);
   const load = useAssetLibraryStore((state) => state.load);
   const loadUsage = useAssetLibraryStore((state) => state.loadUsage);
-  const retrySave = useAssetLibraryStore((state) => state.retrySave);
-  const updateMetadata = useAssetLibraryStore((state) => state.updateMetadata);
+  const updateManyMetadata = useAssetLibraryStore(
+    (state) => state.updateManyMetadata,
+  );
+  const transitionManyStatus = useAssetLibraryStore(
+    (state) => state.transitionManyStatus,
+  );
+  const removeManyAssets = useAssetLibraryStore(
+    (state) => state.removeManyAssets,
+  );
   const importAsset = useAssetLibraryStore((state) => state.importAsset);
   const toggleFavorite = useAssetLibraryStore((state) => state.toggleFavorite);
   const createCollection = useAssetLibraryStore(
@@ -216,6 +238,22 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   }, [loadUsage, usageStatus]);
 
   const query = useMemo(() => parseAssetQuery(searchParams), [searchParams]);
+  // 위치나 필터가 바뀌면 선택을 비운다 — 화면에서 사라진 자산이 선택된 채
+  // 남으면, 보이지 않는 자산에 일괄 작업이 걸린다. 정렬만 바뀐 것은 같은 목록이다.
+  const selectionScope = useMemo(
+    () =>
+      writeAssetQuery(new URLSearchParams(), {
+        ...query,
+        sort: DEFAULT_ASSET_QUERY.sort,
+        reverse: false,
+      }).toString(),
+    [query],
+  );
+  const [selectedScope, setSelectedScope] = useState(selectionScope);
+  if (selectedScope !== selectionScope) {
+    setSelectedScope(selectionScope);
+    if (selectedIds.size > 0) setSelectedIds(new Set());
+  }
   const setQuery = useCallback(
     (next: AssetQuery) => {
       setSearchParams((current) => writeAssetQuery(current, next), {
@@ -226,7 +264,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   );
 
   const favorites = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-  const facets = useMemo(() => countAssetFacets(assets), [assets]);
   const tree = useMemo(() => buildAssetTree(assets), [assets]);
   const scope = getAssetScope(query);
   const placements = useMemo(() => {
@@ -245,9 +282,29 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     () => ({ statsTable, placements, usageKnown }),
     [placements, statsTable, usageKnown],
   );
+  // 지금 위치에 놓인 자산(필터 전). 레일의 처리할 일 개수와 상태 선택의
+  // 개수는 이 범위로 센다 — 누르면 이 위치 안에서 걸리므로, 전체 기준으로
+  // 세면 "5" 를 눌렀는데 1개가 나온다.
+  const scopedAssets = useMemo(
+    () =>
+      queryAssets(
+        assets,
+        withAssetScope(DEFAULT_ASSET_QUERY, {
+          site: scope.site,
+          kind: scope.kind,
+          category: scope.category,
+        }),
+        { collections: [], favorites: new Set<string>(), statsTable: {} },
+      ),
+    [assets, scope.category, scope.kind, scope.site],
+  );
+  const scopedFacets = useMemo(
+    () => countAssetFacets(scopedAssets),
+    [scopedAssets],
+  );
   const attentionCounts = useMemo(
-    () => countAssetAttention(assets, attentionContext),
-    [assets, attentionContext],
+    () => countAssetAttention(scopedAssets, attentionContext),
+    [attentionContext, scopedAssets],
   );
   const attentionByAsset = useMemo(() => {
     const map = new Map<string, AssetAttentionKind[]>();
@@ -301,14 +358,19 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   // 미리보기에 올린 자산은 URL(`?preview=`)이 단일 소스다 — 링크로 공유되고,
   // 상세에서 뒤로 오면 보던 자산이 그대로 올라와 있다.
   const previewParam = searchParams.get(PREVIEW_PARAM);
+  // 결과가 아니라 전체에서 찾는다 — 검수 목록에서 승인하면 그 자산은 결과에서
+  // 빠지는데, 그때 패널이 닫히면 방금 한 일의 결과도 못 보고 다음으로도 못 간다.
   const previewAsset = useMemo(
     () =>
       previewParam
-        ? (results.find((asset) => asset.id === previewParam) ?? null)
+        ? (assets.find((asset) => asset.id === previewParam) ?? null)
         : null,
-    [previewParam, results],
+    [assets, previewParam],
   );
   const previewId = previewAsset?.id ?? null;
+  // 미리보기 자산이 결과에서 차지하던 자리. 결과에서 빠진 뒤의 이전/다음이
+  // 여기서 이어 간다(이벤트 처리기에서만 읽는다).
+  const previewIndexRef = useRef(0);
   const setPreview = useCallback(
     (assetId: string | null) => {
       setSearchParams(
@@ -337,6 +399,23 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     [hrefFor, navigate],
   );
   const neighbors = previewId ? findNeighbors(orderedIds, previewId) : null;
+  useEffect(() => {
+    if (neighbors && neighbors.position > 0) {
+      previewIndexRef.current = neighbors.position - 1;
+    }
+  }, [neighbors]);
+  const stepPreview = useCallback(
+    (step: number) => {
+      const next = stepFromRemembered(
+        orderedIds,
+        previewId,
+        previewIndexRef.current,
+        step,
+      );
+      if (next && next !== previewId) setPreview(next);
+    },
+    [orderedIds, previewId, setPreview],
+  );
 
   // 상세 화면이 이전/다음 자산과 "목록으로" 에 쓸 수 있게 순서를 남긴다.
   useEffect(() => {
@@ -362,9 +441,10 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
       focused.closest('[data-asset-id]') &&
       !item?.contains(focused)
     ) {
-      item
-        ?.querySelector<HTMLElement>('button[aria-pressed]')
-        ?.focus({ preventScroll: true });
+      // 카드는 덮개 버튼, 목록 보기는 줄 자체가 초점을 받는다.
+      (
+        item?.querySelector<HTMLElement>('button[aria-pressed]') ?? item
+      )?.focus({ preventScroll: true });
     }
   }, [previewId]);
 
@@ -378,7 +458,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
       const target = event.target as HTMLElement | null;
       if (
         target?.closest(
-          'input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], canvas',
+          'input, textarea, select, [contenteditable="true"], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], canvas',
         )
       ) {
         return;
@@ -395,12 +475,11 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             : 0;
       if (step === 0) return;
       event.preventDefault();
-      const next = stepInList(orderedIds, previewId, step);
-      if (next && next !== previewId) setPreview(next);
+      stepPreview(step);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [orderedIds, previewId, setPreview]);
+  }, [previewId, setPreview, stepPreview]);
 
   const updateViewPrefs = (patch: Partial<ViewPrefs>) => {
     const next = { ...viewPrefs, ...patch };
@@ -454,15 +533,50 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     if (!ok) toast.error(t('asset-library:toast.saveFailed'));
   };
 
-  const applyToSelection = async (
-    run: (assetId: string) => Promise<boolean>,
-  ) => {
-    let changed = 0;
-    for (const assetId of selectedIds) {
-      if (await run(assetId)) changed += 1;
-    }
-    if (useAssetLibraryStore.getState().saveState === 'error') {
-      toast.error(t('asset-library:toast.saveFailed'));
+  // 일괄 작업의 대상과, 그 자산들에 실제로 걸리는 것들.
+  const selection = useMemo(() => [...selectedIds], [selectedIds]);
+  const selectedAssets = useMemo(
+    () => assets.filter((asset) => selectedIds.has(asset.id)),
+    [assets, selectedIds],
+  );
+  const selectionTransitions = useMemo(
+    () => listBulkTransitions(selectedAssets),
+    [selectedAssets],
+  );
+  const selectionTags = useMemo(
+    () => listBulkTags(selectedAssets),
+    [selectedAssets],
+  );
+  const selectionCategories = useMemo(
+    () =>
+      [
+        ...new Set(assets.map((asset) => asset.category).filter(Boolean)),
+      ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    [assets],
+  );
+  const removableAssets = selectedAssets.filter(
+    (asset) => asset.origin === 'user',
+  );
+  const removableCount = removableAssets.length;
+  const removablePlaced = removableAssets.reduce(
+    (sum, asset) => sum + (placements.get(asset.id) ?? 0),
+    0,
+  );
+  const [bulkConfirm, setBulkConfirm] = useState<
+    { kind: 'status'; to: AssetVersionStatus } | { kind: 'remove' } | null
+  >(null);
+
+  /** 일괄 작업의 결과(바뀐 수)를 알린다. 저장은 스토어가 한 번에 한다. */
+  const runBulk = async (work: Promise<number>) => {
+    const changed = await work;
+    if (isAssetSaveFailed()) {
+      toast.error(
+        t(
+          useAssetLibraryStore.getState().saveState === 'conflict'
+            ? 'asset-library:toast.saveConflict'
+            : 'asset-library:toast.saveFailed',
+        ),
+      );
     } else {
       toast.success(t('asset-library:toast.bulkApplied', { count: changed }));
     }
@@ -476,7 +590,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     }
     setImportOpen(false);
     setDroppedFile(null);
-    if (useAssetLibraryStore.getState().saveState === 'error') {
+    if (isAssetSaveFailed()) {
       toast.error(t('asset-library:toast.saveFailed'));
     } else {
       toast.success(t('asset-library:toast.imported', { name: record.name }));
@@ -572,11 +686,14 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         if (dragDepthRef.current === 0) setDragging(false);
       }}
       onDragOver={(event) => {
-        if (isFileDrag(event) && !importOpen) event.preventDefault();
+        // 등록 창이 열려 있어도 기본 동작은 막는다 — 창 밖에 떨어뜨린 파일을
+        // 브라우저가 열어 화면을 떠나지 않게.
+        if (isFileDrag(event)) event.preventDefault();
       }}
       onDrop={(event) => {
-        if (!isFileDrag(event) || importOpen) return;
+        if (!isFileDrag(event)) return;
         event.preventDefault();
+        if (importOpen) return;
         dragDepthRef.current = 0;
         setDragging(false);
         const file = event.dataTransfer.files[0];
@@ -636,31 +753,14 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         </Button>
       </header>
 
-      {saveState === 'error' ? (
-        <div
-          role="alert"
-          className="border-destructive/30 bg-destructive/10 text-destructive flex items-center justify-between gap-3 border-b px-5 py-2 text-xs"
-        >
-          <span className="flex items-center gap-2">
-            <TriangleAlert className="size-3.5 shrink-0" />
-            {t('asset-library:save.failed')}
-          </span>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => void retrySave().then(reportSave)}
-          >
-            {t('asset-library:action.retry')}
-          </Button>
-        </div>
-      ) : null}
+      <AssetSaveBanner />
       {localOnly && status === 'ready' ? (
         <p className="border-border bg-muted/40 text-muted-foreground border-b px-5 py-2 text-[11px]">
           {t('asset-library:save.localOnly')}
         </p>
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <AssetFilterRail
           query={query}
           tree={tree}
@@ -714,13 +814,13 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                   </SelectItem>
                   {ASSET_VERSION_STATUSES.filter(
                     (item) =>
-                      facets.statuses[item] > 0 ||
+                      scopedFacets.statuses[item] > 0 ||
                       query.statuses.includes(item),
                   ).map((item) => (
                     <SelectItem key={item} value={item}>
                       {t(`asset-library:status.${item}`)}
                       <span className="text-muted-foreground ml-2 tabular-nums">
-                        {facets.statuses[item]}
+                        {scopedFacets.statuses[item]}
                       </span>
                     </SelectItem>
                   ))}
@@ -861,38 +961,57 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                 <AssetBulkBar
                   count={selectedIds.size}
                   collections={collections}
+                  tags={selectionTags}
+                  categories={selectionCategories}
+                  transitions={selectionTransitions}
+                  removableCount={removableCount}
+                  onTransition={(to) =>
+                    // 되돌리는 걸음(반려·철회)은 한 번 더 묻는다.
+                    to === 'rejected' || to === 'withdrawn'
+                      ? setBulkConfirm({ kind: 'status', to })
+                      : void runBulk(transitionManyStatus(selection, to, actor))
+                  }
                   onAssignSites={(sites) =>
-                    void applyToSelection((assetId) =>
-                      updateMetadata(assetId, { sites }, actor),
+                    void runBulk(
+                      updateManyMetadata(selection, () => ({ sites }), actor),
+                    )
+                  }
+                  onAssignCategory={(category) =>
+                    void runBulk(
+                      updateManyMetadata(selection, () => ({ category }), actor),
                     )
                   }
                   onAddTag={(tag) =>
-                    void applyToSelection((assetId) => {
-                      const asset = useAssetLibraryStore
-                        .getState()
-                        .assets.find((item) => item.id === assetId);
-                      if (!asset) return Promise.resolve(false);
-                      const exists = asset.tags.some(
-                        (item) => item.toLowerCase() === tag.toLowerCase(),
-                      );
-                      return exists
-                        ? Promise.resolve(false)
-                        : updateMetadata(
-                            assetId,
-                            { tags: [...asset.tags, tag] },
-                            actor,
-                          );
-                    })
+                    void runBulk(
+                      updateManyMetadata(
+                        selection,
+                        (asset) => {
+                          const tags = withTag(asset.tags, tag);
+                          return tags ? { tags } : null;
+                        },
+                        actor,
+                      ),
+                    )
+                  }
+                  onRemoveTag={(tag) =>
+                    void runBulk(
+                      updateManyMetadata(
+                        selection,
+                        (asset) => {
+                          const tags = withoutTag(asset.tags, tag);
+                          return tags ? { tags } : null;
+                        },
+                        actor,
+                      ),
+                    )
                   }
                   onAddToCollection={(collectionId) =>
                     void setCollectionMembership(
                       collectionId,
-                      [...selectedIds],
+                      selection,
                       true,
                     ).then((changed) => {
-                      if (
-                        useAssetLibraryStore.getState().saveState === 'error'
-                      ) {
+                      if (isAssetSaveFailed()) {
                         toast.error(t('asset-library:toast.saveFailed'));
                       } else if (changed) {
                         toast.success(
@@ -901,6 +1020,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                       }
                     })
                   }
+                  onRemove={() => setBulkConfirm({ kind: 'remove' })}
                   onClear={() => setSelectedIds(new Set())}
                 />
               </div>
@@ -1050,13 +1170,14 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             href={hrefFor(previewAsset.id)}
             hrefFor={hrefFor}
             attention={attentionByAsset.get(previewAsset.id) ?? []}
+            attentionFilter={query.attention}
             placements={placements.get(previewAsset.id) ?? 0}
             favorite={favorites.has(previewAsset.id)}
             actor={actor}
             position={neighbors.position}
             total={neighbors.total}
-            onPrevious={() => setPreview(neighbors.previousId)}
-            onNext={() => setPreview(neighbors.nextId)}
+            onPrevious={() => stepPreview(-1)}
+            onNext={() => stepPreview(1)}
             onClose={() => setPreview(null)}
             onToggleFavorite={() => toggleFavorite(previewAsset.id)}
             onSelectScope={(target) => setQuery(withAssetScope(query, target))}
@@ -1078,6 +1199,56 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
           </div>
         </div>
       ) : null}
+
+      <AssetConfirmDialog
+        open={bulkConfirm !== null}
+        destructive={bulkConfirm?.kind === 'remove'}
+        title={
+          bulkConfirm?.kind === 'remove'
+            ? t('asset-library:bulk.removeTitle', { count: removableCount })
+            : bulkConfirm
+              ? t('asset-library:bulk.statusTitle', {
+                  action: t(
+                    `asset-library:versions.transition.${bulkConfirm.to}`,
+                  ),
+                })
+              : ''
+        }
+        description={
+          bulkConfirm?.kind === 'remove'
+            ? t('asset-library:bulk.removeHint')
+            : bulkConfirm
+              ? t(`asset-library:lifecycle.confirmHint.${bulkConfirm.to}`)
+              : ''
+        }
+        confirmLabel={
+          bulkConfirm?.kind === 'remove'
+            ? t('asset-library:action.delete')
+            : bulkConfirm
+              ? t(`asset-library:versions.transition.${bulkConfirm.to}`)
+              : ''
+        }
+        onConfirm={() => {
+          if (!bulkConfirm) return;
+          if (bulkConfirm.kind === 'remove') {
+            void runBulk(
+              removeManyAssets(removableAssets.map((asset) => asset.id)),
+            ).then(() => setSelectedIds(new Set()));
+          } else {
+            void runBulk(transitionManyStatus(selection, bulkConfirm.to, actor));
+          }
+        }}
+        onClose={() => setBulkConfirm(null)}
+      >
+        {bulkConfirm?.kind === 'remove' && removablePlaced > 0 ? (
+          <p
+            role="alert"
+            className="border-destructive/30 bg-destructive/10 text-destructive mt-3 rounded-md border px-3 py-2 text-xs leading-relaxed"
+          >
+            {t('asset-library:detail.deletePlaced', { count: removablePlaced })}
+          </p>
+        ) : null}
+      </AssetConfirmDialog>
 
       <AssetImportDialog
         open={importOpen}

@@ -3,8 +3,10 @@ import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   humanizeModelPath,
+  withBaseUrl,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
+import type { ScenePaletteModel } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
@@ -13,8 +15,18 @@ import { SceneModelPreview } from './scene-model-preview';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
 
+/** 라이브러리에 저장된 썸네일의 주소. 같은 경로에 덮어쓴 그림의 캐시를 깬다. */
+function toThumbnailUrl(thumbnail: ScenePaletteModel['thumbnail']) {
+  if (!thumbnail) return undefined;
+  const url = withBaseUrl(thumbnail.path);
+  if (!thumbnail.stamp) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${encodeURIComponent(thumbnail.stamp)}`;
+}
+
 interface PaletteAssetGridProps {
-  items: SceneModelCatalogItem[];
+  /** 팔레트 항목 — 자산 라이브러리와 합친 목록(놓을 수 없는 것 포함). */
+  items: ScenePaletteModel[];
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
@@ -47,7 +59,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
       return items;
     }
 
-    return items.filter((item) => {
+    return items.filter(({ item }) => {
       const modelType = humanizeModelPath(item.path);
 
       return (
@@ -98,18 +110,32 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
       ) : null}
       <ScrollArea className="min-h-0 flex-1">
         {filteredItems.length > 0 ? (
-          <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 pr-1 pb-1">
-            {filteredItems.map((item, index) => {
+          <div
+            ref={gridRef}
+            className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 pr-1 pb-1"
+          >
+            {filteredItems.map((model, index) => {
+              const { item, blocked } = model;
               const isDragging = draggingItemId === item.id;
               const len = filteredItems.length;
               return (
                 <div
                   key={item.id}
-                  ref={(el) => { itemRefs.current[index] = el; }}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
                   role="button"
                   tabIndex={0}
                   aria-label={item.label}
-                  draggable
+                  // 게시되지 않은 자산은 보이지만 놓을 수 없다 — 왜 없는지
+                  // 찾게 두지 않고, 왜 못 놓는지 알린다.
+                  aria-disabled={blocked !== null}
+                  title={
+                    blocked
+                      ? t(`monitoring:palette.blockedHint.${blocked}`)
+                      : undefined
+                  }
+                  draggable={blocked === null}
                   onKeyDown={(event) => {
                     if (event.key === 'ArrowRight') {
                       event.preventDefault();
@@ -117,17 +143,28 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                     } else if (event.key === 'ArrowLeft') {
                       event.preventDefault();
                       itemRefs.current[(index - 1 + len) % len]?.focus();
-                    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    } else if (
+                      event.key === 'ArrowDown' ||
+                      event.key === 'ArrowUp'
+                    ) {
                       event.preventDefault();
                       const cols = Math.round(
-                        (gridRef.current?.offsetWidth ?? 0) / (itemRefs.current[0]?.offsetWidth ?? 1),
+                        (gridRef.current?.offsetWidth ?? 0) /
+                          (itemRefs.current[0]?.offsetWidth ?? 1),
                       );
                       const delta = event.key === 'ArrowDown' ? cols : -cols;
-                      const next = Math.min(Math.max(index + delta, 0), len - 1);
+                      const next = Math.min(
+                        Math.max(index + delta, 0),
+                        len - 1,
+                      );
                       itemRefs.current[next]?.focus();
                     }
                   }}
                   onDragStart={(event) => {
+                    if (blocked) {
+                      event.preventDefault();
+                      return;
+                    }
                     event.dataTransfer.effectAllowed = 'copy';
                     event.dataTransfer.setData(SCENE_MODEL_DRAG_TYPE, item.id);
                     event.dataTransfer.setData('text/plain', item.id);
@@ -135,29 +172,52 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                   }}
                   onDragEnd={onDragEnd}
                   className={cn(
-                    'group border-border bg-muted/50 cursor-grab rounded-md border p-1 text-left transition',
-                    isDragging
-                      ? 'border-primary/40 bg-primary/12 scale-[0.98]'
-                      : 'hover:border-border/80 hover:bg-muted',
+                    'group border-border bg-muted/50 rounded-md border p-1 text-left transition',
+                    blocked
+                      ? 'cursor-not-allowed'
+                      : isDragging
+                        ? 'border-primary/40 bg-primary/12 scale-[0.98] cursor-grab'
+                        : 'hover:border-border/80 hover:bg-muted cursor-grab',
                   )}
                 >
-                  <SceneModelPreview
-                    path={item.path}
-                    label={item.label}
-                    preview={item.preview}
-                    previewAssetId={item.id}
-                    overlayLabel={item.label}
-                    overlayHint={t('monitoring:palette.dragToPlace')}
-                    showOverlay={isDragging}
-                    className={cn(
-                      'h-12 rounded-md',
-                      isDragging && 'border-primary/40',
-                    )}
-                  />
+                  {/* 이 브라우저에만 있는 파일은 경로가 없다 — 미리보기를 그리려
+                      들지 않는다(빈 경로를 불러오다 오류 타일이 된다). */}
+                  {item.path === '' ? (
+                    <div className="border-border bg-muted/40 h-12 rounded-md border opacity-45" />
+                  ) : (
+                    <SceneModelPreview
+                      path={item.path}
+                      label={item.label}
+                      preview={item.preview}
+                      // 카탈로그 자산만 배포된 정적 썸네일이 있다.
+                      previewAssetId={model.fromCatalog ? item.id : undefined}
+                      previewUrl={toThumbnailUrl(model.thumbnail)}
+                      overlayLabel={item.label}
+                      overlayHint={t('monitoring:palette.dragToPlace')}
+                      showOverlay={isDragging}
+                      className={cn(
+                        'h-12 rounded-md',
+                        isDragging && 'border-primary/40',
+                        blocked && 'opacity-45',
+                      )}
+                    />
+                  )}
                   <div className="mt-1 min-w-0 px-0.5">
-                    <p className="text-foreground truncate text-[10px] leading-none font-medium">
+                    <p
+                      className={cn(
+                        'truncate text-[10px] leading-none font-medium',
+                        blocked ? 'text-muted-foreground' : 'text-foreground',
+                      )}
+                    >
                       {item.label}
                     </p>
+                    {blocked ? (
+                      <p className="text-muted-foreground/80 mt-1 truncate text-[9px] leading-none">
+                        {blocked === 'unpublished' && model.status
+                          ? t(`asset-library:status.${model.status}`)
+                          : t(`monitoring:palette.blocked.${blocked}`)}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               );

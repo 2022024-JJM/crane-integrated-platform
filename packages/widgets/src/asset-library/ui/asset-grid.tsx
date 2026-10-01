@@ -156,16 +156,20 @@ const AssetCard = memo(function AssetCard({
                 {asset.name}
               </AppLink>
             </h3>
-            {/* 상태는 점 하나로 — 글자는 미리보기·목록 보기가 적는다. */}
-            <span
-              role="img"
-              aria-label={status}
-              title={status}
-              className={cn(
-                'relative z-10 size-2 shrink-0 rounded-full',
-                ASSET_STATUS_TONE[current.status].dot,
-              )}
-            />
+            {/* 게시된 자산은 아무 표시도 없다 — 그것이 보통이다. 게시 전·철회
+                같은 예외만 점과 글자로 알린다. */}
+            {current.status === 'published' ? null : (
+              <span className="text-muted-foreground relative z-10 flex shrink-0 items-center gap-1.5 text-[11px] leading-none">
+                <span
+                  aria-hidden
+                  className={cn(
+                    'size-2 rounded-full',
+                    ASSET_STATUS_TONE[current.status].dot,
+                  )}
+                />
+                {status}
+              </span>
+            )}
           </div>
           <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs tabular-nums">
             <span className="min-w-0 truncate">

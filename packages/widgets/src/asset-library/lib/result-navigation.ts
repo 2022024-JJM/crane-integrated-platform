@@ -20,6 +20,29 @@ export function stepInList(
 }
 
 /**
+ * 목록에서 빠진 항목에서 출발하는 이동. 검수 대기 목록에서 자산을 승인하면 그
+ * 자산은 목록에서 사라진다 — 그 자리를 기억해 두었다가, "다음" 은 그 자리로
+ * 올라온 항목으로, "이전" 은 그 앞 항목으로 간다. 목록에 있는 항목이면
+ * `stepInList` 와 같다.
+ */
+export function stepFromRemembered(
+  ids: readonly string[],
+  currentId: string | null,
+  rememberedIndex: number,
+  step: number,
+): string | null {
+  if (ids.length === 0) return null;
+  if (currentId !== null && ids.includes(currentId)) {
+    return stepInList(ids, currentId, step);
+  }
+  const base = Number.isFinite(rememberedIndex)
+    ? Math.max(0, Math.floor(rememberedIndex))
+    : 0;
+  const index = step >= 0 ? base : base - 1;
+  return ids[Math.min(ids.length - 1, Math.max(0, index))];
+}
+
+/**
  * `anchorId` 부터 `targetId` 까지(양 끝 포함)의 id. 어느 한쪽이 목록에 없으면
  * 대상 하나만 돌려준다.
  */

@@ -27,6 +27,10 @@ export function AssetActivityTab({ asset }: AssetActivityTabProps) {
         return t('asset-library:activity.versionAdded', {
           version: entry.version,
         });
+      case 'version-removed':
+        return t('asset-library:activity.versionRemoved', {
+          version: entry.version ?? '?',
+        });
       case 'current-changed':
         return t('asset-library:activity.currentChanged', {
           from: entry.from,

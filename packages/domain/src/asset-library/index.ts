@@ -33,6 +33,7 @@ export {
   ASSET_TAG_MAX,
   ASSET_TAGS_MAX,
   ASSET_VERSION_STATUSES,
+  ASSET_VERSIONS_MAX,
   isDocumentAssetKind,
 } from './model/types';
 export {
@@ -51,6 +52,8 @@ export {
   builtinRuntimeModelSources,
 } from './model/builtin-extra-assets';
 export {
+  assertReadableAssetLibraryDocument,
+  collectUnreadableAssetRecords,
   createEmptyAssetLibraryDocument,
   sanitizeAssetLibraryDocument,
   sanitizeAssetSites,
@@ -72,6 +75,7 @@ export type {
 } from './lib/asset-versions';
 export {
   addAssetVersion,
+  canRemoveAssetVersion,
   canTransitionStatus,
   createUserAssetRecord,
   diffAssetStats,
@@ -79,6 +83,7 @@ export {
   getAssetVersion,
   getCurrentAssetVersion,
   getNextAssetVersionNumber,
+  removeAssetVersion,
   setAssetThumbnail,
   setAssetVersionStats,
   setCurrentAssetVersion,
@@ -163,6 +168,7 @@ export { createMemoryBlobStore } from './lib/asset-blob-store';
 export type { AssetLibraryRepository } from './lib/asset-library-storage';
 export {
   ASSET_LIBRARY_STORAGE_KEY,
+  AssetLibraryConflictError,
   createBrowserAssetLibraryRepository,
   createDevAssetLibraryRepository,
   getAssetLibraryRepository,

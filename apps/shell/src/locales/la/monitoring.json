@@ -216,7 +216,17 @@
     "dragToPlace": "Trahe ad ponendum",
     "previewPending": "Praevisio futura",
     "previewLoading": "Praevisio oneratur...",
-    "previewLoadError": "Praevisio praesto non est"
+    "previewLoadError": "Praevisio praesto non est",
+    "blocked": {
+      "unpublished": "Nondum edita",
+      "local-file": "In hoc navigatro tantum"
+    },
+    "blockedHint": {
+      "unpublished": "Res tantum editae in scaena poni possunt. In bibliotheca rerum ede.",
+      "local-file": "Fasciculus in hoc navigatro tantum est; in scaena poni non potest."
+    },
+    "blockedSummary": "{{count}} res nondum editae poni non possunt.",
+    "openLibrary": "In bibliotheca rerum aperi"
   },
   "editor": {
     "exportJson": "JSON Exporta",
@@ -303,7 +313,8 @@
     "noModelsInCategory": "Nulla exemplaria in hac categoria adhuc sunt.",
     "modelCategories": {
       "indoor": "Interior",
-      "outdoor": "Exterior"
+      "outdoor": "Exterior",
+      "none": "Sine classe"
     },
     "paletteTabs": {
       "models": "Exempla",

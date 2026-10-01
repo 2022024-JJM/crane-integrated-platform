@@ -6,6 +6,7 @@ import {
   readResultOrder,
   RESULT_ORDER_MAX,
   RESULT_ORDER_STORAGE_KEY,
+  stepFromRemembered,
   stepInList,
   writeResultOrder,
 } from '../result-navigation';
@@ -100,5 +101,33 @@ describe('결과 순서 기억', () => {
       JSON.stringify({ ids: 'abc' }),
     );
     expect(readResultOrder().ids).toEqual([]);
+  });
+});
+
+describe('stepFromRemembered', () => {
+  it('목록에 있는 항목이면 stepInList 와 같다', () => {
+    expect(stepFromRemembered(ids, 'b', 99, 1)).toBe('c');
+    expect(stepFromRemembered(ids, 'b', 99, -1)).toBe('a');
+  });
+
+  it('목록에서 빠진 항목은 기억한 자리에서 이어 간다', () => {
+    // 원래 [a, X, b, c, d] 의 X(자리 1)가 빠진 상황.
+    expect(stepFromRemembered(ids, 'x', 1, 1)).toBe('b');
+    expect(stepFromRemembered(ids, 'x', 1, -1)).toBe('a');
+  });
+
+  it('끝자리·맨 앞에서 빠졌을 때 범위를 벗어나지 않는다', () => {
+    expect(stepFromRemembered(ids, 'x', 4, 1)).toBe('d');
+    expect(stepFromRemembered(ids, 'x', 0, -1)).toBe('a');
+    expect(stepFromRemembered(ids, 'x', 0, 1)).toBe('a');
+  });
+
+  it('기억한 자리가 비정상이면 맨 앞에서 시작한다', () => {
+    expect(stepFromRemembered(ids, null, Number.NaN, 1)).toBe('a');
+    expect(stepFromRemembered(ids, null, -5, 1)).toBe('a');
+  });
+
+  it('빈 목록은 null', () => {
+    expect(stepFromRemembered([], 'x', 0, 1)).toBeNull();
   });
 });

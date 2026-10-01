@@ -6,6 +6,7 @@ import {
 } from '../../model/types';
 import {
   addAssetVersion,
+  canRemoveAssetVersion,
   canTransitionStatus,
   createUserAssetRecord,
   diffAssetStats,
@@ -13,6 +14,7 @@ import {
   getCurrentAssetVersion,
   getNextAssetVersionNumber,
   METADATA_HISTORY_MERGE_MS,
+  removeAssetVersion,
   setAssetThumbnail,
   setAssetVersionStats,
   setCurrentAssetVersion,
@@ -358,5 +360,75 @@ describe('diffAssetStats', () => {
     ).toEqual({ triangles: -40, vertices: 0, drawCalls: 3, textureMemoryBytes: 0 });
     expect(diffAssetStats(undefined, stats)).toBeNull();
     expect(diffAssetStats(stats, undefined)).toBeNull();
+  });
+});
+
+describe('버전 지우기', () => {
+  const ctx = { entryId: 'e', at: '2026-10-01T00:00:00.000Z', actor: 'me' };
+  const withVersions = () =>
+    asset({
+      versions: [
+        version({ version: 1, status: 'published' }),
+        version({ version: 2, status: 'draft' }),
+        version({ version: 3, status: 'rejected' }),
+        version({ version: 4, status: 'in-review' }),
+        version({ version: 5, status: 'withdrawn' }),
+      ],
+      currentVersion: 1,
+    });
+
+  it('초안·반려만 지울 수 있다', () => {
+    const record = withVersions();
+    expect(canRemoveAssetVersion(record, 2)).toBe(true);
+    expect(canRemoveAssetVersion(record, 3)).toBe(true);
+    expect(canRemoveAssetVersion(record, 4)).toBe(false);
+    expect(canRemoveAssetVersion(record, 5)).toBe(false);
+  });
+
+  it('현재 버전·없는 버전·마지막 남은 버전은 지울 수 없다', () => {
+    const record = withVersions();
+    expect(canRemoveAssetVersion(record, 1)).toBe(false);
+    expect(canRemoveAssetVersion(record, 99)).toBe(false);
+    const draftCurrent = asset({
+      versions: [version({ version: 1, status: 'draft' })],
+      currentVersion: 1,
+    });
+    expect(canRemoveAssetVersion(draftCurrent, 1)).toBe(false);
+    const onlyOne = asset({
+      versions: [version({ version: 2, status: 'draft' })],
+      currentVersion: 1,
+    });
+    expect(canRemoveAssetVersion(onlyOne, 2)).toBe(false);
+  });
+
+  it('지우면 버전이 빠지고 이력이 남는다', () => {
+    const record = withVersions();
+    const next = removeAssetVersion(record, 2, ctx);
+    expect(next.versions.map((v) => v.version)).toEqual([1, 3, 4, 5]);
+    expect(next.currentVersion).toBe(1);
+    expect(next.history.at(-1)).toMatchObject({
+      action: 'version-removed',
+      version: 2,
+      actor: 'me',
+    });
+  });
+
+  it('지울 수 없는 버전은 같은 참조를 돌려준다', () => {
+    const record = withVersions();
+    expect(removeAssetVersion(record, 1, ctx)).toBe(record);
+    expect(removeAssetVersion(record, 99, ctx)).toBe(record);
+  });
+
+  it('지운 번호는 다시 쓰지 않는다', () => {
+    const record = asset({
+      versions: [
+        version({ version: 1, status: 'published' }),
+        version({ version: 2, status: 'draft' }),
+      ],
+      currentVersion: 1,
+    });
+    const removed = removeAssetVersion(record, 2, ctx);
+    expect(removed.versions.map((v) => v.version)).toEqual([1]);
+    expect(getNextAssetVersionNumber(removed)).toBe(3);
   });
 });

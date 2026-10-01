@@ -98,17 +98,25 @@ export function sanitizeAssetSites(value: unknown): AssetSiteId[] {
   return ASSET_SITES.filter((site) => value.includes(site));
 }
 
+/**
+ * 경로에 상위 탈출 조각(`..`)이 있는가. 조각 단위로 본다 — 파일 이름 안의
+ * 이어진 점(`crane..v2.glb`)은 탈출이 아니다.
+ */
+function hasParentSegment(path: string): boolean {
+  return path.split(/[\\/]/).includes('..');
+}
+
 function sanitizeFileRef(value: unknown): AssetFileRef | null {
   if (!isObject(value)) return null;
   if (value.storage === 'public') {
     const path = typeof value.path === 'string' ? value.path : '';
     // public 경로는 `/` 로 시작하는 절대 경로여야 하고 상위 탈출이 없어야 한다.
-    if (!path.startsWith('/') || path.includes('..')) return null;
+    if (!path.startsWith('/') || hasParentSegment(path)) return null;
     return { storage: 'public', path };
   }
   if (value.storage === 'browser') {
     const key = typeof value.key === 'string' ? value.key : '';
-    if (!key || key.includes('..')) return null;
+    if (!key || hasParentSegment(key)) return null;
     return { storage: 'browser', key };
   }
   return null;
@@ -319,6 +327,45 @@ export function createEmptyAssetLibraryDocument(): AssetLibraryDocument {
     assets: [],
     collections: [],
   };
+}
+
+/**
+ * 문서를 읽을 수 있는 모양인지 확인한다. 못 읽는 문서를 빈 문서로 받아들이면
+ * 다음 자동 저장이 그 위에 덮어써 내용이 영영 사라진다 — 읽기 실패로 알려
+ * 저장을 막는다.
+ */
+export function assertReadableAssetLibraryDocument(value: unknown): void {
+  if (!isObject(value)) {
+    throw new Error('Asset library document is not an object.');
+  }
+  if ('assets' in value && !Array.isArray(value.assets)) {
+    throw new Error('Asset library document has a malformed "assets" field.');
+  }
+  if (
+    isFiniteNumber(value.schemaVersion) &&
+    value.schemaVersion > ASSET_LIBRARY_SCHEMA_VERSION
+  ) {
+    throw new Error(
+      `Asset library document is newer than this app (schema ${value.schemaVersion}).`,
+    );
+  }
+}
+
+/**
+ * 방어를 통과하지 못한 자산 레코드를 원본 그대로 골라낸다. 저장소가 이것을
+ * 들고 있다가 저장할 때 문서 끝에 도로 붙인다 — 이 앱이 읽지 못한 레코드
+ * (손으로 고치다 어긋난 것, 다른 브랜치의 필드)를 조용히 지우지 않는다.
+ */
+export function collectUnreadableAssetRecords(value: unknown): unknown[] {
+  if (!isObject(value) || !Array.isArray(value.assets)) return [];
+  const seen = new Set<string>();
+  const unreadable: unknown[] = [];
+  for (const item of value.assets) {
+    const record = sanitizeAssetRecord(item);
+    if (!record || seen.has(record.id)) unreadable.push(item);
+    else seen.add(record.id);
+  }
+  return unreadable;
 }
 
 export function sanitizeAssetLibraryDocument(

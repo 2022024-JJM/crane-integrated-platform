@@ -57,6 +57,7 @@ function RailRow({
   leading,
   label,
   count,
+  emphasizeCount = false,
   trailing,
 }: {
   active: boolean;
@@ -64,6 +65,8 @@ function RailRow({
   leading?: ReactNode;
   label: string;
   count?: number;
+  /** 개수를 알약으로 도드라지게 — "처리할 일" 처럼 수가 곧 할 일인 줄. */
+  emphasizeCount?: boolean;
   trailing?: ReactNode;
 }) {
   return (
@@ -92,8 +95,13 @@ function RailRow({
         {count !== undefined ? (
           <span
             className={cn(
-              'shrink-0 text-xs tabular-nums',
-              active ? 'text-foreground/70' : 'text-muted-foreground',
+              'shrink-0 tabular-nums',
+              emphasizeCount
+                ? 'bg-foreground/10 text-foreground min-w-5 rounded-full px-1.5 py-1 text-center text-[11px] leading-none font-semibold'
+                : cn(
+                    'text-xs',
+                    active ? 'text-foreground/70' : 'text-muted-foreground',
+                  ),
             )}
           >
             {count}
@@ -140,7 +148,9 @@ export function AssetFilterRail({
   return (
     <nav
       aria-label={t('asset-library:rail.label')}
-      className="border-border divide-border flex w-60 shrink-0 flex-col divide-y overflow-y-auto border-r"
+      // 레일과 옆 패널은 한 단 올라온 면, 결과가 놓이는 가운데가 바닥이다 —
+      // 선 대신 면의 밝기로 세 칸을 나눈다.
+      className="bg-sidebar border-border divide-border flex w-60 shrink-0 flex-col divide-y overflow-y-auto border-r"
     >
       {visibleAttention.length > 0 ? (
         <RailSection title={t('asset-library:rail.attention')}>
@@ -157,6 +167,7 @@ export function AssetFilterRail({
               leading={<AssetAttentionIcon kind={kind} />}
               label={t(`asset-library:attention.${kind}.label`)}
               count={attention[kind]}
+              emphasizeCount
             />
           ))}
         </RailSection>

@@ -666,7 +666,13 @@ export function AssetModelViewer({
     onLoadedRef.current = onLoaded;
     onReadyRef.current = onReady;
   }, [onLoaded, onReady]);
-  const handleFramed = useCallback(() => onReadyRef.current?.(), []);
+  // 카메라를 맞추기 전의 한 프레임(모델이 화면 가득 크게 그려진다)을 보이지
+  // 않게, 맞춘 뒤에야 캔버스를 드러낸다.
+  const [framedUrl, setFramedUrl] = useState<string | null>(null);
+  const handleFramed = useCallback(() => {
+    setFramedUrl(url);
+    onReadyRef.current?.();
+  }, [url]);
   const handleInfo = useCallback(
     (next: ModelInfo) => {
       setLoaded({ url, info: next });
@@ -695,7 +701,13 @@ export function AssetModelViewer({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className={cn('relative min-h-0 flex-1', tone.surface)}>
-        <div ref={setSurface} className="absolute inset-0">
+        <div
+          ref={setSurface}
+          className={cn(
+            'absolute inset-0 transition-opacity duration-200',
+            framedUrl === url ? 'opacity-100' : 'opacity-0',
+          )}
+        >
           {surface ? (
             <Canvas
               key={url}

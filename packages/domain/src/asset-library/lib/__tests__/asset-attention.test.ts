@@ -47,12 +47,28 @@ describe('getAssetAttention', () => {
       ],
       currentVersion: 1,
     });
+    // 새 버전이 전부 검토 전·검토 중·반려라 "새 버전 있음" 은 아니다.
     expect(getAssetAttention(record, placed)).toEqual([
       'review',
       'rejected',
       'draft',
-      'newer',
     ]);
+  });
+
+  it('검토를 통과한 새 버전(승인·게시)만 "새 버전" 이다', () => {
+    const ready = (status: 'approved' | 'published' | 'draft' | 'in-review') =>
+      getAssetAttention(
+        asset({
+          id: 'healthy',
+          versions: [version({ version: 1 }), version({ version: 2, status })],
+          currentVersion: 1,
+        }),
+        placed,
+      ).includes('newer');
+    expect(ready('approved')).toBe(true);
+    expect(ready('published')).toBe(true);
+    expect(ready('draft')).toBe(false);
+    expect(ready('in-review')).toBe(false);
   });
 
   it('현재보다 새 버전이 반려·철회뿐이면 "새 버전" 이 아니다', () => {

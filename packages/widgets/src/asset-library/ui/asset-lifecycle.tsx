@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getAllowedStatusTransitions,
@@ -11,6 +11,8 @@ import { useAssetLibraryStore } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { ASSET_STATUS_TONE } from '../lib/asset-presentation';
+import { AssetStatusBadge } from './asset-badges';
+import { AssetConfirmDialog } from './asset-confirm-dialog';
 import { useAssetSaveReport } from '../model/use-asset-save-report';
 
 /** 수명주기의 큰 흐름. 반려·철회는 이 길 위의 한 지점에 멈춰 선 상태다. */
@@ -78,9 +80,16 @@ export function AssetLifecycle({
   const backwardOnly =
     allowed.length > 0 && allowed.every((next) => BACKWARD.has(next));
   const transitions = backwardOnly ? [] : allowed;
-  const run = (next: AssetVersionStatus) =>
+  const apply = (next: AssetVersionStatus) =>
     report(transitionStatus(asset.id, version.version, next, actor));
+  // 되돌리는 걸음은 한 번 더 묻는다 — 누르는 순간 저장되고 물릴 길이 없다.
+  const [pending, setPending] = useState<AssetVersionStatus | null>(null);
+  const run = (next: AssetVersionStatus) => {
+    if (BACKWARD.has(next)) setPending(next);
+    else apply(next);
+  };
   const tone = ASSET_STATUS_TONE[version.status];
+  const settled = version.status === 'published';
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
@@ -105,63 +114,73 @@ export function AssetLifecycle({
             : null}
         </div>
       </div>
-      <ol
-        aria-label={t('asset-library:lifecycle.label', {
-          version: version.version,
-        })}
-        className="flex items-start"
-      >
-        {LIFECYCLE_STEPS.map((step, index) => {
-          const done = index < current;
-          const active = index === current;
-          // 멈춰 선 지점에는 그 상태(반려됨·철회됨)를 적는다.
-          const label = active ? version.status : step;
-          return (
-            <li
-              key={step}
-              aria-current={active ? 'step' : undefined}
-              className="relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
-            >
-              {/* 앞 단계와 잇는 선. 지나온 구간만 진하다. */}
-              {index > 0 ? (
-                <span
-                  aria-hidden
-                  className={cn(
-                    'absolute top-[9px] right-1/2 left-[-50%] h-px',
-                    index <= current ? 'bg-foreground/60' : 'bg-border',
-                  )}
-                />
-              ) : null}
-              <span
-                className={cn(
-                  'relative z-10 flex size-[19px] items-center justify-center rounded-full border-2',
-                  done && 'border-foreground bg-foreground text-background',
-                  active && cn('bg-background border-current', tone.text),
-                  !done && !active && 'border-border bg-background',
-                )}
+      {settled ? (
+        // 길을 다 온 버전은 단계를 다시 늘어놓지 않는다 — 대부분의 자산이 이
+        // 상태라, 매번 네 개의 마디를 그리면 정작 진행 중인 것이 묻힌다.
+        <p className="text-muted-foreground flex items-center gap-2 text-xs">
+          <AssetStatusBadge status={version.status} />
+          {t('asset-library:lifecycle.settled')}
+        </p>
+      ) : (
+        <ol
+          aria-label={t('asset-library:lifecycle.label', {
+            version: version.version,
+          })}
+          className="flex items-start"
+        >
+          {LIFECYCLE_STEPS.map((step, index) => {
+            const done = index < current;
+            const active = index === current;
+            // 멈춰 선 지점에는 그 상태(반려됨·철회됨)를 적는다.
+            const label = active ? version.status : step;
+            return (
+              <li
+                key={step}
+                aria-current={active ? 'step' : undefined}
+                className="relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
               >
-                {done ? (
-                  <Check className="size-3" strokeWidth={3} />
-                ) : active ? (
-                  <span className={cn('size-2 rounded-full', tone.dot)} />
+                {/* 앞 단계와 잇는 선. 지나온 구간만 진하다. */}
+                {index > 0 ? (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute top-[9px] right-1/2 left-[-50%] h-px',
+                      index <= current ? 'bg-foreground/60' : 'bg-border',
+                    )}
+                  />
                 ) : null}
-              </span>
-              <span
-                className={cn(
-                  'max-w-full truncate px-0.5 text-xs',
-                  active
-                    ? 'text-foreground font-semibold'
-                    : done
-                      ? 'text-foreground/80'
-                      : 'text-muted-foreground',
-                )}
-              >
-                {t(`asset-library:status.${label}`)}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+                <span
+                  className={cn(
+                    'relative z-10 flex size-[19px] items-center justify-center rounded-full border-2',
+                    done && 'border-foreground bg-foreground text-background',
+                    // 마디는 선을 가려야 한다 — 패널의 면과 같은 색으로 채운다.
+                    active && cn('bg-sidebar border-current', tone.text),
+                    !done && !active && 'border-border bg-sidebar',
+                  )}
+                >
+                  {done ? (
+                    <Check className="size-3" strokeWidth={3} />
+                  ) : active ? (
+                    <span className={cn('size-2 rounded-full', tone.dot)} />
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    'max-w-full truncate px-0.5 text-xs',
+                    active
+                      ? 'text-foreground font-semibold'
+                      : done
+                        ? 'text-foreground/80'
+                        : 'text-muted-foreground',
+                  )}
+                >
+                  {t(`asset-library:status.${label}`)}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
 
       {transitions.length > 0 ? (
         // 앞으로 가는 걸음은 넓은 주 버튼, 되돌리는 걸음(반려·철회)은 작은
@@ -182,6 +201,25 @@ export function AssetLifecycle({
           ))}
         </div>
       ) : null}
+      <AssetConfirmDialog
+        open={pending !== null}
+        title={t('asset-library:lifecycle.confirmTitle', {
+          version: version.version,
+          action: pending
+            ? t(`asset-library:versions.transition.${pending}`)
+            : '',
+        })}
+        description={
+          pending ? t(`asset-library:lifecycle.confirmHint.${pending}`) : ''
+        }
+        confirmLabel={
+          pending ? t(`asset-library:versions.transition.${pending}`) : ''
+        }
+        onConfirm={() => {
+          if (pending) apply(pending);
+        }}
+        onClose={() => setPending(null)}
+      />
     </div>
   );
 }

@@ -29,11 +29,17 @@ import {
   stopSimulation,
   type SceneTransformMode,
 } from '@crane/features/3d';
+import {
+  listScenePaletteGroups,
+  useScenePaletteModels,
+  type ScenePaletteModel,
+} from '@crane/features/asset-library';
 import { Images, Search } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import { cn } from '@crane/core/lib/utils';
+import { AppLink } from '@crane/ui/atoms/app-link';
 import { Input } from '@crane/ui/atoms/input';
 import {
   ResizableHandle,
@@ -134,6 +140,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
+  // 모델 팔레트는 카탈로그를 자산 라이브러리와 합친 것이다 — 라이브러리의
+  // 이름·분류·썸네일로 보이고 게시된 자산만 놓는다(asset-library.md).
+  const palette = useScenePaletteModels(sceneModelCatalog);
   // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
   // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어진다. 접기/펼치기는 헤더
   // 바 양끝의 고정 토글이 맡는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
@@ -584,7 +593,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             >
               <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
                 <ProjectPalettePanel
-                  items={sceneModelCatalog}
+                  items={palette.models}
                   maps={sceneInfo?.maps ?? EMPTY_MAPS}
                   draggingItemId={draggingCatalogItem?.id ?? null}
                   onDragStart={setDraggingCatalogItem}
@@ -667,7 +676,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 homeCamera={homeCamera}
                 sceneInfo={sceneInfo}
                 regionId={regionId}
-                catalogItems={sceneModelCatalog}
+                catalogItems={palette.placeable}
                 transformMode={transformMode}
                 draggingModelCatalogItem={draggingCatalogItem}
                 onTransformVectorChange={(field, value) => {
@@ -992,7 +1001,8 @@ function ProjectPalettePanel({
   onLightingInteractionStart,
   onLightingInteractionEnd,
 }: {
-  items: SceneModelCatalogItem[];
+  /** 모델 탭 — 자산 라이브러리와 합친 팔레트 항목. */
+  items: ScenePaletteModel[];
   maps: SavedMapInfo[];
   /** 뷰 탭 — 씬 뷰 목록·분할 칸과 그 편집 콜백. */
   views: SavedSceneView[];
@@ -1029,25 +1039,28 @@ function ProjectPalettePanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
-  const [activeCategory, setActiveCategory] = useState<ModelPanelCategory>(
+  const [selectedCategory, setSelectedCategory] = useState<string>(
     DEFAULT_MODEL_CATEGORY,
   );
   const [assetSearch, setAssetSearch] = useState('');
   const [showThumbnailGenerator, setShowThumbnailGenerator] = useState(false);
-  const categoryCounts = useMemo(() => {
-    return MODEL_PANEL_CATEGORIES.reduce(
-      (acc, category) => {
-        acc[category] = items.filter(
-          (item) => item.category === category,
-        ).length;
-        return acc;
-      },
-      {} as Record<ModelPanelCategory, number>,
-    );
-  }, [items]);
+  // 묶음은 라이브러리의 분류를 따른다 — 카탈로그의 분류가 앞에 오고,
+  // 라이브러리에서 새로 붙인 분류가 그 뒤에 붙는다.
+  const groups = useMemo(
+    () => listScenePaletteGroups(items, MODEL_PANEL_CATEGORIES),
+    [items],
+  );
+  // 고른 묶음이 사라지면(분류를 고쳤을 때) 첫 묶음으로 돌아간다.
+  const activeCategory = groups.some((entry) => entry.group === selectedCategory)
+    ? selectedCategory
+    : (groups[0]?.group ?? DEFAULT_MODEL_CATEGORY);
   const categoryItems = useMemo(() => {
-    return items.filter((item) => item.category === activeCategory);
+    return items.filter((model) => model.group === activeCategory);
   }, [activeCategory, items]);
+  const blockedCount = useMemo(
+    () => items.filter((model) => model.blocked === 'unpublished').length,
+    [items],
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1127,14 +1140,14 @@ function ProjectPalettePanel({
           <div className="flex h-full min-h-0 flex-col">
             {/* 카테고리 — 좁은 세로 패널이라 사이드 목록 대신 칩 줄로 배치 */}
             <div className="flex shrink-0 flex-wrap gap-1 pb-2">
-              {MODEL_PANEL_CATEGORIES.map((category) => {
+              {groups.map(({ group: category, count }) => {
                 const isActive = activeCategory === category;
                 return (
                   <button
                     key={category}
                     type="button"
                     aria-pressed={isActive}
-                    onClick={() => setActiveCategory(category)}
+                    onClick={() => setSelectedCategory(category)}
                     className={cn(
                       'flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition',
                       isActive
@@ -1142,14 +1155,21 @@ function ProjectPalettePanel({
                         : 'border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                     )}
                   >
-                    {t(MODEL_CATEGORY_LABEL_KEY[category])}
+                    {category in MODEL_CATEGORY_LABEL_KEY
+                      ? t(
+                          MODEL_CATEGORY_LABEL_KEY[
+                            category as ModelPanelCategory
+                          ],
+                        )
+                      : category ||
+                        t('monitoring:editor.modelCategories.none')}
                     <span
                       className={cn(
                         'text-[10px]',
                         isActive ? 'text-primary' : 'text-muted-foreground/70',
                       )}
                     >
-                      {categoryCounts[category]}
+                      {count}
                     </span>
                   </button>
                 );
@@ -1203,6 +1223,17 @@ function ProjectPalettePanel({
                 />
               )}
             </div>
+            {blockedCount > 0 ? (
+              <p className="border-border text-muted-foreground shrink-0 border-t px-1 pt-2 text-[10px] leading-relaxed">
+                {t('monitoring:palette.blockedSummary', { count: blockedCount })}{' '}
+                <AppLink
+                  to="/asset-library?kind=model&status=draft,in-review,approved,rejected,withdrawn"
+                  className="text-foreground underline underline-offset-2"
+                >
+                  {t('monitoring:palette.openLibrary')}
+                </AppLink>
+              </p>
+            ) : null}
           </div>
         )}
       </div>

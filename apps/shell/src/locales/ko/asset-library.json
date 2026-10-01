@@ -75,12 +75,15 @@
     "retry": "다시 시도",
     "download": "내려받기",
     "delete": "삭제",
-    "add": "추가"
+    "add": "추가",
+    "reload": "다시 불러오기",
+    "apply": "적용"
   },
   "save": {
     "saving": "저장 중",
     "failed": "변경 내용을 저장하지 못했습니다. 다시 시도하지 않으면 새로고침할 때 사라집니다.",
-    "localOnly": "아직 자산 서버가 없어, 이 환경에서 등록·수정한 내용은 이 브라우저에만 저장됩니다. 다른 사람과 다른 기기에서는 보이지 않습니다."
+    "localOnly": "아직 자산 서버가 없어, 이 환경에서 등록·수정한 내용은 이 브라우저에만 저장됩니다. 다른 사람과 다른 기기에서는 보이지 않습니다.",
+    "conflict": "다른 곳에서 라이브러리가 바뀌어 방금 한 변경이 저장되지 않았습니다. 다시 불러온 뒤 다시 해 주세요."
   },
   "rail": {
     "label": "자산 필터",
@@ -136,7 +139,15 @@
     "bothSites": "옥포·필리 모두",
     "addTag": "태그 추가",
     "addToCollection": "컬렉션에 담기",
-    "clear": "선택 해제"
+    "clear": "선택 해제",
+    "changeStatus": "상태 바꾸기",
+    "assignCategory": "분류 지정",
+    "categoryPlaceholder": "분류 (비우면 분류 없음)",
+    "removeTag": "태그 빼기",
+    "remove": "삭제 ({{count}})",
+    "removeTitle": "등록한 자산 {{count}}개를 삭제할까요?",
+    "removeHint": "파일과 이력이 함께 지워지며 되돌릴 수 없습니다. 배포 자산은 삭제되지 않습니다.",
+    "statusTitle": "고른 자산을 {{action}} 처리할까요?"
   },
   "form": {
     "siteCommonHint": "조선소를 고르지 않으면 전사 공용 자산입니다.",
@@ -188,7 +199,8 @@
     "deleteTitle": "{{name}} 자산을 삭제할까요?",
     "deleteDescription": "버전 {{count}}개의 파일과 이력이 함께 지워지며 되돌릴 수 없습니다.",
     "previousAsset": "이전 자산 (←)",
-    "nextAsset": "다음 자산 (→)"
+    "nextAsset": "다음 자산 (→)",
+    "deletePlaced": "씬에 {{count}}개 놓여 있습니다. 지우면 그 씬에서 이 모델이 사라집니다."
   },
   "titleBlock": {
     "size": "폭 × 깊이 × 높이"
@@ -258,7 +270,11 @@
     "kindMismatch": "이 자산과 다른 종류의 파일입니다. 3D 자산에는 GLB를, 도면에는 PDF·SVG·이미지를, CAD에는 CAD 파일을 올리세요.",
     "sameContent": "이 자산에 이미 있는 버전과 같은 내용의 파일입니다.",
     "catalogNotice": "씬은 버전 1의 배포 파일을 사용합니다. 새 버전을 씬에 반영하려면 자산 파이프라인(assets-src → optimize:glb)으로 배포 파일을 교체해야 합니다.",
-    "revisionShort": "Rev {{revision}}"
+    "revisionShort": "Rev {{revision}}",
+    "paletteNotice": "3D 화면 편집의 팔레트는 현재 버전의 파일을 놓습니다. 이미 씬에 놓은 것은 놓을 때의 버전 그대로입니다.",
+    "remove": "버전 삭제",
+    "removeTitle": "v{{version}} 버전을 삭제할까요?",
+    "removeHint": "이 버전의 파일이 지워지며 되돌릴 수 없습니다. 게시된 적 없는 버전만 지울 수 있습니다."
   },
   "usage": {
     "loading": "씬을 확인하는 중",
@@ -267,11 +283,12 @@
     "none": "어느 씬에도 놓여 있지 않습니다",
     "noneCatalogHint": "3D 화면 편집의 팔레트에서 씬에 놓을 수 있습니다.",
     "noneRuntimeHint": "씬에 배치하지 않고 화면 코드가 직접 불러 쓰는 자산입니다. 사용처가 없어 보여도 지우면 안 됩니다.",
-    "noneUserHint": "이 화면에서 등록한 자산은 아직 편집기 팔레트에 나타나지 않습니다.",
+    "noneUserHint": "게시하면 3D 화면 편집의 팔레트에 나타나 씬에 놓을 수 있습니다.",
     "versionHeading": "v{{version}} 버전을 쓰는 씬",
     "count": "{{count}}개",
     "openEditor": "3D 화면 편집에서 열기",
-    "drawing": "도면·CAD는 씬에 배치하지 않습니다. 연결된 자산은 정보 탭에서 봅니다."
+    "drawing": "도면·CAD는 씬에 배치하지 않습니다. 연결된 자산은 정보 탭에서 봅니다.",
+    "noneUserMapHint": "등록한 지도는 아직 3D 화면 편집의 맵 탭에 나타나지 않습니다."
   },
   "activity": {
     "created": "자산을 등록했습니다",
@@ -293,7 +310,8 @@
       "drawingNo": "도면 번호",
       "relatedAssetIds": "연결된 자산",
       "defaultScale": "기본 스케일"
-    }
+    },
+    "versionRemoved": "v{{version}} 버전을 삭제했습니다"
   },
   "viewer": {
     "loading": "모델을 불러오는 중 {{percent}}%",
@@ -349,7 +367,8 @@
     "collectionRejected": "같은 이름의 컬렉션이 있거나 더 만들 수 없습니다",
     "pathCopied": "경로를 복사했습니다",
     "linkCopied": "링크를 복사했습니다",
-    "copyFailed": "복사하지 못했습니다"
+    "copyFailed": "복사하지 못했습니다",
+    "saveConflict": "다른 곳에서 바뀌어 저장되지 않았습니다"
   },
   "attention": {
     "review": {
@@ -366,7 +385,7 @@
     },
     "newer": {
       "label": "새 버전 있음",
-      "hint": "현재 버전보다 새 버전이 있습니다. 확인한 뒤 현재 버전으로 지정하세요."
+      "hint": "검토를 마친 새 버전이 있습니다. 현재 버전으로 지정하세요."
     },
     "over-budget": {
       "label": "권장 상한 초과",
@@ -410,12 +429,20 @@
     "closeHint": "미리보기 닫기 (Esc)",
     "modeImage": "이미지",
     "mode3d": "3D",
-    "modeLabel": "미리보기 방식"
+    "modeLabel": "미리보기 방식",
+    "outOfList": "지금 목록의 조건에 맞지 않는 자산입니다",
+    "currentIs": "현재 v{{version}}"
   },
   "lifecycle": {
     "label": "v{{version}} 진행 단계",
     "heading": "v{{version}} 진행 단계",
-    "currentVersion": "현재 버전"
+    "currentVersion": "현재 버전",
+    "settled": "모든 단계를 마쳤습니다",
+    "confirmTitle": "v{{version}} — {{action}}",
+    "confirmHint": {
+      "rejected": "반려하면 이 버전은 다시 검토를 요청하기 전까지 쓸 수 없습니다.",
+      "withdrawn": "철회하면 3D 화면 편집의 팔레트에서 이 자산을 더 놓을 수 없습니다. 이미 씬에 놓인 것은 그대로입니다."
+    }
   },
   "compare": {
     "title": "버전 비교",

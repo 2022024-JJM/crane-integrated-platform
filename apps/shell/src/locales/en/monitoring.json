@@ -216,7 +216,17 @@
     "dragToPlace": "Drag to place",
     "previewPending": "Preview pending",
     "previewLoading": "Loading preview...",
-    "previewLoadError": "Preview unavailable"
+    "previewLoadError": "Preview unavailable",
+    "blocked": {
+      "unpublished": "Not published",
+      "local-file": "This browser only"
+    },
+    "blockedHint": {
+      "unpublished": "Only published assets can be placed in a scene. Publish it in the asset library.",
+      "local-file": "The file exists only in this browser, so it cannot be placed in a scene."
+    },
+    "blockedSummary": "{{count}} unpublished assets cannot be placed.",
+    "openLibrary": "Open in the asset library"
   },
   "editor": {
     "exportJson": "Export JSON",
@@ -303,7 +313,8 @@
     "noModelsInCategory": "No models in this category yet.",
     "modelCategories": {
       "indoor": "Indoor",
-      "outdoor": "Outdoor"
+      "outdoor": "Outdoor",
+      "none": "Uncategorized"
     },
     "paletteTabs": {
       "models": "Models",

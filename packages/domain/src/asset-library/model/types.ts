@@ -101,6 +101,7 @@ export const ASSET_HISTORY_ACTIONS = [
   'metadata',
   'status',
   'version-added',
+  'version-removed',
   'current-changed',
   'thumbnail',
 ] as const;

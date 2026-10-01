@@ -152,10 +152,22 @@ export function AssetTable({
               aria-selected={previewed}
               // 줄 어디를 눌러도 미리보기에 올린다. 체크박스·이름 링크는 자기
               // 일을 하고 여기까지 올라오지 않는다.
+              // 줄에 초점을 줄 수 있다 — Space 는 미리보기, Enter 는 상세.
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === ' ') {
+                  event.preventDefault();
+                  onPreview(asset.id, true);
+                } else if (event.key === 'Enter') {
+                  event.preventDefault();
+                  onOpen(asset.id);
+                }
+              }}
               onClick={() => onPreview(asset.id, false)}
               onDoubleClick={() => onOpen(asset.id)}
               className={cn(
-                'scroll-m-10 cursor-pointer',
+                'focus-visible:ring-ring/60 scroll-m-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset',
                 previewed &&
                   'bg-foreground/6 hover:bg-foreground/6 shadow-[inset_3px_0_0_var(--foreground)]',
               )}

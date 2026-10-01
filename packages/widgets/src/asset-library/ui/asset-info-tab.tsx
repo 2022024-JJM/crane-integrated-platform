@@ -100,6 +100,17 @@ export function AssetInfoTab({
   const { t } = useTranslation();
   const report = useAssetSaveReport();
   const assets = useAssetLibraryStore((state) => state.assets);
+  const knownCategories = useMemo(
+    () =>
+      [
+        ...new Set(
+          assets
+            .filter((item) => item.kind === asset.kind && item.category)
+            .map((item) => item.category),
+        ),
+      ].sort((x, y) => x.localeCompare(y, undefined, { numeric: true })),
+    [asset.kind, assets],
+  );
   const collections = useAssetLibraryStore((state) => state.collections);
   const statsTable = useAssetLibraryStore((state) => state.statsTable);
   const updateMetadata = useAssetLibraryStore((state) => state.updateMetadata);
@@ -199,8 +210,16 @@ export function AssetInfoTab({
             id={ids.category}
             value={asset.category}
             maxLength={ASSET_CATEGORY_MAX}
+            // 같은 종류에 이미 있는 분류를 권한다 — 철자가 갈리면 탐색 계층의
+            // 마디가 둘로 나뉜다.
+            listId={`${ids.category}-options`}
             onCommit={(category) => patch({ category })}
           />
+          <datalist id={`${ids.category}-options`}>
+            {knownCategories.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
         </PropertyRow>
         {isDocumentAssetKind(asset.kind) ? (
           <PropertyRow

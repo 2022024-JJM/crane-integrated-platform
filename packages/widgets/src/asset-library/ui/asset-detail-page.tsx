@@ -8,6 +8,7 @@ import {
   Loader2,
   Star,
   Trash2,
+  TriangleAlert,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +81,7 @@ import { AssetCompareView } from './asset-compare-view';
 import { AssetDrawingViewer } from './asset-drawing-viewer';
 import { AssetInfoTab } from './asset-info-tab';
 import { AssetLifecycle } from './asset-lifecycle';
+import { AssetSaveBanner } from './asset-save-banner';
 import {
   AssetModelViewer,
   type AssetViewerHandle,
@@ -263,9 +265,13 @@ function AssetDetailView({
     [basePath],
   );
 
+  const placementCount = useMemo(
+    () => countAssetPlacements(asset, usageIndex),
+    [asset, usageIndex],
+  );
   const attention = useMemo(() => {
     const placements = new Map<string, number>();
-    const count = countAssetPlacements(asset, usageIndex);
+    const count = placementCount;
     if (count > 0) placements.set(asset.id, count);
     return (
       getAssetAttention(asset, {
@@ -282,7 +288,7 @@ function AssetDetailView({
           );
         })
     );
-  }, [asset, statsTable, tab, usageIndex, usageStatus, version.version]);
+  }, [asset, placementCount, statsTable, tab, usageStatus, version.version]);
 
   const file = useAssetFileUrl(version.file.ref);
   const previewMode = getAssetPreviewMode(version.file.format);
@@ -357,7 +363,7 @@ function AssetDetailView({
       const target = event.target as HTMLElement | null;
       if (
         target?.closest(
-          'input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], [role="combobox"], canvas',
+          'input, textarea, select, [contenteditable="true"], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="combobox"], [role="tablist"], canvas',
         )
       ) {
         return;
@@ -370,7 +376,8 @@ function AssetDetailView({
             : null;
       if (!next) return;
       event.preventDefault();
-      navigate(siblingHref(next));
+      // 넘겨 본 자산마다 뒤로 가기 기록이 쌓이지 않게 자리를 바꿔 넣는다.
+      navigate(siblingHref(next), { replace: true });
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -483,7 +490,7 @@ function AssetDetailView({
               disabled={!neighbors.previousId}
               onClick={() =>
                 neighbors.previousId &&
-                navigate(siblingHref(neighbors.previousId))
+                navigate(siblingHref(neighbors.previousId), { replace: true })
               }
             >
               <ChevronLeft />
@@ -498,7 +505,8 @@ function AssetDetailView({
               title={t('asset-library:detail.nextAsset')}
               disabled={!neighbors.nextId}
               onClick={() =>
-                neighbors.nextId && navigate(siblingHref(neighbors.nextId))
+                neighbors.nextId &&
+                navigate(siblingHref(neighbors.nextId), { replace: true })
               }
             >
               <ChevronRight />
@@ -602,9 +610,12 @@ function AssetDetailView({
           ) : null}
         </div>
       </header>
+      <AssetSaveBanner />
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className="min-h-[18rem] min-w-0 flex-1">
+      {/* 좁은 화면에서는 뷰어와 인스펙터가 위아래로 놓이고 통째로 스크롤된다 —
+          인스펙터가 화면 아래로 잘려 닿지 않는 일이 없게. */}
+      <div className="flex min-h-0 flex-1 flex-col max-lg:overflow-y-auto lg:flex-row">
+        <div className="min-h-[18rem] min-w-0 flex-1 max-lg:h-[60vh] max-lg:flex-none">
           {compareOther ? (
             <AssetCompareView
               asset={asset}
@@ -648,7 +659,7 @@ function AssetDetailView({
           )}
         </div>
 
-        <aside className="border-border flex min-h-0 w-full shrink-0 flex-col border-t lg:w-[25rem] lg:border-t-0 lg:border-l">
+        <aside className="bg-sidebar border-border flex min-h-0 w-full shrink-0 flex-col border-t lg:w-[25rem] lg:border-t-0 lg:border-l">
           {/* 지금 어디까지 왔고 다음에 무엇을 하는가 — 어느 탭에서도 보인다. */}
           <section className="border-border shrink-0 border-b px-5 py-4">
             <AssetLifecycle
@@ -783,6 +794,17 @@ function AssetDetailView({
               count: asset.versions.length,
             })}
           </AlertDialogDescription>
+          {/* 씬은 자산을 파일 경로로 가리킨다 — 놓여 있는 자산을 지우면 그
+              씬에서 모델이 사라진다. 지우기 전에 알린다. */}
+          {placementCount > 0 ? (
+            <p
+              role="alert"
+              className="border-destructive/30 bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs leading-relaxed"
+            >
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+              {t('asset-library:detail.deletePlaced', { count: placementCount })}
+            </p>
+          ) : null}
           <div className="mt-4 flex justify-end gap-2">
             <AlertDialogClose
               render={<Button variant="outline" size="sm" disabled={deleting} />}

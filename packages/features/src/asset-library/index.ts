@@ -54,3 +54,14 @@ export {
   fromRelativeCameraPose,
   toRelativeCameraPose,
 } from './lib/viewer-camera-sync';
+export type {
+  ScenePaletteBlockReason,
+  ScenePaletteGroup,
+  ScenePaletteModel,
+} from './lib/scene-palette';
+export {
+  buildScenePaletteModels,
+  listScenePaletteGroups,
+  selectPlaceableCatalog,
+} from './lib/scene-palette';
+export { useScenePaletteModels } from './model/use-scene-palette-models';

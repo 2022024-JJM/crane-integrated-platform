@@ -75,12 +75,15 @@
     "retry": "Try again",
     "download": "Download",
     "delete": "Delete",
-    "add": "Add"
+    "add": "Add",
+    "reload": "Reload",
+    "apply": "Apply"
   },
   "save": {
     "saving": "Saving",
     "failed": "Your changes could not be saved. Try again, or they will be lost on reload.",
-    "localOnly": "There is no asset server yet, so anything you add or change here is saved in this browser only. Other people and other devices will not see it."
+    "localOnly": "There is no asset server yet, so anything you add or change here is saved in this browser only. Other people and other devices will not see it.",
+    "conflict": "The library was changed elsewhere, so your last change was not saved. Reload, then make the change again."
   },
   "rail": {
     "label": "Asset filters",
@@ -136,7 +139,15 @@
     "bothSites": "Both Okpo and Philly",
     "addTag": "Add tag",
     "addToCollection": "Add to collection",
-    "clear": "Clear selection"
+    "clear": "Clear selection",
+    "changeStatus": "Change status",
+    "assignCategory": "Set category",
+    "categoryPlaceholder": "Category (empty for none)",
+    "removeTag": "Remove tag",
+    "remove": "Delete ({{count}})",
+    "removeTitle": "Delete {{count}} added assets?",
+    "removeHint": "Their files and history are deleted and cannot be restored. Deployed assets are not deleted.",
+    "statusTitle": "{{action}} the selected assets?"
   },
   "form": {
     "siteCommonHint": "With no shipyard selected, the asset is shared company-wide.",
@@ -188,7 +199,8 @@
     "deleteTitle": "Delete {{name}}?",
     "deleteDescription": "The files and history of {{count}} version(s) will be deleted. This cannot be undone.",
     "previousAsset": "Previous asset (←)",
-    "nextAsset": "Next asset (→)"
+    "nextAsset": "Next asset (→)",
+    "deletePlaced": "Placed {{count}} time(s) in scenes. Deleting it removes the model from those scenes."
   },
   "titleBlock": {
     "size": "Width × depth × height"
@@ -258,7 +270,11 @@
     "kindMismatch": "This file is a different type from the asset. Upload a GLB for 3D assets, a PDF, SVG or image for drawings, and a CAD file for CAD.",
     "sameContent": "This file has the same content as a version this asset already has.",
     "catalogNotice": "Scenes use the deployed file of version 1. To use a new version in scenes, replace the deployed file through the asset pipeline (assets-src → optimize:glb).",
-    "revisionShort": "Rev {{revision}}"
+    "revisionShort": "Rev {{revision}}",
+    "paletteNotice": "The 3D editor palette places the current version’s file. Objects already placed keep the version they were placed with.",
+    "remove": "Delete version",
+    "removeTitle": "Delete version v{{version}}?",
+    "removeHint": "The file for this version is deleted and cannot be restored. Only versions that were never published can be deleted."
   },
   "usage": {
     "loading": "Checking scenes",
@@ -267,11 +283,12 @@
     "none": "Not placed in any scene",
     "noneCatalogHint": "You can place it in a scene from the 3D editor palette.",
     "noneRuntimeHint": "Screen code loads this asset directly instead of placing it in a scene. Do not delete it even though no scene uses it.",
-    "noneUserHint": "Assets added on this page do not appear in the editor palette yet.",
+    "noneUserHint": "Once published, it appears in the 3D editor palette and can be placed in scenes.",
     "versionHeading": "Scenes using v{{version}}",
     "count": "{{count}} placed",
     "openEditor": "Open in the 3D editor",
-    "drawing": "Drawings and CAD files are not placed in scenes. See linked assets on the Info tab."
+    "drawing": "Drawings and CAD files are not placed in scenes. See linked assets on the Info tab.",
+    "noneUserMapHint": "Maps added here do not appear in the 3D editor’s Map tab yet."
   },
   "activity": {
     "created": "Added the asset",
@@ -293,7 +310,8 @@
       "drawingNo": "drawing number",
       "relatedAssetIds": "linked assets",
       "defaultScale": "default scale"
-    }
+    },
+    "versionRemoved": "Deleted version v{{version}}"
   },
   "viewer": {
     "loading": "Loading model {{percent}}%",
@@ -349,7 +367,8 @@
     "collectionRejected": "A collection with that name exists, or no more can be created",
     "pathCopied": "Path copied",
     "linkCopied": "Link copied",
-    "copyFailed": "Could not copy"
+    "copyFailed": "Could not copy",
+    "saveConflict": "Not saved — the library changed elsewhere"
   },
   "attention": {
     "review": {
@@ -366,7 +385,7 @@
     },
     "newer": {
       "label": "Newer version",
-      "hint": "A version newer than the current one exists. Check it, then make it current."
+      "hint": "A newer version has passed review. Make it the current version."
     },
     "over-budget": {
       "label": "Over budget",
@@ -410,12 +429,20 @@
     "closeHint": "Close preview (Esc)",
     "modeImage": "Image",
     "mode3d": "3D",
-    "modeLabel": "Preview mode"
+    "modeLabel": "Preview mode",
+    "outOfList": "This asset no longer matches the current list",
+    "currentIs": "current v{{version}}"
   },
   "lifecycle": {
     "label": "Progress of v{{version}}",
     "heading": "v{{version}} progress",
-    "currentVersion": "Current version"
+    "currentVersion": "Current version",
+    "settled": "All steps complete",
+    "confirmTitle": "v{{version}} — {{action}}",
+    "confirmHint": {
+      "rejected": "A rejected version cannot be used until it is sent for review again.",
+      "withdrawn": "Once withdrawn, this asset can no longer be placed from the 3D editor palette. Objects already placed in scenes stay as they are."
+    }
   },
   "compare": {
     "title": "Compare versions",

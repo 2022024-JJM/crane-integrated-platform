@@ -15,6 +15,7 @@ import {
   formatCount,
   formatDimensions,
   getAssetPreviewMode,
+  getAssetVersion,
   getCurrentAssetVersion,
   getPrimaryAssetSite,
   isDocumentAssetKind,
@@ -37,8 +38,10 @@ import { Button } from '@crane/ui/atoms/button';
 import { formatAssetDate } from '../lib/asset-presentation';
 import {
   attentionTargetSearch,
+  pickPreviewVersion,
   resolveAttentionTarget,
 } from '../lib/attention-target';
+import { useAssetSaveReport } from '../model/use-asset-save-report';
 import { useSettled } from '../model/use-settled';
 import { AssetAttentionList } from './asset-attention';
 import { AssetBreadcrumb } from './asset-breadcrumb';
@@ -67,6 +70,8 @@ interface AssetPreviewPanelProps {
   href: string;
   hrefFor: (assetId: string) => string;
   attention: readonly AssetAttentionKind[];
+  /** 목록에 걸린 "처리할 일" 필터 — 그 일의 대상 버전을 보여 준다. */
+  attentionFilter: AssetAttentionKind | null;
   placements: number;
   favorite: boolean;
   actor: string;
@@ -136,6 +141,7 @@ export function AssetPreviewPanel({
   href,
   hrefFor,
   attention,
+  attentionFilter,
   placements,
   favorite,
   actor,
@@ -152,9 +158,37 @@ export function AssetPreviewPanel({
   const locale = getFormatLocale(i18n.language);
   const statsTable = useAssetLibraryStore((state) => state.statsTable);
   const usageStatus = useAssetLibraryStore((state) => state.usageStatus);
+  const setCurrentVersion = useAssetLibraryStore(
+    (state) => state.setCurrentVersion,
+  );
+  const report = useAssetSaveReport();
   const allAssets = useAssetLibraryStore((state) => state.assets);
 
-  const version = getCurrentAssetVersion(asset);
+  // 보여 줄 버전은 "지금 손이 가야 하는 버전" 이다 — 검토 대기 목록에서 열면
+  // 검토할 버전이, 그렇지 않으면 현재 버전이 올라온다.
+  // 한 자산을 보는 동안에는 버전을 바꿔치지 않는다 — 검토 중이던 버전을
+  // 승인하면 그 자산은 "검토 대기" 가 아니게 되는데, 그때 현재 버전으로 넘어가
+  // 버리면 이어서 게시할 수가 없다. 자산이 바뀔 때만 다시 고른다.
+  const current = getCurrentAssetVersion(asset);
+  const [pinned, setPinned] = useState(() => ({
+    assetId: asset.id,
+    version: pickPreviewVersion(asset, attentionFilter),
+  }));
+  if (pinned.assetId !== asset.id) {
+    setPinned({
+      assetId: asset.id,
+      version: pickPreviewVersion(asset, attentionFilter),
+    });
+  }
+  const version =
+    (pinned.assetId === asset.id
+      ? getAssetVersion(asset, pinned.version)
+      : null) ?? current;
+  const pendingVersion = version.version !== asset.currentVersion;
+  const canBeCurrent =
+    pendingVersion &&
+    version.status !== 'withdrawn' &&
+    version.status !== 'rejected';
   const file = useAssetFileUrl(version.file.ref);
   const mode = getAssetPreviewMode(version.file.format);
   const sizeBytes = resolveVersionSizeBytes(version, statsTable);
@@ -187,7 +221,7 @@ export function AssetPreviewPanel({
     <aside
       aria-label={t('asset-library:preview.label', { name: asset.name })}
       // 패널이 열릴 때만 옆에서 들어온다(자산을 넘길 때는 움직이지 않는다).
-      className="border-border bg-background animate-in fade-in slide-in-from-right-3 flex w-[26rem] shrink-0 flex-col border-l duration-200 motion-reduce:animate-none"
+      className="border-border bg-sidebar animate-in fade-in slide-in-from-right-3 flex w-[26rem] max-w-full shrink-0 flex-col border-l duration-200 motion-reduce:animate-none max-xl:absolute max-xl:inset-y-0 max-xl:right-0 max-xl:z-20 max-xl:shadow-2xl"
     >
       <header className="border-border flex items-center gap-1 border-b py-2 pr-2 pl-4">
         <div className="min-w-0 flex-1">
@@ -198,6 +232,13 @@ export function AssetPreviewPanel({
             <span className="border-border text-muted-foreground shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium tabular-nums">
               v{version.version}
             </span>
+            {pendingVersion ? (
+              <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+                {t('asset-library:preview.currentIs', {
+                  version: asset.currentVersion,
+                })}
+              </span>
+            ) : null}
           </div>
           {/* 이 자산이 계층에서 놓인 자리. 마디를 누르면 목록이 그리로 간다. */}
           <AssetBreadcrumb
@@ -219,15 +260,20 @@ export function AssetPreviewPanel({
             )}
           />
         </div>
-        <span className="text-muted-foreground px-1 text-xs tabular-nums">
-          {position} / {total}
+        <span
+          className="text-muted-foreground px-1 text-xs tabular-nums"
+          title={
+            position === 0 ? t('asset-library:preview.outOfList') : undefined
+          }
+        >
+          {position === 0 ? '–' : position} / {total}
         </span>
         <Button
           variant="ghost"
           size="icon-sm"
           aria-label={t('asset-library:preview.previous')}
           title={t('asset-library:preview.previousHint')}
-          disabled={position <= 1}
+          disabled={total === 0 || position === 1}
           onClick={onPrevious}
         >
           <ChevronLeft />
@@ -237,7 +283,7 @@ export function AssetPreviewPanel({
           size="icon-sm"
           aria-label={t('asset-library:preview.next')}
           title={t('asset-library:preview.nextHint')}
-          disabled={position >= total}
+          disabled={total === 0 || (position > 0 && position >= total)}
           onClick={onNext}
         >
           <ChevronRight />
@@ -258,7 +304,7 @@ export function AssetPreviewPanel({
           {show3d ? (
             // 자산마다 새로 마운트한다 — 앞 자산의 표시 상태·카메라가 남지 않게.
             <AssetModelViewer
-              key={asset.id}
+              key={`${asset.id}@${version.version}`}
               url={file.url}
               defaultScale={asset.defaultScale}
               toolbar="compact"
@@ -342,6 +388,19 @@ export function AssetPreviewPanel({
             version={version}
             actor={actor}
             compact
+            aside={
+              canBeCurrent ? (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() =>
+                    report(setCurrentVersion(asset.id, version.version, actor))
+                  }
+                >
+                  {t('asset-library:versions.makeCurrent')}
+                </Button>
+              ) : null
+            }
           />
         </section>
 
@@ -489,7 +548,12 @@ export function AssetPreviewPanel({
           size="sm"
           className="flex-1"
           nativeButton={false}
-          render={<AppLink to={href} />}
+          // 보고 있던 버전 그대로 상세로 간다.
+          render={
+            <AppLink
+              to={pendingVersion ? `${href}?v=${version.version}` : href}
+            />
+          }
         >
           {t('asset-library:preview.openDetail')}
           <ArrowUpRight />

@@ -3,6 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useAssetLibraryStore } from '@crane/features/asset-library';
 
+/** 방금 한 작업이 저장되지 않았는가(일시적 실패든, 다른 곳에서 바뀐 것이든). */
+export function isAssetSaveFailed(): boolean {
+  const { saveState } = useAssetLibraryStore.getState();
+  return saveState === 'error' || saveState === 'conflict';
+}
+
 /**
  * 스토어 작업의 결과를 알린다. 자동 저장이라 성공은 조용히 지나가고,
  * 저장에 실패했을 때만 토스트를 띄운다 — 작업이 no-op 이었는지(false)와
@@ -13,7 +19,10 @@ export function useAssetSaveReport() {
   return useCallback(
     (result: Promise<unknown>) => {
       void result.then(() => {
-        if (useAssetLibraryStore.getState().saveState === 'error') {
+        const { saveState } = useAssetLibraryStore.getState();
+        if (saveState === 'conflict') {
+          toast.error(t('asset-library:toast.saveConflict'));
+        } else if (saveState === 'error') {
           toast.error(t('asset-library:toast.saveFailed'));
         }
       });

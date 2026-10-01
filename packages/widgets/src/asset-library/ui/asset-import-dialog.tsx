@@ -398,6 +398,8 @@ function ImportForm({
             {(id) => (
               <TextArea
                 id={id}
+                rows={2}
+                className="min-h-0"
                 value={description}
                 maxLength={ASSET_DESCRIPTION_MAX}
                 onChange={(event) => setDescription(event.target.value)}

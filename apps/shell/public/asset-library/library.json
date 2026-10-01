@@ -17,9 +17,9 @@
       ],
       "owner": "JoBeomHee",
       "defaultScale": [
-        0.1,
-        0.1,
-        0.1
+        1,
+        1,
+        1
       ],
       "relatedAssetIds": [],
       "versions": [
@@ -482,7 +482,7 @@
       "id": "1p-3bay",
       "kind": "model",
       "origin": "builtin",
-      "name": "1P 3Bay",
+      "name": "1P 3Bay-test",
       "description": "",
       "category": "indoor",
       "sites": [
@@ -494,9 +494,9 @@
       ],
       "owner": "jobeomhee",
       "defaultScale": [
-        0.1,
-        0.1,
-        0.1
+        1,
+        1,
+        1
       ],
       "relatedAssetIds": [],
       "versions": [
@@ -527,13 +527,22 @@
         "updatedAt": "2026-10-01T06:05:50.718Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "updatedAt": "2026-10-01T11:40:28.519Z",
       "history": [
         {
           "id": "id-mup4rta7-l0ts6p3k",
           "at": "2026-10-01T06:05:50.718Z",
           "actor": "crane.philly",
           "action": "thumbnail"
+        },
+        {
+          "id": "id-mupgq5ev-1df0a3vq",
+          "at": "2026-10-01T11:40:28.519Z",
+          "actor": "crane.philly",
+          "action": "metadata",
+          "fields": [
+            "name"
+          ]
         }
       ],
       "catalogId": "1p-3bay"

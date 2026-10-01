@@ -52,6 +52,31 @@ export const ASSET_UPLOAD_EXTENSIONS: readonly string[] = [
   ...ASSET_CAD_EXTENSIONS,
 ];
 
+/** 저장 요청에 싣는 "내가 읽은 문서의 판" 헤더. */
+export const ASSET_LIBRARY_REVISION_HEADER = 'x-asset-library-revision';
+
+/**
+ * 문서 글자의 지문 — 저장할 때 "내가 읽은 뒤로 다른 곳에서 바뀌지 않았는가"
+ * 를 견주는 데 쓴다. 브라우저와 vite 미들웨어가 같은 함수를 쓴다(보안용
+ * 해시가 아니다. LAN 의 http 에서는 `crypto.subtle` 이 없어 직접 계산한다).
+ */
+export function hashAssetLibraryText(text: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0)
+    .toString(16)
+    .padStart(8, '0')}`;
+}
+
 /** 파일명에서 소문자 확장자를 뽑는다. 없으면 빈 문자열. */
 export function getFileExtension(fileName: string): string {
   const dot = fileName.lastIndexOf('.');
@@ -62,6 +87,8 @@ export function getFileExtension(fileName: string): string {
 /**
  * 사용자가 올린 파일명을 저장 가능한 이름으로 바꾼다. 한글·공백 등은 `-` 로
  * 접고 확장자는 소문자로 맞춘다. 이름 부분이 전부 사라지면 `file` 을 쓴다.
+ * 점이 이어진 곳(`a..b`)은 하나로 접는다 — 경로에 `..` 이 들어가면 읽을 때의
+ * 방어가 상위 탈출로 보고 그 자산을 버린다.
  */
 export function sanitizeAssetFileName(fileName: string): string {
   const extension = getFileExtension(fileName);
@@ -73,6 +100,7 @@ export function sanitizeAssetFileName(fileName: string): string {
       .normalize('NFKD')
       .replace(/[^A-Za-z0-9._-]+/g, '-')
       .replace(/-{2,}/g, '-')
+      .replace(/\.{2,}/g, '.')
       .replace(/^[-._]+|[-._]+$/g, '')
       .slice(0, 80) || 'file';
   return extension ? `${safeStem}.${extension}` : safeStem;
@@ -119,6 +147,7 @@ export function parseAssetLibraryFileKey(
     const versionMatch = /^v([1-9]\d{0,5})$/.exec(versionPart);
     if (!versionMatch) return null;
     if (!ASSET_FILE_NAME_PATTERN.test(fileName)) return null;
+    if (fileName.includes('..')) return null;
     if (!ASSET_UPLOAD_EXTENSIONS.includes(getFileExtension(fileName))) {
       return null;
     }

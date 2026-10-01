@@ -11,6 +11,8 @@ import {
   sanitizeAssetStats,
   sanitizeAssetStatsTable,
   sanitizeAssetTags,
+  assertReadableAssetLibraryDocument,
+  collectUnreadableAssetRecords,
 } from '../sanitize-asset-library';
 import { asset, version } from './fixtures';
 
@@ -294,5 +296,76 @@ describe('sanitizeAssetStatsTable', () => {
       },
     });
     expect(sanitizeAssetStatsTable('nope')).toEqual({});
+  });
+});
+
+describe('assertReadableAssetLibraryDocument', () => {
+  it('객체이고 assets 가 배열(또는 없음)이면 통과', () => {
+    expect(() => assertReadableAssetLibraryDocument({})).not.toThrow();
+    expect(() =>
+      assertReadableAssetLibraryDocument({ schemaVersion: 1, assets: [] }),
+    ).not.toThrow();
+  });
+
+  it('객체가 아니거나 assets 가 배열이 아니면 던진다', () => {
+    for (const value of [null, undefined, 'x', 3, [], { assets: 'no' }, { assets: {} }]) {
+      expect(() => assertReadableAssetLibraryDocument(value)).toThrow();
+    }
+  });
+
+  it('이 앱보다 새 스키마는 던진다 — 정확히 같은 판은 통과', () => {
+    expect(() =>
+      assertReadableAssetLibraryDocument({ schemaVersion: 1, assets: [] }),
+    ).not.toThrow();
+    expect(() =>
+      assertReadableAssetLibraryDocument({ schemaVersion: 2, assets: [] }),
+    ).toThrow();
+  });
+});
+
+describe('collectUnreadableAssetRecords', () => {
+  it('방어를 통과하지 못한 레코드를 원본 그대로 돌려준다', () => {
+    const good = asset({ id: 'good' });
+    const broken = { id: 'BAD ID', kind: 'model' };
+    const duplicate = asset({ id: 'good', name: '둘째' });
+    expect(
+      collectUnreadableAssetRecords({ assets: [good, broken, null, duplicate] }),
+    ).toEqual([broken, null, duplicate]);
+  });
+
+  it('전부 읽히면 빈 목록, 문서가 이상하면 빈 목록', () => {
+    expect(collectUnreadableAssetRecords({ assets: [asset()] })).toEqual([]);
+    expect(collectUnreadableAssetRecords(null)).toEqual([]);
+    expect(collectUnreadableAssetRecords({ assets: 'no' })).toEqual([]);
+  });
+});
+
+describe('파일 경로의 상위 탈출 판정', () => {
+  const withPath = (path: string) =>
+    sanitizeAssetLibraryDocument({
+      assets: [
+        asset({
+          versions: [
+            version({
+              file: {
+                ref: { storage: 'public', path },
+                fileName: 'a.glb',
+                format: 'glb',
+                sizeBytes: null,
+                contentHash: null,
+              },
+            }),
+          ],
+        }),
+      ],
+    }).assets;
+
+  it('조각이 .. 인 경로는 버린다', () => {
+    expect(withPath('/models/../secret.glb')).toEqual([]);
+    expect(withPath('/..')).toEqual([]);
+  });
+
+  it('파일 이름 안의 이어진 점은 탈출이 아니다', () => {
+    expect(withPath('/asset-library/files/a/v1/crane..v2.glb')).toHaveLength(1);
   });
 });

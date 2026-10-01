@@ -53,6 +53,10 @@
 - 여러 region 이 한 파일을 **공유**할 수 있다(옥포 `dock-1`·`dock-2` → `okpo.json`, `isSceneFileShared`). 지도·모델·배경·조명은 하나이고 region 별로 다른 것은 카메라뿐이다 — 씬 JSON 의 `cameraByRegion[regionId]` 슬롯에 두고 `camera` 는 폴백. 로드 경계 `loadSceneInfoByRegionId` 가 `resolveSceneCameraForRegion` 으로 자기 슬롯을 `camera` 에 해석해 넣으므로 소비자는 `camera` 만 본다. 에디터 저장은 `withRegionCamera` 로 자기 슬롯만 기록한다(`lib/scene-region-camera.ts`). 두 region 의 에디터가 동시에 저장하면 마지막 저장이 이긴다.
 - 운영 localStorage 저장 키는 region 이 아니라 **씬 파일**(`crane:scene:<파일명>`) 기준이라 공유 region 이 같은 로컬 저장본을 본다. GLB 캐시 해제(`gltf-cache-release.ts`)도 씬 파일 단위라 공유 region 사이 이동은 캐시를 유지한다.
 
+### 모델 팔레트
+
+모델 탭의 항목은 카탈로그(`sceneModelCatalog`)를 자산 라이브러리와 합친 것이다(`useScenePaletteModels`). 이름·묶음·썸네일은 라이브러리를 따르고 게시된 자산만 놓을 수 있으며, 라이브러리에서 등록·게시한 모델도 나온다. 캔버스에는 놓을 수 있는 것만 넘긴다(프리로드·드롭 대상). 규칙은 `docs/agents/asset-library.md` 의 "3D 화면 편집의 팔레트".
+
 ### 씬 설정(배경·지역·조명·바다·진북)
 
 - 배경(EXR `environmentId`)·진북·지역·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx` — 진북 입력은 조명 절 바로 위), 바다는 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래다. 전부 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.

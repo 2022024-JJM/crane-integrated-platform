@@ -216,7 +216,17 @@
     "dragToPlace": "드래그해서 배치",
     "previewPending": "미리보기 준비 중",
     "previewLoading": "미리보기를 불러오는 중...",
-    "previewLoadError": "미리보기를 표시할 수 없습니다"
+    "previewLoadError": "미리보기를 표시할 수 없습니다",
+    "blocked": {
+      "unpublished": "게시 전",
+      "local-file": "이 브라우저 전용"
+    },
+    "blockedHint": {
+      "unpublished": "게시된 자산만 씬에 놓을 수 있습니다. 자산 라이브러리에서 게시하세요.",
+      "local-file": "파일이 이 브라우저에만 있어 씬에 놓을 수 없습니다."
+    },
+    "blockedSummary": "게시 전인 자산 {{count}}개는 놓을 수 없습니다.",
+    "openLibrary": "자산 라이브러리에서 보기"
   },
   "editor": {
     "exportJson": "JSON 내보내기",
@@ -303,7 +313,8 @@
     "noModelsInCategory": "이 카테고리에 등록된 모델이 없습니다.",
     "modelCategories": {
       "indoor": "내업",
-      "outdoor": "외업"
+      "outdoor": "외업",
+      "none": "분류 없음"
     },
     "paletteTabs": {
       "models": "모델",

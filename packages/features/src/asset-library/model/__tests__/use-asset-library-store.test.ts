@@ -1,4 +1,7 @@
-import { ASSET_CATEGORY_MAX } from '@crane/domain/asset-library';
+import {
+  ASSET_CATEGORY_MAX,
+  AssetLibraryConflictError,
+} from '@crane/domain/asset-library';
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -34,6 +37,7 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
   const files = new Map<string, Blob>();
   const removed: string[] = [];
   let failSave = false;
+  let conflictSave = false;
   let failPut = false;
   let loadCalls = 0;
   let table: AssetStatsTable = {};
@@ -46,6 +50,7 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
     },
     loadStatsTable: async () => table,
     save: async (document) => {
+      if (conflictSave) throw new AssetLibraryConflictError();
       if (failSave) throw new Error('save failed');
       saved.push(structuredClone(document));
     },
@@ -64,6 +69,9 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
     removeAssetFiles: async (assetId) => {
       removed.push(assetId);
     },
+    removeVersionFiles: async (assetId, version) => {
+      removed.push(`${assetId}@v${version}`);
+    },
     resolveUrl: async () => null,
   };
 
@@ -77,6 +85,9 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
     },
     setFailSave: (value: boolean) => {
       failSave = value;
+    },
+    setConflictSave: (value: boolean) => {
+      conflictSave = value;
     },
     setFailPut: (value: boolean) => {
       failPut = value;
@@ -564,5 +575,201 @@ describe('loadUsage', () => {
     await store.getState().loadUsage();
     expect(store.getState().usageStatus).toBe('error');
     expect(store.getState().usageIndex.size).toBe(0);
+  });
+});
+
+describe('읽기 전·읽기 실패 상태에서는 고치지도 저장하지도 않는다', () => {
+  const input = {
+    file: glbFile(),
+    kind: 'model' as const,
+    name: 'Crane',
+    description: '',
+    sites: [],
+    tags: [],
+    note: '',
+    contentHash: null,
+  };
+
+  it('읽기 전(idle)에는 어떤 변경도 문서를 쓰지 않는다', async () => {
+    const { store, repo } = setup();
+    expect(await store.getState().createCollection('Yard')).toBeNull();
+    expect(await store.getState().importAsset(input, 'me')).toBeNull();
+    expect(
+      await store.getState().updateMetadata('okpo-ttc', { name: 'X' }, 'me'),
+    ).toBe(false);
+    expect(await store.getState().retrySave()).toBe(false);
+    expect(repo.saved).toHaveLength(0);
+    expect(repo.files.size).toBe(0);
+    expect(store.getState().collections).toEqual([]);
+  });
+
+  it('읽기에 실패한 뒤에도 빈 문서를 덮어쓰지 않는다', async () => {
+    const { store, repo } = setup();
+    vi.spyOn(repo.repository, 'load').mockRejectedValueOnce(
+      new Error('offline'),
+    );
+    await store.getState().load();
+    expect(store.getState().status).toBe('error');
+    expect(await store.getState().createCollection('Yard')).toBeNull();
+    expect(repo.saved).toHaveLength(0);
+  });
+});
+
+describe('다른 곳에서 문서가 바뀌었을 때', () => {
+  it('저장은 실패로 끝나고 conflict 로 남는다 — 뒤이은 성공이 감추지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    repo.setConflictSave(true);
+    expect(
+      await store.getState().updateMetadata('okpo-ttc', { name: 'A' }, 'me'),
+    ).toBe(false);
+    expect(store.getState().saveState).toBe('conflict');
+    repo.setConflictSave(false);
+    await store.getState().updateMetadata('okpo-ttc', { name: 'B' }, 'me');
+    expect(store.getState().saveState).toBe('conflict');
+  });
+
+  it('다시 읽으면 풀리고, 저장 못 한 변경은 버려진다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    repo.setConflictSave(true);
+    await store.getState().updateMetadata('okpo-ttc', { name: 'Mine' }, 'me');
+    repo.setConflictSave(false);
+    await store.getState().load({ force: true });
+    expect(store.getState().saveState).toBe('idle');
+    expect(repo.loadCalls).toBe(2);
+    expect(store.getState().assets[0].name).not.toBe('Mine');
+  });
+
+  it('force 없이 다시 부르면 읽지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    await store.getState().load();
+    expect(repo.loadCalls).toBe(1);
+  });
+});
+
+describe('removeAsset — 저장 실패', () => {
+  it('파일을 지우지 않고 화면도 지우기 전으로 되돌린다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const record = await store.getState().importAsset(
+      {
+        file: glbFile(),
+        kind: 'model',
+        name: 'Temp',
+        description: '',
+        sites: [],
+        tags: [],
+        note: '',
+        contentHash: null,
+      },
+      'me',
+    );
+    const before = store.getState().assets;
+    repo.setFailSave(true);
+    expect(await store.getState().removeAsset(record!.id)).toBe(false);
+    expect(repo.removed).toEqual([]);
+    expect(store.getState().assets).toBe(before);
+    expect(store.getState().saveState).toBe('error');
+  });
+});
+
+describe('버전 지우기·일괄 작업', () => {
+  const input = (name: string) => ({
+    file: glbFile(`${name}.glb`),
+    kind: 'model' as const,
+    name,
+    description: '',
+    sites: [],
+    tags: [],
+    note: '',
+    contentHash: null,
+  });
+
+  it('초안 버전을 지우면 그 버전의 파일만 지운다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const record = await store.getState().importAsset(input('Temp'), 'me');
+    const added = await store
+      .getState()
+      .addVersion(record!.id, { file: glbFile('b.glb'), note: '', contentHash: null }, 'me');
+    expect(added).toBe(2);
+    expect(await store.getState().removeVersion(record!.id, 2, 'me')).toBe(true);
+    expect(repo.removed).toEqual([`${record!.id}@v2`]);
+    const after = store.getState().assets.find((a) => a.id === record!.id)!;
+    expect(after.versions.map((v) => v.version)).toEqual([1]);
+    // 지운 번호는 다시 쓰지 않는다.
+    expect(
+      await store
+        .getState()
+        .addVersion(record!.id, { file: glbFile('c.glb'), note: '', contentHash: null }, 'me'),
+    ).toBe(3);
+  });
+
+  it('현재 버전은 지우지 않고 파일도 건드리지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const record = await store.getState().importAsset(input('Temp'), 'me');
+    expect(await store.getState().removeVersion(record!.id, 1, 'me')).toBe(false);
+    expect(repo.removed).toEqual([]);
+  });
+
+  it('여러 자산을 고쳐도 저장은 한 번이다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const a = await store.getState().importAsset(input('A'), 'me');
+    const b = await store.getState().importAsset(input('B'), 'me');
+    const before = repo.saved.length;
+    const changed = await store
+      .getState()
+      .updateManyMetadata([a!.id, b!.id, 'nope'], () => ({ category: 'hull' }), 'me');
+    expect(changed).toBe(2);
+    expect(repo.saved.length).toBe(before + 1);
+    expect(
+      store.getState().assets.filter((x) => x.category === 'hull'),
+    ).toHaveLength(2);
+  });
+
+  it('바뀐 것이 없으면 저장하지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const a = await store.getState().importAsset(input('A'), 'me');
+    const before = repo.saved.length;
+    expect(
+      await store.getState().updateManyMetadata([a!.id], () => null, 'me'),
+    ).toBe(0);
+    expect(repo.saved.length).toBe(before);
+  });
+
+  it('일괄 상태 전환은 허용되는 자산만 옮긴다', async () => {
+    const { store } = setup();
+    await store.getState().load();
+    const a = await store.getState().importAsset(input('A'), 'me');
+    // a 는 초안, 내장 자산(okpo-ttc)은 게시됨 — 검토 요청은 a 에만 걸린다.
+    const changed = await store
+      .getState()
+      .transitionManyStatus([a!.id, 'okpo-ttc'], 'in-review', 'me');
+    expect(changed).toBe(1);
+    const after = store.getState().assets.find((x) => x.id === a!.id)!;
+    expect(after.versions[0].status).toBe('in-review');
+  });
+
+  it('일괄 삭제는 등록한 자산만 지우고, 저장에 실패하면 되돌린다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const a = await store.getState().importAsset(input('A'), 'me');
+    const b = await store.getState().importAsset(input('B'), 'me');
+    repo.setFailSave(true);
+    const snapshot = store.getState().assets;
+    expect(await store.getState().removeManyAssets([a!.id, b!.id])).toBe(0);
+    expect(store.getState().assets).toBe(snapshot);
+    expect(repo.removed).toEqual([]);
+    repo.setFailSave(false);
+    expect(
+      await store.getState().removeManyAssets([a!.id, b!.id, 'okpo-ttc']),
+    ).toBe(2);
+    expect(repo.removed.sort()).toEqual([a!.id, b!.id].sort());
+    expect(store.getState().assets.map((x) => x.id)).toEqual(['okpo-ttc']);
   });
 });

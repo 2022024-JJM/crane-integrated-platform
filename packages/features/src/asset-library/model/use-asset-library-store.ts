@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createId } from '@crane/core/lib/create-id';
 import { getStorageJson, setStorageJson } from '@crane/core/lib/safe-storage';
 import {
+  AssetLibraryConflictError,
   ASSET_CATEGORY_MAX,
   addAssetVersion,
   ASSET_COLLECTION_NAME_MAX,
@@ -34,6 +35,10 @@ import {
   type AssetVersionStatus,
   type BuiltinAssetSource,
   type SceneAssetSource,
+  ASSET_VERSIONS_MAX,
+  getCurrentAssetVersion,
+  getNextAssetVersionNumber,
+  removeAssetVersion,
 } from '@crane/domain/asset-library';
 import { collectBuiltinAssetSources } from '../lib/builtin-asset-sources';
 import { loadSceneAssetSources } from '../lib/scene-asset-sources';
@@ -55,7 +60,11 @@ import { loadSceneAssetSources } from '../lib/scene-asset-sources';
 export const ASSET_FAVORITES_STORAGE_KEY = 'crane:asset-library:favorites';
 
 export type AssetLibraryStatus = 'idle' | 'loading' | 'ready' | 'error';
-export type AssetLibrarySaveState = 'idle' | 'saving' | 'error';
+/**
+ * `error` 는 다시 시도하면 풀릴 수 있는 실패, `conflict` 는 읽은 뒤로 다른
+ * 곳에서 문서가 바뀌어 다시 읽어야만 풀리는 실패다.
+ */
+export type AssetLibrarySaveState = 'idle' | 'saving' | 'error' | 'conflict';
 
 export interface ImportAssetInput {
   file: File;
@@ -93,7 +102,8 @@ export interface AssetLibraryState {
   /** 저장이 이 브라우저 안에만 남는 환경인지. */
   localOnly: boolean;
 
-  load: () => Promise<void>;
+  /** `force` 는 이미 읽었어도 다시 읽는다(다른 곳에서 바뀌었을 때). */
+  load: (options?: { force?: boolean }) => Promise<void>;
   loadUsage: () => Promise<void>;
   retrySave: () => Promise<boolean>;
 
@@ -145,6 +155,30 @@ export interface AssetLibraryState {
   ) => Promise<boolean>;
   /** 이 화면에서 등록한 자산만 지울 수 있다. */
   removeAsset: (assetId: string) => Promise<boolean>;
+  /** 게시된 적 없는(초안·반려) 버전을 파일과 함께 지운다. */
+  removeVersion: (
+    assetId: string,
+    version: number,
+    actor: string,
+  ) => Promise<boolean>;
+  /**
+   * 여러 자산을 한 번에 고치고 **한 번만** 저장한다. `toPatch` 가 null 을
+   * 돌려준 자산은 건드리지 않는다. 실제로 바뀐 자산 수를 돌려준다(저장에
+   * 실패하면 0 이고 `saveState` 가 알린다).
+   */
+  updateManyMetadata: (
+    assetIds: readonly string[],
+    toPatch: (asset: AssetRecord) => AssetMetadataPatch | null,
+    actor: string,
+  ) => Promise<number>;
+  /** 여러 자산의 현재 버전 상태를 한 번에 옮긴다. 허용되지 않는 것은 건너뛴다. */
+  transitionManyStatus: (
+    assetIds: readonly string[],
+    to: AssetVersionStatus,
+    actor: string,
+  ) => Promise<number>;
+  /** 등록한 자산 여럿을 한 번에 지운다. 지운 수를 돌려준다. */
+  removeManyAssets: (assetIds: readonly string[]) => Promise<number>;
 
   toggleFavorite: (assetId: string) => void;
   createCollection: (name: string) => Promise<string | null>;
@@ -204,7 +238,18 @@ export function createAssetLibraryStore(
       collections: get().collections,
     });
 
+    /**
+     * 라이브러리를 다 읽은 뒤에만 고치고 저장한다. 읽는 중이거나 읽기에
+     * 실패한 상태의 메모리는 빈 목록이라, 그대로 저장하면 문서가 빈 것으로
+     * 덮인다.
+     */
+    const isReady = () => get().status === 'ready';
+
     const persist = (): Promise<boolean> => {
+      if (!isReady()) return Promise.resolve(false);
+      // 다른 곳에서 바뀐 뒤로는 다시 읽기 전까지 쓰지 않는다 — 어차피 거부되고,
+      // 그사이 "저장 중"·"저장됨" 으로 보이면 충돌이 가려진다.
+      if (get().saveState === 'conflict') return Promise.resolve(false);
       set({ saveState: 'saving' });
       const run = saveQueue
         .catch(() => undefined)
@@ -213,12 +258,20 @@ export function createAssetLibraryStore(
       saveQueue = run;
       return run.then(
         () => {
-          if (saveQueue === run) set({ saveState: 'idle' });
+          if (saveQueue === run && get().saveState !== 'conflict') {
+            set({ saveState: 'idle' });
+          }
           return true;
         },
         (error: unknown) => {
           console.error('[asset-library] Failed to save.', error);
-          if (saveQueue === run) set({ saveState: 'error' });
+          // 다른 곳에서 바뀐 것은 다시 시도해도 풀리지 않는다 — 다시 읽어야
+          // 한다. 뒤이은 저장이 성공으로 덮어 감추지 않게 줄과 무관하게 남긴다.
+          if (error instanceof AssetLibraryConflictError) {
+            set({ saveState: 'conflict' });
+          } else if (saveQueue === run && get().saveState !== 'conflict') {
+            set({ saveState: 'error' });
+          }
           return false;
         },
       );
@@ -229,6 +282,7 @@ export function createAssetLibraryStore(
       assetId: string,
       change: (asset: AssetRecord) => AssetRecord,
     ): Promise<boolean> => {
+      if (!isReady()) return Promise.resolve(false);
       const current = get().assets.find((asset) => asset.id === assetId);
       if (!current) return Promise.resolve(false);
       const next = change(current);
@@ -241,7 +295,27 @@ export function createAssetLibraryStore(
       return persist();
     };
 
+    /** 여러 자산에 같은 변경을 걸고 한 번만 저장한다. 바뀐 수를 돌려준다. */
+    const applyToMany = async (
+      assetIds: readonly string[],
+      change: (asset: AssetRecord) => AssetRecord,
+    ): Promise<number> => {
+      if (!isReady()) return 0;
+      const targets = new Set(assetIds);
+      let changed = 0;
+      const next = get().assets.map((asset) => {
+        if (!targets.has(asset.id)) return asset;
+        const updated = change(asset);
+        if (updated !== asset) changed += 1;
+        return updated;
+      });
+      if (changed === 0) return 0;
+      set({ assets: next });
+      return (await persist()) ? changed : 0;
+    };
+
     const setCollections = (collections: AssetCollection[]) => {
+      if (!isReady()) return Promise.resolve(false);
       set({ collections });
       return persist();
     };
@@ -258,10 +332,12 @@ export function createAssetLibraryStore(
       saveState: 'idle',
       localOnly: false,
 
-      load: () => {
+      load: (options) => {
         // 여러 화면이 동시에 불러도 한 번만 읽는다.
         if (loadPromise) return loadPromise;
-        if (get().status === 'ready') return Promise.resolve();
+        if (get().status === 'ready' && !options?.force) {
+          return Promise.resolve();
+        }
         set({ status: 'loading' });
         const repository = deps.getRepository();
         loadPromise = Promise.all([
@@ -279,6 +355,8 @@ export function createAssetLibraryStore(
               collections: merged.collections,
               statsTable,
               localOnly: repository.localOnly,
+              // 다시 읽었으니 저장 못 한 변경과 충돌은 여기서 끝난다.
+              saveState: 'idle',
             });
           })
           .catch((error: unknown) => {
@@ -337,6 +415,7 @@ export function createAssetLibraryStore(
         }),
 
       importAsset: async (input, actor) => {
+        if (!isReady()) return null;
         const existingIds = new Set(get().assets.map((asset) => asset.id));
         const id = createAssetId(input.name, existingIds, deps.createId());
         const fileName = sanitizeAssetFileName(input.file.name);
@@ -377,10 +456,12 @@ export function createAssetLibraryStore(
       },
 
       addVersion: async (assetId, input, actor) => {
+        if (!isReady()) return null;
         const asset = get().assets.find((a) => a.id === assetId);
         if (!asset) return null;
-        const version =
-          asset.versions.reduce((max, v) => Math.max(max, v.version), 0) + 1;
+        // 상한에 닿은 자산에는 파일부터 올리지 않는다(주인 없는 파일이 남는다).
+        if (asset.versions.length >= ASSET_VERSIONS_MAX) return null;
+        const version = getNextAssetVersionNumber(asset);
         const fileName = sanitizeAssetFileName(input.file.name);
         let ref;
         try {
@@ -417,6 +498,7 @@ export function createAssetLibraryStore(
       },
 
       saveThumbnail: async (assetId, blob, actor) => {
+        if (!isReady()) return false;
         let ref;
         try {
           ref = await deps.getRepository().putThumbnail(assetId, blob);
@@ -435,8 +517,14 @@ export function createAssetLibraryStore(
       },
 
       removeAsset: async (assetId) => {
+        if (!isReady()) return false;
         const asset = get().assets.find((a) => a.id === assetId);
         if (!asset || asset.origin !== 'user') return false;
+        const before = {
+          assets: get().assets,
+          collections: get().collections,
+          favorites: get().favorites,
+        };
         set({
           assets: get()
             .assets.filter((a) => a.id !== assetId)
@@ -461,14 +549,101 @@ export function createAssetLibraryStore(
           favorites: get().favorites.filter((id) => id !== assetId),
         });
         const saved = await persist();
-        // 문서에서 빠진 뒤에 파일을 지운다 — 순서가 반대면 저장 실패 시
-        // 문서는 남고 파일만 사라진다. 파일 삭제 실패는 고아 파일로 남을 뿐이다.
+        // 문서에서 빠진 것이 저장된 뒤에만 파일을 지운다. 저장에 실패하면
+        // 문서에는 자산이 남아 있으므로, 파일을 지우면 다시 열었을 때 파일
+        // 없는 자산이 된다 — 지우지 않고 화면도 지우기 전으로 되돌린다.
+        if (!saved) {
+          set(before);
+          return false;
+        }
+        // 파일 삭제 실패는 고아 파일로 남을 뿐이다.
         try {
           await deps.getRepository().removeAssetFiles(assetId);
         } catch (error) {
           console.warn('[asset-library] Failed to remove asset files.', error);
         }
         return saved;
+      },
+
+      removeVersion: async (assetId, version, actor) => {
+        const saved = await applyToAsset(assetId, (asset) =>
+          removeAssetVersion(asset, version, context(actor)),
+        );
+        if (!saved) return false;
+        try {
+          await deps.getRepository().removeVersionFiles(assetId, version);
+        } catch (error) {
+          console.warn('[asset-library] Failed to remove version files.', error);
+        }
+        return true;
+      },
+
+      updateManyMetadata: (assetIds, toPatch, actor) =>
+        applyToMany(assetIds, (asset) => {
+          const patch = toPatch(asset);
+          return patch ? updateAssetMetadata(asset, patch, context(actor)) : asset;
+        }),
+
+      transitionManyStatus: (assetIds, to, actor) =>
+        applyToMany(assetIds, (asset) =>
+          transitionAssetVersionStatus(
+            asset,
+            getCurrentAssetVersion(asset).version,
+            to,
+            context(actor),
+          ),
+        ),
+
+      removeManyAssets: async (assetIds) => {
+        if (!isReady()) return 0;
+        const targets = new Set(
+          get()
+            .assets.filter(
+              (asset) => assetIds.includes(asset.id) && asset.origin === 'user',
+            )
+            .map((asset) => asset.id),
+        );
+        if (targets.size === 0) return 0;
+        const before = {
+          assets: get().assets,
+          collections: get().collections,
+          favorites: get().favorites,
+        };
+        set({
+          assets: before.assets
+            .filter((asset) => !targets.has(asset.id))
+            .map((asset) =>
+              asset.relatedAssetIds.some((id) => targets.has(id))
+                ? {
+                    ...asset,
+                    relatedAssetIds: asset.relatedAssetIds.filter(
+                      (id) => !targets.has(id),
+                    ),
+                  }
+                : asset,
+            ),
+          collections: before.collections.map((collection) =>
+            collection.assetIds.some((id) => targets.has(id))
+              ? {
+                  ...collection,
+                  assetIds: collection.assetIds.filter((id) => !targets.has(id)),
+                }
+              : collection,
+          ),
+          favorites: before.favorites.filter((id) => !targets.has(id)),
+        });
+        if (!(await persist())) {
+          set(before);
+          return 0;
+        }
+        for (const assetId of targets) {
+          try {
+            await deps.getRepository().removeAssetFiles(assetId);
+          } catch (error) {
+            console.warn('[asset-library] Failed to remove asset files.', error);
+          }
+        }
+        return targets.size;
       },
 
       toggleFavorite: (assetId) => {
@@ -480,6 +655,7 @@ export function createAssetLibraryStore(
       },
 
       createCollection: async (rawName) => {
+        if (!isReady()) return null;
         const name = rawName.trim().slice(0, ASSET_COLLECTION_NAME_MAX);
         const collections = get().collections;
         if (!name || collections.length >= ASSET_COLLECTIONS_MAX) return null;

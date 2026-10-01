@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ASSET_SITES,
@@ -194,6 +194,9 @@ export function TagEditor({
             if (draft.trim()) commit(draft);
           } else if (
             event.key === 'Backspace' &&
+            // 꾹 누르고 있을 때의 반복 입력으로 저장된 태그가 줄줄이 지워지지
+            // 않게, 눌렀다 뗀 한 번만 받는다.
+            !event.repeat &&
             draft === '' &&
             value.length > 0
           ) {
@@ -218,6 +221,7 @@ export function CommitInput({
   className,
   /** 비울 수 없는 필드 — 빈 값으로 확정하면 원래 값으로 되돌린다. */
   required,
+  listId,
   onCommit,
 }: {
   id?: string;
@@ -227,6 +231,8 @@ export function CommitInput({
   disabled?: boolean;
   className?: string;
   required?: boolean;
+  /** 추천 값 목록(`<datalist>`)의 id. */
+  listId?: string;
   onCommit: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
@@ -235,8 +241,16 @@ export function CommitInput({
     setSynced(value);
     setDraft(value);
   }
+  // Esc 는 취소다. 초점을 빼면 blur 가 저장을 부르는데, 그때의 `draft` 는 아직
+  // 고친 값이라 그대로 두면 취소가 저장이 된다 — 취소했다는 표시를 남긴다.
+  const cancelledRef = useRef(false);
 
   const commit = () => {
+    if (cancelledRef.current) {
+      cancelledRef.current = false;
+      setDraft(value);
+      return;
+    }
     const next = draft.trim();
     if (next === value || (required && next === '')) {
       setDraft(value);
@@ -250,15 +264,17 @@ export function CommitInput({
       id={id}
       value={draft}
       maxLength={maxLength}
-      placeholder={placeholder}
+      // 빈 칸이 빈 상자로만 보이지 않게 — 값이 없다는 것을 적는다.
+      placeholder={placeholder ?? '—'}
       disabled={disabled}
+      list={listId}
       className={cn(QUIET_FIELD, 'h-8 text-[13px]', className)}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
       onKeyDown={(event) => {
         if (event.key === 'Enter') event.currentTarget.blur();
         if (event.key === 'Escape') {
-          setDraft(value);
+          cancelledRef.current = true;
           event.currentTarget.blur();
         }
       }}

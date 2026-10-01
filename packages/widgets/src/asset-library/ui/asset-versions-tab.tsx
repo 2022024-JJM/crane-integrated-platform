@@ -1,4 +1,11 @@
-import { Columns2, Download, Eye, Loader2, Upload } from 'lucide-react';
+import {
+  Columns2,
+  Download,
+  Eye,
+  Loader2,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -6,6 +13,7 @@ import { getFormatLocale } from '@crane/core/config/i18n';
 import {
   ASSET_NOTE_MAX,
   ASSET_REVISION_MAX,
+  canRemoveAssetVersion,
   diffAssetStats,
   formatBytes,
   formatCount,
@@ -40,8 +48,12 @@ import {
   dropUnknownRows,
   type VersionCompareSide,
 } from '../lib/version-compare';
-import { useAssetSaveReport } from '../model/use-asset-save-report';
+import {
+  isAssetSaveFailed,
+  useAssetSaveReport,
+} from '../model/use-asset-save-report';
 import { AssetStatusBadge } from './asset-badges';
+import { AssetConfirmDialog } from './asset-confirm-dialog';
 import { CommitInput } from './asset-form-fields';
 import { AssetVersionDiff } from './asset-version-diff';
 
@@ -147,7 +159,7 @@ function VersionUpload({
       toast.error(t('asset-library:toast.importFailed'));
       return;
     }
-    if (useAssetLibraryStore.getState().saveState === 'error') {
+    if (isAssetSaveFailed()) {
       toast.error(t('asset-library:toast.saveFailed'));
     } else {
       toast.success(t('asset-library:toast.versionAdded', { version: added }));
@@ -225,20 +237,15 @@ function VersionUpload({
           </div>
         </form>
       ) : (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            {t('asset-library:versions.uploadHint')}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => inputRef.current?.click()}
-          >
-            <Upload />
-            {t('asset-library:versions.newVersion')}
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => inputRef.current?.click()}
+        >
+          <Upload />
+          {t('asset-library:versions.newVersion')}
+        </Button>
       )}
     </section>
   );
@@ -265,6 +272,13 @@ export function AssetVersionsTab({
   const updateVersionNote = useAssetLibraryStore(
     (state) => state.updateVersionNote,
   );
+  const removeVersion = useAssetLibraryStore((state) => state.removeVersion);
+  // 한 번 더 묻는 일 — 되돌리는 상태 전환(반려·철회)과 버전 지우기.
+  const [pending, setPending] = useState<
+    | { kind: 'status'; version: number; to: AssetVersionStatus }
+    | { kind: 'remove'; version: number }
+    | null
+  >(null);
 
   // 최신 버전이 위.
   const versions = [...asset.versions].sort((a, b) => b.version - a.version);
@@ -292,11 +306,6 @@ export function AssetVersionsTab({
   return (
     <div>
       <VersionUpload asset={asset} actor={actor} onView={onView} />
-      {asset.catalogId ? (
-        <p className="border-border bg-muted/40 text-muted-foreground border-b px-5 py-3 text-xs leading-relaxed">
-          {t('asset-library:versions.catalogNotice')}
-        </p>
-      ) : null}
       {diffBase && diffTarget ? (
         <section className="border-border border-b px-5 py-4">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -382,13 +391,17 @@ export function AssetVersionsTab({
                       value={version.status}
                       onValueChange={(value) => {
                         if (value === version.status) return;
+                        const to = value as AssetVersionStatus;
+                        if (to === 'rejected' || to === 'withdrawn') {
+                          setPending({
+                            kind: 'status',
+                            version: version.version,
+                            to,
+                          });
+                          return;
+                        }
                         report(
-                          transitionStatus(
-                            asset.id,
-                            version.version,
-                            value as AssetVersionStatus,
-                            actor,
-                          ),
+                          transitionStatus(asset.id, version.version, to, actor),
                         );
                       }}
                     >
@@ -506,11 +519,78 @@ export function AssetVersionsTab({
                   </Button>
                 ) : null}
                 <DownloadLink version={version} />
+                {/* 잘못 올린 버전을 걷어낸다 — 게시된 적 없는 것만. */}
+                {canRemoveAssetVersion(asset, version.version) ? (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() =>
+                      setPending({ kind: 'remove', version: version.version })
+                    }
+                  >
+                    <Trash2 />
+                    {t('asset-library:versions.remove')}
+                  </Button>
+                ) : null}
               </div>
             </li>
           );
         })}
       </ol>
+      {/* 목록을 가리지 않게, 알아 둘 것은 아래에 조용히 적는다. */}
+      <div className="text-muted-foreground border-border flex flex-col gap-1.5 border-t px-5 py-4 text-xs leading-relaxed">
+        <p>{t('asset-library:versions.uploadHint')}</p>
+        {asset.catalogId ? (
+          <p>{t('asset-library:versions.catalogNotice')}</p>
+        ) : asset.kind === 'model' ? (
+          <p>{t('asset-library:versions.paletteNotice')}</p>
+        ) : null}
+      </div>
+      <AssetConfirmDialog
+        open={pending !== null}
+        destructive={pending?.kind === 'remove'}
+        title={
+          pending?.kind === 'remove'
+            ? t('asset-library:versions.removeTitle', {
+                version: pending.version,
+              })
+            : pending
+              ? t('asset-library:lifecycle.confirmTitle', {
+                  version: pending.version,
+                  action: t(`asset-library:versions.transition.${pending.to}`),
+                })
+              : ''
+        }
+        description={
+          pending?.kind === 'remove'
+            ? t('asset-library:versions.removeHint')
+            : pending
+              ? t(`asset-library:lifecycle.confirmHint.${pending.to}`)
+              : ''
+        }
+        confirmLabel={
+          pending?.kind === 'remove'
+            ? t('asset-library:action.delete')
+            : pending
+              ? t(`asset-library:versions.transition.${pending.to}`)
+              : ''
+        }
+        onConfirm={() => {
+          if (!pending) return;
+          if (pending.kind === 'remove') {
+            // 지우는 버전을 보고 있었으면 현재 버전으로 돌아간다.
+            if (viewedVersion === pending.version) onView(asset.currentVersion);
+            if (compareVersion === pending.version) onCompare(null);
+            report(removeVersion(asset.id, pending.version, actor));
+          } else {
+            report(
+              transitionStatus(asset.id, pending.version, pending.to, actor),
+            );
+          }
+        }}
+        onClose={() => setPending(null)}
+      />
     </div>
   );
 }

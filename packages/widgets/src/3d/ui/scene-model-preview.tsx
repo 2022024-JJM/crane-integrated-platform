@@ -22,6 +22,11 @@ interface SceneModelPreviewProps {
    * 시도하고, 없을 때만(로드 실패 시) 런타임 offscreen 렌더로 폴백한다.
    */
   previewAssetId?: string;
+  /**
+   * 이미 있는 썸네일의 URL(자산 라이브러리에 저장된 것). 있으면 정적 썸네일
+   * 보다 먼저 쓴다. 못 읽으면 `previewAssetId` → offscreen 렌더 순으로 내려간다.
+   */
+  previewUrl?: string;
   overlayLabel?: string | null;
   overlayHint?: string | null;
   showOverlay?: boolean;
@@ -104,6 +109,7 @@ export const SceneModelPreview = memo(function SceneModelPreview({
   label,
   preview,
   previewAssetId,
+  previewUrl,
   overlayLabel,
   overlayHint,
   showOverlay = false,
@@ -133,6 +139,7 @@ export const SceneModelPreview = memo(function SceneModelPreview({
         label={label}
         preview={preview}
         previewAssetId={previewAssetId}
+        previewUrl={previewUrl}
         overlayLabel={overlayLabel}
         overlayHint={overlayHint}
         showOverlay={showOverlay}
@@ -147,6 +154,7 @@ function SceneModelPreviewInner({
   label,
   preview,
   previewAssetId,
+  previewUrl,
   overlayLabel,
   overlayHint,
   showOverlay = false,
@@ -164,10 +172,20 @@ function SceneModelPreviewInner({
     setStaticFailed(false);
   }
 
+  // 저장된 썸네일(previewUrl)도 같은 방식으로 다룬다 — 바뀌면 다시 시도한다.
+  const [prevPreviewUrl, setPrevPreviewUrl] = useState(previewUrl);
+  const [previewUrlFailed, setPreviewUrlFailed] = useState(false);
+  if (prevPreviewUrl !== previewUrl) {
+    setPrevPreviewUrl(previewUrl);
+    setPreviewUrlFailed(false);
+  }
+  const savedUrl = previewUrl && !previewUrlFailed ? previewUrl : null;
+
   const staticUrl =
-    previewAssetId && !staticFailed
+    savedUrl ??
+    (previewAssetId && !staticFailed
       ? withBaseUrl(getModelPreviewAssetPath(previewAssetId))
-      : null;
+      : null);
 
   const { imageUrl, status } = useOffscreenPreview(
     path,
@@ -199,7 +217,10 @@ function SceneModelPreviewInner({
           alt={label}
           className="absolute inset-0 h-full w-full object-contain"
           draggable={false}
-          onError={() => setStaticFailed(true)}
+          onError={() => {
+            if (savedUrl) setPreviewUrlFailed(true);
+            else setStaticFailed(true);
+          }}
         />
       ) : (
         <>

@@ -21,7 +21,10 @@ export const ASSET_ATTENTION_KINDS = [
   'rejected',
   /** 아직 검토를 요청하지 않은 초안 버전이 있다. */
   'draft',
-  /** 현재 버전보다 새 버전이 있다(올렸지만 현재로 지정하지 않음). */
+  /**
+   * 현재 버전보다 새 버전이 검토를 통과했는데(승인·게시) 아직 현재로 지정되지
+   * 않았다. 검토 전·검토 중인 새 버전은 그 상태의 이유가 따로 알린다.
+   */
   'newer',
   /** 현재 버전이 권장 상한을 넘는다. */
   'over-budget',
@@ -67,8 +70,7 @@ export function getAssetAttention(
     asset.versions.some(
       (version) =>
         version.version > asset.currentVersion &&
-        version.status !== 'rejected' &&
-        version.status !== 'withdrawn',
+        (version.status === 'approved' || version.status === 'published'),
     )
   ) {
     reasons.push('newer');

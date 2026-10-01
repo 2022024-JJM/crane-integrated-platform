@@ -62,7 +62,12 @@ function BudgetRow({ item }: { item: BudgetItem }) {
         aria-valuemax={item.limit}
         aria-valuenow={Math.min(item.value, item.limit)}
         aria-valuetext={`${formatMetric(item.metric, item.value)} / ${formatMetric(item.metric, item.limit)}`}
-        className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full"
+        // 막대의 바탕은 채움과 같은 색의 옅은 단 — 넘었을 때 줄 전체가
+        // 같은 상태로 읽힌다.
+        className={cn(
+          'mt-2 h-1.5 overflow-hidden rounded-full',
+          over ? 'bg-amber-500/20' : 'bg-foreground/10',
+        )}
       >
         <div
           className={cn(
@@ -161,7 +166,7 @@ export function AssetStatsTab({ asset, stats, live }: AssetStatsTabProps) {
                 <dt className="text-muted-foreground mt-1 text-xs">
                   {t(`asset-library:stats.axis.${axis}`)}
                 </dt>
-                <dd className="text-foreground font-condensed text-xl leading-none font-semibold tabular-nums">
+                <dd className="text-foreground font-condensed text-xl leading-none font-semibold">
                   {formatMeters(value)}
                 </dd>
               </div>
