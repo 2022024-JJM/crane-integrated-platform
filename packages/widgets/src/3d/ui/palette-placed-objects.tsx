@@ -24,12 +24,6 @@ import {
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
-import {
-  ContextMenu,
-  ContextMenuItem,
-  ContextMenuPopup,
-  ContextMenuTrigger,
-} from '@crane/ui/molecules/context-menu';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import { TreeRow } from '@crane/ui/molecules/tree';
 import {
@@ -374,13 +368,9 @@ export function PalettePlacedObjects({
                   {isEditing ? (
                     <Input
                       ref={(el) => {
-                        // 컨텍스트 메뉴가 닫히며 base-ui가 트리거(행)로
-                        // 포커스를 되돌리므로 다음 프레임에 가져온다.
                         if (el && document.activeElement !== el) {
-                          requestAnimationFrame(() => {
-                            el.focus();
-                            el.select();
-                          });
+                          el.focus();
+                          el.select();
                         }
                       }}
                       value={draft}
@@ -402,7 +392,20 @@ export function PalettePlacedObjects({
                       onBlur={() => commitEdit(item)}
                     />
                   ) : (
-                    <p className="min-w-0 flex-1 truncate text-[12px] leading-none font-medium">
+                    // 이름 더블클릭 = 이름 변경(뷰 탭 목록과 같은 조작).
+                    // 행이 아니라 이름에 걸어 펼침·삭제·잠금 버튼의 빠른
+                    // 연타가 편집으로 새지 않게 한다.
+                    <p
+                      className="min-w-0 flex-1 truncate text-[12px] leading-none font-medium"
+                      onDoubleClick={
+                        canRename
+                          ? (event) => {
+                              event.preventDefault();
+                              startEdit(item);
+                            }
+                          : undefined
+                      }
+                    >
                       {item.displayName}
                     </p>
                   )}
@@ -484,27 +487,9 @@ export function PalettePlacedObjects({
                   />
                 ) : null;
 
-              if (!canRename) {
-                return (
-                  <Fragment key={item.id}>
-                    <div {...rowProps}>{rowChildren}</div>
-                    {nodeRows}
-                  </Fragment>
-                );
-              }
-
               return (
                 <Fragment key={item.id}>
-                  <ContextMenu>
-                    <ContextMenuTrigger render={<div {...rowProps} />}>
-                      {rowChildren}
-                    </ContextMenuTrigger>
-                    <ContextMenuPopup>
-                      <ContextMenuItem onClick={() => startEdit(item)}>
-                        {t('monitoring:editor.renameObject')}
-                      </ContextMenuItem>
-                    </ContextMenuPopup>
-                  </ContextMenu>
+                  <div {...rowProps}>{rowChildren}</div>
                   {nodeRows}
                 </Fragment>
               );
