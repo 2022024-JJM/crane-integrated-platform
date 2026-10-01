@@ -728,6 +728,7 @@ html.flow-locked, html.flow-locked body{ overflow:hidden }
         <span class="chip chip--neutral">PART 2 · nginx · 포트 · 전체 흐름</span>
         <span class="chip chip--info">PART 3 · GitHub 러너 (dev · prod)</span>
         <span class="chip chip--warn">미확정: 199 서버 배포 경로</span>
+        <span class="chip chip--ok">저장소 반영: 워크플로 · 배포 셸 · 컨테이너 nginx 경로</span>
       </div>
     </header>
 
@@ -752,6 +753,18 @@ html.flow-locked, html.flow-locked body{ overflow:hidden }
             <tr><td class="mono">/crane_rnd/indoor/ · /crane_rnd/indoor/dev/ · /crane_rnd/indoor/stage/</td><td class="mono">Indoorshop.IT · Indoorshop.OT · Indoorshop.Keyin</td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="note note--ok">
+        <p class="note__t">구현 현황 — 저장소에 들어간 것</p>
+        <ul>
+          <li><span class="mono">.github/workflows/deploy-199.yml</span> — §3.2 그대로. 검사 잡은 <span class="mono">pnpm/action-setup@v4</span> 가 <span class="mono">package.json</span> 의 <span class="mono">packageManager</span>(pnpm 10.11.0)를 읽어 <span class="mono">pnpm install --frozen-lockfile</span> → <span class="mono">lint · typecheck · test</span>. <span class="mono">permissions: contents: read</span> 만 더함</li>
+          <li><span class="mono">deploy/deploy.sh</span> · <span class="mono">deploy/smoke.sh</span> — §3.3 그대로. smoke 는 <span class="mono">INDOOR_PATH</span> 가 비면 crane 주소만 본다</li>
+          <li><span class="mono">nginx.conf.template</span> — <span class="mono">/crane_rnd/</span> 하드코딩을 전부 <span class="mono">${BASE_PATH}</span> 치환으로 바꿈(§1.2 "컨테이너 nginx" 참조). 파생 변수는 <span class="mono">deploy/nginx/15-base-path.envsh</span>, Dockerfile runner 에 <span class="mono">ENV BASE_PATH</span> 와 COPY 두 줄</li>
+          <li>루트 Dockerfile · docker-compose.yml 인자, <span class="mono">deploy/env/{prod,stage,dev}.env</span> — 이전 커밋에 이미 반영</li>
+          <li><span class="mono">pnpm dev:dev</span> · <span class="mono">dev:stage</span> · <span class="mono">dev:prod</span> — 환경별 주소로 dev 서버를 띄우는 루트 스크립트. <span class="mono">deploy/env/&lt;env&gt;.env</span> 를 <span class="mono">vite.config.ts</span> 가 직접 읽으므로 값은 한 곳. 기존 <span class="mono">pnpm dev</span> 는 그대로(§1.1 "개발 서버에서 보기").</li>
+          <li>pnpm 이 어디서 어떤 스크립트로 도는지(검사 잡 · Dockerfile builder · 로컬)와 검사 범위는 §3.2 "pnpm 스크립트" 표.</li>
+        </ul>
+        <p class="small muted">아직 서버 쪽 작업(S4 rnd_nginx location, S5 러너 · Secrets · 브랜치 보호, S6 prod 전환)은 손대지 않았습니다. 로컬 검증 결과는 §A.3 끝에 있습니다.</p>
       </div>
       <div class="partgrid">
         <div class="card card--accent">
@@ -960,8 +973,9 @@ export function toScopeUrl(
       </div>
       <div class="note note--info">
         <p class="note__t">개발 서버에서 보기</p>
-        <span class="mono">VITE_INDOOR_BASE_URL=/crane_rnd/indoor/ pnpm dev</span> 로 띄우면 <span class="mono">localhost:5173/crane_rnd/</span> 와 <span class="mono">localhost:5173/crane_rnd/indoor/</span> 가 함께 열립니다.
-        indoor 주소는 Vite base 아래이므로 dev 서버의 SPA 폴백이 그대로 index.html 을 냅니다. 변수가 없으면 지금처럼 crane 하나만 동작합니다.
+        <span class="mono">pnpm dev:dev</span> · <span class="mono">pnpm dev:stage</span> · <span class="mono">pnpm dev:prod</span> 가 <span class="mono">deploy/env/&lt;env&gt;.env</span> 의 BASE_PATH · INDOOR_PATH · DEPLOY_ENV 를 읽어 그 환경의 주소로 dev 서버를 띄웁니다
+        (예: <span class="mono">pnpm dev:dev</span> → <span class="mono">localhost:5173/crane_rnd/dev/</span> 와 <span class="mono">localhost:5173/crane_rnd/indoor/dev/</span>). 기존 <span class="mono">pnpm dev</span> 는 그대로 <span class="mono">/crane_rnd/</span> 하나만 띄웁니다.
+        dev · stage 의 indoor 주소는 Vite base 밖이라 <span class="mono">vite.config.ts</span> 의 <span class="mono">devIndoorFallbackPlugin</span> 이 운영 nginx 의 catch-all 처럼 index.html 로 넘깁니다. 매핑은 같은 파일의 <span class="mono">applyDeployEnv</span> 이고, 환경 값은 env 파일에만 둡니다.
       </div>
     </section>
 
@@ -1027,13 +1041,21 @@ VITE_GOOGLE_MAPS_MAP_ID=&lt;Map ID, 없으면 비움&gt;</pre>
  RUN rm -rf /usr/share/nginx/html/*
 
 <span class="cm">-COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html/crane_rnd</span>
-<span class="hl">+COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html${BASE_PATH}</span></pre>
+<span class="hl">+COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html${BASE_PATH}</span>
+<span class="hl">+# nginx.conf.template 의 ${BASE_PATH} 치환용</span>
+<span class="hl">+ENV BASE_PATH=$BASE_PATH</span>
+
+ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+<span class="hl">+COPY --chmod=755 deploy/nginx/15-base-path.envsh /docker-entrypoint.d/15-base-path.envsh</span></pre>
       </div>
       <p><span class="mono">vite.config.ts</span> 는 이미 <span class="mono">VITE_BASE_URL</span> 을 base 로 읽으므로<sup class="ref" data-ref="4">4</sup> 빌드 쪽은 이것으로 끝입니다. ARG 는 스테이지마다 다시 선언해야 해서 runner 에 한 줄 더 있습니다.</p>
 
       <div class="code">
         <div class="code__bar"><span>docker-compose.yml (루트) — 바뀌는 부분</span><button class="code__copy" type="button">복사</button></div>
-<pre>     build:
+<pre><span class="hl">+name: crane-shell-${DEPLOY_ENV:-prod}</span>   <span class="cm"># 프로젝트 이름 = 환경. -p 불필요, env 파일 없이 치면 prod</span>
+ services:
+   shell:
+     build:
        context: .
        dockerfile: Dockerfile
        args:
@@ -1049,11 +1071,49 @@ VITE_GOOGLE_MAPS_MAP_ID=&lt;Map ID, 없으면 비움&gt;</pre>
      ports:
        - "${SHELL_PORT:-33600}:80"</pre>
       </div>
-      <p>포트는 원래 있던 <span class="mono">SHELL_PORT</span> 를 그대로 씁니다. 나머지(environment · restart · healthcheck)는 손대지 않습니다. 환경마다 <span class="mono">-p crane-shell-&lt;env&gt;</span> 프로젝트 이름으로 같은 파일을 세 번 띄웁니다.</p>
+      <p>포트는 원래 있던 <span class="mono">SHELL_PORT</span> 를 그대로 씁니다. 나머지(environment · restart · healthcheck)는 손대지 않습니다. 프로젝트 이름은 맨 위 <span class="mono">name:</span> 이 <span class="mono">DEPLOY_ENV</span> 로 정하므로(<span class="mono">crane-shell-dev</span> · <span class="mono">-stage</span> · <span class="mono">-prod</span>) 같은 파일을 env 파일만 바꿔 세 번 띄웁니다. <span class="mono">-p</span> 는 쓰지 않습니다.</p>
 
-      <div class="note note--warn">
-        <p class="note__t">컨테이너 nginx 는 별도 작업</p>
-        stage · dev 처럼 <span class="mono">BASE_PATH</span> 가 <span class="mono">/crane_rnd/</span> 가 아니면 루트 <span class="mono">nginx.conf.template</span> 의 <span class="mono">/crane_rnd/</span> 위치들도 같은 경로를 따라야 화면이 뜹니다. 이 문서는 그 템플릿을 다루지 않습니다.
+      <h3>환경별 이미지 만들기 (로컬 · 빌드 머신)</h3>
+      <p>같은 Dockerfile · compose 파일에 <b>어느 env 파일을 읽느냐</b>와 <b>이미지 태그</b>만 다릅니다. compose 의 <span class="mono">${BASE_PATH:-…}</span> 류 변수는 <span class="mono">--env-file</span> 이나 셸 변수에서만 채워지고, <span class="mono">IMAGE_TAG</span> 는 env 파일에 없으므로 앞에 붙입니다.</p>
+      <div class="code">
+        <div class="code__bar"><span>이미지만 만들기 — 저장소 루트</span><button class="code__copy" type="button">복사</button></div>
+<pre>IMAGE_TAG=dev   docker compose --env-file deploy/env/dev.env   build   <span class="cm"># → crane-shell:dev    (/crane_rnd/dev/)</span>
+IMAGE_TAG=stage docker compose --env-file deploy/env/stage.env build   <span class="cm"># → crane-shell:stage  (/crane_rnd/stage/)</span>
+IMAGE_TAG=prod  docker compose --env-file deploy/env/prod.env  build   <span class="cm"># → crane-shell:prod   (/crane_rnd/)</span>
+
+<span class="cm"># 인자 없이 치면 예전과 같은 crane-shell:latest (/crane_rnd/) 가 나온다</span>
+docker compose build</pre>
+      </div>
+      <p>빌드만 할 때는 런타임 값(<span class="mono">BACKEND_HOST</span> 등)이 비어 있어도 됩니다 — 경고만 나오고 이미지에는 들어가지 않습니다. <b>띄울 때</b>는 루트 <span class="mono">.env</span> 와 프로젝트 이름이 더 필요합니다. <span class="mono">--env-file</span> 을 하나라도 주면 <span class="mono">.env</span> 자동 읽기가 꺼지므로 함께 적습니다.</p>
+      <div class="code">
+        <div class="code__bar"><span>만든 이미지 띄우기</span><button class="code__copy" type="button">복사</button></div>
+<pre>IMAGE_TAG=dev docker compose --env-file .env --env-file deploy/env/dev.env up -d --no-build
+<span class="cm">#          ^ 런타임 값        ^ 환경 값 (뒤 파일이 앞을 덮음). 프로젝트 이름은 compose name: 이 DEPLOY_ENV 로</span>
+docker compose --env-file deploy/env/dev.env down       <span class="cm"># name: 이 같은 값으로 풀려 crane-shell-dev 만 내려간다</span></pre>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th style="width:22%">조각</th><th>뜻</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">IMAGE_TAG=dev</td><td>결과 이미지 이름 <span class="mono">crane-shell:${IMAGE_TAG:-latest}</span> 의 태그. 안 주면 <span class="mono">latest</span> 라 운영본 이름과 겹친다. 워크플로는 <span class="mono">dev-&lt;sha7&gt;</span> 처럼 커밋을 붙이고, deploy.sh 는 <span class="mono">dev-</span> 접두어로 환경별 이미지를 골라 최근 3개만 남긴다</td></tr>
+            <tr><td class="mono">--env-file deploy/env/dev.env</td><td>BASE_PATH · INDOOR_PATH · DEPLOY_ENV(빌드 인자) 와 SHELL_PORT · CONTAINER_SUFFIX(기동 값)를 변수 치환에 쓴다. compose 의 <span class="mono">env_file:</span> 항목과는 다르다 — 그쪽은 컨테이너 안 환경변수만 넣고 <span class="mono">build.args</span> 에는 안 들어간다</td></tr>
+            <tr><td class="mono">--env-file .env</td><td>BACKEND_HOST 등 nginx 런타임 값. 빌드에는 불필요, <span class="mono">up</span> 에는 필수(비면 nginx 가 <span class="mono">proxy_pass http://:/</span> 로 뜨다 죽는다)</td></tr>
+            <tr><td class="mono">프로젝트 이름</td><td>네트워크 · 컨테이너를 환경별로 묶는 이름. compose 파일 맨 위 <span class="mono">name: crane-shell-${DEPLOY_ENV:-prod}</span> 이 env 파일의 <span class="mono">DEPLOY_ENV</span> 로 정하므로 <span class="mono">-p</span> 를 치지 않는다. env 파일 없이 치면 <span class="mono">crane-shell-prod</span>. 지금 199 의 운영 컨테이너 <span class="mono">crane-shell</span> 은 옛 프로젝트(디렉토리 이름) 소속이라, 이 파일로 올리기 전에 옛 것을 내리거나 §2.3 전환까지 옛 파일을 쓴다 — 같은 컨테이너 이름이 두 프로젝트에 있으면 <span class="mono">up</span> 이 거부된다</td></tr>
+            <tr><td class="mono">build · up -d --no-build · down</td><td>이미지만 / 띄우기(이미 만든 이미지로) / 내리기</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>워크플로와 <span class="mono">deploy.sh</span> 는 <span class="mono">--env-file</span> 대신 <span class="mono">set -a; . deploy/env/$ENV.env; set +a</span> 로 같은 파일을 셸 변수로 올린 뒤 같은 명령을 칩니다(§3.2 · §3.3). 결과는 같습니다.</p>
+
+      <div class="note note--ok">
+        <p class="note__t">컨테이너 nginx — BASE_PATH 하나로 따라가게 바꿈</p>
+        <p>루트 <span class="mono">nginx.conf.template</span> 의 <span class="mono">/crane_rnd/</span> 는 모두 <span class="mono">${BASE_PATH}</span>(끝 슬래시 포함) 치환이 됐습니다. nginx 의 <span class="mono">location</span> 은 변수를 못 받으므로 공식 이미지의 envsubst 템플릿 치환으로만 경로를 바꿉니다.</p>
+        <ul>
+          <li>runner 스테이지의 <span class="mono">ENV BASE_PATH=$BASE_PATH</span> 가 빌드 인자를 이미지에 박아 두고, 컨테이너가 뜰 때 치환됩니다. compose 의 <span class="mono">environment</span> 에는 없으므로 199 의 <span class="mono">.env</span> 는 손대지 않습니다.</li>
+          <li><span class="mono">deploy/nginx/15-base-path.envsh</span> 가 치환 직전에 source 되어 값을 검사(<span class="mono">/…/</span> 형태만 허용, <span class="mono">/</span> 거부)하고 끝 슬래시 없는 <span class="mono">${BASE_PATH_NOSLASH}</span> 를 만듭니다(슬래시 없는 주소 302 · <span class="mono">= …/lidar</span> 류 정확 매칭용). 값이 틀리면 컨테이너가 안 뜹니다.</li>
+          <li>indoor 주소(<span class="mono">/crane_rnd/indoor/dev/</span>)는 dev · stage 에서 <span class="mono">BASE_PATH</span>(<span class="mono">/crane_rnd/dev/</span>) 밖에 놓이므로 맨 아래 <span class="mono">location /</span> 가 같은 <span class="mono">${BASE_PATH}index.html</span> 을 냅니다. 에셋은 indoor 화면도 <span class="mono">BASE_PATH</span> 접두어로 요청하니 HTML 폴백만 맡습니다.</li>
+          <li>확인: <span class="mono">BASE_PATH=/crane_rnd/dev/</span> 와 <span class="mono">/crane_rnd/</span> 로 치환한 설정이 모두 <span class="mono">nginx -t</span> 통과. prod 치환 결과는 바꾸기 전 파일과 location 이 같고 <span class="mono">location /</span> 폴백 하나만 늘었습니다.</li>
+        </ul>
       </div>
 
     </section>
@@ -1471,9 +1531,9 @@ server {
           <thead><tr><th style="width:6%">#</th><th style="width:18%">어디서</th><th style="width:22%">무엇</th><th>명령</th></tr></thead>
           <tbody>
             <tr><td>1</td><td>GitHub 호스티드</td><td>push · 검사</td><td class="mono">pnpm lint &amp;&amp; pnpm typecheck &amp;&amp; pnpm test</td></tr>
-            <tr><td>2</td><td>러너</td><td>이미지 빌드</td><td class="mono">IMAGE_TAG=dev-4e1d0a2 docker compose -p crane-shell-dev build</td></tr>
+            <tr><td>2</td><td>러너</td><td>이미지 빌드</td><td class="mono">IMAGE_TAG=dev-4e1d0a2 docker compose build</td></tr>
             <tr><td>3</td><td>러너 → 199</td><td>저장 · 전송</td><td class="mono">docker save crane-shell:dev-4e1d0a2 | gzip &gt; …tar.gz → scp tar · docker-compose.yml · deploy/</td></tr>
-            <tr><td>4</td><td>199 서버</td><td>로드 · 재기동</td><td class="mono">gunzip -c … | docker load → docker compose -p crane-shell-dev down → up -d --no-build</td></tr>
+            <tr><td>4</td><td>199 서버</td><td>로드 · 재기동</td><td class="mono">gunzip -c … | docker load → docker compose down → up -d --no-build</td></tr>
             <tr><td>5</td><td>199 서버</td><td>응답 확인</td><td class="mono">smoke.sh (60초 안에 안 되면 직전 태그로 up, exit 1)</td></tr>
             <tr><td>6</td><td>199 서버</td><td>정리</td><td class="mono">tar 삭제 · 환경별 태그 3개만 보관</td></tr>
           </tbody>
@@ -1484,21 +1544,56 @@ server {
     <section class="sec" id="s32">
       <h2><span class="n">3.2</span>워크플로</h2>
       <p class="why">파일 하나, 잡 둘. 검사는 GitHub 호스티드에서, 빌드부터는 이 저장소에 등록해 둔 230 서버의 self-hosted 러너에서 돕니다(199 는 사내 IP 라 GitHub 호스티드 러너가 닿지 않음).</p>
+
+      <h3>pnpm 스크립트: 어디서 무엇이 도나</h3>
+      <p>저장소는 pnpm workspace + turbo 모노레포입니다. 루트 <span class="mono">package.json</span> 의 스크립트는 전부 <span class="mono">turbo run &lt;task&gt;</span> 로 각 workspace 의 같은 이름 스크립트를 부릅니다. 파이프라인에서 pnpm 이 도는 곳은 두 군데 — 검사 잡(GitHub 호스티드)과 Dockerfile builder 스테이지(230 러너 안의 docker build)입니다. 199 서버에서는 pnpm 이 돌지 않습니다(이미지만 받습니다).</p>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th style="width:12%">어디서</th><th style="width:30%">명령</th><th>실제로 하는 일 · 검사 범위</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="4">verify 잡<br><span class="small muted">GitHub 호스티드</span></td><td class="mono">pnpm/action-setup@v4</td><td>버전 입력 없음. <span class="mono">package.json</span> 의 <span class="mono">"packageManager": "pnpm@10.11.0"</span> 을 읽어 그 버전을 설치합니다. 버전을 바꾸려면 이 필드 하나만 고칩니다(Dockerfile 의 <span class="mono">corepack prepare pnpm@10.11.0</span> 도 함께).</td></tr>
+            <tr><td class="mono">pnpm install --frozen-lockfile</td><td><span class="mono">pnpm-lock.yaml</span> 과 어긋나면 실패. <span class="mono">setup-node</span> 의 <span class="mono">cache: pnpm</span> 이 store 를 캐시합니다.</td></tr>
+            <tr><td class="mono">pnpm lint</td><td><span class="mono">turbo run lint</span> → <span class="mono">lint</span> 스크립트가 있는 workspace 는 <span class="mono">apps/shell</span> 뿐이라 <b>apps/shell 안에서만</b> <span class="mono">eslint .</span> 이 돕니다. <span class="mono">packages/*</span> · 다른 <span class="mono">apps/*</span> 는 검사되지 않습니다(AGENTS.md "검증 커맨드의 실제 커버리지").</td></tr>
+            <tr><td class="mono">pnpm typecheck &amp;&amp; pnpm test</td><td>typecheck 도 <span class="mono">apps/shell/src</span> 만(import 를 따라 <span class="mono">@crane/*</span> 소스는 간접 검사). test 는 <span class="mono">apps/{philly-shipyard,mro2,indoorshop}</span> + <span class="mono">packages/{core,domain,features,widgets}</span> 의 vitest 전부 — 하나라도 실패하면 deploy 잡이 시작되지 않습니다.</td></tr>
+            <tr><td rowspan="3">Dockerfile builder<br><span class="small muted">230 러너 · docker build</span></td><td class="mono">corepack enable &amp;&amp; corepack prepare pnpm@10.11.0 --activate</td><td><span class="mono">node:20-alpine</span> 에 pnpm 을 고정 버전으로 설치. 러너 호스트의 pnpm 과 무관합니다.</td></tr>
+            <tr><td class="mono">pnpm install --frozen-lockfile</td><td>workspace 13개의 <span class="mono">package.json</span> 과 lockfile 만 먼저 COPY 한 레이어에서 실행 → 소스가 바뀌어도 의존성 레이어는 캐시. store 는 BuildKit 캐시 마운트(<span class="mono">id=pnpm-store</span>).</td></tr>
+            <tr><td class="mono">pnpm turbo run build --filter=@crane/shell...</td><td><span class="mono">@crane/shell</span> 과 그 의존 workspace 만 빌드(<span class="mono">...</span> 가 의존 포함). shell 의 <span class="mono">build</span> 는 <span class="mono">vite build</span> 이고, 이때 <span class="mono">VITE_BASE_URL</span> · <span class="mono">VITE_INDOOR_BASE_URL</span> · <span class="mono">VITE_APP_ENV</span> 가 번들에 구워집니다. 산출물 <span class="mono">apps/shell/dist</span> 만 runner 로 넘어갑니다.</td></tr>
+            <tr><td>로컬</td><td class="mono">pnpm dev:dev · dev:stage · dev:prod</td><td>환경별 dev 서버. <span class="mono">vite --mode &lt;env&gt;</span> 가 <span class="mono">deploy/env/&lt;env&gt;.env</span> 를 읽어 <span class="mono">VITE_BASE_URL</span> · <span class="mono">VITE_INDOOR_BASE_URL</span> · <span class="mono">VITE_APP_ENV</span> 로 넘깁니다(<span class="mono">applyDeployEnv</span>). 셸에 export 한 VITE_* 가 있으면 그것이 우선. 기존 <span class="mono">pnpm dev</span> · <span class="mono">dev:split</span> 은 바뀌지 않았습니다.</td></tr>
+            <tr><td>로컬</td><td class="mono">pnpm lint &amp;&amp; pnpm typecheck &amp;&amp; pnpm test</td><td>push 전에 verify 잡과 같은 명령을 그대로 돌립니다. 로컬 pnpm 이 10.11.0 이 아니면 <span class="mono">ERR_PNPM_BAD_PM_VERSION</span> 으로 아무것도 안 돕니다 → <span class="mono">corepack enable</span>(권장) 또는 임시로 <span class="mono">COREPACK_ENABLE_STRICT=0</span>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note note--warn">
+        <p class="note__t">지금 verify 잡은 빨갛게 끝납니다</p>
+        <span class="mono">pnpm test</span> 가 <span class="mono">apps/indoorshop</span> 의 performance 더미 테스트 3파일(<span class="mono">paintingDailyProgress</span> · <span class="mono">rosterAssy</span> · <span class="mono">stageOrder</span>)에서 15건 실패합니다(이 작업과 무관, 마지막 수정 2026-09-04). lint · typecheck 는 통과.
+        워크플로를 켜기 전에 테스트를 고치거나, 임시로 verify 잡의 test 를 <span class="mono">pnpm test --filter=!@crane/indoorshop</span> 으로 좁히는 결정이 필요합니다. 고치지 않고 두면 develop push 가 영영 배포되지 않습니다.
+      </div>
+      <div class="note note--info">
+        <p class="note__t">pnpm 과 npm 을 섞지 않습니다</p>
+        러너 · 로컬 어디서든 <span class="mono">npm install</span> 을 치면 <span class="mono">package-lock.json</span> 이 생기고 workspace 링크가 깨집니다. <span class="mono">.npmrc</span> 의 <span class="mono">shamefully-hoist=true</span> 는 이식 코드(indoorshop)의 암묵 의존성 때문이며, 이 값이 바뀌면 verify 잡과 docker build 가 함께 깨지므로 lockfile 과 같은 PR 에서만 손댑니다.
+      </div>
       <div class="code">
-        <div class="code__bar"><span>.github/workflows/deploy-199.yml</span><button class="code__copy" type="button">복사</button></div>
-<pre>name: deploy-199
+        <div class="code__bar"><span>.github/workflows/deploy-199.yml — 저장소 파일 그대로</span><button class="code__copy" type="button">복사</button></div>
+<pre># develop · main push → 검사(GitHub 호스티드) → 이미지 빌드·전송(230 self-hosted 러너)
+# → 199 서버의 deploy/deploy.sh 가 load · up · 응답 확인 · 실패 시 직전 태그 복귀.
+# Secrets · Variables 목록과 절차는 docs/crane_rnd-호스팅-배포-전략.html §3.2.
+# pull_request 트리거는 두지 않는다 — 포크 PR 코드가 230 러너에서 실행된다.
+name: deploy-199
 
 on:
   push:
     branches: [develop, main]
-  workflow_dispatch:                 <span class="cm"># 재배포: Actions → Run workflow → 브랜치 선택</span>
+  workflow_dispatch:                 # 재배포: Actions → Run workflow → 브랜치 선택
+
+permissions:
+  contents: read
 
 jobs:
-  verify:                            <span class="cm"># GitHub 호스티드. 230 · 199 자원을 쓰지 않는다</span>
+  verify:                            # GitHub 호스티드. 230 · 199 자원을 쓰지 않는다
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4   # 버전은 package.json 의 packageManager 를 읽는다
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
@@ -1506,7 +1601,7 @@ jobs:
 
   deploy:
     needs: verify
-    runs-on: self-hosted             <span class="cm"># 230 서버에 이 저장소용으로 등록한 러너. 러너가 더 생기면 230 의 라벨을 추가해 고정</span>
+    runs-on: self-hosted             # 230 서버에 이 저장소용으로 등록한 러너. 러너가 더 생기면 230 의 라벨을 추가해 고정
     environment: ${{ github.ref_name == 'main' &amp;&amp; 'prod' || 'dev' }}
     concurrency:
       group: deploy-${{ github.ref_name }}
@@ -1531,8 +1626,8 @@ jobs:
 
       - name: 1. 이미지 빌드 (230)
         run: |
-          set -a; . "deploy/env/$ENV.env"; set +a     <span class="cm"># 경로 · 포트 · 지도 키 모두 env 파일에서</span>
-          IMAGE_TAG="$TAG" docker compose -p "crane-shell-$ENV" build
+          set -a; . "deploy/env/$ENV.env"; set +a     # 경로 · 포트 · 지도 키 모두 env 파일에서
+          IMAGE_TAG="$TAG" docker compose build         # 프로젝트 이름은 compose name: 이 DEPLOY_ENV 로 정함
 
       - name: 2. 이미지 저장 (230)
         run: docker save "crane-shell:$TAG" | gzip &gt; "crane-shell-$TAG.tar.gz"
@@ -1550,7 +1645,7 @@ jobs:
 
       - name: 4. 199 에서 배포 셸 실행
         env:
-          SUDO_PASS: ${{ secrets.SUDO_PASS }}      <span class="cm"># 199 계정이 docker 그룹이면 비워 둔다</span>
+          SUDO_PASS: ${{ secrets.SUDO_PASS }}      # 199 계정이 docker 그룹이면 비워 둔다
         run: |
           SSH="ssh -i $HOME/.ssh/crane_199 -p $SSH_PORT $SSH_USER@$SSH_HOST"
           if [ -n "$SUDO_PASS" ]; then
@@ -1599,10 +1694,10 @@ jobs:
         <table class="tbl">
           <thead><tr><th style="width:5%">#</th><th style="width:34%">지금 (손으로)</th><th style="width:32%">바뀐 뒤 (자동)</th><th>누가</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>빌드 머신에서 <span class="mono">docker compose build</span> → <span class="mono">docker save crane-shell:latest -o crane-shell.tar</span></td><td><span class="mono">IMAGE_TAG=dev-4e1d0a2 docker compose -p crane-shell-dev build</span> → <span class="mono">docker save … | gzip</span></td><td>230 러너 (워크플로 1 · 2)</td></tr>
+            <tr><td>1</td><td>빌드 머신에서 <span class="mono">docker compose build</span> → <span class="mono">docker save crane-shell:latest -o crane-shell.tar</span></td><td><span class="mono">IMAGE_TAG=dev-4e1d0a2 docker compose build</span> → <span class="mono">docker save … | gzip</span></td><td>230 러너 (워크플로 1 · 2)</td></tr>
             <tr><td>2</td><td>tar 를 199 로 옮김</td><td><span class="mono">scp</span> 로 <span class="mono">$DEPLOY_DIR/images/</span> 에, compose · deploy/ 도 함께</td><td>230 러너 (워크플로 3)</td></tr>
             <tr><td>3</td><td>199 에서 <span class="mono">docker load -i crane-shell.tar</span></td><td><span class="mono">gunzip -c … | docker load</span></td><td>199 <span class="mono">deploy.sh</span> ①</td></tr>
-            <tr><td>4</td><td>같은 디렉토리의 <span class="mono">.env</span> + <span class="mono">docker-compose.yml</span> 로 <span class="mono">docker compose up -d</span></td><td><span class="mono">docker compose -p crane-shell-dev down</span> → <span class="mono">up -d --no-build</span> → 응답 확인</td><td>199 <span class="mono">deploy.sh</span> ③ ④</td></tr>
+            <tr><td>4</td><td>같은 디렉토리의 <span class="mono">.env</span> + <span class="mono">docker-compose.yml</span> 로 <span class="mono">docker compose up -d</span></td><td><span class="mono">docker compose down</span> → <span class="mono">up -d --no-build</span> → 응답 확인</td><td>199 <span class="mono">deploy.sh</span> ③ ④</td></tr>
           </tbody>
         </table>
       </div>
@@ -1610,31 +1705,34 @@ jobs:
         지금 떠 있는 <span class="mono">crane-shell</span> 컨테이너와 <span class="mono">crane-shell:latest</span> 이미지는 건드리지 않습니다(§2.3 전환 때까지).</p>
 
       <div class="code">
-        <div class="code__bar"><span>deploy/deploy.sh — 199 서버에서 실행</span><button class="code__copy" type="button">복사</button></div>
+        <div class="code__bar"><span>deploy/deploy.sh — 199 서버에서 실행 · 저장소 파일 그대로</span><button class="code__copy" type="button">복사</button></div>
 <pre>#!/usr/bin/env bash
-<span class="cm"># 호출: deploy/deploy.sh &lt;dev|prod&gt; &lt;이미지 태그&gt;   예) deploy/deploy.sh dev dev-4e1d0a2</span>
-<span class="cm"># 위치: $DEPLOY_DIR/deploy/deploy.sh (옆에 env/ · smoke.sh, 위에 docker-compose.yml · .env · images/)</span>
+# 호출: deploy/deploy.sh &lt;dev|stage|prod&gt; &lt;이미지 태그&gt;   예) deploy/deploy.sh dev dev-4e1d0a2
+# 위치: $DEPLOY_DIR/deploy/deploy.sh (옆에 env/ · smoke.sh, 위에 docker-compose.yml · .env · images/)
+# 워크플로 .github/workflows/deploy-199.yml 의 4단계가 ssh 로 이 셸을 부른다.
+# 손으로 되돌릴 때도 같은 셸을 쓴다: 이미 로드된 태그면 tar 없이 된다.
 set -euo pipefail
 ENV="${1:?env}"; TAG="${2:?tag}"
 ROOT="$(cd "$(dirname "$0")/.." &amp;&amp; pwd)"
 set -a; . "$ROOT/deploy/env/$ENV.env"; set +a
 NAME="crane-shell-$ENV"
 TAR="$ROOT/images/crane-shell-$TAG.tar.gz"
-compose() { docker compose -p "$NAME" -f "$ROOT/docker-compose.yml" "$@"; }
+# 프로젝트 이름은 compose 의 name: 이 위에서 올린 DEPLOY_ENV 로 정한다 ($NAME 과 같은 값)
+compose() { docker compose -f "$ROOT/docker-compose.yml" "$@"; }
 
-<span class="cm"># 1. 이미지 로드 (tar 가 없으면 이미 로드된 이미지를 씀 — 로컬 실습)</span>
+# 1. 이미지 로드 (tar 가 없으면 이미 로드된 이미지를 씀 — 롤백 · 로컬 실습)
 if [ -f "$TAR" ]; then gunzip -c "$TAR" | docker load; fi
 docker image inspect "crane-shell:$TAG" &gt;/dev/null
 
-<span class="cm"># 2. 지금 떠 있는 태그 기억 (롤백용)</span>
+# 2. 지금 떠 있는 태그 기억 (롤백용)
 PREV="$(docker inspect -f '{{.Config.Image}}' "$NAME" 2&gt;/dev/null | cut -d: -f2 || true)"
 
-<span class="cm"># 3. 내렸다가 다시 올림</span>
+# 3. 내렸다가 다시 올림
 compose down --remove-orphans || true
 IMAGE_TAG="$TAG" compose up -d --no-build
 
-<span class="cm"># 4. 응답 확인. 60초 안에 안 되면 직전 태그로 다시 올리고 실패로 끝냄</span>
-if ! bash "$ROOT/deploy/smoke.sh" "http://127.0.0.1:$SHELL_PORT" "$BASE_PATH" "$INDOOR_PATH" 60; then
+# 4. 응답 확인. 60초 안에 안 되면 직전 태그로 다시 올리고 실패로 끝냄
+if ! bash "$ROOT/deploy/smoke.sh" "http://127.0.0.1:$SHELL_PORT" "$BASE_PATH" "${INDOOR_PATH:-}" 60; then
   docker logs --tail 80 "$NAME" || true
   if [ -n "$PREV" ] &amp;&amp; [ "$PREV" != "$TAG" ]; then
     echo "응답 없음 → $PREV 로 복귀"
@@ -1644,7 +1742,7 @@ if ! bash "$ROOT/deploy/smoke.sh" "http://127.0.0.1:$SHELL_PORT" "$BASE_PATH" "$
   exit 1
 fi
 
-<span class="cm"># 5. 정리: 받은 tar 삭제, 환경별 이미지는 최근 3개만 (현재 + 롤백 후보 2)</span>
+# 5. 정리: 받은 tar 삭제, 환경별 이미지는 최근 3개만 (현재 + 롤백 후보 2)
 rm -f "$TAR"
 docker images crane-shell --format '{{.Tag}}' | grep "^$ENV-" | tail -n +4 \
   | xargs -r -I{} docker rmi "crane-shell:{}" || true
@@ -1659,7 +1757,7 @@ echo "배포 완료: $NAME ← crane-shell:$TAG"</pre>
           <tbody>
             <tr><td>①</td><td>이미지 로드</td><td class="mono">gunzip -c images/crane-shell-dev-4e1d0a2.tar.gz | docker load</td><td><span class="mono">docker images crane-shell</span> 에 <span class="mono">dev-4e1d0a2</span> 가 생김. 컨테이너는 아직 옛 것</td><td>컨테이너 그대로, exit 1</td></tr>
             <tr><td>②</td><td>직전 태그 기억</td><td class="mono">docker inspect -f '{{.Config.Image}}' crane-shell-dev</td><td>변화 없음. 예: <span class="mono">dev-a1b2c3d</span> 를 변수에 담음 (첫 배포면 빈 값)</td><td>—</td></tr>
-            <tr><td>③</td><td>내렸다가 올림</td><td class="mono">docker compose -p crane-shell-dev down<br>IMAGE_TAG=dev-4e1d0a2 docker compose -p crane-shell-dev up -d --no-build</td><td><span class="mono">crane-shell-dev</span> 가 몇 초 사라졌다가 새 이미지로 다시 뜸. 이 사이 <span class="mono">/crane_rnd/dev/</span> 는 502. prod 컨테이너는 그대로</td><td>exit 1 (컨테이너가 없을 수 있음 → 수동 롤백)</td></tr>
+            <tr><td>③</td><td>내렸다가 올림</td><td class="mono">docker compose down<br>IMAGE_TAG=dev-4e1d0a2 docker compose up -d --no-build</td><td><span class="mono">crane-shell-dev</span> 가 몇 초 사라졌다가 새 이미지로 다시 뜸. 이 사이 <span class="mono">/crane_rnd/dev/</span> 는 502. prod 컨테이너는 그대로</td><td>exit 1 (컨테이너가 없을 수 있음 → 수동 롤백)</td></tr>
             <tr><td>④</td><td>응답 확인</td><td class="mono">smoke.sh http://127.0.0.1:3362 /crane_rnd/dev/ /crane_rnd/indoor/dev/ 60</td><td>3초 간격 최대 20번 curl. healthz · crane · indoor 가 200 이고 indoor HTML 이 <span class="mono">/crane_rnd/dev/assets/</span> 를 가리키면 통과</td><td>로그 80줄 출력 → ② 의 태그로 ③ 반복 → exit 1</td></tr>
             <tr><td>⑤</td><td>정리</td><td class="mono">rm images/…tar.gz<br>docker rmi crane-shell:dev-(4번째부터)</td><td>tar 삭제. dev 이미지는 최근 3개만 남음</td><td>무시 (배포는 이미 성공)</td></tr>
           </tbody>
@@ -1689,6 +1787,39 @@ rnd_nginx          nginx:…                      0.0.0.0:33600-&gt;80/tcp</pre>
         </div>
       </div>
 
+      <h3>손으로 보낼 때 (scp)</h3>
+      <p>워크플로 3단계가 하는 일을 사람이 그대로 할 때입니다. 러너가 멈췄거나, 처음 한 번 서버를 맞출 때 씁니다. 빌드 머신(또는 로컬)의 저장소 루트에서 실행하고, 199 의 <span class="mono">.env</span> 는 서버에 있는 것을 쓰므로 보내지 않습니다.</p>
+      <div class="code">
+        <div class="code__bar"><span>빌드 머신 → 199 (저장소 루트)</span><button class="code__copy" type="button">복사</button></div>
+<pre><span class="cm"># 1. 이미지를 tar.gz 로 (300MB 대 → gzip 으로 묶어 보낸다)</span>
+docker save crane-shell:dev | gzip &gt; crane-shell-dev.tar.gz
+
+<span class="cm"># 2. 받을 디렉토리 (처음 한 번)</span>
+ssh -p 22 사용자@192.168.135.199 "mkdir -p /opt/crane-rnd/images"
+
+<span class="cm"># 3. 이미지 tar</span>
+scp -P 22 crane-shell-dev.tar.gz 사용자@192.168.135.199:/opt/crane-rnd/images/
+
+<span class="cm"># 4. compose 파일과 deploy/ 디렉토리 (deploy.sh · smoke.sh · env/) — -r 은 디렉토리 통째로</span>
+scp -P 22 -r docker-compose.yml deploy 사용자@192.168.135.199:/opt/crane-rnd/
+
+<span class="cm"># 5. 199 에서 배포 셸 (load → down → up → 응답 확인 → 실패 시 직전 태그)</span>
+ssh -p 22 사용자@192.168.135.199 "bash /opt/crane-rnd/deploy/deploy.sh dev dev"</pre>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th style="width:26%">옵션</th><th>뜻</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ssh -p 22 · scp -P 22</td><td>포트. <b>ssh 는 소문자, scp 는 대문자</b>다(scp 의 <span class="mono">-p</span> 는 "파일 시각 · 권한 보존"). 22 가 아니면 Secret <span class="mono">SSH_PORT</span> 와 같은 값</td></tr>
+            <tr><td class="mono">-r</td><td>디렉토리를 통째로 보낸다. <span class="mono">deploy/</span> 안의 셸 둘과 env 세 파일이 함께 간다</td></tr>
+            <tr><td class="mono">-i ~/.ssh/crane_199</td><td>비밀번호 대신 쓸 개인키(워크플로만). 230 에서 <span class="mono">ssh-keygen -t ed25519 -N '' -f ~/crane_199</span> 로 만들어 공개키를 199 계정의 <span class="mono">~/.ssh/authorized_keys</span> 에 넣고, 개인키 내용을 Secret <span class="mono">SSH_KEY</span> 에 넣는다</td></tr>
+            <tr><td class="mono">-o StrictHostKeyChecking=accept-new</td><td>처음 접속할 때 "호스트 키를 믿겠냐" 질문에 사람이 답할 수 없어 자동으로 받아들인다(워크플로만). 이미 아는 호스트의 키가 바뀌면 여전히 거부한다</td></tr>
+            <tr><td class="mono">사용자@192.168.135.199:경로</td><td>콜론 뒤가 199 쪽 경로. 끝 슬래시를 붙이면 그 디렉토리 안으로 들어간다. 디렉토리가 없으면 scp 가 실패하므로 2번을 먼저</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>워크플로는 위 2~5 를 Secret 값으로 바꿔 그대로 칩니다(<span class="mono">$SSH_USER@$SSH_HOST</span>, <span class="mono">-P $SSH_PORT</span>, <span class="mono">$DEPLOY_DIR</span>). 끝나면 러너의 tar 와 키 파일(<span class="mono">rm -f crane-shell-*.tar.gz ~/.ssh/crane_199</span>)을 지웁니다. 손으로 보냈을 때도 tar 는 199 의 deploy.sh 가 성공 후 지우고, 빌드 머신 쪽은 직접 지웁니다.</p>
+
       <h3>199 에서 손으로 다룰 때</h3>
       <div class="code">
         <div class="code__bar"><span>199 서버 셸</span><button class="code__copy" type="button">복사</button></div>
@@ -1701,22 +1832,26 @@ docker images crane-shell --format '{{.Tag}}\t{{.CreatedSince}}' | grep '^prod-'
 bash deploy/deploy.sh prod prod-9b2f6d4
 
 <span class="cm"># 지금 떠 있는 것 · 로그</span>
-docker compose -p crane-shell-prod ps
+docker compose --env-file deploy/env/prod.env ps
 docker logs --tail 100 crane-shell-prod</pre>
       </div>
 
       <div class="code">
-        <div class="code__bar"><span>deploy/smoke.sh</span><button class="code__copy" type="button">복사</button></div>
+        <div class="code__bar"><span>deploy/smoke.sh — 저장소 파일 그대로</span><button class="code__copy" type="button">복사</button></div>
 <pre>#!/usr/bin/env bash
-<span class="cm"># smoke.sh &lt;origin&gt; &lt;BASE_PATH&gt; &lt;INDOOR_PATH&gt; [제한 초]</span>
+# smoke.sh &lt;origin&gt; &lt;BASE_PATH&gt; &lt;INDOOR_PATH&gt; [제한 초]
+#   예) smoke.sh http://127.0.0.1:3362 /crane_rnd/dev/ /crane_rnd/indoor/dev/ 60
+# healthz · crane · indoor 주소가 200 이고, indoor 가 돌려준 index.html 이 이 환경의
+# 에셋 접두어(BASE_PATH/assets/)를 가리키면 통과. 3초 간격으로 제한 초까지 재시도.
 set -u
-O="$1"; B="$2"; I="$3"; LIMIT="${4:-60}"
+O="$1"; B="$2"; I="${3:-}"; LIMIT="${4:-60}"
+[ -n "$I" ] || I="$B"                  # crane · indoor 를 나누지 않는 빌드면 crane 주소만 본다
 for _ in $(seq 1 $((LIMIT / 3))); do
   html="$(curl -fsS "$O$I" 2&gt;/dev/null)" \
     &amp;&amp; curl -fsS -o /dev/null "$O$B" \
     &amp;&amp; curl -fsS -o /dev/null "$O/healthz" \
     &amp;&amp; grep -q "src=\"${B}assets/" &lt;&lt;&lt;"$html" \
-    &amp;&amp; exit 0                          <span class="cm"># indoor 주소가 이 환경의 빌드를 냈는지 에셋 접두어로 확인</span>
+    &amp;&amp; exit 0
   sleep 3
 done
 echo "smoke 실패: $O $B $I"; exit 1</pre>
@@ -1837,7 +1972,7 @@ echo "smoke 실패: $O $B $I"; exit 1</pre>
         <div class="slice__b"><dl>
           <dt>산출물</dt><dd><span class="mono">app-scope.ts</span> · 테스트, <span class="mono">app.tsx</span> basename 교체와 <span class="mono">craneRoutes</span> · <span class="mono">indoorRoutes</span> · <span class="mono">ScopeRedirect</span></dd>
           <dt>완료 조건</dt><dd>SC-06 · SC-07 과 경계 케이스가 테스트로 고정. 기존 <span class="mono">/crane_rnd/</span> 동작 변화 없음</dd>
-          <dt>검증</dt><dd><span class="mono">pnpm --filter @crane/core test</span> · <span class="mono">pnpm typecheck</span> · <span class="mono">VITE_INDOOR_BASE_URL=/crane_rnd/indoor/ pnpm dev</span></dd>
+          <dt>검증</dt><dd><span class="mono">pnpm --filter @crane/core test</span> · <span class="mono">pnpm typecheck</span> · <span class="mono">pnpm dev:prod</span>(또는 <span class="mono">dev:dev</span>)</dd>
           <dt>의존</dt><dd>없음</dd></dl></div>
       </div>
       <div class="slice">
@@ -1849,9 +1984,9 @@ echo "smoke 실패: $O $B $I"; exit 1</pre>
           <dt>의존</dt><dd>S1</dd></dl></div>
       </div>
       <div class="slice">
-        <div class="slice__h"><span class="no">S3</span><b>환경별 빌드 값과 배포 셸</b><span class="sp"></span><span class="chip chip--neutral">1일</span></div>
+        <div class="slice__h"><span class="no">S3</span><b>환경별 빌드 값과 배포 셸</b><span class="sp"></span><span class="chip chip--ok">코드 반영</span><span class="chip chip--neutral">1일</span></div>
         <div class="slice__b"><dl>
-          <dt>산출물</dt><dd>루트 Dockerfile · docker-compose.yml 인자 추가, <span class="mono">deploy/env/*</span>, <span class="mono">deploy/deploy.sh</span>, <span class="mono">deploy/smoke.sh</span></dd>
+          <dt>산출물</dt><dd>루트 Dockerfile · docker-compose.yml 인자 추가, <span class="mono">deploy/env/*</span>, <span class="mono">deploy/deploy.sh</span>, <span class="mono">deploy/smoke.sh</span>, <span class="mono">nginx.conf.template</span> 의 <span class="mono">${BASE_PATH}</span> 치환 + <span class="mono">deploy/nginx/15-base-path.envsh</span></dd>
           <dt>완료 조건</dt><dd>로컬에서 <span class="mono">deploy/deploy.sh dev dev-local</span> 이 0 으로 끝나고 <span class="mono">:3362/crane_rnd/dev/</span> · <span class="mono">:3362/crane_rnd/indoor/dev/</span> 가 열림</dd>
           <dt>검증</dt><dd>§A.3 로컬 실습</dd>
           <dt>의존</dt><dd>S1</dd></dl></div>
@@ -1865,7 +2000,7 @@ echo "smoke 실패: $O $B $I"; exit 1</pre>
           <dt>의존</dt><dd>S3 (199 서버에 dev 컨테이너가 떠 있어야 함)</dd></dl></div>
       </div>
       <div class="slice">
-        <div class="slice__h"><span class="no">S5</span><b>러너 · 워크플로 · 브랜치 보호</b><span class="sp"></span><span class="chip chip--neutral">1일</span></div>
+        <div class="slice__h"><span class="no">S5</span><b>러너 · 워크플로 · 브랜치 보호</b><span class="sp"></span><span class="chip chip--info">워크플로 파일만 반영</span><span class="chip chip--neutral">1일</span></div>
         <div class="slice__b"><dl>
           <dt>산출물</dt><dd>230 러너 확인, Secrets(§3.2 표), <span class="mono">deploy-199.yml</span>, develop · main 보호 규칙</dd>
           <dt>완료 조건</dt><dd>develop push 로 <span class="mono">crane-shell-dev</span> 가 바뀌고, 일부러 깨뜨린 커밋으로 SC-05 복귀 확인</dd>
@@ -1927,12 +2062,12 @@ echo "smoke 실패: $O $B $I"; exit 1</pre>
       <p class="why">서버 없이 dev 컨테이너를 띄워 주소 응답과 범위 판정을 손으로 확인합니다.</p>
       <div class="code">
         <div class="code__bar"><span>로컬 절차 (저장소 루트, Git Bash)</span><button class="code__copy" type="button">복사</button></div>
-<pre><span class="cm"># 0. 개발 서버로 범위 판정만 빠르게 (docker 불필요)</span>
-VITE_INDOOR_BASE_URL=/crane_rnd/indoor/ pnpm dev     <span class="cm"># → localhost:5173/crane_rnd/ , /crane_rnd/indoor/</span>
+<pre><span class="cm"># 0. 개발 서버로 범위 판정만 빠르게 (docker 불필요). deploy/env/dev.env 를 읽는다</span>
+pnpm dev:dev     <span class="cm"># → localhost:5173/crane_rnd/dev/ , /crane_rnd/indoor/dev/  (dev:stage · dev:prod 도 같음)</span>
 
 <span class="cm"># 1. dev 이미지 빌드 (워크플로 1단계와 같은 명령)</span>
 ( set -a; . deploy/env/dev.env; set +a
-  IMAGE_TAG=dev-local docker compose -p crane-shell-dev build )
+  IMAGE_TAG=dev-local docker compose build )
 
 <span class="cm"># 2. 배포 셸 실행 (tar 가 없으므로 로드는 건너뛰고 내림 → 올림 → 응답 확인)</span>
 bash deploy/deploy.sh dev dev-local
@@ -1943,15 +2078,26 @@ for p in /crane_rnd/dev/ /crane_rnd/indoor/dev/ /crane_rnd/indoor/dev/keyin /cra
 done
 
 <span class="cm"># 4. 정리</span>
-docker compose -p crane-shell-dev down</pre>
+docker compose --env-file deploy/env/dev.env down</pre>
       </div>
       <div class="g2">
         <div class="note note--ok"><p class="note__t">성공 판정</p>
           2번이 "배포 완료" 로 끝나고 3번이 모두 <span class="mono">200</span> (마지막 줄은 index.html 을 받은 뒤 브라우저에서 <span class="mono">ScopeRedirect</span> 가 indoor 주소로 바꿈).
           브라우저로 <span class="mono">:3362/crane_rnd/indoor/dev/</span> 에서 <span class="mono">Indoorshop.OT</span> 로그인 성공, <span class="mono">crane.ocean</span> 거부.</div>
         <div class="note note--warn"><p class="note__t">자주 나는 오류</p>
-          Git Bash 가 <span class="mono">/crane_rnd/…</span> 인자를 Windows 경로로 바꿉니다(<span class="mono">C:/Program Files/Git/crane_rnd/</span>). 앞에 <span class="mono">MSYS_NO_PATHCONV=1</span> 을 붙입니다.
-          저장소 루트에 <span class="mono">.env</span> 가 없으면 compose 의 기존 환경변수가 비어 컨테이너가 뜨지 않습니다.</div>
+          Git Bash 가 <span class="mono">/crane_rnd/…</span> 인자를 Windows 경로로 바꿉니다(<span class="mono">C:/Program Files/Git/crane_rnd/</span>). 변수를 직접 붙이지 말고 <span class="mono">pnpm dev:dev</span> 처럼 env 파일을 읽는 스크립트를 쓰거나, 꼭 붙여야 하면 앞에 <span class="mono">MSYS_NO_PATHCONV=1</span>.
+          저장소 루트에 <span class="mono">.env</span> 가 없으면 compose 의 기존 환경변수가 비어 컨테이너가 뜨지 않습니다.
+          로컬에 <span class="mono">.env</span> 를 두지 않으려면 <span class="mono">BACKEND_HOST=127.0.0.1 BACKEND_PORT=8000 LIDAR_HOST=127.0.0.1 LIDAR_PORT=9000</span> 을 export 하고 2번을 실행합니다.
+          pnpm 이 10.11.0 이 아니면 <span class="mono">ERR_PNPM_BAD_PM_VERSION</span> 으로 모든 스크립트가 멈춥니다 — <span class="mono">corepack enable</span>.</div>
+      </div>
+      <div class="note note--ok">
+        <p class="note__t">실습 결과 — 저장소 파일 기준으로 통과</p>
+        <ul>
+          <li>1번 빌드(<span class="mono">crane-shell:dev-local</span>) 후 2번 <span class="mono">deploy/deploy.sh dev dev-local</span> 이 "배포 완료" 로 0 종료.</li>
+          <li>3번 직결 확인: <span class="mono">/crane_rnd/dev/</span> · <span class="mono">/crane_rnd/indoor/dev/</span> · <span class="mono">/crane_rnd/indoor/dev/keyin</span> · <span class="mono">/crane_rnd/dev/indoorshop/zones/assembly</span> · <span class="mono">/healthz</span> 모두 200. <span class="mono">/crane_rnd/dev</span>(슬래시 없음)와 <span class="mono">/</span> 는 <span class="mono">/crane_rnd/dev/</span> 로 302.</li>
+          <li>indoor 주소가 돌려준 index.html 의 스크립트 경로는 <span class="mono">/crane_rnd/dev/assets/…</span> (smoke 의 에셋 접두어 판정과 같음). <span class="mono">assets/</span> 응답은 1년 immutable.</li>
+          <li>4번 <span class="mono">compose … down</span> 으로 정리. 서버는 건드리지 않았습니다.</li>
+        </ul>
       </div>
 
     </section>
@@ -1990,6 +2136,7 @@ docker compose -p crane-shell-dev down</pre>
             <tr><td>SHELL_PORT</td><td>env</td><td>앱 컨테이너의 호스트 포트 (루트 compose 의 기존 변수)</td><td>rnd_nginx 의 proxy_pass 포트와 같아야 함</td></tr>
             <tr><td>basename</td><td>React Router</td><td>라우트 앞에 붙는 공통 접두어</td><td>범위 · 환경별 (<span class="mono">/crane_rnd/indoor/stage</span> 등). §1.1</td></tr>
             <tr><td>ScopeRedirect</td><td>컴포넌트</td><td>다른 범위 주소로 바꿔 다시 여는 라우트 요소</td><td>crane 트리의 <span class="mono">indoorshop/*</span> · <span class="mono">keyin</span> 옛 북마크용</td></tr>
+            <tr><td>name: crane-shell-${DEPLOY_ENV:-prod}</td><td>compose 최상위 키</td><td>프로젝트 이름(네트워크 · 컨테이너 묶음)</td><td>env 파일의 DEPLOY_ENV 로 환경별 이름이 됨. <span class="mono">-p</span> 를 대신한다</td></tr>
             <tr><td>CONTAINER_SUFFIX</td><td>env</td><td>컨테이너 이름 꼬리</td><td><span class="mono">-prod</span> · <span class="mono">-stage</span> · <span class="mono">-dev</span>. 비우면 지금 이름 <span class="mono">crane-shell</span></td></tr>
             <tr><td>scope (범위)</td><td>앱 개념</td><td>crane 또는 indoor</td><td>주소로만 정함, 허용 role 과 세션 키를 가름</td></tr>
             <tr><td>SCOPE_ROLES</td><td>상수</td><td>범위 → 허용 role 목록</td><td>여기 없는 role 은 어디서도 로그인 불가</td></tr>

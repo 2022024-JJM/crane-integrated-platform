@@ -18,6 +18,7 @@
 pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` 이며 npm 을 쓰지 않는다.
 
 - `pnpm dev` — 전체 dev (실질적으로 `apps/shell`), 또는 `pnpm dev:shell`
+- `pnpm dev:dev` · `pnpm dev:stage` · `pnpm dev:prod` — `deploy/env/<env>.env` 의 BASE_PATH · INDOOR_PATH · DEPLOY_ENV 를 VITE_* 로 읽어 그 환경의 주소(예: `/crane_rnd/dev/` + `/crane_rnd/indoor/dev/`)로 dev 서버를 띄운다(`vite --mode <env>`, 매핑은 `apps/shell/vite.config.ts` 의 `applyDeployEnv`, base 밖 indoor 주소는 `devIndoorFallbackPlugin` 이 index.html 로 넘김). 셸에 export 된 VITE_* 가 우선. 환경 값은 그 파일에만 두고 vite 쪽에 다시 적지 않는다
 - `pnpm dev:split` — crane(`/crane_rnd/`) · indoor(`/crane_rnd/indoor/`) 주소를 나눠 띄우는 dev (`apps/shell/.env.split`). Git Bash 에서 `VITE_INDOOR_BASE_URL=/…` 를 직접 붙이면 Windows 경로로 바뀌므로 이 스크립트를 쓴다
 - `pnpm build` — turbo build (`apps/shell` 이 유일한 빌드 대상)
 - `pnpm lint` — ESLint flat config
@@ -47,7 +48,7 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 
 vitest 를 사용한다. 테스트 위치는 위 커버리지 표의 `pnpm test` 행이 전부이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
 
-- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/philly-shipyard` 와 `packages/{core,domain,features,widgets}` 뿐이고(`core` 는 three 가 없어 `setupFiles` 도 없다), `apps/{mro2,indoorshop}` 은 설정 없이 vitest 기본값으로 돈다.
+- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/{philly-shipyard,indoorshop}` 과 `packages/{core,domain,features,widgets}` 다(`core` 는 three 가 없어 `setupFiles` 도 없다). `apps/indoorshop` 은 `*.test.ts` → node, `*.test.tsx` → jsdom 두 프로젝트로 나뉘고 dom 은 직렬 실행이다. `apps/mro2` 는 설정 없이 vitest 기본값으로 돈다.
 - 패키지 공통 규칙: 기본 환경은 node. DOM·localStorage·React 훅이 필요한 파일에만 `// @vitest-environment jsdom` 을 붙인다 (jsdom 전역 설정 금지). 훅 테스트는 `@testing-library/react` 의 `renderHook` 을 쓴다.
 - `packages/{features,widgets}` 의 `src/test-setup.ts` 는 jsdom 캔버스 스텁이다 — three/examples 모듈(lottie 등)이 로드 시점에 2D 컨텍스트를 요구해서 없으면 jsdom 테스트의 모듈 로드가 깨진다.
 - R3F `useFrame` 훅(리플레이 러너, 충돌 가드 시뮬레이션)은 `@react-three/fiber` 를 mock 해 콜백을 잡아 두고 delta 를 수동 주입해 결정론적으로 돌린다. 시뮬레이션의 Math.random 은 시드 고정 PRNG 로 대체한다.
@@ -320,3 +321,4 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - `apps/indoorshop` 의 이식 코드(`src/dashboard/**`, `src/pages/inshop-*/**`)는 `react-hooks` 컴파일러 규칙과 `react-refresh/only-export-components` 가 warn 으로 완화돼 있다. 이식 전부터 있던 패턴이고 대부분 three.js 뷰어의 명령형 코드라 검증 없이 고치면 동작이 바뀐다. 자세한 배경과 종료 조건은 `eslint.config.js` 의 해당 블록 주석에 있다.
 - `VITE_*` 환경변수는 Vite 가 빌드 시점에 번들로 인라인한다. 운영 서버에서 `.env` 만 바꿔서는 반영되지 않고 재빌드가 필요하다. 반면 백엔드/LiDAR IP·PORT 는 런타임에 nginx envsubst 로 주입되므로 `.env` 수정만으로 바뀐다 (`Dockerfile`, `docker-compose.yml` 주석 참조).
 - 배포는 폐쇄망이다. `docker save` 로 만든 tar 를 운영 서버로 옮겨 `docker load` 하며, 운영 서버에는 인터넷이 없다. 도구·의존성을 추가하는 제안을 할 때 이 제약을 전제한다.
+- 배포 자동화는 `.github/workflows/deploy-199.yml`(검사는 GitHub 호스티드, 빌드·전송은 self-hosted 러너) → 운영 서버의 `deploy/deploy.sh` 다. 환경별 값은 `deploy/env/<env>.env`, 응답 확인은 `deploy/smoke.sh`. 컨테이너 nginx 의 경로는 `nginx.conf.template` 의 `${BASE_PATH}` 치환 하나로 따라가고 파생 변수는 `deploy/nginx/15-base-path.envsh` 가 만든다 — 템플릿에 `/crane_rnd/` 를 다시 하드코딩하지 않는다. 절차·시크릿 목록은 `docs/crane_rnd-호스팅-배포-전략.html`.
