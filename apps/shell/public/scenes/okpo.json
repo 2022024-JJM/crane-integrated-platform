@@ -46,7 +46,7 @@
   "models": [
     {
       "id": "85d60f80-146b-4870-8786-3839398931cd",
-      "equipName": "2Dock Goliath",
+      "equipName": "GC-02",
       "path": "/models/okpo_goliath.glb",
       "opacity": 1,
       "position": [
@@ -153,13 +153,13 @@
     },
     {
       "id": "f37f44b8-1a5e-41b1-8b6a-b5d776720846",
-      "equipName": "1Dock Goliath",
+      "equipName": "GC-01",
       "path": "/models/okpo_goliath.glb",
       "opacity": 1,
       "position": [
-        49.293,
+        34,
         5.483,
-        -94.739
+        -63
       ],
       "rotation": [
         0,
@@ -167,42 +167,20 @@
         0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.55,
+        1.1,
+        1.55
       ]
     },
     {
-      "id": "14fdd3e2-3c7e-4570-97c6-80bb53be8241",
-      "equipName": "OC",
-      "path": "/models/okpo_oc.glb",
-      "opacity": 1,
-      "position": [
-        477.241,
-        4.975,
-        -2.397
-      ],
-      "rotation": [
-        0,
-        90,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
-    },
-    {
       "id": "a777d569-a381-43c4-b556-a039907b5141",
-      "equipName": "OC",
+      "equipName": "OC-03",
       "path": "/models/okpo_oc.glb",
       "opacity": 1,
       "position": [
-        195.035,
+        -150,
         4.975,
-        -165.221
+        -155
       ],
       "rotation": [
         0,
@@ -217,14 +195,35 @@
       "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
-      "id": "009dc1ba-5983-4be3-a62c-95426add69ff",
-      "equipName": "TTC",
+      "id": "0f7d5737-9896-41f6-9fc9-89212e132630",
+      "equipName": "TTC-7",
       "path": "/models/okpo_ttc.glb",
       "opacity": 1,
       "position": [
-        358.267,
+        153,
         5.524,
-        -162.13
+        -200
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "5e97b639-9840-48da-b1a6-90920cad44e5",
+      "equipName": "TTC-06",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        1137,
+        5.524,
+        -667.74
       ],
       "rotation": [
         0,
@@ -238,14 +237,14 @@
       ]
     },
     {
-      "id": "c3b1f038-e735-4083-8695-2684d938343b",
-      "equipName": "TC",
-      "path": "/models/okpo_tc.glb",
+      "id": "75041f21-af60-461d-828a-2dcefd671874",
+      "equipName": "TTC-16",
+      "path": "/models/okpo_ttc.glb",
       "opacity": 1,
       "position": [
-        -213.596,
-        5.24,
-        12.174
+        1261.737,
+        5.524,
+        -667.74
       ],
       "rotation": [
         0,
@@ -259,18 +258,694 @@
       ]
     },
     {
-      "id": "0f7d5737-9896-41f6-9fc9-89212e132630",
-      "equipName": "TTC",
+      "id": "d53386df-ff1c-4550-8736-c3c20d42d9d9",
+      "equipName": "TTC-17",
       "path": "/models/okpo_ttc.glb",
       "opacity": 1,
       "position": [
-        158.024,
+        1459.104,
         5.524,
-        4.796
+        -667.74
+      ],
+      "rotation": [
+        180,
+        180,
+        180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "d67b651c-cb64-4c9a-b7ee-87e23ac66c57",
+      "equipName": "OC-12",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        772,
+        4.975,
+        -235
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "50f57d5c-c177-47f2-a1d4-649e0b3ca397",
+      "equipName": "TTC-13",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        579,
+        5.524,
+        -235
       ],
       "rotation": [
         0,
         0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "36e16a8d-cd53-456d-b00e-9e346a144e82",
+      "equipName": "OC-13",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        754,
+        4.975,
+        525
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "6f2a2b72-e5ba-4383-9dd1-3283895ace35",
+      "equipName": "TTC-09",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        948,
+        5.524,
+        525
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "2f7cd750-c352-419c-934e-183b5224cd97",
+      "equipName": "TTC-14",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        706,
+        5.524,
+        1133
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "536b842e-7905-4704-a983-c55fc649b77f",
+      "equipName": "TTC-10",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        1140.203,
+        5.524,
+        1132
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "cc6d4cfe-c29b-4cd9-8c99-ecaee3309fa6",
+      "equipName": "TTC-15",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        893,
+        5.524,
+        1134
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "725fc603-c8c9-446a-9a9b-3df80284e94a",
+      "equipName": "Okpo OC",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        1589,
+        4.975,
+        1132
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "d2e92e27-e5f7-4b5d-a1d5-06ceac82774c",
+      "equipName": "TC-54",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        -240,
+        5.24,
+        -78
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "3fc01bfc-7b61-4a45-9a49-c6039bb30882",
+      "equipName": "TC-35",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        -46,
+        5.24,
+        37
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "84998952-60c5-43c3-980b-a64a1e39a512",
+      "equipName": "TC-77",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        -140,
+        5.24,
+        37
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "67cd54a4-0879-4f9a-95eb-1106c3fd2add",
+      "equipName": "TC-48",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        -230,
+        5.24,
+        37
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "588ffba6-a399-45b6-a997-48e4c1554c4e",
+      "equipName": "OC-02",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        70,
+        4.975,
+        -4
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+    },
+    {
+      "id": "949b3f39-08db-4f4d-b5c7-c20794ea018a",
+      "equipName": "OC-01",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        337,
+        4.975,
+        -4
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+    },
+    {
+      "id": "2d8ba966-6e40-4adc-9081-099d088d8d49",
+      "equipName": "CC-02",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        201,
+        4.975,
+        -4
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+    },
+    {
+      "id": "c58d8d19-ecd4-44b6-afc3-66f342f756b9",
+      "equipName": "TC-39",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        128,
+        5.24,
+        37
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "4158fb43-24ff-42c3-a6ec-8cea66907c23",
+      "equipName": "TC-64",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        282,
+        5.24,
+        37
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "8f15a6ad-4b33-48c1-a9c0-b1554484fa9f",
+      "equipName": "TC-96",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        369,
+        5.24,
+        37
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "d96086c3-4f7b-4678-88de-0411b37bdee8",
+      "equipName": "TC-94",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        209,
+        -40,
+        -66
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "36d94b6e-1137-458c-8a97-81a8a6e6c7c0",
+      "equipName": "TC-93",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        253,
+        -40,
+        -129
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "790f7bb4-0f93-4bf9-87cb-bb1c3f9bfb44",
+      "equipName": "OC-03",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        355,
+        4.975,
+        -169
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+    },
+    {
+      "id": "4c4d4d0e-759a-4342-a3b1-9c7e637fc6fd",
+      "equipName": "GC-03",
+      "path": "/models/goliath_crane.glb",
+      "opacity": 1,
+      "position": [
+        2409.255,
+        5.234,
+        1116.295
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.9,
+        1.1,
+        0.9
+      ]
+    },
+    {
+      "id": "6ed3c526-663e-4968-9e35-0f3175d5c943",
+      "equipName": "GC-05",
+      "path": "/models/goliath_crane.glb",
+      "opacity": 1,
+      "position": [
+        2631,
+        5.234,
+        943.148
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.2,
+        1.3,
+        1.3
+      ]
+    },
+    {
+      "id": "cc8b7687-3c60-445a-9360-8f190473b4b1",
+      "equipName": "TTC-24",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        2661,
+        5.524,
+        1105
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.7,
+        0.7
+      ]
+    },
+    {
+      "id": "ac814c7f-bf77-4c5c-a550-1587809a86b5",
+      "equipName": "TTC-23",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        2663,
+        5.524,
+        978
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.7,
+        0.7
+      ]
+    },
+    {
+      "id": "a38bc42f-f3ef-4222-922a-5b1cf37ef2c5",
+      "equipName": "TC-",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2596,
+        5.24,
+        993
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "34db2131-205b-40df-88a4-47ca8514719b",
+      "equipName": "TC-75",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2451,
+        5.24,
+        948
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "8b98e9e5-10ce-4765-8fec-c7f3e069179a",
+      "equipName": "TC-74",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2451,
+        5.24,
+        1032
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "64a7aa63-f1dc-496c-b71e-dfc9620bf763",
+      "equipName": "TC-80",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2385,
+        5.24,
+        894
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "b7b150e9-8c17-4fdc-acc6-67dbc1d92a4e",
+      "equipName": "TC-83",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2387,
+        5.24,
+        971
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "5a90fb3b-c638-4434-b1a4-c7de003aae59",
+      "equipName": "TC-73",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2383,
+        5.24,
+        1112
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "5945ec78-aeda-4c67-94f5-3f6d0aedd324",
+      "equipName": "TC-72",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        2399,
+        5.24,
+        1043
+      ],
+      "rotation": [
+        0,
+        270,
         0
       ],
       "scale": [
@@ -283,14 +958,14 @@
   "texts": [],
   "camera": {
     "position": [
-      603.6481606377654,
-      198.51497879049512,
-      -189.5318885192911
+      2654.209620774657,
+      229.31418856405077,
+      1209.645844914366
     ],
     "target": [
-      477.77532928770546,
-      -0.017547291929621008,
-      -144.1813647849046
+      2596.9128651845053,
+      88.88041007315344,
+      1088.3776492122959
     ]
   },
   "rigs": [
@@ -383,17 +1058,59 @@
       ]
     }
   ],
+  "rulers": [
+    {
+      "id": "d16db388-638a-4e8e-a436-8c9902d0463b",
+      "name": "눈금 1",
+      "position": [
+        2708,
+        4.976,
+        1166
+      ],
+      "rotation": [
+        0,
+        88.8,
+        0
+      ],
+      "length": 300,
+      "interval": 100,
+      "textColor": "#ffffff",
+      "dotColor": "#ffffff",
+      "textSize": "s",
+      "dotSize": "s"
+    },
+    {
+      "id": "a72a06f9-c569-47c7-b07a-e8b3a93d7bc3",
+      "name": "눈금 2",
+      "position": [
+        -290.948,
+        4.976,
+        55.583
+      ],
+      "rotation": [
+        0,
+        359.7,
+        0
+      ],
+      "length": 818.661,
+      "interval": 100,
+      "textColor": "#ffffff",
+      "dotColor": "#ffffff",
+      "textSize": "s",
+      "dotSize": "s"
+    }
+  ],
   "cameraByRegion": {
     "dock-1": {
       "position": [
-        603.6481606377654,
-        198.51497879049512,
-        -189.5318885192911
+        2654.209620774657,
+        229.31418856405077,
+        1209.645844914366
       ],
       "target": [
-        477.77532928770546,
-        -0.017547291929621008,
-        -144.1813647849046
+        2596.9128651845053,
+        88.88041007315344,
+        1088.3776492122959
       ]
     },
     "dock-2": {
@@ -429,14 +1146,14 @@
       "id": "daa127fc-3b94-4351-9737-0152bfcb65e0",
       "name": "A",
       "position": [
-        955.618119685081,
-        365.5880749207349,
-        -119.76620110407993
+        1008.4037457188851,
+        272.94659233688793,
+        25.935819057927006
       ],
       "target": [
-        817.5772310888947,
-        32.025901542745466,
-        -299.7524480281943
+        915.6485119394296,
+        -4.649490531205129,
+        -215.75286803565578
       ],
       "pinned": true
     },
@@ -459,14 +1176,14 @@
       "id": "4b6677bc-fb83-44ab-8273-a06547359215",
       "name": "E",
       "position": [
-        1295.4869715039565,
-        335.8151408926237,
-        1298.224458575856
+        1413.4300098323813,
+        316.7346137938742,
+        1365.7300329718382
       ],
       "target": [
-        1142.6057789318588,
-        -41.82744614564926,
-        986.3499013883571
+        1316.3461653016432,
+        25.612019095937455,
+        1168.3550556253124
       ],
       "pinned": true
     },
@@ -474,15 +1191,45 @@
       "id": "79e89fa3-0d13-41c2-8d71-ac0d46e276a2",
       "name": "2도크",
       "position": [
-        379.8935870636014,
-        303.59491938994876,
-        184.4587272859903
+        340.5567848242317,
+        241.43448817138403,
+        176.70599362040838
       ],
       "target": [
-        228.22860047928913,
-        -40.07378781592131,
-        -103.20573408834926
+        203.08471320261026,
+        53.0871133400997,
+        -15.050049250199274
       ]
+    },
+    {
+      "id": "0150c0f6-eebf-4c15-b6b6-d5f4a72481aa",
+      "name": "NEUTAE",
+      "position": [
+        2642.7993416149625,
+        255.129319426327,
+        1238.1825803386232
+      ],
+      "target": [
+        2524.8107956410126,
+        4.975770975582751,
+        1044.592753261403
+      ],
+      "pinned": true
+    },
+    {
+      "id": "204a73de-44e6-4bd8-93c1-330f8d3010a8",
+      "name": "H",
+      "position": [
+        2797.3619606010375,
+        465.82331457188104,
+        505.02055837900815
+      ],
+      "target": [
+        3135.6253676411384,
+        -0.00026921382370468234,
+        552.2806972486009
+      ],
+      "pinned": true
     }
   ],
   "viewSplit": {
@@ -502,6 +1249,8 @@
   "trueNorth": 50.6,
   "lighting": {
     "shadows": true,
-    "sunMode": "solar"
+    "sunMode": "solar",
+    "sunAzimuth": 135.82782985822627,
+    "sunElevation": 28.105583914615174
   }
 }
