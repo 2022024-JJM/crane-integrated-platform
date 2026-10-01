@@ -24,8 +24,6 @@ dist-ssr
 !.env.production.example
 !.env.example
 !apps/*/.env.example
-# 비밀값 없는 vite 모드 파일 (pnpm dev:split)
-!apps/shell/.env.split
 
 # Editor directories and files
 .vscode/*

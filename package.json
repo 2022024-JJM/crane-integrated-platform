@@ -11,7 +11,6 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "dev:shell": "pnpm --filter @crane/shell dev",
-    "dev:split": "pnpm --filter @crane/shell dev:split",
     "dev:dev": "pnpm --filter @crane/shell dev:dev",
     "dev:stage": "pnpm --filter @crane/shell dev:stage",
     "dev:prod": "pnpm --filter @crane/shell dev:prod",

@@ -17,9 +17,7 @@
 
 pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` 이며 npm 을 쓰지 않는다.
 
-- `pnpm dev` — 전체 dev (실질적으로 `apps/shell`), 또는 `pnpm dev:shell`
-- `pnpm dev:dev` · `pnpm dev:stage` · `pnpm dev:prod` — `deploy/env/<env>.env` 의 BASE_PATH · INDOOR_PATH · DEPLOY_ENV 를 VITE_* 로 읽어 그 환경의 주소(예: `/crane_rnd/dev/` + `/crane_rnd/indoor/dev/`)로 dev 서버를 띄운다(`vite --mode <env>`, 매핑은 `apps/shell/vite.config.ts` 의 `applyDeployEnv`, base 밖 indoor 주소는 `devIndoorFallbackPlugin` 이 index.html 로 넘김). 셸에 export 된 VITE_* 가 우선. 환경 값은 그 파일에만 두고 vite 쪽에 다시 적지 않는다
-- `pnpm dev:split` — crane(`/crane_rnd/`) · indoor(`/crane_rnd/indoor/`) 주소를 나눠 띄우는 dev (`apps/shell/.env.split`). Git Bash 에서 `VITE_INDOOR_BASE_URL=/…` 를 직접 붙이면 Windows 경로로 바뀌므로 이 스크립트를 쓴다
+- `pnpm dev` — shell dev 서버. `apps/shell/vite.config.ts` 의 `applyDeployEnv` 가 `deploy/env/prod.env` 를 읽어 운영과 같이 crane(`/crane_rnd/`) · indoor(`/crane_rnd/indoor/`) 로 나뉘고 `VITE_APP_ENV` 만 `local` 로 바꿔 헤더에 LOCAL 표시. 또는 `pnpm dev:shell`. 모드 파일(`.env.*`)로 주소를 바꾸지 않는다
 - `pnpm build` — turbo build (`apps/shell` 이 유일한 빌드 대상)
 - `pnpm lint` — ESLint flat config
 - `pnpm typecheck` — TypeScript check

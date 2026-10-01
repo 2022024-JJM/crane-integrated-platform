@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:split": "vite --mode split",
     "dev:dev": "vite --mode dev",
     "dev:stage": "vite --mode stage",
     "dev:prod": "vite --mode prod",

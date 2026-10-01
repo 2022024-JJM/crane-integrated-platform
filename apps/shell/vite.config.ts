@@ -288,6 +288,9 @@ function normalizeBaseUrl(input: string | undefined): string {
 /**
  * `vite --mode dev|stage|prod`(pnpm dev:dev 등) 는 저장소 루트 `deploy/env/<mode>.env` 의
  * 환경 값(BASE_PATH · INDOOR_PATH · DEPLOY_ENV)을 읽어 VITE_* 로 넘긴다.
+ * 그냥 `vite`(pnpm dev, mode development) 도 운영과 같은 주소 체계로 crane · indoor 가 나뉘도록
+ * `prod.env` 를 읽되 DEPLOY_ENV 만 `local` 로 바꿔 헤더에 LOCAL 이 뜨게 한다 — 별도 모드 파일 없음.
+ * `vite build`(mode production) 는 건드리지 않는다: docker 빌드가 ENV 로 값을 주고, 값이 없으면 기본 /crane_rnd/ 하나다.
  * 환경별 값의 단일 소스는 그 파일이라 여기서 다시 적지 않는다(docker 빌드도 같은
  * 파일을 compose 인자로 읽는다). 셸에서 직접 export 한 VITE_* 가 있으면 그것이
  * 우선이고, 없을 때만 채운다. process.env 에 넣는 이유: Vite 는 설정 함수가 끝난
@@ -301,9 +304,14 @@ const DEPLOY_ENV_TO_VITE: Record<string, string> = {
   DEPLOY_ENV: 'VITE_APP_ENV',
 };
 
-function applyDeployEnv(mode: string): Record<string, string> {
-  if (!(DEPLOY_ENV_MODES as readonly string[]).includes(mode)) return {};
-  const file = path.resolve(__dirname, '../../deploy/env', `${mode}.env`);
+const LOCAL_DEV_ENV = 'prod'; // pnpm dev 가 따라가는 주소 체계
+const LOCAL_DEV_LABEL = 'local'; // 그때 헤더 표시(VITE_APP_ENV)
+
+function applyDeployEnv(mode: string, command: 'serve' | 'build'): Record<string, string> {
+  const isLocalDev = command === 'serve' && mode === 'development';
+  const envName = isLocalDev ? LOCAL_DEV_ENV : mode;
+  if (!(DEPLOY_ENV_MODES as readonly string[]).includes(envName)) return {};
+  const file = path.resolve(__dirname, '../../deploy/env', `${envName}.env`);
   if (!existsSync(file)) {
     throw new Error(`[vite] --mode ${mode} 인데 ${file} 이 없습니다.`);
   }
@@ -314,7 +322,8 @@ function applyDeployEnv(mode: string): Record<string, string> {
     const eq = line.indexOf('=');
     if (eq < 0) continue;
     const key = line.slice(0, eq).trim();
-    const value = line.slice(eq + 1).trim();
+    const value =
+      isLocalDev && key === 'DEPLOY_ENV' ? LOCAL_DEV_LABEL : line.slice(eq + 1).trim();
     const viteKey = DEPLOY_ENV_TO_VITE[key];
     if (!viteKey) continue;
     if (process.env[viteKey] === undefined) process.env[viteKey] = value;
@@ -354,8 +363,8 @@ function devIndoorFallbackPlugin(
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = { ...loadEnv(mode, process.cwd(), ''), ...applyDeployEnv(mode) };
+export default defineConfig(({ mode, command }) => {
+  const env = { ...loadEnv(mode, process.cwd(), ''), ...applyDeployEnv(mode, command) };
   // dev proxy 대상 IP 는 코드에 두지 않는다. 운영에서는 nginx 가 처리하고
   // 개발자는 apps/shell/.env.local 에 본인 환경의 백엔드/LiDAR 주소를 적는다.
   const proxyHttpTarget = env.VITE_DEV_PROXY_TARGET_HTTP;
