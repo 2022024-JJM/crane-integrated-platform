@@ -24,7 +24,7 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     label: 'Goliath Crane',
     category: 'outdoor',
     path: '/models/goliath_crane.glb',
-    defaultScale: [0.1, 0.1, 0.1],
+    defaultScale: [1, 1, 1],
   }),
   // 옥포 크레인 4종: 미터 실척(옥포 씬 okpo.json 은 1 m/unit). 루트에 베이크된
   // 월드 오프셋은 scripts/unbake-root-transform.mjs 로 제거해 반입했다.
@@ -100,7 +100,7 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     label: '1P 3Bay',
     category: 'indoor',
     path: '/models/1p_3bay.glb',
-    defaultScale: [0.1, 0.1, 0.1],
+    defaultScale: [1, 1, 1],
   }),
   withDefaultPreview({
     id: '3p',

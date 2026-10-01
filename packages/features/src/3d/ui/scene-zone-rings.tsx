@@ -33,7 +33,7 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * 모델 영역의 바닥 원·테두리·이름 배지. 에디터·모니터링(리플레이 포함) 공용.
  *
  * - 영역은 **모델 루트의 자식으로 portal 하지 않는다** — 모델 scale/yaw 를
- *   상속받으면 반경 단위가 깨진다(카탈로그 defaultScale 0.1). 씬 수준 형제로
+ *   상속받으면 반경 단위가 깨진다(배치 scale 은 1 이 아닐 수 있다). 씬 수준 형제로
  *   두고 useFrame 마다 registry 루트의 월드 위치를 읽어 따라간다. 루트의
  *   `updateWorldMatrix(true, false)` 로 이 프레임의 자세를 바로 읽어 주행
  *   크레인 뒤로 링이 끌리지 않게 한다.
