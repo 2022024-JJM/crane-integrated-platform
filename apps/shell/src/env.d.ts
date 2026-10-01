@@ -7,3 +7,10 @@
 declare module 'virtual:asset-hash-manifest' {
   export const ASSET_HASH_MANIFEST: Record<string, string>;
 }
+
+interface ImportMetaEnv {
+  /** indoor 범위 주소 (예: '/crane_rnd/indoor/'). 없으면 범위를 나누지 않는다 */
+  readonly VITE_INDOOR_BASE_URL?: string;
+  /** 배포 환경 (dev · stage · prod). 헤더 환경 표시용 */
+  readonly VITE_APP_ENV?: string;
+}

@@ -6,73 +6,62 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import type { AuthUser, UserRole } from './types';
-
-interface Credentials {
-  id: string;
-  password: string;
-  role: UserRole;
-}
-
-const ACCOUNTS: Credentials[] = [
-  { id: 'crane.philly', password: '1', role: 'philly' },
-  { id: 'crane.ocean', password: '1', role: 'ocean' },
-  { id: 'crane.goliath', password: '1', role: 'goliath' },
-  { id: 'crane.MRO', password: '1', role: 'mro' },
-  { id: 'crane.MRO2', password: '1', role: 'mro2' },
-  { id: 'crane.HMI', password: '1', role: 'hmi' },
-  { id: 'crane.HMI2', password: '1', role: 'hmi2' },
-  { id: 'Indoorshop.IT', password: '1', role: 'indoorshop' },
-  { id: 'Indoorshop.OT', password: '1', role: 'indoorshop-ot' },
-  { id: 'Indoorshop.Keyin', password: '1', role: 'keyin' },
-];
-
-export const AUTH_STORAGE_KEY = 'crane-auth-user';
+import type { AuthUser } from './types';
+import {
+  getSessionStore,
+  readStoredUser,
+  writeStoredUser,
+  type AuthScope,
+} from './auth-scope';
+import { authenticate, type LoginResult } from './authenticate';
 
 interface AuthContextValue {
   user: AuthUser | null;
-  login: (id: string, password: string) => UserRole | false;
+  /** 이 주소의 범위. null = 범위를 나누지 않음 */
+  scope: AuthScope;
+  login: (id: string, password: string) => LoginResult;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function getStoredUser(): AuthUser | null {
-  try {
-    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(getStoredUser);
+export function AuthProvider({
+  children,
+  scope = null,
+}: {
+  children: ReactNode;
+  scope?: AuthScope;
+}) {
+  const [user, setUser] = useState<AuthUser | null>(() =>
+    readStoredUser(getSessionStore(), scope),
+  );
 
   const login = useCallback(
-    (id: string, password: string): UserRole | false => {
-      // ID는 앞뒤 공백·대소문자 차이를 허용한다 (비밀번호는 정확히 일치해야 함)
-      const normalized = id.trim().toLowerCase();
-      const account = ACCOUNTS.find(
-        (a) => a.id.toLowerCase() === normalized && a.password === password,
-      );
-      if (!account) return false;
-      const authUser: AuthUser = { id: account.id, role: account.role };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
-      setUser(authUser);
-      return account.role;
+    (id: string, password: string): LoginResult => {
+      const result = authenticate(id, password, scope);
+      if (result.ok) {
+        writeStoredUser(getSessionStore(), scope, result.user);
+        setUser(result.user);
+      }
+      return result;
     },
-    [],
+    [scope],
   );
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem('site-type');
+    writeStoredUser(getSessionStore(), scope, null);
+    try {
+      localStorage.removeItem('site-type');
+    } catch {
+      // 무시
+    }
     setUser(null);
-  }, []);
+  }, [scope]);
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+  const value = useMemo(
+    () => ({ user, scope, login, logout }),
+    [user, scope, login, logout],
+  );
 
   return <AuthContext value={value}>{children}</AuthContext>;
 }
