@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:split": "vite --mode split",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
