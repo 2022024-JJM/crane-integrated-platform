@@ -17,7 +17,6 @@
 | 검출기 훅 / Canvas 컴포넌트 | `packages/features/src/3d/model/use-scene-zone-detector.ts`, `ui/scene-zone-detector.tsx` |
 | 링·이름 배지 | `packages/features/src/3d/ui/scene-zone-rings.tsx` |
 | 화면 경보(비네트) | `packages/features/src/3d/ui/scene-zone-alert-overlay.tsx` |
-| 미니맵 영역 원 | `packages/features/src/3d/ui/scene-minimap.tsx` (`drawZones`) |
 | 인스펙터 "영역" 탭 / 순수 로직 | `packages/widgets/src/3d/ui/zone-section.tsx`, `packages/widgets/src/3d/lib/zone-editor.ts` |
 | 편집 채널·dirty 판정 | `updateSelectedZones` (`packages/features/src/3d/model/use-selected-scene-object-editor.ts`), `isZoneListEqual` (`packages/widgets/src/scene-editor/model/scene-snapshot.ts`) |
 | 로컬 알람 / 알람 메타 | `packages/domain/src/alarm/lib/local-alarm.ts`, `lib/zone-alarm-meta.ts` |
@@ -31,7 +30,7 @@
 
 ### 스키마·방어
 
-- `SavedModelInfo.zones?: SavedModelZone[]` — 항목은 `id`·`name`·`color`(`#rrggbb`)·`radius`·`offset?: [dx, dz]`·`level?: 'warn' | 'stop'`. `radius` 와 `offset` 은 **씬 unit** 이며 position 과 같은 단위다(옥포는 unit 이 m 가 아니다 — 아래 "씬 unit 스케일"). `offset` 은 월드 축 기준이고 `[0,0]` 이면 생략, `level` 은 `'stop'` 만 저장, 배열이 비면 필드 생략.
+- `SavedModelInfo.zones?: SavedModelZone[]` — 항목은 `id`·`name`·`color`(`#rrggbb`)·`radius`·`offset?: [dx, dz]`·`level?: 'warn' | 'stop'`. `radius` 와 `offset` 은 **씬 unit** 이며 position 과 같은 단위다(옥포 `dock-in` 은 unit 이 m 가 아니다 — 아래 "씬 unit 스케일"). `offset` 은 월드 축 기준이고 `[0,0]` 이면 생략, `level` 은 `'stop'` 만 저장, 배열이 비면 필드 생략.
 - `SavedModelInfo.zoneExempt?: boolean` — true 만 저장. 그 모델은 감지에서 통째로 빠진다: 침범자도 되지 않고 **자기 `zones` 도 감지하지 않으며** 링도 그리지 않는다(`buildEntry` 가 ZoneEntry 를 만들지 않고, `SceneZoneRings` 가 같은 플래그를 보고 선택 중이어도 건너뛴다). 정의는 남아 제외를 풀면 되살아난다. 침범 중 제외로 바뀌면 양쪽 다 합성 exit(`liveZoneKeys`·`liveIntruderIds` 가 같은 기준).
 - `sanitize-model-zones.ts`: 반경 ≤0·NaN 항목 버림, 중복 id first-wins, 색은 `#rrggbb` 만 소문자 정규화하고 그 외는 `DEFAULT_ZONE_COLOR` 폴백.
 
@@ -80,7 +79,7 @@
 - `scene-zone-alert-overlay.tsx` 는 가장자리 비네트만(amber/red). 충돌 경보가 떠 있으면 아무것도 그리지 않는다.
 - [영역 보기]는 우상단 알람 목록의 `zone_intrusion` 행 버튼이다. `features/alarm` 의 `AlarmFullscreenOverlay onViewZone` 을 페이지가 `Monitoring3dView actionsRef.viewZone` 에 잇는다 — 두 슬라이스는 같은 레이어라 서로 import 하지 않는다. 카메라 포즈는 충돌의 `computeCollisionViewPose` 재사용. 행의 색 점은 알람 `eventData.color`, 파싱은 `@crane/domain/alarm` `getZoneAlarmMeta`. 이 목록의 배지는 위험 수준 라벨(`getAlarmRiskLevelLabel`)이고 설명 줄 대신 발생 시각을 보인다. 골리앗 실시간 화면은 알람 오버레이 자체가 없어 [영역 보기]도 없다.
 - HUD 에 침범 칸이 있다(씬에 영역이 있을 때만, 정지 중엔 "n · 정지"). 가동 칸은 값 생산이 멈춘 동안 "정지 중". HUD 자체는 `docs/agents/monitoring-ui.md`.
-- 미니맵 `drawZones`: 마커 아래에 같은 중심·색으로 원을 그리고 침범 시 채움이 진해진다. 2px 미만은 생략. 영역 원 hover 는 소유·이름·침범자 목록 라벨. 미니맵 자체는 `docs/agents/monitoring-ui.md`.
+- 미니맵은 영역 원을 그리지 않는다 — 3D 링과 HUD 가 담당하고 미니맵에선 마커를 가린다. 미니맵 자체는 `docs/agents/monitoring-ui.md`.
 - 마운트 범위: 모니터링은 전 모드(실시간·3D 플레이·미리보기), 에디터는 `scene-objects-edit-canvas.tsx`.
 
 ### 인스펙터 "영역" 탭(zone-section)

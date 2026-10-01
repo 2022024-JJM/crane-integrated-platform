@@ -36,7 +36,7 @@
 
 - 대상은 씬 모델 **인스턴스 간** 관통이다. 판정은 AABB → OBB → three-mesh-bvh 삼각형 순으로 좁힌다. BVH 는 `collision-volumes.ts` 에서만 접근하고 여기서 빌드하지 않는다(빌드는 워밍업 큐, `docs/agents/rendering-perf.md`).
 - 메쉬 수집은 `collectCollidableMeshes` 다. `visible=false` 서브트리는 빼되 LOD 는 가시성과 무관하게 **항상 LOD0** 을 모은다 — LOD>0 사본은 BVH 가 없고, LOD0 은 `SceneTerrainLod` 가 거리에 따라 숨겨도 대상이다(raycast 와 같은 계약).
-- 억제 해제(분리 판정)는 모델 AABB 가 아니라 **메쉬 단위**다. `meshesWithinDistance` 가 AABB+margin → OBB → 삼각형 최단 거리로 보므로, 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 `SEPARATION_MARGIN` 이상 떨어지면 다시 보고된다.
+- 억제 해제(분리 판정)는 모델 AABB 가 아니라 **메쉬 단위**다. 런타임의 `meshPairsSeparated` 가 AABB+margin → OBB → 삼각형 최단 거리(`meshesWithinDistance`)로 보므로, 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 `SEPARATION_MARGIN` 이상 떨어지면 다시 보고된다.
 
 ### 런타임(scene-collision-runtime)
 
