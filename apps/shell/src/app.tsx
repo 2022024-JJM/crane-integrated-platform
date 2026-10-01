@@ -208,6 +208,18 @@ const CraneDetailPage = lazy(() =>
   })),
 );
 
+const AssetLibraryPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/asset-library').then((m) => ({
+    default: m.AssetLibraryPage,
+  })),
+);
+
+const AssetLibraryDetailPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/asset-library').then((m) => ({
+    default: m.AssetLibraryDetailPage,
+  })),
+);
+
 const AssetManagementPage = lazy(() =>
   import('@crane/philly-shipyard/pages/asset-management').then((m) => ({
     default: m.AssetManagementPage,
@@ -611,6 +623,23 @@ export function App() {
                 element={
                   <LazyRoute>
                     <CraneDetailPage />
+                  </LazyRoute>
+                }
+              />
+              {/* 3D 자산 라이브러리 — 전사 공용이라 region 하위가 아니다. */}
+              <Route
+                path="asset-library"
+                element={
+                  <LazyRoute>
+                    <AssetLibraryPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="asset-library/:assetId"
+                element={
+                  <LazyRoute>
+                    <AssetLibraryDetailPage />
                   </LazyRoute>
                 }
               />

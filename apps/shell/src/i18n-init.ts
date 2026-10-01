@@ -48,6 +48,9 @@ import laHistory from './locales/la/history.json';
 import koMro2 from './locales/ko/mro2.json';
 import enMro2 from './locales/en/mro2.json';
 import laMro2 from './locales/la/mro2.json';
+import koAssetLibrary from './locales/ko/asset-library.json';
+import enAssetLibrary from './locales/en/asset-library.json';
+import laAssetLibrary from './locales/la/asset-library.json';
 
 const resources = {
   ko: {
@@ -67,6 +70,7 @@ const resources = {
     calendar: koCalendar,
     history: koHistory,
     mro2: koMro2,
+    'asset-library': koAssetLibrary,
   },
   en: {
     common: enCommon,
@@ -85,6 +89,7 @@ const resources = {
     calendar: enCalendar,
     history: enHistory,
     mro2: enMro2,
+    'asset-library': enAssetLibrary,
   },
   la: {
     common: laCommon,
@@ -103,6 +108,7 @@ const resources = {
     calendar: laCalendar,
     history: laHistory,
     mro2: laMro2,
+    'asset-library': laAssetLibrary,
   },
 };
 
@@ -123,4 +129,5 @@ initI18n(resources, [
   'calendar',
   'history',
   'mro2',
+  'asset-library',
 ]);

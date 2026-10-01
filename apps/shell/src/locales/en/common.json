@@ -104,7 +104,9 @@
     "indoorshopReference": "Reference",
     "indoorshopDocs": "Documents",
     "virtualTags": "Virtual Tags",
-    "settings": "Settings"
+    "settings": "Settings",
+    "assets": "Assets",
+    "assetLibrary": "3D Asset Library"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",

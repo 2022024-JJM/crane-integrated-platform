@@ -13,7 +13,8 @@
     "./goliath-crane": "./src/goliath-crane/index.ts",
     "./scene-editor": "./src/scene-editor/index.ts",
     "./virtual-tags": "./src/virtual-tags/index.ts",
-    "./detection-settings": "./src/detection-settings/index.ts"
+    "./detection-settings": "./src/detection-settings/index.ts",
+    "./asset-library": "./src/asset-library/index.ts"
   },
   "scripts": {
     "test": "vitest run"

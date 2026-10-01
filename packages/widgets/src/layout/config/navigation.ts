@@ -30,6 +30,7 @@ import {
   MonitorPlay,
   RadioTower,
   Tags,
+  Library,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -71,6 +72,23 @@ function getMonitoringGroup(): NavGroup {
         label: i18n.t('common:nav.cmms'),
         path: '/monitoring/cmms',
         icon: MonitorCheck,
+      },
+    ],
+  };
+}
+
+/**
+ * 자산 그룹 — 3D 자산 라이브러리. 조선소·region 과 무관한 전사 공용 화면이라
+ * 작업 그룹(region 하위)이 아니라 모니터링 아래에 따로 둔다.
+ */
+function getAssetsGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.assets'),
+    items: [
+      {
+        label: i18n.t('common:nav.assetLibrary'),
+        path: '/asset-library',
+        icon: Library,
       },
     ],
   };
@@ -504,10 +522,11 @@ export function getNavigationConfig(
 
   const groups: NavGroup[] = [];
 
-  // 모든 role: Overview(Dashboard) + Monitoring(3개) + work systemGroup
+  // 모든 role: Overview(Dashboard) + Monitoring(3개) + 자산 + work systemGroup
   // MRO 그룹은 'mro' 전용 (위에서 단축 반환)
   groups.push(getOverviewGroup());
   groups.push(getMonitoringGroup());
+  groups.push(getAssetsGroup());
   groups.push(systemGroup);
 
   return groups.filter((g) => g.items.length > 0);

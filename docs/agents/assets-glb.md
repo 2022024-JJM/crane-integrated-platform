@@ -123,6 +123,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - LOD 노드 숨김은 최상위 캐리어만 — 자식 Mesh 의 복제된 extras 로 끄지 않는다.
 - three 를 업그레이드하면 `apps/shell/public/basis/r<REVISION>/` 을 새 REVISION 으로 재복사한다.
 - `sceneModelCatalog` 변경·미리보기 룩 변경 시 `public/previews/` 를 재생성해 함께 커밋한다.
+- GLB 를 반입·교체하면 `pnpm assets:stats` 로 자산 라이브러리의 통계 표를 다시 뽑아 함께 커밋한다(`docs/agents/asset-library.md`).
 - GLB 를 지우기 전에 씬 JSON·카탈로그뿐 아니라 코드 참조(`grep -rn <파일명> packages apps scripts`)까지 확인한다 — 카탈로그 밖에서 직접 로드하는 GLB 목록은 위 "배포본과 원본".
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 출력에 "← 얹힌 표시" 가 없어야 한다.
 - 새 카탈로그 지도는 `kind` 를 정한다 — `ground` 는 드롭 바닥·(체크 시) 카메라 기준, `context` 는 Lambert·LOD·그림자 제외 규칙을 받는다.

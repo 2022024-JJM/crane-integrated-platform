@@ -1,0 +1,2935 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "goliath-crane",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Goliath Crane",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "outdoor",
+        "crane"
+      ],
+      "owner": "JoBeomHee",
+      "defaultScale": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/goliath_crane.glb"
+            },
+            "fileName": "goliath_crane.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-20T01:23:05.000Z",
+          "createdBy": "JoBeomHee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/goliath-crane.png"
+        },
+        "updatedAt": "2026-10-01T08:04:30.618Z"
+      },
+      "createdAt": "2026-07-23T09:43:08.000Z",
+      "updatedAt": "2026-08-20T01:23:05.000Z",
+      "history": [],
+      "catalogId": "goliath-crane"
+    },
+    {
+      "id": "okpo-goliath",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Okpo Goliath",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "outdoor",
+        "crane"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/okpo_goliath.glb"
+            },
+            "fileName": "okpo_goliath.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-23T07:45:15.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/okpo-goliath.png"
+        },
+        "updatedAt": "2026-10-01T08:04:36.274Z"
+      },
+      "createdAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "history": [],
+      "catalogId": "okpo-goliath"
+    },
+    {
+      "id": "okpo-oc",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Okpo OC",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "outdoor",
+        "crane"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/okpo_oc.glb"
+            },
+            "fileName": "okpo_oc.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-23T07:45:15.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/okpo-oc.png"
+        },
+        "updatedAt": "2026-10-01T08:04:41.901Z"
+      },
+      "createdAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "history": [],
+      "catalogId": "okpo-oc"
+    },
+    {
+      "id": "okpo-tc",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Okpo TC",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "outdoor",
+        "crane"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/okpo_tc.glb"
+            },
+            "fileName": "okpo_tc.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-23T07:45:15.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/okpo-tc.png"
+        },
+        "updatedAt": "2026-10-01T08:04:47.307Z"
+      },
+      "createdAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "history": [],
+      "catalogId": "okpo-tc"
+    },
+    {
+      "id": "okpo-ttc",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Okpo TTC",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "outdoor",
+        "crane"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/okpo_ttc.glb"
+            },
+            "fileName": "okpo_ttc.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-23T07:45:15.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/okpo-ttc.png"
+        },
+        "updatedAt": "2026-10-01T08:04:52.082Z"
+      },
+      "createdAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "history": [],
+      "catalogId": "okpo-ttc"
+    },
+    {
+      "id": "llc-002",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "LLC-002",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "outdoor",
+        "crane"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/LLC_002.glb"
+            },
+            "fileName": "LLC_002.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-23T07:45:15.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/llc-002.png"
+        },
+        "updatedAt": "2026-10-01T08:04:57.941Z"
+      },
+      "createdAt": "2026-07-23T09:43:08.000Z",
+      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "history": [],
+      "catalogId": "llc-002"
+    },
+    {
+      "id": "block-001",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Block-001",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "outdoor",
+        "block"
+      ],
+      "owner": "whdals6831",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/Block_001.glb"
+            },
+            "fileName": "Block_001.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-26T01:37:43.000Z",
+          "createdBy": "whdals6831"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/block-001.png"
+        },
+        "updatedAt": "2026-10-01T08:05:02.571Z"
+      },
+      "createdAt": "2026-08-20T01:23:05.000Z",
+      "updatedAt": "2026-08-26T01:37:43.000Z",
+      "history": [],
+      "catalogId": "block-001"
+    },
+    {
+      "id": "block-002",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Block-002",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "outdoor",
+        "block"
+      ],
+      "owner": "whdals6831",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/Block_002.glb"
+            },
+            "fileName": "Block_002.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-26T01:37:43.000Z",
+          "createdBy": "whdals6831"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/block-002.png"
+        },
+        "updatedAt": "2026-10-01T08:05:07.259Z"
+      },
+      "createdAt": "2026-08-20T01:23:05.000Z",
+      "updatedAt": "2026-08-26T01:37:43.000Z",
+      "history": [],
+      "catalogId": "block-002"
+    },
+    {
+      "id": "hanwha-ocean-lngc-174k",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "LNGC 174K",
+      "description": "",
+      "category": "outdoor",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "outdoor",
+        "vessel"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/hanwha-ocean-lngc-174k.glb"
+            },
+            "fileName": "hanwha-ocean-lngc-174k.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-11T10:27:42.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/hanwha-ocean-lngc-174k.png"
+        },
+        "updatedAt": "2026-10-01T08:05:13.264Z"
+      },
+      "createdAt": "2026-09-04T02:07:44.000Z",
+      "updatedAt": "2026-09-11T10:27:42.000Z",
+      "history": [],
+      "catalogId": "hanwha-ocean-lngc-174k"
+    },
+    {
+      "id": "1p-3bay",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "1P 3Bay",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "bay"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/1p_3bay.glb"
+            },
+            "fileName": "1p_3bay.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/1p-3bay.png"
+        },
+        "updatedAt": "2026-10-01T06:05:50.718Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [
+        {
+          "id": "id-mup4rta7-l0ts6p3k",
+          "at": "2026-10-01T06:05:50.718Z",
+          "actor": "crane.philly",
+          "action": "thumbnail"
+        }
+      ],
+      "catalogId": "1p-3bay"
+    },
+    {
+      "id": "3p",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "3P",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "bay"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/3p.glb"
+            },
+            "fileName": "3p.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/3p.png"
+        },
+        "updatedAt": "2026-10-01T08:05:19.045Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "3p"
+    },
+    {
+      "id": "5p-1bay",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "5P 1Bay",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "bay"
+      ],
+      "owner": "조범희",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/5p_1bay.glb"
+            },
+            "fileName": "5p_1bay.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-09T22:19:11.000Z",
+          "createdBy": "조범희"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/5p-1bay.png"
+        },
+        "updatedAt": "2026-10-01T08:05:25.135Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-09-09T22:19:11.000Z",
+      "history": [],
+      "catalogId": "5p-1bay"
+    },
+    {
+      "id": "5p-2bay",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "5P 2Bay",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "bay"
+      ],
+      "owner": "조범희",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/5p_2bay.glb"
+            },
+            "fileName": "5p_2bay.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-09T22:19:11.000Z",
+          "createdBy": "조범희"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/5p-2bay.png"
+        },
+        "updatedAt": "2026-10-01T08:05:31.292Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-09-09T22:19:11.000Z",
+      "history": [],
+      "catalogId": "5p-2bay"
+    },
+    {
+      "id": "c-171",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-171",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_171.glb"
+            },
+            "fileName": "c_171.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-171.png"
+        },
+        "updatedAt": "2026-10-01T08:05:37.144Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-171"
+    },
+    {
+      "id": "c-172",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-172",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_172.glb"
+            },
+            "fileName": "c_172.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-172.png"
+        },
+        "updatedAt": "2026-10-01T08:05:43.645Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-172"
+    },
+    {
+      "id": "c-173",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-173",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_173.glb"
+            },
+            "fileName": "c_173.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-173.png"
+        },
+        "updatedAt": "2026-10-01T08:05:50.106Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-173"
+    },
+    {
+      "id": "c-800",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-800",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_800.glb"
+            },
+            "fileName": "c_800.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-800.png"
+        },
+        "updatedAt": "2026-10-01T08:05:56.639Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-800"
+    },
+    {
+      "id": "c-801",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-801",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_801.glb"
+            },
+            "fileName": "c_801.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-801.png"
+        },
+        "updatedAt": "2026-10-01T08:06:03.181Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-801"
+    },
+    {
+      "id": "c-810",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-810",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_810.glb"
+            },
+            "fileName": "c_810.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-810.png"
+        },
+        "updatedAt": "2026-10-01T08:06:09.271Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-810"
+    },
+    {
+      "id": "c-811",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-811",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_811.glb"
+            },
+            "fileName": "c_811.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-811.png"
+        },
+        "updatedAt": "2026-10-01T08:06:15.314Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-811"
+    },
+    {
+      "id": "c-862",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-862",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_862.glb"
+            },
+            "fileName": "c_862.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-862.png"
+        },
+        "updatedAt": "2026-10-01T08:06:21.247Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-862"
+    },
+    {
+      "id": "c-863",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-863",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_863.glb"
+            },
+            "fileName": "c_863.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-863.png"
+        },
+        "updatedAt": "2026-10-01T08:06:27.082Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-863"
+    },
+    {
+      "id": "c-864",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-864",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_864.glb"
+            },
+            "fileName": "c_864.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-864.png"
+        },
+        "updatedAt": "2026-10-01T08:06:32.831Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-864"
+    },
+    {
+      "id": "c-865",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-865",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_865.glb"
+            },
+            "fileName": "c_865.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-865.png"
+        },
+        "updatedAt": "2026-10-01T08:06:38.859Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-865"
+    },
+    {
+      "id": "c-866",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-866",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_866.glb"
+            },
+            "fileName": "c_866.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-866.png"
+        },
+        "updatedAt": "2026-10-01T08:06:44.653Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-866"
+    },
+    {
+      "id": "c-867",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-867",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_867.glb"
+            },
+            "fileName": "c_867.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-867.png"
+        },
+        "updatedAt": "2026-10-01T08:06:50.700Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-867"
+    },
+    {
+      "id": "c-868",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-868",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_868.glb"
+            },
+            "fileName": "c_868.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-868.png"
+        },
+        "updatedAt": "2026-10-01T08:06:56.435Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-868"
+    },
+    {
+      "id": "c-869",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-869",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_869.glb"
+            },
+            "fileName": "c_869.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-869.png"
+        },
+        "updatedAt": "2026-10-01T08:07:02.254Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-869"
+    },
+    {
+      "id": "c-870",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-870",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_870.glb"
+            },
+            "fileName": "c_870.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-870.png"
+        },
+        "updatedAt": "2026-10-01T08:07:08.382Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-870"
+    },
+    {
+      "id": "c-871",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-871",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_871.glb"
+            },
+            "fileName": "c_871.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-871.png"
+        },
+        "updatedAt": "2026-10-01T08:07:14.501Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-871"
+    },
+    {
+      "id": "c-1806",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "C-1806",
+      "description": "",
+      "category": "indoor",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "indoor",
+        "crane"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/c_1806.glb"
+            },
+            "fileName": "c_1806.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/c-1806.png"
+        },
+        "updatedAt": "2026-10-01T08:07:20.516Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": [],
+      "catalogId": "c-1806"
+    },
+    {
+      "id": "map-okpo",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Okpo",
+      "description": "",
+      "category": "ground",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "ground"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/okpo.glb"
+            },
+            "fileName": "okpo.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-27T14:03:32.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-okpo.png"
+        },
+        "updatedAt": "2026-10-01T06:00:11.773Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-09-27T14:03:32.000Z",
+      "history": [],
+      "catalogId": "map-okpo"
+    },
+    {
+      "id": "map-okpo-terrain",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Okpo Terrain",
+      "description": "",
+      "category": "context",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "context",
+        "terrain"
+      ],
+      "owner": "stupidbox",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/okpo-terrain.glb"
+            },
+            "fileName": "okpo-terrain.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-21T00:43:32.000Z",
+          "createdBy": "stupidbox"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-okpo-terrain.png"
+        },
+        "updatedAt": "2026-10-01T06:00:18.408Z"
+      },
+      "createdAt": "2026-09-21T00:43:32.000Z",
+      "updatedAt": "2026-09-21T00:43:32.000Z",
+      "history": [],
+      "catalogId": "map-okpo-terrain"
+    },
+    {
+      "id": "map-okpo-tree",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Okpo Tree",
+      "description": "",
+      "category": "context",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "context",
+        "terrain"
+      ],
+      "owner": "stupidbox",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/okpo-tree.glb"
+            },
+            "fileName": "okpo-tree.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-21T00:43:32.000Z",
+          "createdBy": "stupidbox"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-okpo-tree.png"
+        },
+        "updatedAt": "2026-10-01T06:00:26.308Z"
+      },
+      "createdAt": "2026-09-21T00:43:32.000Z",
+      "updatedAt": "2026-09-21T00:43:32.000Z",
+      "history": [],
+      "catalogId": "map-okpo-tree"
+    },
+    {
+      "id": "map-philly-area-1",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Philly Area 1",
+      "description": "",
+      "category": "ground",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "ground"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/philly-area-1.glb"
+            },
+            "fileName": "philly-area-1.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-27T14:03:32.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-philly-area-1.png"
+        },
+        "updatedAt": "2026-10-01T06:00:32.379Z"
+      },
+      "createdAt": "2026-09-10T23:33:53.000Z",
+      "updatedAt": "2026-09-27T14:03:32.000Z",
+      "history": [],
+      "catalogId": "map-philly-area-1"
+    },
+    {
+      "id": "map-philly-area-2",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Philly Area 2",
+      "description": "",
+      "category": "ground",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "ground"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/philly-area-2.glb"
+            },
+            "fileName": "philly-area-2.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-27T14:03:32.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-philly-area-2.png"
+        },
+        "updatedAt": "2026-10-01T06:00:38.140Z"
+      },
+      "createdAt": "2026-09-10T23:33:53.000Z",
+      "updatedAt": "2026-09-27T14:03:32.000Z",
+      "history": [],
+      "catalogId": "map-philly-area-2"
+    },
+    {
+      "id": "map-philly-terrain",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Philly Terrain",
+      "description": "",
+      "category": "context",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "context",
+        "terrain"
+      ],
+      "owner": "정종민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/philly-terrain.glb"
+            },
+            "fileName": "philly-terrain.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-10T23:33:53.000Z",
+          "createdBy": "정종민"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-philly-terrain.png"
+        },
+        "updatedAt": "2026-10-01T06:00:44.836Z"
+      },
+      "createdAt": "2026-09-08T04:41:16.000Z",
+      "updatedAt": "2026-09-10T23:33:53.000Z",
+      "history": [],
+      "catalogId": "map-philly-terrain"
+    },
+    {
+      "id": "map-1dock",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "1 Dock",
+      "description": "",
+      "category": "ground",
+      "sites": [],
+      "tags": [
+        "ground"
+      ],
+      "owner": "조범희",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/1dock.glb"
+            },
+            "fileName": "1dock.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-04-03T09:02:47.000Z",
+          "createdBy": "조범희"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-1dock.png"
+        },
+        "updatedAt": "2026-10-01T06:00:49.419Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-04-03T09:02:47.000Z",
+      "history": [],
+      "catalogId": "map-1dock"
+    },
+    {
+      "id": "map-plane",
+      "kind": "map",
+      "origin": "builtin",
+      "name": "Plane",
+      "description": "",
+      "category": "ground",
+      "sites": [],
+      "tags": [
+        "ground"
+      ],
+      "owner": "조범희",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/maps/plane.glb"
+            },
+            "fileName": "plane.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-04-03T09:02:47.000Z",
+          "createdBy": "조범희"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/map-plane.png"
+        },
+        "updatedAt": "2026-10-01T06:00:53.358Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-04-03T09:02:47.000Z",
+      "history": [],
+      "catalogId": "map-plane"
+    },
+    {
+      "id": "rt-crane",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Crane (MRO)",
+      "description": "",
+      "category": "runtime",
+      "sites": [],
+      "tags": [
+        "runtime",
+        "MRO"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/crane.glb"
+            },
+            "fileName": "crane.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-11T10:27:42.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-crane.png"
+        },
+        "updatedAt": "2026-10-01T06:00:58.164Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-09-11T10:27:42.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-gantry-crane",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Gantry Crane (MRO)",
+      "description": "",
+      "category": "runtime",
+      "sites": [],
+      "tags": [
+        "runtime",
+        "MRO"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/gantry_crane.glb"
+            },
+            "fileName": "gantry_crane.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-11T10:27:42.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-gantry-crane.png"
+        },
+        "updatedAt": "2026-10-01T06:01:02.207Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-09-11T10:27:42.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-ttc-27",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "TTC-27 (MRO)",
+      "description": "",
+      "category": "runtime",
+      "sites": [],
+      "tags": [
+        "runtime",
+        "MRO"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/TTC-27.glb"
+            },
+            "fileName": "TTC-27.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-11T10:27:42.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-ttc-27.png"
+        },
+        "updatedAt": "2026-10-01T06:01:06.349Z"
+      },
+      "createdAt": "2026-04-03T09:02:47.000Z",
+      "updatedAt": "2026-09-11T10:27:42.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-goliath-crane-body",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Goliath Crane Body",
+      "description": "",
+      "category": "runtime",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "runtime",
+        "MRO",
+        "part"
+      ],
+      "owner": "조범희",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/goliath_crane_body.glb"
+            },
+            "fileName": "goliath_crane_body.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-01T06:28:37.000Z",
+          "createdBy": "조범희"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-goliath-crane-body.png"
+        },
+        "updatedAt": "2026-10-01T06:01:10.728Z"
+      },
+      "createdAt": "2026-07-23T09:43:08.000Z",
+      "updatedAt": "2026-09-01T06:28:37.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-goliath-crane-trolley",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Goliath Crane Trolley",
+      "description": "",
+      "category": "runtime",
+      "sites": [
+        "philly"
+      ],
+      "tags": [
+        "runtime",
+        "MRO",
+        "part"
+      ],
+      "owner": "조범희",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/goliath_crane_trolley.glb"
+            },
+            "fileName": "goliath_crane_trolley.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-01T06:28:37.000Z",
+          "createdBy": "조범희"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-goliath-crane-trolley.png"
+        },
+        "updatedAt": "2026-10-01T06:01:14.366Z"
+      },
+      "createdAt": "2026-07-23T09:43:08.000Z",
+      "updatedAt": "2026-09-01T06:28:37.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-man",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Worker",
+      "description": "",
+      "category": "runtime",
+      "sites": [],
+      "tags": [
+        "runtime",
+        "collision-guard"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/man.glb"
+            },
+            "fileName": "man.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-man.png"
+        },
+        "updatedAt": "2026-10-01T06:01:18.139Z"
+      },
+      "createdAt": "2026-08-11T13:49:25.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-car",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Vehicle",
+      "description": "",
+      "category": "runtime",
+      "sites": [],
+      "tags": [
+        "runtime",
+        "collision-guard"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/car.glb"
+            },
+            "fileName": "car.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-car.png"
+        },
+        "updatedAt": "2026-10-01T06:01:22.857Z"
+      },
+      "createdAt": "2026-08-11T01:42:25.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": []
+    },
+    {
+      "id": "rt-fork-lift",
+      "kind": "model",
+      "origin": "builtin",
+      "name": "Forklift",
+      "description": "",
+      "category": "runtime",
+      "sites": [],
+      "tags": [
+        "runtime",
+        "collision-guard"
+      ],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/models/fork_lift.glb"
+            },
+            "fileName": "fork_lift.glb",
+            "format": "glb",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-15T13:02:37.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/rt-fork-lift.png"
+        },
+        "updatedAt": "2026-10-01T06:01:26.639Z"
+      },
+      "createdAt": "2026-08-11T01:42:25.000Z",
+      "updatedAt": "2026-08-15T13:02:37.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-bos2",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "BOS2 Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/bos2.webp"
+            },
+            "fileName": "bos2.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-bos3",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "BOS3 Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/bos3.webp"
+            },
+            "fileName": "bos3.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-10-01T11:09:55.827Z",
+      "history": [
+        {
+          "id": "id-mupfmu57-2r081kjw",
+          "at": "2026-10-01T11:09:55.827Z",
+          "actor": "crane.philly",
+          "action": "metadata",
+          "fields": [
+            "sites"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dwg-equipment-layout-gos",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "GOS Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/gos.webp"
+            },
+            "fileName": "gos.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-nps",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "NPS Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/nps.webp"
+            },
+            "fileName": "nps.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-ofd1",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "OFD1 Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/ofd1.webp"
+            },
+            "fileName": "ofd1.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-ofd-shelter",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "OFD Shelter Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/ofd-shelter.webp"
+            },
+            "fileName": "ofd-shelter.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-pas",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "PAS Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/pas.webp"
+            },
+            "fileName": "pas.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-pbs",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "PBS Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/pbs.webp"
+            },
+            "fileName": "pbs.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-pos1",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "POS1 Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/pos1.webp"
+            },
+            "fileName": "pos1.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    },
+    {
+      "id": "dwg-equipment-layout-pos2-dumo",
+      "kind": "drawing",
+      "origin": "builtin",
+      "name": "POS2 DUMO Equipment Layout",
+      "description": "",
+      "category": "equipment-layout",
+      "sites": [
+        "okpo"
+      ],
+      "tags": [
+        "equipment-layout",
+        "indoor"
+      ],
+      "owner": "박경민",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/drawings/equipment-layout/pos2-dumo.webp"
+            },
+            "fileName": "pos2-dumo.webp",
+            "format": "webp",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-09-04T01:55:15.000Z",
+          "createdBy": "박경민"
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-09-04T01:55:15.000Z",
+      "updatedAt": "2026-09-04T01:55:15.000Z",
+      "history": []
+    }
+  ],
+  "collections": []
+}

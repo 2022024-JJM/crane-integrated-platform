@@ -1,0 +1,516 @@
+import { Columns2, Download, Eye, Loader2, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { getFormatLocale } from '@crane/core/config/i18n';
+import {
+  ASSET_NOTE_MAX,
+  ASSET_REVISION_MAX,
+  diffAssetStats,
+  formatBytes,
+  formatCount,
+  formatSignedCount,
+  getAllowedAssetKinds,
+  getAllowedStatusTransitions,
+  isDocumentAssetKind,
+  resolveVersionSizeBytes,
+  resolveVersionStats,
+  toMeterSize,
+  type AssetRecord,
+  type AssetVersion,
+  type AssetVersionStatus,
+} from '@crane/domain/asset-library';
+import {
+  useAssetFileUrl,
+  useAssetLibraryStore,
+} from '@crane/features/asset-library';
+import { cn } from '@crane/core/lib/utils';
+import { Button } from '@crane/ui/atoms/button';
+import { Input } from '@crane/ui/atoms/input';
+import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+} from '@crane/ui/molecules/select';
+import { analyzeAssetFile } from '../lib/analyze-asset-file';
+import { formatAssetDateTime } from '../lib/asset-presentation';
+import {
+  compareVersions,
+  dropUnknownRows,
+  type VersionCompareSide,
+} from '../lib/version-compare';
+import { useAssetSaveReport } from '../model/use-asset-save-report';
+import { AssetStatusBadge } from './asset-badges';
+import { CommitInput } from './asset-form-fields';
+import { AssetVersionDiff } from './asset-version-diff';
+
+interface AssetVersionsTabProps {
+  asset: AssetRecord;
+  /** 지금 뷰어에 올라와 있는 버전 번호. */
+  viewedVersion: number;
+  /** 보고 있는 버전과 나란히 비교 중인 다른 버전 번호. 없으면 null. */
+  compareVersion: number | null;
+  actor: string;
+  onView: (version: number) => void;
+  /** 이 버전을 보고 있는 버전과 비교한다. null 은 비교 끝내기. */
+  onCompare: (version: number | null) => void;
+}
+
+function DownloadLink({ version }: { version: AssetVersion }) {
+  const { t } = useTranslation();
+  const file = useAssetFileUrl(version.file.ref);
+  if (file.status !== 'ready') return null;
+  return (
+    <Button
+      variant="ghost"
+      size="xs"
+      nativeButton={false}
+      render={<a href={file.url} download={version.file.fileName} />}
+    >
+      <Download />
+      {t('asset-library:action.download')}
+    </Button>
+  );
+}
+
+function VersionUpload({
+  asset,
+  actor,
+  onView,
+}: {
+  asset: AssetRecord;
+  actor: string;
+  onView: (version: number) => void;
+}) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const assets = useAssetLibraryStore((state) => state.assets);
+  const statsTable = useAssetLibraryStore((state) => state.statsTable);
+  const addVersion = useAssetLibraryStore((state) => state.addVersion);
+  const [file, setFile] = useState<File | null>(null);
+  const [note, setNote] = useState('');
+  const [revision, setRevision] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const reset = () => {
+    setFile(null);
+    setNote('');
+    setRevision('');
+    setProblem(null);
+  };
+
+  const submit = async () => {
+    if (!file || busy) return;
+    setBusy(true);
+    setProblem(null);
+    const analysis = await analyzeAssetFile(file, assets, statsTable);
+    // 모델·지도 자산에 도면을(또는 그 반대를) 버전으로 붙일 수 없다.
+    if (!getAllowedAssetKinds(file.name).includes(asset.kind)) {
+      setProblem(t('asset-library:versions.kindMismatch'));
+      setBusy(false);
+      return;
+    }
+    if (analysis.problem) {
+      setProblem(
+        analysis.problem.code === 'glb'
+          ? t(`asset-library:import.problem.glb.${analysis.problem.reason}`)
+          : analysis.problem.code === 'empty'
+            ? t('asset-library:import.problem.empty')
+            : t('asset-library:import.problem.unsupported', {
+                format: analysis.problem.format || '?',
+              }),
+      );
+      setBusy(false);
+      return;
+    }
+    if (analysis.duplicates.some((item) => item.assetId === asset.id)) {
+      setProblem(t('asset-library:versions.sameContent'));
+      setBusy(false);
+      return;
+    }
+    const added = await addVersion(
+      asset.id,
+      {
+        file,
+        note: note.trim(),
+        contentHash: analysis.contentHash,
+        ...(isDocumentAssetKind(asset.kind) && revision.trim()
+          ? { revision: revision.trim() }
+          : {}),
+      },
+      actor,
+    );
+    setBusy(false);
+    if (added === null) {
+      toast.error(t('asset-library:toast.importFailed'));
+      return;
+    }
+    if (useAssetLibraryStore.getState().saveState === 'error') {
+      toast.error(t('asset-library:toast.saveFailed'));
+    } else {
+      toast.success(t('asset-library:toast.versionAdded', { version: added }));
+    }
+    reset();
+    onView(added);
+  };
+
+  return (
+    <section className="border-border border-b px-5 py-4">
+      <input
+        ref={inputRef}
+        type="file"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(event) => {
+          setFile(event.target.files?.[0] ?? null);
+          setProblem(null);
+          event.target.value = '';
+        }}
+      />
+      {file ? (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <p className="text-foreground truncate text-[13px] font-medium">
+            {file.name}
+            <span className="text-muted-foreground ml-2 font-normal tabular-nums">
+              {formatBytes(file.size)}
+            </span>
+          </p>
+          <div className="flex gap-2">
+            <Input
+              value={note}
+              maxLength={ASSET_NOTE_MAX}
+              aria-label={t('asset-library:field.versionNote')}
+              placeholder={t('asset-library:versions.notePlaceholder')}
+              className="h-7 text-xs"
+              onChange={(event) => setNote(event.target.value)}
+            />
+            {isDocumentAssetKind(asset.kind) ? (
+              <Input
+                value={revision}
+                maxLength={ASSET_REVISION_MAX}
+                aria-label={t('asset-library:field.revision')}
+                placeholder={t('asset-library:field.revision')}
+                className="h-7 w-20 text-xs"
+                onChange={(event) => setRevision(event.target.value)}
+              />
+            ) : null}
+          </div>
+          {problem ? (
+            <p role="alert" className="text-destructive text-xs">
+              {problem}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={reset}
+            >
+              {t('asset-library:action.cancel')}
+            </Button>
+            <Button type="submit" size="sm" disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <Upload />}
+              {t('asset-library:versions.upload')}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {t('asset-library:versions.uploadHint')}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload />
+            {t('asset-library:versions.newVersion')}
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function AssetVersionsTab({
+  asset,
+  viewedVersion,
+  compareVersion,
+  actor,
+  onView,
+  onCompare,
+}: AssetVersionsTabProps) {
+  const { t, i18n } = useTranslation();
+  const locale = getFormatLocale(i18n.language);
+  const report = useAssetSaveReport();
+  const statsTable = useAssetLibraryStore((state) => state.statsTable);
+  const transitionStatus = useAssetLibraryStore(
+    (state) => state.transitionStatus,
+  );
+  const setCurrentVersion = useAssetLibraryStore(
+    (state) => state.setCurrentVersion,
+  );
+  const updateVersionNote = useAssetLibraryStore(
+    (state) => state.updateVersionNote,
+  );
+
+  // 최신 버전이 위.
+  const versions = [...asset.versions].sort((a, b) => b.version - a.version);
+
+  const sideOf = (version: AssetVersion): VersionCompareSide => {
+    const stats = resolveVersionStats(version, statsTable);
+    return {
+      sizeBytes: resolveVersionSizeBytes(version, statsTable),
+      stats,
+      meters: stats?.size ? toMeterSize(stats.size, asset.defaultScale) : null,
+    };
+  };
+  const compared = asset.versions.find(
+    (item) => item.version === compareVersion,
+  );
+  const viewed = asset.versions.find((item) => item.version === viewedVersion);
+  // 차이는 늘 옛 버전에서 새 버전으로 읽는다.
+  const [diffBase, diffTarget] =
+    compared && viewed
+      ? compared.version < viewed.version
+        ? [compared, viewed]
+        : [viewed, compared]
+      : [null, null];
+
+  return (
+    <div>
+      <VersionUpload asset={asset} actor={actor} onView={onView} />
+      {asset.catalogId ? (
+        <p className="border-border bg-muted/40 text-muted-foreground border-b px-5 py-3 text-xs leading-relaxed">
+          {t('asset-library:versions.catalogNotice')}
+        </p>
+      ) : null}
+      {diffBase && diffTarget ? (
+        <section className="border-border border-b px-5 py-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-foreground text-[13px] font-semibold">
+              {t('asset-library:compare.heading', {
+                base: diffBase.version,
+                target: diffTarget.version,
+              })}
+            </h3>
+            <Button variant="ghost" size="xs" onClick={() => onCompare(null)}>
+              {t('asset-library:compare.close')}
+            </Button>
+          </div>
+          <AssetVersionDiff
+            baseVersion={diffBase.version}
+            targetVersion={diffTarget.version}
+            rows={dropUnknownRows(
+              compareVersions(sideOf(diffBase), sideOf(diffTarget)),
+            )}
+          />
+        </section>
+      ) : null}
+      <ol className="px-5 py-2">
+        {versions.map((version, index) => {
+          const previous = versions[index + 1];
+          const stats = resolveVersionStats(version, statsTable);
+          const delta = previous
+            ? diffAssetStats(
+                resolveVersionStats(previous, statsTable) ?? undefined,
+                stats ?? undefined,
+              )
+            : null;
+          const isCurrent = asset.currentVersion === version.version;
+          const isViewed = viewedVersion === version.version;
+          const transitions = getAllowedStatusTransitions(version.status);
+          const canBeCurrent =
+            !isCurrent &&
+            version.status !== 'withdrawn' &&
+            version.status !== 'rejected';
+
+          return (
+            // 버전은 시간 순서다 — 왼쪽 세로선에 마디를 찍어 타임라인으로 읽힌다.
+            // 현재 버전은 채운 마디, 지금 뷰어에 올라온 버전은 주황 테두리.
+            <li
+              key={version.version}
+              className="border-border relative flex flex-col gap-2 border-l py-3 pl-5 last:pb-2"
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'absolute top-4 -left-[5px] size-[9px] rounded-full border-2',
+                  isCurrent
+                    ? 'border-foreground bg-foreground'
+                    : 'border-muted-foreground/60 bg-background',
+                  isViewed &&
+                    'ring-background shadow-[0_0_0_2px_var(--hanwha-orange-100)] ring-2',
+                )}
+              />
+              <div className="flex items-center gap-2">
+                <span className="text-foreground font-condensed text-lg leading-none font-semibold tabular-nums">
+                  v{version.version}
+                </span>
+                {version.revision ? (
+                  <span className="border-border text-muted-foreground rounded border px-1.5 py-1 text-[11px] leading-none">
+                    {t('asset-library:versions.revision', {
+                      revision: version.revision,
+                    })}
+                  </span>
+                ) : null}
+                {isCurrent ? (
+                  <span className="bg-foreground text-background rounded px-1.5 py-1 text-[11px] leading-none font-medium">
+                    {t('asset-library:versions.current')}
+                  </span>
+                ) : null}
+                {compareVersion === version.version ? (
+                  <span className="border-border text-foreground rounded border px-1.5 py-1 text-[11px] leading-none font-medium">
+                    {t('asset-library:compare.comparing')}
+                  </span>
+                ) : null}
+                <span className="ml-auto">
+                  {transitions.length > 0 ? (
+                    <Select
+                      value={version.status}
+                      onValueChange={(value) => {
+                        if (value === version.status) return;
+                        report(
+                          transitionStatus(
+                            asset.id,
+                            version.version,
+                            value as AssetVersionStatus,
+                            actor,
+                          ),
+                        );
+                      }}
+                    >
+                      <SelectTrigger
+                        variant="ghost"
+                        aria-label={t('asset-library:versions.changeStatus', {
+                          version: version.version,
+                        })}
+                        className="h-6 px-1.5"
+                      >
+                        <AssetStatusBadge
+                          status={version.status}
+                          variant="inline"
+                        />
+                      </SelectTrigger>
+                      <SelectPopup align="end">
+                        <SelectItem value={version.status} disabled>
+                          {t(`asset-library:status.${version.status}`)}
+                        </SelectItem>
+                        {transitions.map((next) => (
+                          <SelectItem key={next} value={next}>
+                            {t(`asset-library:versions.transition.${next}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectPopup>
+                    </Select>
+                  ) : (
+                    <AssetStatusBadge status={version.status} variant="inline" />
+                  )}
+                </span>
+              </div>
+
+              <CommitInput
+                value={version.note}
+                maxLength={ASSET_NOTE_MAX}
+                placeholder={t('asset-library:versions.notePlaceholder')}
+                className="bg-transparent px-0 hover:bg-muted hover:px-2 focus:px-2"
+                onCommit={(note) =>
+                  report(
+                    updateVersionNote(asset.id, version.version, { note }, actor),
+                  )
+                }
+              />
+
+              <dl className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+                <div>
+                  <dt className="sr-only">{t('asset-library:field.size')}</dt>
+                  <dd>
+                    {formatBytes(resolveVersionSizeBytes(version, statsTable))}
+                  </dd>
+                </div>
+                {stats ? (
+                  <div className="flex items-baseline gap-1">
+                    <dd>{formatCount(stats.triangles)}</dd>
+                    <dt>{t('asset-library:unit.triangles')}</dt>
+                    {delta && delta.triangles !== 0 ? (
+                      <span
+                        className={cn(
+                          delta.triangles > 0
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-emerald-600 dark:text-emerald-400',
+                        )}
+                      >
+                        {formatSignedCount(delta.triangles)}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="ml-auto">
+                  <dt className="sr-only">
+                    {t('asset-library:field.created')}
+                  </dt>
+                  <dd>
+                    {formatAssetDateTime(version.createdAt, locale)}
+                    {version.createdBy ? ` ${version.createdBy}` : ''}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="-ml-1.5 flex flex-wrap items-center gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={isViewed}
+                  onClick={() => onView(version.version)}
+                >
+                  <Eye />
+                  {t(
+                    isViewed
+                      ? 'asset-library:versions.viewing'
+                      : 'asset-library:versions.view',
+                  )}
+                </Button>
+                {canBeCurrent ? (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() =>
+                      report(
+                        setCurrentVersion(asset.id, version.version, actor),
+                      )
+                    }
+                  >
+                    {t('asset-library:versions.makeCurrent')}
+                  </Button>
+                ) : null}
+                {!isViewed && compareVersion !== version.version ? (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => onCompare(version.version)}
+                  >
+                    <Columns2 />
+                    {t('asset-library:compare.withViewed')}
+                  </Button>
+                ) : null}
+                <DownloadLink version={version} />
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}

@@ -104,7 +104,9 @@
     "indoorshopReference": "참고",
     "indoorshopDocs": "문서",
     "virtualTags": "가상 태그",
-    "settings": "설정"
+    "settings": "설정",
+    "assets": "자산",
+    "assetLibrary": "3D 자산 라이브러리"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",

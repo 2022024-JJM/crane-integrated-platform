@@ -1,0 +1,458 @@
+{
+  "title": "Bibliotheca Rerum 3D",
+  "kind": {
+    "model": "Exemplaria",
+    "map": "Tabulae",
+    "drawing": "Delineationes",
+    "cad": "CAD"
+  },
+  "site": {
+    "all": "Omnia",
+    "okpo": "Navale Okpo",
+    "philly": "Navale Philly",
+    "common": "Communia",
+    "okpoShort": "Okpo",
+    "phillyShort": "Philly",
+    "commonShort": "Commune"
+  },
+  "status": {
+    "draft": "Adumbratio",
+    "in-review": "In recensione",
+    "approved": "Probatum",
+    "rejected": "Reiectum",
+    "published": "Editum",
+    "withdrawn": "Revocatum"
+  },
+  "origin": {
+    "builtin": "Res edita",
+    "user": "In hac pagina addita"
+  },
+  "storage": {
+    "public": "Fasciculus editus",
+    "browser": "Hic navigator"
+  },
+  "sort": {
+    "name": "Nomen",
+    "updated": "Nuper mutata",
+    "size": "Magnitudo fasciculi",
+    "triangles": "Plurima triangula"
+  },
+  "unit": {
+    "triangles": "triang."
+  },
+  "field": {
+    "asset": "Res",
+    "name": "Nomen",
+    "description": "Descriptio",
+    "kind": "Genus",
+    "site": "Navale",
+    "status": "Status",
+    "version": "Versio",
+    "revision": "Recensio",
+    "drawingNo": "Numerus delineationis",
+    "tags": "Notae",
+    "owner": "Curator",
+    "category": "Classis",
+    "file": "Fasciculus",
+    "size": "Magnitudo",
+    "sizeBytes": "Magnitudo (octeti)",
+    "triangles": "Triangula",
+    "updated": "Mutatum",
+    "created": "Additum",
+    "versionNote": "Nota mutationis",
+    "storage": "Locus servandi",
+    "path": "Via",
+    "hash": "Summa contenti",
+    "defaultScale": "Scala praefinita",
+    "origin": "Origo",
+    "format": "Forma",
+    "fileName": "Nomen fasciculi"
+  },
+  "action": {
+    "import": "Rem adde",
+    "exportCsv": "CSV exporta",
+    "cancel": "Abrogare",
+    "retry": "Iterum tempta",
+    "download": "Depone",
+    "delete": "Dele",
+    "add": "Adde"
+  },
+  "save": {
+    "saving": "Servatur",
+    "failed": "Mutationes servari non potuerunt. Iterum tempta, aliter pagina renovata peribunt.",
+    "localOnly": "Servitor rerum nondum est; quae hic addis vel mutas in hoc navigatore tantum servantur. Alii et aliae machinae ea non videbunt."
+  },
+  "rail": {
+    "label": "Cola rerum",
+    "status": "Status",
+    "collections": "Collectiones",
+    "favorites": "Dilecta",
+    "newCollection": "Nova collectio",
+    "collectionName": "Nomen collectionis",
+    "removeCollection": "Collectionem {{name}} dele",
+    "attention": "Agenda",
+    "browse": "Perlustra"
+  },
+  "browser": {
+    "search": "Quaere nomen, notam, fasciculum",
+    "resultCount": "{{count}} ex {{total}}",
+    "clearFilters": "Cola tolle",
+    "sort": "Ordo",
+    "viewMode": "Aspectus",
+    "view": {
+      "grid": "Ut chartas monstra",
+      "list": "Ut indicem monstra"
+    },
+    "placed": "Posita",
+    "selectAll": "Omnes res monstratas elige",
+    "selectAsset": "{{name}} elige",
+    "favorite": "{{name}} dilectis adde",
+    "unfavorite": "{{name}} ex dilectis tolle",
+    "loading": "Res arcessuntur",
+    "loadFailed": "Bibliotheca rerum arcessi non potuit",
+    "loadFailedHint": "Nexum retis inspice et iterum tempta.",
+    "empty": "Nullae res his colis respondent",
+    "emptyHint": "Quaestionem vel cola muta, aut novam rem adde.",
+    "dropTitle": "Hic depone ut res addatur",
+    "previewAsset": "{{name}} praevide",
+    "activeFilters": "Cola adhibita",
+    "removeFilter": "Colum {{name}} tolle",
+    "anyStatus": "Omnis status",
+    "statusCount": "{{count}} status",
+    "emptyScope": "Nihil hic adhuc est",
+    "emptyScopeHint": {
+      "model": "Fasciculum GLB mitte et genus Exemplaria elige ut hic ponatur.",
+      "map": "Fasciculum GLB mitte et genus Tabulae elige ut hic ponatur.",
+      "drawing": "Fasciculum PDF, SVG vel imaginem mitte ut hic ponatur.",
+      "cad": "Fasciculum DWG, DXF, STEP vel IGES mitte ut hic ponatur."
+    },
+    "scopeCount": "{{count}} res",
+    "reverseSort": "Ordinem inverte"
+  },
+  "bulk": {
+    "label": "Actiones in res electas",
+    "selected": "{{count}} electae",
+    "assignSite": "Navale constitue",
+    "bothSites": "Okpo et Philly",
+    "addTag": "Notam adde",
+    "addToCollection": "Collectioni adde",
+    "clear": "Electionem tolle"
+  },
+  "form": {
+    "siteCommonHint": "Nullo navali electo, res toti societati communis est.",
+    "siteScopedHint": "Res ad navalia electa pertinet.",
+    "tagPlaceholder": "Notam scribe, deinde Enter",
+    "tagsFull": "Res usque ad {{max}} notas habere potest",
+    "removeTag": "Notam {{tag}} tolle"
+  },
+  "import": {
+    "title": "Rem adde",
+    "description": "Fasciculus missus fit versio 1. Res 3D GLB accipiunt; delineationes PDF, SVG, imagines; CAD DWG, DXF, STEP, IGES.",
+    "pickFile": "Fasciculum elige vel huc depone",
+    "formats": "GLB, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
+    "changeFile": "Alium fasciculum",
+    "analyzing": "Fasciculus inspicitur",
+    "noteHint": "Scribe quid in hac versione mutatum sit. In indice versionum apparebit.",
+    "startsAsDraft": "Res novae ut adumbrationes incipiunt.",
+    "localOnly": "Fasciculus in hoc navigatore tantum servatur.",
+    "submit": "Adde",
+    "duplicate": "Fasciculus eiusdem contenti iam exstat: {{names}}. Vide num nova versio illius rei esse debeat.",
+    "large": "Hic fasciculus 100 MB excedit. Aperiri tardius potest.",
+    "problem": {
+      "unsupported": "Forma .{{format}} addi non potest. Fasciculum GLB, delineationis vel CAD elige.",
+      "empty": "Fasciculus vacuus est. Alium elige.",
+      "glb": {
+        "too-short": "Hic fasciculus GLB non est. Nimis brevis est.",
+        "bad-magic": "Hic fasciculus GLB non est. Fortasse alia forma cum extensione .glb.",
+        "bad-version": "Hoc GLB non est glTF 2.0. Iterum ut glTF 2.0 exporta.",
+        "bad-length": "Fasciculus GLB corruptus est. Longitudo in capite cum magnitudine non congruit; fortasse in transmissione truncatus est."
+      }
+    },
+    "categoryPlaceholder": "e.g. indoor, hull — vacuum relinque ut sub genere ipso ponatur"
+  },
+  "detail": {
+    "backToLibrary": "Ad bibliothecam",
+    "tabs": "De re",
+    "tab": {
+      "info": "Notitia",
+      "stats": "Numeri",
+      "versions": "Versiones",
+      "usage": "Usus",
+      "activity": "Acta"
+    },
+    "viewingOldVersion": "v{{version}} spectas. Versionem praesentem v{{current}} monstra",
+    "notFound": "Res non inventa",
+    "notFoundHint": "Fortasse deleta est, aut in alio navigatore addita.",
+    "fileMissing": "Hic navigator fasciculum non habet",
+    "fileMissingHint": "Fasciculus huius versionis in navigatore tantum servatur qui eum addidit. Servitore parato ubique aperietur.",
+    "deleteTitle": "{{name}} delere vis?",
+    "deleteDescription": "Fasciculi et acta {{count}} versionum delebuntur. Hoc revocari non potest.",
+    "previousAsset": "Res prior (←)",
+    "nextAsset": "Res sequens (→)"
+  },
+  "titleBlock": {
+    "size": "Latitudo × profunditas × altitudo"
+  },
+  "info": {
+    "basics": "Fundamenta",
+    "classification": "Classificatio",
+    "related": "Res conexae",
+    "file": "Fasciculus (v{{version}})",
+    "descriptionPlaceholder": "Usus, origo fontis, quae cavenda sint",
+    "relatedEmptyModel": "Delineationes, CAD vel res socias huius rei conecte ut inter eas transeas.",
+    "relatedEmptyDrawing": "Res 3D quas hoc documentum describit conecte ut inter eas transeas.",
+    "linkAsset": "Rem conecte",
+    "noLinkCandidates": "Nullae res conectendae",
+    "unlink": "{{name}} disiunge",
+    "linkedFromOther": "Ab altera re conexa",
+    "copyPath": "Viam exscribe",
+    "defaultScaleHint": "Mensurae in unitatibus scaenae sunt, scala praefinita applicata. In plerisque scaenis una unitas 1 m est, sed scaena interior (dock-in) alia unitate utitur."
+  },
+  "stats": {
+    "dimensions": "Mensurae",
+    "geometry": "Geometria",
+    "axis": {
+      "W": "Latitudo",
+      "D": "Profunditas",
+      "H": "Altitudo"
+    },
+    "metric": {
+      "triangles": "Triangula",
+      "vertices": "Vertices",
+      "drawCalls": "Vocationes pingendi",
+      "textureMemory": "Memoria texturarum",
+      "meshes": "Retia",
+      "materials": "Materiae",
+      "textures": "Texturae",
+      "nodes": "Nodi",
+      "lodLevels": "Gradus LOD",
+      "animations": "Animationes"
+    },
+    "overBudget": "Supra modum commendatum",
+    "sourceLive": "Modo mensum ex fasciculo in hac pagina aperto. Si LOD adsunt, LOD 0.",
+    "sourceStored": "Antea mensum. Si LOD adsunt, LOD 0.",
+    "pending": "Numeri metiuntur cum fasciculus aperitur.",
+    "drawing": "Delineationes et CAD numeros geometricos non habent. De fasciculo in scheda Notitia.",
+    "budgetHint": "Si haec res saepe in scaena ponitur, primitiva coniungere vel LOD addere considera. Additionem non impedit.",
+    "budgetHeading": "Ad modos commendatos",
+    "budgetLegend": "Quaeque virga ad modum commendatum plena est. Modum excedere additionem non impedit."
+  },
+  "versions": {
+    "newVersion": "Novam versionem mitte",
+    "upload": "Mitte",
+    "uploadHint": "Fasciculo mutato nova versio fit. Priores manent.",
+    "notePlaceholder": "Quid in hac versione mutatum sit",
+    "current": "Praesens",
+    "revision": "Rec. {{revision}}",
+    "view": "Specta",
+    "viewing": "Spectatur",
+    "makeCurrent": "Praesentem fac",
+    "changeStatus": "Statum v{{version}} muta",
+    "transition": {
+      "in-review": "Recensionem pete",
+      "approved": "Proba",
+      "rejected": "Reice",
+      "published": "Ede",
+      "withdrawn": "Revoca"
+    },
+    "kindMismatch": "Hic fasciculus alterius generis est. Rebus 3D GLB, delineationibus PDF vel SVG vel imaginem, CAD fasciculum CAD mitte.",
+    "sameContent": "Hic fasciculus idem contentum habet ac versio quam haec res iam habet.",
+    "catalogNotice": "Scaenae fasciculo edito versionis 1 utuntur. Ut nova versio in scaenis adhibeatur, fasciculum editum per fistulam rerum (assets-src → optimize:glb) muta.",
+    "revisionShort": "Rec. {{revision}}"
+  },
+  "usage": {
+    "loading": "Scaenae inspiciuntur",
+    "failed": "Fasciculi scaenarum legi non potuerunt; usus ignotus est.",
+    "partial": "Quaedam scaenae legi non potuerunt; usus fortasse incompletus: {{scenes}}",
+    "none": "In nulla scaena posita",
+    "noneCatalogHint": "Ex palaestra editoris 3D in scaena poni potest.",
+    "noneRuntimeHint": "Codex paginae hanc rem directe arcessit neque in scaena ponit. Noli delere, etsi nulla scaena ea utitur.",
+    "noneUserHint": "Res in hac pagina additae nondum in palaestra editoris apparent.",
+    "versionHeading": "Scaenae v{{version}} utentes",
+    "count": "{{count}} positae",
+    "openEditor": "In editore 3D aperi",
+    "drawing": "Delineationes et CAD in scaenis non ponuntur. Res conexas in scheda Notitia vide."
+  },
+  "activity": {
+    "created": "Rem addidit",
+    "versionAdded": "v{{version}} misit",
+    "status": "v{{version}} ex {{from}} in {{to}} mutavit",
+    "currentChanged": "Versionem praesentem ex v{{from}} in v{{to}} movit",
+    "metadata": "{{fields}} mutavit",
+    "thumbnail": "Imagunculam servavit",
+    "empty": "Nulla acta adhuc notata.",
+    "emptyBuiltin": "Haec res edita est. Mutationes in hac pagina factae hinc notantur.",
+    "field": {
+      "name": "nomen",
+      "description": "descriptionem",
+      "category": "classem",
+      "sites": "navale",
+      "tags": "notas",
+      "owner": "curatorem",
+      "kind": "genus",
+      "drawingNo": "numerum delineationis",
+      "relatedAssetIds": "res conexas",
+      "defaultScale": "scalam praefinitam"
+    }
+  },
+  "viewer": {
+    "loading": "Exemplar arcessitur {{percent}}%",
+    "loadFailed": "Exemplar aperiri non potuit",
+    "loadFailedHint": "Fasciculus fortasse deest vel corruptus est. Aliam versionem aperi vel fasciculum iterum mitte.",
+    "viewMode": "Modus ostensionis",
+    "mode": {
+      "lit": "Lumen",
+      "clay": "Forma",
+      "wireframe": "Fila",
+      "normals": "Normales"
+    },
+    "lod": "Gradus LOD",
+    "grid": "Craticula soli",
+    "dimensions": "Mensurae",
+    "turntable": "Rotatio sua sponte",
+    "background": "Fundum muta (nunc: {{name}})",
+    "backgroundName": {
+      "dark": "Obscurum",
+      "light": "Clarum",
+      "blueprint": "Caeruleum"
+    },
+    "saveThumbnail": "Hunc aspectum ut imagunculam serva",
+    "camera": "Prospectus",
+    "preset": {
+      "iso": "Obliquus",
+      "front": "A fronte",
+      "right": "A latere",
+      "top": "Desuper"
+    },
+    "fit": "Ad aspectum apta",
+    "display": "Optiones ostensionis"
+  },
+  "drawing": {
+    "noPreview": "Haec forma hic praevideri non potest",
+    "noPreviewHint": "Haec forma tantum servatur et versionatur. Depone et programmate CAD aperi.",
+    "loadFailed": "Delineatio arcessi non potuit",
+    "zoomIn": "Amplifica",
+    "zoomOut": "Minue",
+    "actualSize": "Vera magnitudo (100%)",
+    "fit": "Ad aspectum apta"
+  },
+  "toast": {
+    "saveFailed": "Servari non potuit",
+    "imported": "{{name}} addita",
+    "importFailed": "Fasciculus servari non potuit; res non addita est",
+    "versionAdded": "v{{version}} missa",
+    "deleted": "{{name}} deleta",
+    "thumbnailSaved": "Imaguncula servata",
+    "thumbnailFailed": "Imaguncula servari non potuit",
+    "bulkApplied": "{{count}} rebus applicatum",
+    "addedToCollection": "Collectioni addita",
+    "collectionRejected": "Collectio eiusdem nominis exstat, aut plures creari non possunt",
+    "pathCopied": "Via exscripta",
+    "linkCopied": "Nexus exscriptus",
+    "copyFailed": "Exscribi non potuit"
+  },
+  "attention": {
+    "review": {
+      "label": "Recognitionem exspectat",
+      "hint": "Versio recognitionem exspectat."
+    },
+    "rejected": {
+      "label": "Reiecta",
+      "hint": "Versio reiecta est. Fasciculum emendatum ut novam versionem mitte."
+    },
+    "draft": {
+      "label": "Nondum proposita",
+      "hint": "Versio adumbrata nondum ad recognitionem missa est."
+    },
+    "newer": {
+      "label": "Versio recentior",
+      "hint": "Versio praesenti recentior exstat. Inspice, deinde praesentem fac."
+    },
+    "over-budget": {
+      "label": "Modum excedit",
+      "hint": "Versio praesens modos commendatos excedit. Vide tabulam numerorum."
+    },
+    "unused": {
+      "label": "Non adhibita",
+      "hint": "In nulla scaena posita."
+    }
+  },
+  "menu": {
+    "preview": "Praevide",
+    "open": "Singula aperi",
+    "select": "Elige",
+    "deselect": "Electionem tolle",
+    "favorite": "Dilectis adde",
+    "unfavorite": "E dilectis tolle",
+    "copyLink": "Nexum exscribe",
+    "more": "Plura de {{name}}"
+  },
+  "preview": {
+    "label": "Praevisio: {{name}}",
+    "previous": "Res prior",
+    "next": "Res sequens",
+    "close": "Praevisionem claude",
+    "open3d": "In 3D specta ({{size}})",
+    "placements": "In scaenis",
+    "notPlaced": "Nusquam posita",
+    "openDetail": "Singula aperi",
+    "group": {
+      "file": "Fasciculus",
+      "document": "De delineatione",
+      "geometry": "Geometria"
+    },
+    "relatedCount": "Res conexae",
+    "lodLevels": "Gradus LOD",
+    "animations": "Animationes",
+    "filterByTag": "Res nota {{tag}} signatas ostende",
+    "previousHint": "Res prior (← ↑)",
+    "nextHint": "Res sequens (→ ↓)",
+    "closeHint": "Praevisionem claude (Esc)",
+    "modeImage": "Imago",
+    "mode3d": "3D",
+    "modeLabel": "Modus praevisionis"
+  },
+  "lifecycle": {
+    "label": "Progressus v{{version}}",
+    "heading": "Progressus v{{version}}",
+    "currentVersion": "Versio praesens"
+  },
+  "compare": {
+    "title": "Versiones compara",
+    "toggle": "Versiones compara",
+    "linkCamera": "Cameras coniunge",
+    "close": "Comparationem fini",
+    "base": "Prius",
+    "target": "Postea",
+    "heading": "Quid mutatum sit, v{{base}} → v{{target}}",
+    "withViewed": "Cum spectata compara",
+    "changedCount": "{{count}} numeri mutati",
+    "noChange": "Nihil numeris differt",
+    "changedOnly": "Mutata tantum",
+    "metric": "Res",
+    "delta": "Mutatio",
+    "metricName": {
+      "sizeBytes": "Magnitudo fasciculi",
+      "triangles": "Triangula",
+      "vertices": "Vertices",
+      "meshes": "Retia",
+      "materials": "Materiae",
+      "textures": "Texturae",
+      "drawCalls": "Iussa pingendi",
+      "textureMemoryBytes": "Memoria texturarum",
+      "width": "Latitudo",
+      "depth": "Altitudo in profundum",
+      "height": "Altitudo"
+    },
+    "viewedLabel": "Spectatur v{{version}}",
+    "otherLabel": "Contra v{{version}}",
+    "chooseOther": "Versionem comparandam elige",
+    "comparing": "Comparatur"
+  },
+  "tree": {
+    "root": "Bibliotheca rerum",
+    "path": "Locus",
+    "expand": "{{name}} explica",
+    "collapse": "{{name}} complica"
+  }
+}

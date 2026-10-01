@@ -1,0 +1,1053 @@
+{
+  "/drawings/equipment-layout/3ds.webp": {
+    "hash": "552d2079",
+    "bytes": 73490
+  },
+  "/drawings/equipment-layout/bos1.webp": {
+    "hash": "9d71d296",
+    "bytes": 92910
+  },
+  "/drawings/equipment-layout/bos2.webp": {
+    "hash": "9f201859",
+    "bytes": 41374
+  },
+  "/drawings/equipment-layout/bos3.webp": {
+    "hash": "133aff91",
+    "bytes": 40096
+  },
+  "/drawings/equipment-layout/cas.webp": {
+    "hash": "4fd891c3",
+    "bytes": 52700
+  },
+  "/drawings/equipment-layout/gbs.webp": {
+    "hash": "65d237c8",
+    "bytes": 108776
+  },
+  "/drawings/equipment-layout/gos.webp": {
+    "hash": "dd261474",
+    "bytes": 44536
+  },
+  "/drawings/equipment-layout/nps.webp": {
+    "hash": "cf50b11c",
+    "bytes": 88712
+  },
+  "/drawings/equipment-layout/ofd-shelter.webp": {
+    "hash": "ae29a2ea",
+    "bytes": 34604
+  },
+  "/drawings/equipment-layout/ofd1.webp": {
+    "hash": "5f1ead58",
+    "bytes": 78730
+  },
+  "/drawings/equipment-layout/ofd2.webp": {
+    "hash": "f7159061",
+    "bytes": 47106
+  },
+  "/drawings/equipment-layout/ofd3.webp": {
+    "hash": "eaf04071",
+    "bytes": 49834
+  },
+  "/drawings/equipment-layout/pas.webp": {
+    "hash": "9aeac9b9",
+    "bytes": 47806
+  },
+  "/drawings/equipment-layout/pbs.webp": {
+    "hash": "60b012d8",
+    "bytes": 113502
+  },
+  "/drawings/equipment-layout/pos1.webp": {
+    "hash": "640fea67",
+    "bytes": 107958
+  },
+  "/drawings/equipment-layout/pos2-dumo.webp": {
+    "hash": "64d084a8",
+    "bytes": 87490
+  },
+  "/maps/1dock.glb": {
+    "hash": "562c8a5c",
+    "bytes": 20984,
+    "stats": {
+      "triangles": 183,
+      "vertices": 207,
+      "meshes": 13,
+      "materials": 13,
+      "textures": 0,
+      "drawCalls": 13,
+      "nodes": 12,
+      "textureMemoryBytes": 0,
+      "size": [
+        216.555,
+        0.1,
+        216.555
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/maps/okpo-terrain.glb": {
+    "hash": "cee55116",
+    "bytes": 11560296,
+    "stats": {
+      "triangles": 602980,
+      "vertices": 888968,
+      "meshes": 82,
+      "materials": 10,
+      "textures": 6,
+      "drawCalls": 82,
+      "nodes": 64,
+      "textureMemoryBytes": 102035046,
+      "size": [
+        12363.535,
+        601.82,
+        11221.397
+      ],
+      "lodLevels": 4,
+      "animations": 0
+    }
+  },
+  "/maps/okpo-tree.glb": {
+    "hash": "3dfe97ea",
+    "bytes": 39678396,
+    "stats": {
+      "triangles": 1694696,
+      "vertices": 2901234,
+      "meshes": 36,
+      "materials": 6,
+      "textures": 8,
+      "drawCalls": 36,
+      "nodes": 36,
+      "textureMemoryBytes": 34703429,
+      "size": [
+        2177.279,
+        84.231,
+        2195.707
+      ],
+      "lodLevels": 4,
+      "animations": 0
+    }
+  },
+  "/maps/okpo.glb": {
+    "hash": "db14dc59",
+    "bytes": 18662176,
+    "stats": {
+      "triangles": 892281,
+      "vertices": 1969151,
+      "meshes": 31,
+      "materials": 31,
+      "textures": 34,
+      "drawCalls": 31,
+      "nodes": 1,
+      "textureMemoryBytes": 146009039,
+      "size": [
+        3344.19,
+        131.204,
+        3804.564
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/maps/philly-area-1.glb": {
+    "hash": "831d4208",
+    "bytes": 1958708,
+    "stats": {
+      "triangles": 132915,
+      "vertices": 260762,
+      "meshes": 36,
+      "materials": 36,
+      "textures": 15,
+      "drawCalls": 36,
+      "nodes": 1,
+      "textureMemoryBytes": 145288343,
+      "size": [
+        823.468,
+        75.152,
+        1083.855
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/maps/philly-area-2.glb": {
+    "hash": "ac61ca44",
+    "bytes": 4387084,
+    "stats": {
+      "triangles": 314833,
+      "vertices": 723471,
+      "meshes": 26,
+      "materials": 26,
+      "textures": 10,
+      "drawCalls": 26,
+      "nodes": 1,
+      "textureMemoryBytes": 139460608,
+      "size": [
+        1625.017,
+        50.287,
+        1483.23
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/maps/philly-terrain.glb": {
+    "hash": "38d9f073",
+    "bytes": 25273160,
+    "stats": {
+      "triangles": 1760959,
+      "vertices": 3178803,
+      "meshes": 181,
+      "materials": 3,
+      "textures": 2,
+      "drawCalls": 181,
+      "nodes": 256,
+      "textureMemoryBytes": 21932360,
+      "size": [
+        13357.208,
+        123.923,
+        10073.244
+      ],
+      "lodLevels": 4,
+      "animations": 0
+    }
+  },
+  "/maps/plane.glb": {
+    "hash": "73ff07ea",
+    "bytes": 1420,
+    "stats": {
+      "triangles": 2,
+      "vertices": 4,
+      "meshes": 1,
+      "materials": 1,
+      "textures": 0,
+      "drawCalls": 1,
+      "nodes": 1,
+      "textureMemoryBytes": 0,
+      "size": [
+        215.346,
+        0,
+        215.346
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/1p_3bay.glb": {
+    "hash": "7ef8ee3b",
+    "bytes": 52016,
+    "stats": {
+      "triangles": 3968,
+      "vertices": 6281,
+      "meshes": 9,
+      "materials": 3,
+      "textures": 0,
+      "drawCalls": 9,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        180,
+        41.181,
+        42.282
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/3p.glb": {
+    "hash": "7f592f4a",
+    "bytes": 51908,
+    "stats": {
+      "triangles": 3968,
+      "vertices": 6316,
+      "meshes": 9,
+      "materials": 3,
+      "textures": 0,
+      "drawCalls": 9,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        210.179,
+        41.18,
+        54.773
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/5p_1bay.glb": {
+    "hash": "6e966a9d",
+    "bytes": 43148,
+    "stats": {
+      "triangles": 5060,
+      "vertices": 8063,
+      "meshes": 3,
+      "materials": 3,
+      "textures": 0,
+      "drawCalls": 3,
+      "nodes": 3,
+      "textureMemoryBytes": 0,
+      "size": [
+        254.788,
+        30.679,
+        47.121
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/5p_2bay.glb": {
+    "hash": "9cd42284",
+    "bytes": 47684,
+    "stats": {
+      "triangles": 5728,
+      "vertices": 9056,
+      "meshes": 3,
+      "materials": 3,
+      "textures": 0,
+      "drawCalls": 3,
+      "nodes": 3,
+      "textureMemoryBytes": 0,
+      "size": [
+        254.788,
+        36.173,
+        50.574
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/Block_001.glb": {
+    "hash": "7a80eabd",
+    "bytes": 117832,
+    "stats": {
+      "triangles": 4344,
+      "vertices": 4568,
+      "meshes": 1,
+      "materials": 1,
+      "textures": 1,
+      "drawCalls": 1,
+      "nodes": 1,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        30.682,
+        20.43,
+        78.489
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/Block_002.glb": {
+    "hash": "1c05786a",
+    "bytes": 104184,
+    "stats": {
+      "triangles": 2372,
+      "vertices": 3216,
+      "meshes": 1,
+      "materials": 1,
+      "textures": 1,
+      "drawCalls": 1,
+      "nodes": 1,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        30.682,
+        20.456,
+        22.835
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_171.glb": {
+    "hash": "9bf2aafd",
+    "bytes": 391960,
+    "stats": {
+      "triangles": 22972,
+      "vertices": 42725,
+      "meshes": 4,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 4,
+      "nodes": 1,
+      "textureMemoryBytes": 0,
+      "size": [
+        11.101,
+        7.444,
+        37.25
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_172.glb": {
+    "hash": "31872b3b",
+    "bytes": 275120,
+    "stats": {
+      "triangles": 15128,
+      "vertices": 27383,
+      "meshes": 8,
+      "materials": 5,
+      "textures": 0,
+      "drawCalls": 8,
+      "nodes": 6,
+      "textureMemoryBytes": 0,
+      "size": [
+        7.271,
+        7.263,
+        35.2
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_173.glb": {
+    "hash": "4b338ac9",
+    "bytes": 274624,
+    "stats": {
+      "triangles": 15129,
+      "vertices": 27383,
+      "meshes": 8,
+      "materials": 5,
+      "textures": 0,
+      "drawCalls": 8,
+      "nodes": 6,
+      "textureMemoryBytes": 0,
+      "size": [
+        7.271,
+        7.263,
+        35.2
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_1806.glb": {
+    "hash": "d28c3272",
+    "bytes": 218652,
+    "stats": {
+      "triangles": 11648,
+      "vertices": 21797,
+      "meshes": 8,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 8,
+      "nodes": 6,
+      "textureMemoryBytes": 0,
+      "size": [
+        7.834,
+        6.993,
+        39.13
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_800.glb": {
+    "hash": "91abd152",
+    "bytes": 431736,
+    "stats": {
+      "triangles": 22972,
+      "vertices": 42648,
+      "meshes": 14,
+      "materials": 6,
+      "textures": 0,
+      "drawCalls": 14,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        11.101,
+        7.447,
+        37.25
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_801.glb": {
+    "hash": "2f0168fd",
+    "bytes": 253512,
+    "stats": {
+      "triangles": 15214,
+      "vertices": 24326,
+      "meshes": 7,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 7,
+      "nodes": 6,
+      "textureMemoryBytes": 0,
+      "size": [
+        8.212,
+        5.287,
+        35.2
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_810.glb": {
+    "hash": "d6505f6e",
+    "bytes": 618232,
+    "stats": {
+      "triangles": 34025,
+      "vertices": 63817,
+      "meshes": 12,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 12,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        18.137,
+        12.042,
+        50.225
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_811.glb": {
+    "hash": "8713fdbf",
+    "bytes": 472500,
+    "stats": {
+      "triangles": 25082,
+      "vertices": 47792,
+      "meshes": 12,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 12,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        11.253,
+        6.473,
+        47.687
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_862.glb": {
+    "hash": "882956c2",
+    "bytes": 161472,
+    "stats": {
+      "triangles": 10032,
+      "vertices": 15741,
+      "meshes": 6,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 6,
+      "nodes": 5,
+      "textureMemoryBytes": 0,
+      "size": [
+        9.426,
+        10.47,
+        21.682
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_863.glb": {
+    "hash": "9da072cb",
+    "bytes": 155524,
+    "stats": {
+      "triangles": 9604,
+      "vertices": 15218,
+      "meshes": 6,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 6,
+      "nodes": 5,
+      "textureMemoryBytes": 0,
+      "size": [
+        9.425,
+        10.271,
+        17.865
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_864.glb": {
+    "hash": "e927f46a",
+    "bytes": 155284,
+    "stats": {
+      "triangles": 9604,
+      "vertices": 15256,
+      "meshes": 6,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 6,
+      "nodes": 5,
+      "textureMemoryBytes": 0,
+      "size": [
+        9.425,
+        10.495,
+        17.865
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_865.glb": {
+    "hash": "ee73500f",
+    "bytes": 326700,
+    "stats": {
+      "triangles": 16776,
+      "vertices": 32255,
+      "meshes": 8,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 8,
+      "nodes": 6,
+      "textureMemoryBytes": 0,
+      "size": [
+        7.457,
+        7.106,
+        39.13
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_866.glb": {
+    "hash": "f70593f7",
+    "bytes": 303804,
+    "stats": {
+      "triangles": 16776,
+      "vertices": 32258,
+      "meshes": 4,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 4,
+      "nodes": 1,
+      "textureMemoryBytes": 0,
+      "size": [
+        7.457,
+        7.103,
+        39.13
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_867.glb": {
+    "hash": "ac57fed7",
+    "bytes": 408888,
+    "stats": {
+      "triangles": 23144,
+      "vertices": 40280,
+      "meshes": 11,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 11,
+      "nodes": 9,
+      "textureMemoryBytes": 0,
+      "size": [
+        8.781,
+        6.391,
+        42.04
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_868.glb": {
+    "hash": "d8bb08a7",
+    "bytes": 166572,
+    "stats": {
+      "triangles": 10708,
+      "vertices": 16572,
+      "meshes": 6,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 6,
+      "nodes": 5,
+      "textureMemoryBytes": 0,
+      "size": [
+        10.299,
+        13.294,
+        22.182
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_869.glb": {
+    "hash": "6662b2b6",
+    "bytes": 360900,
+    "stats": {
+      "triangles": 22546,
+      "vertices": 38489,
+      "meshes": 4,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 4,
+      "nodes": 1,
+      "textureMemoryBytes": 0,
+      "size": [
+        8.07,
+        6.059,
+        43.008
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_870.glb": {
+    "hash": "e86c4961",
+    "bytes": 617420,
+    "stats": {
+      "triangles": 34025,
+      "vertices": 63970,
+      "meshes": 12,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 12,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        16.926,
+        8.914,
+        46.112
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/c_871.glb": {
+    "hash": "59b24fe9",
+    "bytes": 620228,
+    "stats": {
+      "triangles": 34089,
+      "vertices": 64340,
+      "meshes": 12,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 12,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        16.974,
+        10.148,
+        46.112
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/car.glb": {
+    "hash": "e4132d55",
+    "bytes": 4282012,
+    "stats": {
+      "triangles": 12134,
+      "vertices": 9148,
+      "meshes": 3,
+      "materials": 3,
+      "textures": 12,
+      "drawCalls": 3,
+      "nodes": 8,
+      "textureMemoryBytes": 66941092,
+      "size": [
+        6.295,
+        4.236,
+        15.198
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/crane.glb": {
+    "hash": "39f98e98",
+    "bytes": 1880168,
+    "stats": {
+      "triangles": 32304,
+      "vertices": 88439,
+      "meshes": 7,
+      "materials": 7,
+      "textures": 18,
+      "drawCalls": 7,
+      "nodes": 9,
+      "textureMemoryBytes": 100411638,
+      "size": [
+        7.156,
+        7.17,
+        1.15
+      ],
+      "lodLevels": 3,
+      "animations": 0
+    }
+  },
+  "/models/fork_lift.glb": {
+    "hash": "6cbf719c",
+    "bytes": 41072,
+    "stats": {
+      "triangles": 2440,
+      "vertices": 2571,
+      "meshes": 7,
+      "materials": 7,
+      "textures": 0,
+      "drawCalls": 7,
+      "nodes": 9,
+      "textureMemoryBytes": 0,
+      "size": [
+        0.48,
+        0.841,
+        1.41
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/gantry_crane.glb": {
+    "hash": "cc8ced6d",
+    "bytes": 2166004,
+    "stats": {
+      "triangles": 15906,
+      "vertices": 17815,
+      "meshes": 1,
+      "materials": 1,
+      "textures": 3,
+      "drawCalls": 1,
+      "nodes": 8,
+      "textureMemoryBytes": 16735273,
+      "size": [
+        8.532,
+        5.619,
+        2.634
+      ],
+      "lodLevels": 4,
+      "animations": 0
+    }
+  },
+  "/models/goliath_crane_body.glb": {
+    "hash": "bf9d8d8a",
+    "bytes": 1030716,
+    "stats": {
+      "triangles": 64560,
+      "vertices": 112574,
+      "meshes": 2,
+      "materials": 2,
+      "textures": 1,
+      "drawCalls": 2,
+      "nodes": 2,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        129.98,
+        61.87,
+        43.623
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/goliath_crane_trolley.glb": {
+    "hash": "ac9ea4af",
+    "bytes": 338508,
+    "stats": {
+      "triangles": 8400,
+      "vertices": 9466,
+      "meshes": 6,
+      "materials": 5,
+      "textures": 1,
+      "drawCalls": 6,
+      "nodes": 3,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        12.269,
+        35.61,
+        22.033
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/goliath_crane.glb": {
+    "hash": "0111c671",
+    "bytes": 1106600,
+    "stats": {
+      "triangles": 72960,
+      "vertices": 122040,
+      "meshes": 8,
+      "materials": 6,
+      "textures": 1,
+      "drawCalls": 8,
+      "nodes": 4,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        129.98,
+        64.612,
+        43.623
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/hanwha-ocean-lngc-174k.glb": {
+    "hash": "2afa6582",
+    "bytes": 867244,
+    "stats": {
+      "triangles": 112844,
+      "vertices": 157656,
+      "meshes": 11,
+      "materials": 8,
+      "textures": 0,
+      "drawCalls": 11,
+      "nodes": 20,
+      "textureMemoryBytes": 0,
+      "size": [
+        300.65,
+        63.378,
+        61.83
+      ],
+      "lodLevels": 4,
+      "animations": 0
+    }
+  },
+  "/models/LLC_002.glb": {
+    "hash": "41709200",
+    "bytes": 978620,
+    "stats": {
+      "triangles": 54008,
+      "vertices": 97812,
+      "meshes": 9,
+      "materials": 4,
+      "textures": 4,
+      "drawCalls": 9,
+      "nodes": 15,
+      "textureMemoryBytes": 22313953,
+      "size": [
+        11.565,
+        53.224,
+        60.693
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/man.glb": {
+    "hash": "4405f7b3",
+    "bytes": 53172,
+    "stats": {
+      "triangles": 2076,
+      "vertices": 6228,
+      "meshes": 1,
+      "materials": 1,
+      "textures": 0,
+      "drawCalls": 1,
+      "nodes": 11,
+      "textureMemoryBytes": 0,
+      "size": [
+        0.539,
+        2,
+        0.284
+      ],
+      "lodLevels": 1,
+      "animations": 3
+    }
+  },
+  "/models/okpo_goliath.glb": {
+    "hash": "b7bc0fa0",
+    "bytes": 536572,
+    "stats": {
+      "triangles": 84818,
+      "vertices": 75235,
+      "meshes": 4,
+      "materials": 3,
+      "textures": 1,
+      "drawCalls": 4,
+      "nodes": 4,
+      "textureMemoryBytes": 85,
+      "size": [
+        49.83,
+        111.368,
+        155.193
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/okpo_oc.glb": {
+    "hash": "c6583010",
+    "bytes": 1163052,
+    "stats": {
+      "triangles": 88076,
+      "vertices": 151904,
+      "meshes": 12,
+      "materials": 4,
+      "textures": 3,
+      "drawCalls": 12,
+      "nodes": 17,
+      "textureMemoryBytes": 255,
+      "size": [
+        84.945,
+        78.313,
+        29.878
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/okpo_tc.glb": {
+    "hash": "46a1c0a0",
+    "bytes": 2404260,
+    "stats": {
+      "triangles": 68926,
+      "vertices": 117153,
+      "meshes": 6,
+      "materials": 5,
+      "textures": 8,
+      "drawCalls": 6,
+      "nodes": 3,
+      "textureMemoryBytes": 22314038,
+      "size": [
+        72.607,
+        52.994,
+        9.91
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/okpo_ttc.glb": {
+    "hash": "e1dc1ecd",
+    "bytes": 1994020,
+    "stats": {
+      "triangles": 72716,
+      "vertices": 93019,
+      "meshes": 4,
+      "materials": 3,
+      "textures": 7,
+      "drawCalls": 4,
+      "nodes": 3,
+      "textureMemoryBytes": 22313953,
+      "size": [
+        137.596,
+        99.744,
+        16.635
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/TTC-27.glb": {
+    "hash": "f14ca764",
+    "bytes": 1509392,
+    "stats": {
+      "triangles": 110124,
+      "vertices": 266654,
+      "meshes": 2,
+      "materials": 1,
+      "textures": 0,
+      "drawCalls": 2,
+      "nodes": 9,
+      "textureMemoryBytes": 0,
+      "size": [
+        137.637,
+        99.388,
+        14.881
+      ],
+      "lodLevels": 4,
+      "animations": 0
+    }
+  }
+}

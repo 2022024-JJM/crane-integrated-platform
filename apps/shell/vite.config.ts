@@ -10,6 +10,12 @@ import {
   getSceneFileNameByRegionId,
   isKnownRegionId,
 } from '../../packages/domain/src/3d/model/scene-file-map';
+import {
+  ASSET_ID_PATTERN,
+  ASSET_LIBRARY_DIR,
+  DEV_ASSET_LIBRARY_API_PATH,
+  parseAssetLibraryFileKey,
+} from '../../packages/domain/src/asset-library/model/asset-library-paths';
 
 const DEV_SCENE_API_PATH = '/__dev/scene';
 
@@ -276,6 +282,143 @@ function devPreviewSavePlugin(): Plugin {
   };
 }
 
+/** 라이브러리 문서의 최소 형태 — 객체이고 assets 가 배열. 정규화는 브라우저가 한다. */
+function isAssetLibraryShaped(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  return Array.isArray((value as Record<string, unknown>).assets);
+}
+
+/**
+ * 3D 자산 라이브러리 저장 미들웨어 (dev 전용).
+ *
+ * - `POST /__dev/asset-library` — 문서(JSON)를 public/asset-library/library.json 에.
+ * - `POST /__dev/asset-library/file?key=…` — 버전 파일·썸네일(바이너리)을
+ *   public/asset-library/ 아래에. 키는 `files/<id>/v<N>/<name>` 또는
+ *   `thumbnails/<id>.png` 뿐이고 규칙은 도메인과 공유한다(asset-library-paths).
+ *   버전 파일은 **불변**이라 이미 있는 경로에는 쓰지 않는다(409).
+ * - `DELETE /__dev/asset-library/file?assetId=…` — 그 자산의 파일 전부.
+ *
+ * 생성물은 커밋해서 배포한다. 운영에는 이 미들웨어가 없어 브라우저 저장소로
+ * 떨어진다(asset-library-storage.ts).
+ */
+function devAssetLibraryPlugin(): Plugin {
+  return {
+    name: 'dev-asset-library-plugin',
+    configureServer(server) {
+      const libraryDir = path.resolve(
+        server.config.root,
+        'public',
+        ASSET_LIBRARY_DIR,
+      );
+
+      server.middlewares.use(
+        DEV_ASSET_LIBRARY_API_PATH,
+        async (req, res, next) => {
+          if (!req.url) {
+            next();
+            return;
+          }
+          // connect 는 마운트 경로를 떼고 넘긴다 — '/' 또는 '/file?...'.
+          const requestUrl = new URL(req.url, 'http://localhost');
+
+          try {
+            if (requestUrl.pathname === '/' && req.method === 'POST') {
+              const body = JSON.parse(await readRequestBody(req));
+              if (!isAssetLibraryShaped(body)) {
+                jsonResponse(res, 400, {
+                  message:
+                    'Invalid asset library payload: expected an object with an "assets" array.',
+                });
+                return;
+              }
+              await fs.mkdir(libraryDir, { recursive: true });
+              await fs.writeFile(
+                path.join(libraryDir, 'library.json'),
+                `${JSON.stringify(body, null, 2)}\n`,
+                'utf8',
+              );
+              jsonResponse(res, 200, { ok: true });
+              return;
+            }
+
+            if (requestUrl.pathname === '/file' && req.method === 'POST') {
+              const key = requestUrl.searchParams.get('key') ?? '';
+              const parsed = parseAssetLibraryFileKey(key);
+              if (!parsed) {
+                jsonResponse(res, 400, {
+                  message: `Invalid asset file key: "${key}".`,
+                });
+                return;
+              }
+              const filePath = path.join(libraryDir, ...key.split('/'));
+              if (parsed.kind === 'version') {
+                const exists = await fs.stat(filePath).then(
+                  () => true,
+                  () => false,
+                );
+                if (exists) {
+                  jsonResponse(res, 409, {
+                    message: `Version file already exists: "${key}".`,
+                  });
+                  return;
+                }
+              }
+              const body = await readRequestBodyBuffer(req);
+              if (body.length === 0) {
+                jsonResponse(res, 400, { message: 'Empty file body.' });
+                return;
+              }
+              if (
+                parsed.kind === 'thumbnail' &&
+                !body.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)
+              ) {
+                jsonResponse(res, 400, {
+                  message: 'Invalid payload: expected a PNG binary body.',
+                });
+                return;
+              }
+              await fs.mkdir(path.dirname(filePath), { recursive: true });
+              await fs.writeFile(filePath, body);
+              jsonResponse(res, 200, { key, bytes: body.length });
+              return;
+            }
+
+            if (requestUrl.pathname === '/file' && req.method === 'DELETE') {
+              const assetId = requestUrl.searchParams.get('assetId') ?? '';
+              // id 가 곧 디렉터리명이다 — 경로 탈출이 불가능한 문자만 허용한다.
+              if (!ASSET_ID_PATTERN.test(assetId)) {
+                jsonResponse(res, 400, {
+                  message: `Invalid asset id: "${assetId}".`,
+                });
+                return;
+              }
+              await fs.rm(path.join(libraryDir, 'files', assetId), {
+                recursive: true,
+                force: true,
+              });
+              await fs.rm(
+                path.join(libraryDir, 'thumbnails', `${assetId}.png`),
+                { force: true },
+              );
+              jsonResponse(res, 200, { ok: true });
+              return;
+            }
+
+            next();
+          } catch (error) {
+            console.error('Failed to handle asset library request.', error);
+            jsonResponse(res, 500, {
+              message: 'Failed to handle asset library request.',
+            });
+          }
+        },
+      );
+    },
+  };
+}
+
 const DEFAULT_BASE_URL = '/crane_rnd/';
 
 function normalizeBaseUrl(input: string | undefined): string {
@@ -331,7 +474,9 @@ export default defineConfig(({ mode }) => {
       devSceneSavePlugin(),
       devVirtualTagsSavePlugin(),
       devPreviewSavePlugin(),
-      // 위 세 저장 미들웨어가 쓰는 public/ 디렉토리(scenes·simulation·previews)는
+      devAssetLibraryPlugin(),
+      // 위 저장 미들웨어들이 쓰는 public/ 디렉토리(scenes·simulation·previews·
+      // asset-library)는
       // 이 플러그인의 DEV_WRITTEN_DIRS 에 등록돼 있어 저장 시 전체 리로드를
       // 보내지 않는다. 새 저장 미들웨어를 추가하면 그 목록도 함께 갱신한다.
       assetHashManifestPlugin(),

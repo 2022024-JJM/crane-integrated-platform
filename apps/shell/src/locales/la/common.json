@@ -104,7 +104,9 @@
     "indoorshopReference": "Reference",
     "indoorshopDocs": "Documents",
     "virtualTags": "Tags Ficta",
-    "settings": "Optiones"
+    "settings": "Optiones",
+    "assets": "Res",
+    "assetLibrary": "Bibliotheca Rerum 3D"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",

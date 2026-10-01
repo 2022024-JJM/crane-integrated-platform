@@ -14,7 +14,8 @@
     "new-site": "node scripts/new-site.mjs",
     "optimize:glb": "node scripts/optimize-glb.mjs",
     "optimize:map": "node scripts/optimize-map.mjs",
-    "perf:scene": "node scripts/scene-perf-report.mjs"
+    "perf:scene": "node scripts/scene-perf-report.mjs",
+    "assets:stats": "node scripts/asset-library-stats.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

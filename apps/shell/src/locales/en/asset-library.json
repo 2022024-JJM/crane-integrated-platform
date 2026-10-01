@@ -1,0 +1,458 @@
+{
+  "title": "3D Asset Library",
+  "kind": {
+    "model": "Models",
+    "map": "Maps",
+    "drawing": "Drawings",
+    "cad": "CAD"
+  },
+  "site": {
+    "all": "All",
+    "okpo": "Okpo Shipyard",
+    "philly": "Philly Shipyard",
+    "common": "Shared",
+    "okpoShort": "Okpo",
+    "phillyShort": "Philly",
+    "commonShort": "Shared"
+  },
+  "status": {
+    "draft": "Draft",
+    "in-review": "In review",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "published": "Published",
+    "withdrawn": "Withdrawn"
+  },
+  "origin": {
+    "builtin": "Deployed asset",
+    "user": "Added on this page"
+  },
+  "storage": {
+    "public": "Deployed file",
+    "browser": "This browser"
+  },
+  "sort": {
+    "name": "Name",
+    "updated": "Recently updated",
+    "size": "File size",
+    "triangles": "Most triangles"
+  },
+  "unit": {
+    "triangles": "tris"
+  },
+  "field": {
+    "asset": "Asset",
+    "name": "Name",
+    "description": "Description",
+    "kind": "Type",
+    "site": "Shipyard",
+    "status": "Status",
+    "version": "Version",
+    "revision": "Revision",
+    "drawingNo": "Drawing number",
+    "tags": "Tags",
+    "owner": "Owner",
+    "category": "Category",
+    "file": "File",
+    "size": "Size",
+    "sizeBytes": "Size (bytes)",
+    "triangles": "Triangles",
+    "updated": "Updated",
+    "created": "Added",
+    "versionNote": "Change note",
+    "storage": "Stored in",
+    "path": "Path",
+    "hash": "Content hash",
+    "defaultScale": "Default scale",
+    "origin": "Source",
+    "format": "Format",
+    "fileName": "File name"
+  },
+  "action": {
+    "import": "Add asset",
+    "exportCsv": "Export CSV",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "download": "Download",
+    "delete": "Delete",
+    "add": "Add"
+  },
+  "save": {
+    "saving": "Saving",
+    "failed": "Your changes could not be saved. Try again, or they will be lost on reload.",
+    "localOnly": "There is no asset server yet, so anything you add or change here is saved in this browser only. Other people and other devices will not see it."
+  },
+  "rail": {
+    "label": "Asset filters",
+    "status": "Status",
+    "collections": "Collections",
+    "favorites": "Favorites",
+    "newCollection": "New collection",
+    "collectionName": "Collection name",
+    "removeCollection": "Delete collection {{name}}",
+    "attention": "Needs attention",
+    "browse": "Browse"
+  },
+  "browser": {
+    "search": "Search name, tag or file name",
+    "resultCount": "{{count}} of {{total}}",
+    "clearFilters": "Clear filters",
+    "sort": "Sort",
+    "viewMode": "View",
+    "view": {
+      "grid": "Show as cards",
+      "list": "Show as list"
+    },
+    "placed": "Placed",
+    "selectAll": "Select all shown assets",
+    "selectAsset": "Select {{name}}",
+    "favorite": "Add {{name}} to favorites",
+    "unfavorite": "Remove {{name}} from favorites",
+    "loading": "Loading assets",
+    "loadFailed": "The asset library could not be loaded",
+    "loadFailedHint": "Check your network connection and try again.",
+    "empty": "No assets match these filters",
+    "emptyHint": "Change the search or filters, or add a new asset.",
+    "dropTitle": "Drop here to add as an asset",
+    "previewAsset": "Preview {{name}}",
+    "activeFilters": "Active filters",
+    "removeFilter": "Remove filter {{name}}",
+    "anyStatus": "Any status",
+    "statusCount": "{{count}} statuses",
+    "emptyScope": "Nothing here yet",
+    "emptyScopeHint": {
+      "model": "Upload a GLB and choose Models to place it here.",
+      "map": "Upload a GLB and choose Maps to place it here.",
+      "drawing": "Upload a PDF, SVG or image to place it here.",
+      "cad": "Upload a DWG, DXF, STEP or IGES file to place it here."
+    },
+    "scopeCount": "{{count}} assets",
+    "reverseSort": "Reverse sort order"
+  },
+  "bulk": {
+    "label": "Actions for selected assets",
+    "selected": "{{count}} selected",
+    "assignSite": "Set shipyard",
+    "bothSites": "Both Okpo and Philly",
+    "addTag": "Add tag",
+    "addToCollection": "Add to collection",
+    "clear": "Clear selection"
+  },
+  "form": {
+    "siteCommonHint": "With no shipyard selected, the asset is shared company-wide.",
+    "siteScopedHint": "The asset belongs to the selected shipyards.",
+    "tagPlaceholder": "Type a tag, then Enter",
+    "tagsFull": "An asset can have up to {{max}} tags",
+    "removeTag": "Remove tag {{tag}}"
+  },
+  "import": {
+    "title": "Add asset",
+    "description": "The file you upload becomes version 1. 3D assets take GLB; drawings take PDF, SVG and images; CAD takes DWG, DXF, STEP and IGES.",
+    "pickFile": "Choose a file or drop it here",
+    "formats": "GLB, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
+    "changeFile": "Change file",
+    "analyzing": "Checking the file",
+    "noteHint": "Describe what changed in this version. It shows in the version list.",
+    "startsAsDraft": "New assets start as drafts.",
+    "localOnly": "The file is saved in this browser only.",
+    "submit": "Add",
+    "duplicate": "A file with the same content already exists: {{names}}. Check whether this should be a new version of that asset.",
+    "large": "This file is over 100 MB. It may take a while to open.",
+    "problem": {
+      "unsupported": ".{{format}} files cannot be added. Choose a GLB, drawing or CAD file.",
+      "empty": "The file is empty. Choose another file.",
+      "glb": {
+        "too-short": "This is not a GLB file. The file is too short.",
+        "bad-magic": "This is not a GLB file. It may be another format with a .glb extension.",
+        "bad-version": "This GLB is not glTF 2.0. Export it again as glTF 2.0.",
+        "bad-length": "The GLB file is damaged. Its header length does not match the file size, so it may have been cut off in transfer."
+      }
+    },
+    "categoryPlaceholder": "e.g. indoor, hull — leave empty to keep it directly under the type"
+  },
+  "detail": {
+    "backToLibrary": "Back to library",
+    "tabs": "Asset details",
+    "tab": {
+      "info": "Info",
+      "stats": "Stats",
+      "versions": "Versions",
+      "usage": "Used in",
+      "activity": "Activity"
+    },
+    "viewingOldVersion": "Viewing v{{version}}. Show current version v{{current}}",
+    "notFound": "Asset not found",
+    "notFoundHint": "It may have been deleted, or it was added in another browser.",
+    "fileMissing": "This browser does not have the file",
+    "fileMissingHint": "This version's file is stored only in the browser that added it. Once the asset server is ready it will open anywhere.",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteDescription": "The files and history of {{count}} version(s) will be deleted. This cannot be undone.",
+    "previousAsset": "Previous asset (←)",
+    "nextAsset": "Next asset (→)"
+  },
+  "titleBlock": {
+    "size": "Width × depth × height"
+  },
+  "info": {
+    "basics": "Basics",
+    "classification": "Classification",
+    "related": "Linked assets",
+    "file": "File (v{{version}})",
+    "descriptionPlaceholder": "Purpose, where the source came from, things to watch out for",
+    "relatedEmptyModel": "Link this asset’s drawings, CAD files or companion assets to move between them.",
+    "relatedEmptyDrawing": "Link the 3D assets this document describes to move between them.",
+    "linkAsset": "Link an asset",
+    "noLinkCandidates": "No assets to link",
+    "unlink": "Unlink {{name}}",
+    "linkedFromOther": "Linked from the other asset",
+    "copyPath": "Copy path",
+    "defaultScaleHint": "Dimensions are in scene units with the default scale applied. In most scenes one unit is 1 m, but the indoor (dock-in) scene uses a different unit."
+  },
+  "stats": {
+    "dimensions": "Dimensions",
+    "geometry": "Geometry",
+    "axis": {
+      "W": "Width",
+      "D": "Depth",
+      "H": "Height"
+    },
+    "metric": {
+      "triangles": "Triangles",
+      "vertices": "Vertices",
+      "drawCalls": "Draw calls",
+      "textureMemory": "Texture memory",
+      "meshes": "Meshes",
+      "materials": "Materials",
+      "textures": "Textures",
+      "nodes": "Nodes",
+      "lodLevels": "LOD levels",
+      "animations": "Animations"
+    },
+    "overBudget": "Over the recommended limit",
+    "sourceLive": "Measured just now from the file opened on this page. With LODs, this is LOD 0.",
+    "sourceStored": "Measured ahead of time. With LODs, this is LOD 0.",
+    "pending": "Stats are measured once the file opens.",
+    "drawing": "Drawings and CAD files have no geometry stats. File details are on the Info tab.",
+    "budgetHint": "If this asset is placed many times in a scene, consider merging primitives or adding LODs. This does not block adding it.",
+    "budgetHeading": "Against recommended limits",
+    "budgetLegend": "Each bar is full at the recommended limit. Going over does not block adding the asset."
+  },
+  "versions": {
+    "newVersion": "Upload new version",
+    "upload": "Upload",
+    "uploadHint": "Changing the file creates a new version. Earlier versions are kept.",
+    "notePlaceholder": "What changed in this version",
+    "current": "Current",
+    "revision": "Rev {{revision}}",
+    "view": "View",
+    "viewing": "Viewing",
+    "makeCurrent": "Make current",
+    "changeStatus": "Change status of v{{version}}",
+    "transition": {
+      "in-review": "Request review",
+      "approved": "Approve",
+      "rejected": "Reject",
+      "published": "Publish",
+      "withdrawn": "Withdraw"
+    },
+    "kindMismatch": "This file is a different type from the asset. Upload a GLB for 3D assets, a PDF, SVG or image for drawings, and a CAD file for CAD.",
+    "sameContent": "This file has the same content as a version this asset already has.",
+    "catalogNotice": "Scenes use the deployed file of version 1. To use a new version in scenes, replace the deployed file through the asset pipeline (assets-src → optimize:glb).",
+    "revisionShort": "Rev {{revision}}"
+  },
+  "usage": {
+    "loading": "Checking scenes",
+    "failed": "Scene files could not be read, so usage is unknown.",
+    "partial": "Some scenes could not be read, so usage may be incomplete: {{scenes}}",
+    "none": "Not placed in any scene",
+    "noneCatalogHint": "You can place it in a scene from the 3D editor palette.",
+    "noneRuntimeHint": "Screen code loads this asset directly instead of placing it in a scene. Do not delete it even though no scene uses it.",
+    "noneUserHint": "Assets added on this page do not appear in the editor palette yet.",
+    "versionHeading": "Scenes using v{{version}}",
+    "count": "{{count}} placed",
+    "openEditor": "Open in the 3D editor",
+    "drawing": "Drawings and CAD files are not placed in scenes. See linked assets on the Info tab."
+  },
+  "activity": {
+    "created": "Added the asset",
+    "versionAdded": "Uploaded v{{version}}",
+    "status": "Changed v{{version}} from {{from}} to {{to}}",
+    "currentChanged": "Moved the current version from v{{from}} to v{{to}}",
+    "metadata": "Edited {{fields}}",
+    "thumbnail": "Saved a thumbnail",
+    "empty": "No activity recorded yet.",
+    "emptyBuiltin": "This is a deployed asset. Changes made on this page are recorded here from now on.",
+    "field": {
+      "name": "name",
+      "description": "description",
+      "category": "category",
+      "sites": "shipyard",
+      "tags": "tags",
+      "owner": "owner",
+      "kind": "type",
+      "drawingNo": "drawing number",
+      "relatedAssetIds": "linked assets",
+      "defaultScale": "default scale"
+    }
+  },
+  "viewer": {
+    "loading": "Loading model {{percent}}%",
+    "loadFailed": "The model could not be opened",
+    "loadFailedHint": "The file may be missing or damaged. Open another version or upload the file again.",
+    "viewMode": "Display",
+    "mode": {
+      "lit": "Lit",
+      "clay": "Clay",
+      "wireframe": "Wire",
+      "normals": "Normals"
+    },
+    "lod": "LOD level",
+    "grid": "Ground grid",
+    "dimensions": "Dimensions",
+    "turntable": "Auto-rotate",
+    "background": "Change background (now: {{name}})",
+    "backgroundName": {
+      "dark": "Dark",
+      "light": "Light",
+      "blueprint": "Blueprint"
+    },
+    "saveThumbnail": "Save this view as the thumbnail",
+    "camera": "Viewpoint",
+    "preset": {
+      "iso": "Iso",
+      "front": "Front",
+      "right": "Side",
+      "top": "Top"
+    },
+    "fit": "Fit to view",
+    "display": "Display options"
+  },
+  "drawing": {
+    "noPreview": "This format cannot be previewed here",
+    "noPreviewHint": "This format is stored and versioned only. Download the file and open it in a CAD program.",
+    "loadFailed": "The drawing could not be loaded",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "actualSize": "Actual size (100%)",
+    "fit": "Fit to view"
+  },
+  "toast": {
+    "saveFailed": "Could not save",
+    "imported": "Added {{name}}",
+    "importFailed": "The file could not be stored, so the asset was not added",
+    "versionAdded": "Uploaded v{{version}}",
+    "deleted": "Deleted {{name}}",
+    "thumbnailSaved": "Thumbnail saved",
+    "thumbnailFailed": "The thumbnail could not be saved",
+    "bulkApplied": "Applied to {{count}} asset(s)",
+    "addedToCollection": "Added to the collection",
+    "collectionRejected": "A collection with that name exists, or no more can be created",
+    "pathCopied": "Path copied",
+    "linkCopied": "Link copied",
+    "copyFailed": "Could not copy"
+  },
+  "attention": {
+    "review": {
+      "label": "Awaiting review",
+      "hint": "A version is waiting for review."
+    },
+    "rejected": {
+      "label": "Rejected",
+      "hint": "A version was rejected. Upload the corrected file as a new version."
+    },
+    "draft": {
+      "label": "Not yet submitted",
+      "hint": "A draft version has not been sent for review."
+    },
+    "newer": {
+      "label": "Newer version",
+      "hint": "A version newer than the current one exists. Check it, then make it current."
+    },
+    "over-budget": {
+      "label": "Over budget",
+      "hint": "The current version exceeds the recommended limits. See the Stats tab."
+    },
+    "unused": {
+      "label": "Unused",
+      "hint": "Not placed in any scene."
+    }
+  },
+  "menu": {
+    "preview": "Preview",
+    "open": "Open details",
+    "select": "Select",
+    "deselect": "Deselect",
+    "favorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
+    "copyLink": "Copy link",
+    "more": "More actions for {{name}}"
+  },
+  "preview": {
+    "label": "Preview of {{name}}",
+    "previous": "Previous asset",
+    "next": "Next asset",
+    "close": "Close preview",
+    "open3d": "View in 3D ({{size}})",
+    "placements": "In scenes",
+    "notPlaced": "Not placed",
+    "openDetail": "Open details",
+    "group": {
+      "file": "File",
+      "document": "Drawing details",
+      "geometry": "Geometry"
+    },
+    "relatedCount": "Linked assets",
+    "lodLevels": "LOD levels",
+    "animations": "Animations",
+    "filterByTag": "Show assets tagged {{tag}}",
+    "previousHint": "Previous asset (← ↑)",
+    "nextHint": "Next asset (→ ↓)",
+    "closeHint": "Close preview (Esc)",
+    "modeImage": "Image",
+    "mode3d": "3D",
+    "modeLabel": "Preview mode"
+  },
+  "lifecycle": {
+    "label": "Progress of v{{version}}",
+    "heading": "v{{version}} progress",
+    "currentVersion": "Current version"
+  },
+  "compare": {
+    "title": "Compare versions",
+    "toggle": "Compare versions",
+    "linkCamera": "Link cameras",
+    "close": "Stop comparing",
+    "base": "Before",
+    "target": "After",
+    "heading": "What changed, v{{base}} → v{{target}}",
+    "withViewed": "Compare with viewed",
+    "changedCount": "{{count}} values changed",
+    "noChange": "No measurable differences",
+    "changedOnly": "Changes only",
+    "metric": "Metric",
+    "delta": "Change",
+    "metricName": {
+      "sizeBytes": "File size",
+      "triangles": "Triangles",
+      "vertices": "Vertices",
+      "meshes": "Meshes",
+      "materials": "Materials",
+      "textures": "Textures",
+      "drawCalls": "Draw calls",
+      "textureMemoryBytes": "Texture memory",
+      "width": "Width",
+      "depth": "Depth",
+      "height": "Height"
+    },
+    "viewedLabel": "Viewing v{{version}}",
+    "otherLabel": "Against v{{version}}",
+    "chooseOther": "Choose the version to compare against",
+    "comparing": "Comparing"
+  },
+  "tree": {
+    "root": "Asset library",
+    "path": "Location",
+    "expand": "Expand {{name}}",
+    "collapse": "Collapse {{name}}"
+  }
+}

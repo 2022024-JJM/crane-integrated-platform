@@ -41,12 +41,14 @@ const HASHED_DIRS = [
   'previews',
   'simulation',
   'textures',
+  'asset-library',
 ];
 
 /**
  * dev 저장 미들웨어가 직접 쓰는 산출물 디렉터리 (HASHED_DIRS 의 부분집합).
  * vite.config.ts 의 devSceneSavePlugin(scenes) · devVirtualTagsSavePlugin
- * (simulation) · devPreviewSavePlugin(previews) 이 여기에 파일을 쓴다.
+ * (simulation) · devPreviewSavePlugin(previews) · devAssetLibraryPlugin
+ * (asset-library) 이 여기에 파일을 쓴다.
  *
  * 이 디렉터리의 변경은 "앱이 방금 저장한 결과를 되읽는 것" 이라 전체
  * 리로드를 보내면 저장 직후 화면·토스트·편집 상태가 통째로 날아간다
@@ -59,7 +61,12 @@ const HASHED_DIRS = [
  * 집합에 있는 파일만 서빙해서, 무시된 디렉터리에 기동 후 새로 생긴 파일은
  * 재시작 전까지 404 가 된다.
  */
-const DEV_WRITTEN_DIRS = ['scenes', 'simulation', 'previews'];
+const DEV_WRITTEN_DIRS = [
+  'scenes',
+  'simulation',
+  'previews',
+  'asset-library',
+];
 
 /** URL 길이만 늘리지 않도록 짧게 자른다. 8 hex = 32bit, 충돌은 실질적으로 무관. */
 const HASH_LENGTH = 8;

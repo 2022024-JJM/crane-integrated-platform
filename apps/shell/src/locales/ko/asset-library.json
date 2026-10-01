@@ -1,0 +1,458 @@
+{
+  "title": "3D 자산 라이브러리",
+  "kind": {
+    "model": "모델",
+    "map": "지도",
+    "drawing": "도면",
+    "cad": "CAD"
+  },
+  "site": {
+    "all": "전체",
+    "okpo": "옥포조선소",
+    "philly": "필리조선소",
+    "common": "공용",
+    "okpoShort": "옥포",
+    "phillyShort": "필리",
+    "commonShort": "공용"
+  },
+  "status": {
+    "draft": "초안",
+    "in-review": "검토 중",
+    "approved": "승인됨",
+    "rejected": "반려됨",
+    "published": "게시됨",
+    "withdrawn": "철회됨"
+  },
+  "origin": {
+    "builtin": "배포 자산",
+    "user": "이 화면에서 등록"
+  },
+  "storage": {
+    "public": "배포 파일",
+    "browser": "이 브라우저"
+  },
+  "sort": {
+    "name": "이름순",
+    "updated": "최근 수정순",
+    "size": "파일 크기순",
+    "triangles": "삼각형 많은 순"
+  },
+  "unit": {
+    "triangles": "삼각형"
+  },
+  "field": {
+    "asset": "자산",
+    "name": "이름",
+    "description": "설명",
+    "kind": "종류",
+    "site": "조선소",
+    "status": "상태",
+    "version": "버전",
+    "revision": "리비전",
+    "drawingNo": "도면 번호",
+    "tags": "태그",
+    "owner": "담당자",
+    "category": "분류",
+    "file": "파일",
+    "size": "크기",
+    "sizeBytes": "크기(바이트)",
+    "triangles": "삼각형",
+    "updated": "수정일",
+    "created": "등록 시각",
+    "versionNote": "변경 메모",
+    "storage": "저장 위치",
+    "path": "경로",
+    "hash": "콘텐츠 해시",
+    "defaultScale": "기본 스케일",
+    "origin": "출처",
+    "format": "형식",
+    "fileName": "파일명"
+  },
+  "action": {
+    "import": "자산 등록",
+    "exportCsv": "CSV 내보내기",
+    "cancel": "취소",
+    "retry": "다시 시도",
+    "download": "내려받기",
+    "delete": "삭제",
+    "add": "추가"
+  },
+  "save": {
+    "saving": "저장 중",
+    "failed": "변경 내용을 저장하지 못했습니다. 다시 시도하지 않으면 새로고침할 때 사라집니다.",
+    "localOnly": "아직 자산 서버가 없어, 이 환경에서 등록·수정한 내용은 이 브라우저에만 저장됩니다. 다른 사람과 다른 기기에서는 보이지 않습니다."
+  },
+  "rail": {
+    "label": "자산 필터",
+    "status": "상태",
+    "collections": "컬렉션",
+    "favorites": "즐겨찾기",
+    "newCollection": "컬렉션 만들기",
+    "collectionName": "컬렉션 이름",
+    "removeCollection": "{{name}} 컬렉션 삭제",
+    "attention": "처리할 일",
+    "browse": "탐색"
+  },
+  "browser": {
+    "search": "이름·태그·파일명 검색",
+    "resultCount": "{{total}}개 중 {{count}}개",
+    "clearFilters": "필터 초기화",
+    "sort": "정렬",
+    "viewMode": "보기 방식",
+    "view": {
+      "grid": "카드로 보기",
+      "list": "목록으로 보기"
+    },
+    "placed": "배치",
+    "selectAll": "보이는 자산 모두 선택",
+    "selectAsset": "{{name}} 선택",
+    "favorite": "{{name}} 즐겨찾기에 추가",
+    "unfavorite": "{{name}} 즐겨찾기에서 빼기",
+    "loading": "자산을 불러오는 중",
+    "loadFailed": "자산 라이브러리를 불러오지 못했습니다",
+    "loadFailedHint": "네트워크 상태를 확인한 뒤 다시 시도하세요.",
+    "empty": "조건에 맞는 자산이 없습니다",
+    "emptyHint": "검색어나 필터를 바꾸거나, 새 자산을 등록하세요.",
+    "dropTitle": "여기에 놓아 자산으로 등록",
+    "previewAsset": "{{name}} 미리보기",
+    "activeFilters": "걸린 필터",
+    "removeFilter": "{{name}} 필터 풀기",
+    "anyStatus": "모든 상태",
+    "statusCount": "상태 {{count}}개",
+    "emptyScope": "이 위치에 아직 자산이 없습니다",
+    "emptyScopeHint": {
+      "model": "GLB 파일을 올리고 종류를 모델로 고르면 여기에 놓입니다.",
+      "map": "GLB 파일을 올리고 종류를 지도로 고르면 여기에 놓입니다.",
+      "drawing": "PDF·SVG·이미지 파일을 올리면 여기에 놓입니다.",
+      "cad": "DWG·DXF·STEP·IGES 파일을 올리면 여기에 놓입니다."
+    },
+    "scopeCount": "{{count}}개",
+    "reverseSort": "정렬 방향 뒤집기"
+  },
+  "bulk": {
+    "label": "선택한 자산 일괄 작업",
+    "selected": "{{count}}개 선택",
+    "assignSite": "조선소 지정",
+    "bothSites": "옥포·필리 모두",
+    "addTag": "태그 추가",
+    "addToCollection": "컬렉션에 담기",
+    "clear": "선택 해제"
+  },
+  "form": {
+    "siteCommonHint": "조선소를 고르지 않으면 전사 공용 자산입니다.",
+    "siteScopedHint": "고른 조선소의 자산으로 분류됩니다.",
+    "tagPlaceholder": "태그 입력 후 Enter",
+    "tagsFull": "태그는 {{max}}개까지 붙일 수 있습니다",
+    "removeTag": "{{tag}} 태그 제거"
+  },
+  "import": {
+    "title": "자산 등록",
+    "description": "파일을 올리면 버전 1로 등록됩니다. 3D 자산은 GLB, 도면은 PDF·SVG·이미지, CAD는 DWG·DXF·STEP·IGES를 받습니다.",
+    "pickFile": "파일 선택 또는 여기에 끌어다 놓기",
+    "formats": "GLB, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
+    "changeFile": "다른 파일",
+    "analyzing": "파일을 확인하는 중",
+    "noteHint": "이 버전에서 달라진 점을 적어 두면 버전 목록에 함께 보입니다.",
+    "startsAsDraft": "등록한 자산은 초안 상태로 시작합니다.",
+    "localOnly": "파일은 이 브라우저에만 저장됩니다.",
+    "submit": "등록",
+    "duplicate": "같은 내용의 파일이 이미 있습니다: {{names}}. 그 자산의 새 버전이 아닌지 확인하세요.",
+    "large": "100 MB가 넘는 파일입니다. 화면에서 여는 데 시간이 걸릴 수 있습니다.",
+    "problem": {
+      "unsupported": ".{{format}} 형식은 등록할 수 없습니다. GLB, 도면 또는 CAD 형식의 파일을 고르세요.",
+      "empty": "빈 파일입니다. 다른 파일을 고르세요.",
+      "glb": {
+        "too-short": "GLB 파일이 아닙니다. 파일이 너무 짧습니다.",
+        "bad-magic": "GLB 파일이 아닙니다. 확장자만 .glb 인 다른 형식일 수 있습니다.",
+        "bad-version": "glTF 2.0이 아닌 GLB입니다. glTF 2.0으로 다시 내보내세요.",
+        "bad-length": "GLB 파일이 손상됐습니다. 헤더의 길이와 실제 크기가 다릅니다. 전송 중 잘렸을 수 있습니다."
+      }
+    },
+    "categoryPlaceholder": "예: indoor, hull — 비우면 종류 바로 아래에 놓입니다"
+  },
+  "detail": {
+    "backToLibrary": "라이브러리로",
+    "tabs": "자산 정보",
+    "tab": {
+      "info": "정보",
+      "stats": "통계",
+      "versions": "버전",
+      "usage": "사용처",
+      "activity": "활동"
+    },
+    "viewingOldVersion": "v{{version}} 버전을 보고 있습니다. 현재 버전(v{{current}}) 보기",
+    "notFound": "자산을 찾을 수 없습니다",
+    "notFoundHint": "삭제됐거나, 다른 브라우저에서 등록한 자산일 수 있습니다.",
+    "fileMissing": "이 브라우저에 파일이 없습니다",
+    "fileMissingHint": "이 버전의 파일은 등록한 브라우저에만 저장돼 있습니다. 자산 서버가 준비되면 어디서든 열립니다.",
+    "deleteTitle": "{{name}} 자산을 삭제할까요?",
+    "deleteDescription": "버전 {{count}}개의 파일과 이력이 함께 지워지며 되돌릴 수 없습니다.",
+    "previousAsset": "이전 자산 (←)",
+    "nextAsset": "다음 자산 (→)"
+  },
+  "titleBlock": {
+    "size": "폭 × 깊이 × 높이"
+  },
+  "info": {
+    "basics": "기본 정보",
+    "classification": "분류",
+    "related": "연결된 자산",
+    "file": "파일 (v{{version}})",
+    "descriptionPlaceholder": "용도, 원본 출처, 주의할 점을 적어 두세요",
+    "relatedEmptyModel": "이 자산의 도면·CAD나 함께 쓰는 자산을 연결해 두면 서로 오갈 수 있습니다.",
+    "relatedEmptyDrawing": "이 문서가 설명하는 3D 자산을 연결해 두면 서로 오갈 수 있습니다.",
+    "linkAsset": "자산 연결",
+    "noLinkCandidates": "연결할 자산이 없습니다",
+    "unlink": "{{name}} 연결 해제",
+    "linkedFromOther": "상대 자산에서 연결함",
+    "copyPath": "경로 복사",
+    "defaultScaleHint": "치수는 기본 스케일을 적용한 씬 단위입니다. 대부분의 씬은 1단위가 1 m이지만 내업(dock-in) 씬은 단위가 다릅니다."
+  },
+  "stats": {
+    "dimensions": "크기",
+    "geometry": "기하",
+    "axis": {
+      "W": "폭",
+      "D": "깊이",
+      "H": "높이"
+    },
+    "metric": {
+      "triangles": "삼각형",
+      "vertices": "정점",
+      "drawCalls": "드로우콜",
+      "textureMemory": "텍스처 메모리",
+      "meshes": "메쉬",
+      "materials": "머티리얼",
+      "textures": "텍스처",
+      "nodes": "노드",
+      "lodLevels": "LOD 단계",
+      "animations": "애니메이션"
+    },
+    "overBudget": "권장 상한 초과",
+    "sourceLive": "이 화면에서 연 파일을 방금 잰 값입니다. LOD가 있으면 LOD 0 기준입니다.",
+    "sourceStored": "미리 재어 둔 값입니다. LOD가 있으면 LOD 0 기준입니다.",
+    "pending": "파일이 열리면 통계를 잽니다.",
+    "drawing": "도면·CAD에는 기하 통계가 없습니다. 파일 정보는 정보 탭에 있습니다.",
+    "budgetHint": "씬에 여러 개 놓이는 자산이면 프리미티브 병합이나 LOD를 검토하세요. 등록을 막는 기준은 아닙니다.",
+    "budgetHeading": "권장 상한 대비",
+    "budgetLegend": "막대는 권장 상한에서 가득 찹니다. 넘어도 등록은 됩니다."
+  },
+  "versions": {
+    "newVersion": "새 버전 올리기",
+    "upload": "올리기",
+    "uploadHint": "파일을 바꾸면 새 버전이 됩니다. 이전 버전은 그대로 남습니다.",
+    "notePlaceholder": "이 버전에서 달라진 점",
+    "current": "현재",
+    "revision": "리비전 {{revision}}",
+    "view": "보기",
+    "viewing": "보는 중",
+    "makeCurrent": "현재 버전으로 지정",
+    "changeStatus": "v{{version}} 상태 바꾸기",
+    "transition": {
+      "in-review": "검토 요청",
+      "approved": "승인",
+      "rejected": "반려",
+      "published": "게시",
+      "withdrawn": "철회"
+    },
+    "kindMismatch": "이 자산과 다른 종류의 파일입니다. 3D 자산에는 GLB를, 도면에는 PDF·SVG·이미지를, CAD에는 CAD 파일을 올리세요.",
+    "sameContent": "이 자산에 이미 있는 버전과 같은 내용의 파일입니다.",
+    "catalogNotice": "씬은 버전 1의 배포 파일을 사용합니다. 새 버전을 씬에 반영하려면 자산 파이프라인(assets-src → optimize:glb)으로 배포 파일을 교체해야 합니다.",
+    "revisionShort": "Rev {{revision}}"
+  },
+  "usage": {
+    "loading": "씬을 확인하는 중",
+    "failed": "씬 파일을 읽지 못해 사용처를 알 수 없습니다.",
+    "partial": "읽지 못한 씬이 있어 사용처가 빠져 있을 수 있습니다: {{scenes}}",
+    "none": "어느 씬에도 놓여 있지 않습니다",
+    "noneCatalogHint": "3D 화면 편집의 팔레트에서 씬에 놓을 수 있습니다.",
+    "noneRuntimeHint": "씬에 배치하지 않고 화면 코드가 직접 불러 쓰는 자산입니다. 사용처가 없어 보여도 지우면 안 됩니다.",
+    "noneUserHint": "이 화면에서 등록한 자산은 아직 편집기 팔레트에 나타나지 않습니다.",
+    "versionHeading": "v{{version}} 버전을 쓰는 씬",
+    "count": "{{count}}개",
+    "openEditor": "3D 화면 편집에서 열기",
+    "drawing": "도면·CAD는 씬에 배치하지 않습니다. 연결된 자산은 정보 탭에서 봅니다."
+  },
+  "activity": {
+    "created": "자산을 등록했습니다",
+    "versionAdded": "v{{version}} 버전을 올렸습니다",
+    "status": "v{{version}} 상태 변경: {{from}} → {{to}}",
+    "currentChanged": "현재 버전 변경: v{{from}} → v{{to}}",
+    "metadata": "수정한 항목: {{fields}}",
+    "thumbnail": "썸네일을 저장했습니다",
+    "empty": "아직 기록된 활동이 없습니다.",
+    "emptyBuiltin": "배포 자산입니다. 이 화면에서 바꾼 내용부터 여기에 기록됩니다.",
+    "field": {
+      "name": "이름",
+      "description": "설명",
+      "category": "분류",
+      "sites": "조선소",
+      "tags": "태그",
+      "owner": "담당자",
+      "kind": "종류",
+      "drawingNo": "도면 번호",
+      "relatedAssetIds": "연결된 자산",
+      "defaultScale": "기본 스케일"
+    }
+  },
+  "viewer": {
+    "loading": "모델을 불러오는 중 {{percent}}%",
+    "loadFailed": "모델을 열지 못했습니다",
+    "loadFailedHint": "파일이 없거나 손상됐을 수 있습니다. 다른 버전을 열어 보거나 파일을 다시 올리세요.",
+    "viewMode": "표시 방식",
+    "mode": {
+      "lit": "기본",
+      "clay": "형태",
+      "wireframe": "와이어",
+      "normals": "노멀"
+    },
+    "lod": "LOD 단계",
+    "grid": "바닥 격자",
+    "dimensions": "치수",
+    "turntable": "자동 회전",
+    "background": "배경 바꾸기 (지금: {{name}})",
+    "backgroundName": {
+      "dark": "어두움",
+      "light": "밝음",
+      "blueprint": "청사진"
+    },
+    "saveThumbnail": "지금 화면을 썸네일로 저장",
+    "camera": "시점",
+    "preset": {
+      "iso": "입체",
+      "front": "정면",
+      "right": "측면",
+      "top": "평면"
+    },
+    "fit": "화면에 맞추기",
+    "display": "표시 옵션"
+  },
+  "drawing": {
+    "noPreview": "이 형식은 화면에서 미리 볼 수 없습니다",
+    "noPreviewHint": "이 형식은 보관과 버전 관리만 합니다. 내려받아 CAD 프로그램으로 여세요.",
+    "loadFailed": "도면을 불러오지 못했습니다",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "actualSize": "실제 크기(100%)",
+    "fit": "화면에 맞추기"
+  },
+  "toast": {
+    "saveFailed": "저장하지 못했습니다",
+    "imported": "{{name}} 자산을 등록했습니다",
+    "importFailed": "파일을 저장하지 못해 등록하지 못했습니다",
+    "versionAdded": "v{{version}} 버전을 올렸습니다",
+    "deleted": "{{name}} 자산을 삭제했습니다",
+    "thumbnailSaved": "썸네일을 저장했습니다",
+    "thumbnailFailed": "썸네일을 저장하지 못했습니다",
+    "bulkApplied": "{{count}}개 자산에 적용했습니다",
+    "addedToCollection": "컬렉션에 담았습니다",
+    "collectionRejected": "같은 이름의 컬렉션이 있거나 더 만들 수 없습니다",
+    "pathCopied": "경로를 복사했습니다",
+    "linkCopied": "링크를 복사했습니다",
+    "copyFailed": "복사하지 못했습니다"
+  },
+  "attention": {
+    "review": {
+      "label": "검토 대기",
+      "hint": "검토를 기다리는 버전이 있습니다."
+    },
+    "rejected": {
+      "label": "반려됨",
+      "hint": "반려된 버전이 있습니다. 고친 파일을 새 버전으로 올리세요."
+    },
+    "draft": {
+      "label": "검토 요청 전",
+      "hint": "아직 검토를 요청하지 않은 초안 버전이 있습니다."
+    },
+    "newer": {
+      "label": "새 버전 있음",
+      "hint": "현재 버전보다 새 버전이 있습니다. 확인한 뒤 현재 버전으로 지정하세요."
+    },
+    "over-budget": {
+      "label": "권장 상한 초과",
+      "hint": "현재 버전이 권장 상한을 넘습니다. 통계 탭에서 항목을 확인하세요."
+    },
+    "unused": {
+      "label": "미사용",
+      "hint": "어느 씬에도 놓여 있지 않습니다."
+    }
+  },
+  "menu": {
+    "preview": "미리보기",
+    "open": "상세 열기",
+    "select": "선택",
+    "deselect": "선택 해제",
+    "favorite": "즐겨찾기에 추가",
+    "unfavorite": "즐겨찾기에서 빼기",
+    "copyLink": "링크 복사",
+    "more": "{{name}} 더 보기"
+  },
+  "preview": {
+    "label": "{{name}} 미리보기",
+    "previous": "이전 자산",
+    "next": "다음 자산",
+    "close": "미리보기 닫기",
+    "open3d": "3D로 보기 ({{size}})",
+    "placements": "씬 배치",
+    "notPlaced": "놓인 곳 없음",
+    "openDetail": "상세 열기",
+    "group": {
+      "file": "파일",
+      "document": "도면 정보",
+      "geometry": "형상"
+    },
+    "relatedCount": "연결된 자산",
+    "lodLevels": "LOD 단계",
+    "animations": "애니메이션",
+    "filterByTag": "{{tag}} 태그로 보기",
+    "previousHint": "이전 자산 (← ↑)",
+    "nextHint": "다음 자산 (→ ↓)",
+    "closeHint": "미리보기 닫기 (Esc)",
+    "modeImage": "이미지",
+    "mode3d": "3D",
+    "modeLabel": "미리보기 방식"
+  },
+  "lifecycle": {
+    "label": "v{{version}} 진행 단계",
+    "heading": "v{{version}} 진행 단계",
+    "currentVersion": "현재 버전"
+  },
+  "compare": {
+    "title": "버전 비교",
+    "toggle": "버전 비교",
+    "linkCamera": "카메라 맞물림",
+    "close": "비교 끝내기",
+    "base": "기준",
+    "target": "변경",
+    "heading": "v{{base}} → v{{target}} 달라진 점",
+    "withViewed": "보는 버전과 비교",
+    "changedCount": "{{count}}개 항목이 달라졌습니다",
+    "noChange": "수치상 달라진 점이 없습니다",
+    "changedOnly": "달라진 것만",
+    "metric": "항목",
+    "delta": "증감",
+    "metricName": {
+      "sizeBytes": "파일 크기",
+      "triangles": "삼각형",
+      "vertices": "정점",
+      "meshes": "메시",
+      "materials": "머티리얼",
+      "textures": "텍스처",
+      "drawCalls": "드로콜",
+      "textureMemoryBytes": "텍스처 메모리",
+      "width": "폭",
+      "depth": "깊이",
+      "height": "높이"
+    },
+    "viewedLabel": "보는 버전 v{{version}}",
+    "otherLabel": "비교 버전 v{{version}}",
+    "chooseOther": "비교할 버전 고르기",
+    "comparing": "비교 중"
+  },
+  "tree": {
+    "root": "자산 라이브러리",
+    "path": "위치",
+    "expand": "{{name}} 펼치기",
+    "collapse": "{{name}} 접기"
+  }
+}

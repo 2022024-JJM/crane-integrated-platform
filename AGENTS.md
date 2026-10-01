@@ -24,6 +24,7 @@ pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` �
 - `pnpm test` — vitest
 - `pnpm new-site <slug>` — 새 사이트 plugin scaffold
 - `pnpm optimize:glb`, `pnpm optimize:map`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 절차는 `docs/agents/assets-glb.md`
+- `pnpm assets:stats [--check]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. `docs/agents/asset-library.md`
 
 ### 검증 커맨드의 실제 커버리지 (주의)
 
@@ -46,7 +47,7 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 
 vitest 를 사용한다. 테스트 위치는 위 커버리지 표의 `pnpm test` 행이 전부이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
 
-- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/philly-shipyard` 와 `packages/{core,domain,features,widgets}` 뿐이고(`core` 는 three 가 없어 `setupFiles` 도 없다), `apps/{mro2,indoorshop}` 은 설정 없이 vitest 기본값으로 돈다.
+- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/{philly-shipyard,indoorshop}` 와 `packages/{core,domain,features,widgets}` 뿐이고(`setupFiles` 는 `philly-shipyard`·`indoorshop`·`features`·`widgets` 에만 있다), `apps/mro2` 는 설정 없이 vitest 기본값으로 돈다. `apps/indoorshop` 은 이식 코드의 규약대로 확장자가 환경을 정한다(`*.test.ts` node, `*.test.tsx` jsdom).
 - 패키지 공통 규칙: 기본 환경은 node. DOM·localStorage·React 훅이 필요한 파일에만 `// @vitest-environment jsdom` 을 붙인다 (jsdom 전역 설정 금지). 훅 테스트는 `@testing-library/react` 의 `renderHook` 을 쓴다.
 - `packages/{features,widgets}` 의 `src/test-setup.ts` 는 jsdom 캔버스 스텁이다 — three/examples 모듈(lottie 등)이 로드 시점에 2D 컨텍스트를 요구해서 없으면 jsdom 테스트의 모듈 로드가 깨진다.
 - R3F `useFrame` 훅(리플레이 러너, 충돌 가드 시뮬레이션)은 `@react-three/fiber` 를 mock 해 콜백을 잡아 두고 delta 를 수동 주입해 결정론적으로 돌린다. 시뮬레이션의 Math.random 은 시드 고정 PRNG 로 대체한다.
@@ -156,6 +157,7 @@ apps/{site}/src/pages/{page}/
 - 현장 작업 화면은 `outdoor-work` / `indoor-work` / `goliath-work` 세 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
 - 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `virtual-tags`, `detection-settings`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision`, `cabin-monitoring` 을 더 가진다. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다.
 - `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를, `virtual-tags` 는 `@crane/widgets/virtual-tags` 의 가상 태그 관리 페이지를, `detection-settings` 는 `@crane/widgets/detection-settings` 의 감지 설정 페이지를 쓰며 세 화면이 공유한다. 가상 태그 목록과 감지 설정 값은 region 무관 전역이다.
+- `asset-library`, `asset-library/:assetId` 는 3D 자산 라이브러리(`@crane/widgets/asset-library`)다. 조선소·region 과 무관한 전사 공용 화면이라 region 하위가 아닌 최상위 경로다 — `docs/agents/asset-library.md`.
 - `BrowserRouter` 의 basename 은 `import.meta.env.BASE_URL` 에서 온다 (sub-path 배포 `/crane_rnd/`).
 
 ## FSD Import Rules
@@ -164,7 +166,7 @@ apps/{site}/src/pages/{page}/
 
 - 레이어 경계: `@crane/core`·`@crane/ui` 는 상위 레이어를 import 할 수 없고, `@crane/domain` 은 core/ui 만, `@crane/features` 는 domain/core/ui 까지, `@crane/widgets` 는 features 까지 import 할 수 있다. 어느 패키지도 `apps/*` 를 import 하지 않는다.
 - 다만 "패키지 → app" 금지 목록에 실제로 적혀 있는 app 은 `@crane/hanwha-ocean` 과 `@crane/goliath-crane` 둘뿐이다. `@crane/{philly-shipyard,mro2,indoorshop,crane-hmi,shell}` 을 패키지에서 import 하면 **ESLint 는 잡지 못한다.** 규칙 위반인 것은 같으니 손으로 지킨다.
-- Public API 강제: `@crane/{domain,features,widgets}/*/{ui,model,lib,config}/*` 형태의 deep import 는 에러다. 슬라이스의 `index.ts` public API 를 통한다.
+- Public API 강제: `@crane/{domain,features,widgets}/*/{ui,model,lib,config}/*` 형태의 deep import 는 금지다. 슬라이스의 `index.ts` public API 를 통한다. 실제로 막는 것은 각 패키지 `package.json` 의 `exports` 맵이다 — `eslint.config.js` 의 deep import 패턴은 중괄호 확장이 되지 않아 매칭되지 않으며, 패키지 내부의 상대 경로 deep import(`../../3d/model/...`)는 어느 쪽도 잡지 못하므로 손으로 지킨다.
 - 외부에서 소비되는 슬라이스는 `index.ts` 를 제공해야 한다.
 - 레이어 규칙을 우회하는 편의성 import 를 만들지 않는다.
 - 같은 레이어의 슬라이스는 서로 import 하지 않는다. `features/3d` ↔ `features/alarm` 처럼 연결이 필요하면 상위(페이지 prop 또는 `apps/shell/src/runtime/`)에서 잇는다.
@@ -192,10 +194,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts` — `docs/agents/3d-editor.md` |
-| 거리 눈금(그려서 추가하는 씬 객체) 스키마·기하 / 렌더 / 그리기·편집 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/ruler.ts`, `packages/domain/src/3d/ui/scene-ruler.tsx`, `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx` — `docs/agents/3d-editor.md` |
 | 태그 맵핑 스키마·방어 / 값 버스 / 편집 UI | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/tag-mapping-section.tsx` — `docs/agents/tag-mapping-rig.md` |
-| 모델 라벨의 태그 값 줄(PLC 원시값) | `packages/domain/src/3d/lib/label-reading.ts`, `packages/domain/src/3d/ui/model-label.tsx` — `docs/agents/tag-mapping-rig.md` |
-| 상태 태그(라벨 색·아이콘·장비 외곽선) 스키마 / 서버 값 → 버스 숫자 / 라벨 표시 상태·외곽선 판정 / 외곽선 모양 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/monitoring/lib/tag-number.ts`, `packages/features/src/3d/lib/{model-label-state,model-outline-state}.ts`, `packages/domain/src/3d/lib/status-outline-style.ts` — `docs/agents/tag-mapping-rig.md`, `docs/agents/3d-play.md` |
 | 가상 태그 정의 / 스토어·러너 / 관리 페이지 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/virtual-tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
@@ -206,9 +205,8 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 수면 아래 잠김 안개 / 바다 도달 마스크 | `packages/domain/src/3d/lib/{sea-submersion,sea-reach-grid,sea-reach-mask,sea-reach-uniforms}.ts`, `packages/features/src/3d/model/sea-reach-controller.ts`, `ui/scene-sea-reach.tsx` — `docs/agents/rendering-perf.md` |
 | 프레임 거버너 / shadow map 온디맨드 / 바다 미러 반사·스텐실 / 낮·밤 태양 / 워밍업 큐 | `packages/features/src/3d/ui/scene-frame-governor.tsx`, `ui/scene-render-preset.tsx`(`SceneLighting`), `ui/scene-water.tsx`, `lib/ocean-water.ts`, `lib/sky-lighting.ts`, `packages/domain/src/3d/lib/{scene-stencil,bvh-build-queue}.ts` — `docs/agents/rendering-perf.md` |
 | GLB 자산 파이프라인(압축·타일·LOD·KTX2·philly 지도 3장·썸네일) | `assets-src/README.md`, `scripts/*.mjs`, `packages/domain/src/3d/lib/ktx2-loader.ts` — `docs/agents/assets-glb.md` |
-| 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 방위 표시 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-compass,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
-| 씬 진북(나침반·태양 방향의 북쪽) | 스키마 `SavedSceneInfo.trueNorth`(`types.ts`), 변환 `packages/domain/src/3d/lib/true-north.ts`, 편집 배경 탭 `palette-environment-section.tsx` — `docs/agents/3d-editor.md` |
-| 씬 뷰(저작된 카메라 구도)·분할·메인 뷰 지정 / 우상단 고정 줄 / 분할 화면 렌더 | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 홈 카메라 `lib/scene-home-camera.ts`, 편집 `packages/widgets/src/3d/lib/view-editor.ts`·`ui/palette-view-section.tsx` — `docs/agents/3d-editor.md`; `packages/features/src/3d/ui/{scene-view-menu,scene-view-bar,scene-split-overlay,scene-split-renderer}.tsx`, `model/use-scene-split-store.ts` — `docs/agents/monitoring-ui.md`; 뷰포트별 DOM 포털 `packages/domain/src/3d/ui/scene-viewports.tsx` — `docs/agents/rendering-perf.md` |
+| 3D 자산 라이브러리(조선소 › 종류 › 분류 계층·미리보기·상세 뷰어·버전 비교·상태·처리할 일·사용처, 서버 없는 저장) | `packages/domain/src/asset-library/`, `packages/features/src/asset-library/`, `packages/widgets/src/asset-library/`, `apps/shell/public/asset-library/` — `docs/agents/asset-library.md` |
+| 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
 
 ## packages/ui 구조 (Atomic Design)
 
@@ -257,12 +255,13 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 |---|---|
 | 충돌 감지·정지/재개(hold)·감지 설정 페이지 | `docs/agents/3d-collision.md` |
 | 영역(zone) 침범·영역 알람·저널·unit 스케일 | `docs/agents/3d-zone.md` |
-| 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태·라벨 표시 상태·장비 외곽선 판정 | `docs/agents/3d-play.md` |
+| 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태 | `docs/agents/3d-play.md` |
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치·썸네일 | `docs/agents/assets-glb.md` |
-| 태그 맵핑·상태 태그·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
-| 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·거리 눈금·씬 파일 매핑·뷰 탭) | `docs/agents/3d-editor.md` |
-| 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·방위 표시·독·경보 알림·장면 안 알람 표시·씬 뷰·분할 화면) | `docs/agents/monitoring-ui.md` |
+| 태그 맵핑·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
+| 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·씬 파일 매핑) | `docs/agents/3d-editor.md` |
+| 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·독·경보 알림) | `docs/agents/monitoring-ui.md` |
+| 3D 자산 라이브러리(자산 스키마·버전·상태·저장소·자산 뷰어·통계 표) | `docs/agents/asset-library.md` |
 
 ### 3D 불변식 체크리스트
 
@@ -270,32 +269,26 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - 모델·노드를 새 경로로 움직이면 `invalidateShadows()` 를 부른다. shadow map 은 온디맨드라 빼먹으면 그림자가 안전망 주기까지 동결된다 (rendering-perf).
 - 씬을 매 프레임 바꾸는 새 경로는 `SceneFrameGovernor` 소스 목록에 넣거나 스스로 `invalidate()`/`requestSceneFrame()` 한다. 캔버스가 전부 `frameloop='demand'` 다 (rendering-perf).
-- 지리 방위(천체·나침반)를 월드 방향으로 바꿀 때는 `bearingToWorldAzimuth`(씬 진북 `trueNorth`)를 거친다. 월드 −Z 를 북으로 가정하지 않는다 — 지도를 돌려 놓은 씬은 진북이 다르다 (rendering-perf, 3d-editor).
 - `SceneLighting` 에는 `regionId` 를 반드시 넘긴다. 조명·하늘 밝기 기준값은 `lib/sky-lighting.ts` 상수만 고치고 다른 곳에서 같은 값을 세팅하지 않는다 (rendering-perf).
 - 새 GLTF 로드 경로는 `extendGltfLoaderWithKtx2` 를 걸고, 불투명 머티리얼이면 `markSceneOpaqueStencil` 을 켠다. 바다 위에 보여야 하는 불투명 오버레이는 `renderOrder ≥ 0.5` (assets-glb, rendering-perf).
 - 바다 표시 판정은 `resolveSeaVisible(regionId, sceneInfo)` 한 곳이다. `environmentId` 로 바다를 유추하지 않는다 (rendering-perf).
 - 수면 아래 잠김 안개는 바다가 닿는 위치(바다 도달 마스크)에만 낀다. 안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않고, 마스크 유니폼은 `publishSeaReachMask` 로 값만 바꾼다 (rendering-perf).
 - 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
-- 실루엣 테두리(`ObjectSilhouetteOutline`, 장비 상태 외곽선 포함)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
+- 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
 - Canvas 안 마운트 순서는 계약이다: `RigDriver` → 충돌 검출기 → `SceneCollisionHighlight` → 영역 검출기 → `SceneZoneRings`, `SceneSurfaceCamera` 바로 다음 `SceneCameraLimits`. 같은 priority 의 useFrame 은 마운트 순으로 돈다 (3d-collision, 3d-zone, monitoring-ui).
 - 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다 (3d-editor).
 - 기즈모 스냅은 `lib/snap-transform.ts` 순수 함수로 저장값 기준으로 한다. three `TransformControls` 의 `*Snap` 은 쓰지 않는다 (3d-editor).
 - 씬 스키마 필드를 추가하면 `sanitize-*` 와 `scene-snapshot.ts` 의 동등 비교(`isZoneListEqual` 류)를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 저장되지 않는다 (3d-editor, 3d-zone).
-- 뷰(카메라 구도)는 에디터가 저작해 씬 파일에 넣는다. 모니터링 화면에 뷰를 만들거나 브라우저에 저장하는 경로를 두지 않는다. 화면의 초기 시점·"메인 뷰" 버튼은 `resolveSceneHomeCamera`(메인 뷰, 없으면 저장 시점 카메라) 하나로 정한다 (monitoring-ui, 3d-editor).
-- 기본 카메라나 캔버스 크기로 화면 배치를 계산하는 새 코드(drei `Html`, 세로 px 기준 두께, 카메라로 정하는 씬 전역 가시성)는 분할 화면을 고려한다 — `PerViewport`/`ViewportAnchor`, `useSceneViewportHeight`, 타일 렌더 직전 재적용. `useFrame` 양수 priority 는 분할 렌더러뿐이다 (rendering-perf).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).
 - 새 dev 저장 미들웨어는 `vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다 (3d-editor).
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
 - 시뮬레이션 값은 씬 시간의 함수다 — 가상 태그 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
-- 모델 라벨의 태그 값 줄은 태그 원시값(`readTagLiveValue`)이고, 거리 눈금의 숫자는 씬에서 잰 거리다. 서로의 값을 끌어 쓰지 않는다 (tag-mapping-rig, 3d-editor).
-- 버스는 숫자 전용이다. 서버 값은 `toTagNumber` 로 바꿔 싣고, 상태 비트는 0/1 로 흐른다 (tag-mapping-rig).
-- 장비 운전 상태는 `EquipmentRuntimeStatus` 여섯 가지 하나다. 라벨·HUD·리포트·저널이 같은 값을 쓰고(`useModelStatusRecords`), 화면마다 다른 상태 목록을 두지 않는다 (3d-play).
-- 장비 외곽선의 통신불량은 운전 상태 offline 에서 받는다(`resolveOutlineState`). 외곽선 쪽에서 수신을 따로 판정하지 않는다 (3d-play).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
 - GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돌린다. 타일·LOD 지도(`philly-terrain.glb`·`okpo-terrain.glb`·`okpo-tree.glb`)에 `pnpm optimize:map` 을 원본 없이 재실행하지 않는다 (assets-glb).
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 에 "얹힌 표시" 가 없는지 본다. 바닥과 같은 높이로 겹친 표시는 로그 깊이로도 갈리지 않아 깜빡인다 (assets-glb).
+- GLB 를 반입·교체하거나 카탈로그 밖에서 직접 로드하는 GLB 를 추가하면 `pnpm assets:stats` 를 돌리고, 후자는 `builtin-extra-assets.ts` 에도 올린다. 자산 id(= 카탈로그 id)는 바꾸지 않는다 (asset-library).
 - GLB·씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 `pnpm perf:scene` 등으로 직접 확인한다. 자동 성능 게이트는 없다 (assets-glb).
 
 ### 다시 시도하지 않는 것
