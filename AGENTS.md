@@ -18,6 +18,7 @@
 pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` 이며 npm 을 쓰지 않는다.
 
 - `pnpm dev` — 전체 dev (실질적으로 `apps/shell`), 또는 `pnpm dev:shell`
+- `pnpm dev:split` — crane(`/crane_rnd/`) · indoor(`/crane_rnd/indoor/`) 주소를 나눠 띄우는 dev (`apps/shell/.env.split`). Git Bash 에서 `VITE_INDOOR_BASE_URL=/…` 를 직접 붙이면 Windows 경로로 바뀌므로 이 스크립트를 쓴다
 - `pnpm build` — turbo build (`apps/shell` 이 유일한 빌드 대상)
 - `pnpm lint` — ESLint flat config
 - `pnpm typecheck` — TypeScript check
@@ -156,7 +157,7 @@ apps/{site}/src/pages/{page}/
 - 현장 작업 화면은 `outdoor-work` / `indoor-work` / `goliath-work` 세 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
 - 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `virtual-tags`, `detection-settings`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision`, `cabin-monitoring` 을 더 가진다. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다.
 - `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를, `virtual-tags` 는 `@crane/widgets/virtual-tags` 의 가상 태그 관리 페이지를, `detection-settings` 는 `@crane/widgets/detection-settings` 의 감지 설정 페이지를 쓰며 세 화면이 공유한다. 가상 태그 목록과 감지 설정 값은 region 무관 전역이다.
-- `BrowserRouter` 의 basename 은 `import.meta.env.BASE_URL` 에서 온다 (sub-path 배포 `/crane_rnd/`).
+- `BrowserRouter` 의 basename 은 `@crane/core/config/app-scope` 의 `resolveAppScope` 가 주소로 정한다. `VITE_INDOOR_BASE_URL` 이 있으면 crane 주소(`BASE_URL`)와 indoor 주소로 나뉘어 각자 자기 라우트(`craneRoutes` · `indoorRoutes`)와 계정(`SCOPE_ROLES`)만 받고, 없으면 한 주소가 전부 받는다. crane · indoor · stage · dev 를 최상위 라우트 이름으로 쓰지 않는다(주소 접두어와 겹침).
 
 ## FSD Import Rules
 
