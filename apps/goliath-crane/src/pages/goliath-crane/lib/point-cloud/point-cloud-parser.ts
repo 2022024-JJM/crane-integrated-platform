@@ -3,47 +3,58 @@
 //
 // 입력 frame 의 fields/point_step/row_step/is_bigendian 메타데이터를 그대로
 // 따라가며 점 단위로 좌표를 읽는다. 점이 60K 를 넘으면 step 다운샘플링.
+//
+// 매 프레임 새 Float32Array 를 할당하지 않고, 호출자가 제공한 pool buffer 를
+// in-place 로 기록한 뒤 actual count 만 반환한다. (A1 — GC churn 회피)
 
 import { MAX_POINTS_PER_SENSOR } from './config';
 import type { PointCloudField, PointCloudFrame } from './proto-decoder';
 
-type Reader = (
-  view: DataView,
-  offset: number,
-  littleEndian: boolean,
-) => number;
+type FieldReader = (view: DataView, baseOffset: number) => number;
 
-const DATATYPE_READERS: Record<number, Reader> = {
-  1: (view, offset) => view.getInt8(offset),
-  2: (view, offset) => view.getUint8(offset),
-  3: (view, offset, le) => view.getInt16(offset, le),
-  4: (view, offset, le) => view.getUint16(offset, le),
-  5: (view, offset, le) => view.getInt32(offset, le),
-  6: (view, offset, le) => view.getUint32(offset, le),
-  7: (view, offset, le) => view.getFloat32(offset, le),
-  8: (view, offset, le) => view.getFloat64(offset, le),
-};
+/**
+ * field.datatype + endian + offset 을 한 번에 묶어 매 점마다 객체 lookup /
+ * 함수 분기를 없앤다. (A4 — hot loop 의 polymorphic call 제거)
+ */
+function bindFieldReader(
+  field: PointCloudField,
+  littleEndian: boolean,
+): FieldReader {
+  const offset = field.offset;
+  switch (field.datatype) {
+    case 1:
+      return (v, b) => v.getInt8(b + offset);
+    case 2:
+      return (v, b) => v.getUint8(b + offset);
+    case 3:
+      return (v, b) => v.getInt16(b + offset, littleEndian);
+    case 4:
+      return (v, b) => v.getUint16(b + offset, littleEndian);
+    case 5:
+      return (v, b) => v.getInt32(b + offset, littleEndian);
+    case 6:
+      return (v, b) => v.getUint32(b + offset, littleEndian);
+    case 7:
+      // 가장 흔한 경로 (SOSLAB/OUSTER 등 LiDAR vendor 의 x/y/z 기본 표현).
+      return (v, b) => v.getFloat32(b + offset, littleEndian);
+    case 8:
+      return (v, b) => v.getFloat64(b + offset, littleEndian);
+    default:
+      throw new Error(
+        `Unsupported datatype ${field.datatype} for field "${field.name}"`,
+      );
+  }
+}
 
 function findField(
   fields: PointCloudField[],
   name: string,
 ): PointCloudField | undefined {
+  // ROS 표준은 'x'/'y'/'z' (소문자) 만 정의하므로 정확 매칭 우선.
+  const exact = fields.find((field) => field.name === name);
+  if (exact) return exact;
+  // 일부 vendor 가 'X' 등 대문자로 보내는 경우 fallback.
   return fields.find((field) => field.name?.toLowerCase() === name);
-}
-
-function readFieldValue(
-  view: DataView,
-  baseOffset: number,
-  field: PointCloudField,
-  littleEndian: boolean,
-): number {
-  const reader = DATATYPE_READERS[field.datatype];
-  if (!reader) {
-    throw new Error(
-      `Unsupported datatype ${field.datatype} for field "${field.name}"`,
-    );
-  }
-  return reader(view, baseOffset + field.offset, littleEndian);
 }
 
 export interface ParsedFrameOk {
@@ -52,7 +63,9 @@ export interface ParsedFrameOk {
   pointCount: number;
   sampledPointCount: number;
   skippedPointCount: number;
+  /** pool buffer 의 처음 sampledPointCount*3 개 원소만 유효 */
   positions: Float32Array;
+  /** pool buffer 의 처음 sampledPointCount 개 원소만 유효, intensity 없으면 null */
   intensities: Float32Array | null;
   bounds: { min: [number, number, number]; max: [number, number, number] } | null;
 }
@@ -64,8 +77,25 @@ export interface ParsedFrameError {
 
 export type ParsedFrame = ParsedFrameOk | ParsedFrameError;
 
+export interface ParseFrameBuffers {
+  /** 길이 ≥ MAX_POINTS_PER_SENSOR*3. 매번 같은 인스턴스를 전달해 재사용. */
+  positions: Float32Array;
+  /** 길이 ≥ MAX_POINTS_PER_SENSOR */
+  intensities: Float32Array;
+}
+
+export function createParseFrameBuffers(
+  maxPoints: number = MAX_POINTS_PER_SENSOR,
+): ParseFrameBuffers {
+  return {
+    positions: new Float32Array(maxPoints * 3),
+    intensities: new Float32Array(maxPoints),
+  };
+}
+
 export function parseFrame(
   frame: PointCloudFrame,
+  buffers: ParseFrameBuffers,
   options: { maxPoints?: number } = {},
 ): ParsedFrame {
   const maxPoints = options.maxPoints ?? MAX_POINTS_PER_SENSOR;
@@ -81,7 +111,7 @@ export function parseFrame(
       pointCount: 0,
       sampledPointCount: 0,
       skippedPointCount: 0,
-      positions: new Float32Array(0),
+      positions: buffers.positions,
       intensities: null,
       bounds: null,
     };
@@ -119,10 +149,31 @@ export function parseFrame(
 
   const littleEndian = !frame.is_bigendian;
   const step = Math.max(1, Math.ceil(pointCount / maxPoints));
-  const capacity = Math.ceil(pointCount / step);
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const positions = new Float32Array(capacity * 3);
-  const intensities = intensityField ? new Float32Array(capacity) : null;
+
+  // DataView 범위를 requiredBytes 로 명시 제한 — 잘못된 데이터에서 over-read 방지.
+  const view = new DataView(data.buffer, data.byteOffset, requiredBytes);
+
+  // pool buffer 가 maxPoints 보다 작으면 안 된다.
+  if (
+    buffers.positions.length < maxPoints * 3 ||
+    buffers.intensities.length < maxPoints
+  ) {
+    return {
+      ok: false,
+      error: 'Parse buffers are smaller than maxPoints.',
+    };
+  }
+  const positions = buffers.positions;
+  const intensities = buffers.intensities;
+  const hasIntensity = Boolean(intensityField);
+
+  // field 별 reader 를 사전 바인딩 → loop 안에서 객체 lookup / 분기 제거.
+  const readX = bindFieldReader(xField, littleEndian);
+  const readY = bindFieldReader(yField, littleEndian);
+  const readZ = bindFieldReader(zField, littleEndian);
+  const readI = intensityField
+    ? bindFieldReader(intensityField, littleEndian)
+    : null;
 
   let sampledPointCount = 0;
   let minX = Infinity;
@@ -138,12 +189,21 @@ export function parseFrame(
       const columnIndex = flatIndex - rowIndex * width;
       const baseOffset = rowIndex * rowStep + columnIndex * pointStep;
 
-      const x = readFieldValue(view, baseOffset, xField, littleEndian);
-      const y = readFieldValue(view, baseOffset, yField, littleEndian);
-      const z = readFieldValue(view, baseOffset, zField, littleEndian);
+      const x = readX(view, baseOffset);
+      const y = readY(view, baseOffset);
+      const z = readZ(view, baseOffset);
 
       if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
         continue;
+      }
+
+      // intensity NaN 도 점 전체를 skip — x/y/z 와 일관 처리 (C1).
+      // 일부 vendor 가 invalid 데이터 표시로 NaN intensity 를 쓰므로,
+      // 0 으로 치환하면 어두운 점이 시각 artifact 가 된다.
+      let intensity = 0;
+      if (readI) {
+        intensity = readI(view, baseOffset);
+        if (!Number.isFinite(intensity)) continue;
       }
 
       const writeIndex = sampledPointCount * 3;
@@ -151,16 +211,8 @@ export function parseFrame(
       positions[writeIndex + 1] = y;
       positions[writeIndex + 2] = z;
 
-      if (intensities && intensityField) {
-        const intensity = readFieldValue(
-          view,
-          baseOffset,
-          intensityField,
-          littleEndian,
-        );
-        intensities[sampledPointCount] = Number.isFinite(intensity)
-          ? intensity
-          : 0;
+      if (readI) {
+        intensities[sampledPointCount] = intensity;
       }
 
       if (x < minX) minX = x;
@@ -184,12 +236,13 @@ export function parseFrame(
 
   return {
     ok: true,
-    hasIntensity: Boolean(intensityField),
+    hasIntensity,
     pointCount,
     sampledPointCount,
     skippedPointCount: pointCount - sampledPointCount,
-    positions: positions.slice(0, sampledPointCount * 3),
-    intensities: intensities ? intensities.slice(0, sampledPointCount) : null,
+    // pool buffer 의 view 반환 — 호출자가 sampledPointCount 만큼만 사용해야 한다.
+    positions,
+    intensities: hasIntensity ? intensities : null,
     bounds:
       sampledPointCount > 0
         ? {

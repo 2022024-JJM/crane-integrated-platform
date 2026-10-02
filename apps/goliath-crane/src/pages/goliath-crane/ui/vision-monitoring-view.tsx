@@ -6,10 +6,10 @@ import { LidarTile } from './vision/lidar-tile';
 import { NoSignalSlot } from './vision/no-signal-slot';
 import {
   CAMERA_CHANNELS,
-  LIDAR_CHANNELS,
+  INDIVIDUAL_LIDAR_CHANNELS,
   type CameraChannel,
   type ExpandedView,
-  type LidarSensorKey,
+  type LidarMode,
   type VisionSourceFilter,
 } from './vision/types';
 import { VisionTile } from './vision/vision-tile';
@@ -28,7 +28,7 @@ const GRID_CLASS: Record<GridSize, string> = {
 
 type VisionSlot =
   | { kind: 'camera'; channel: CameraChannel }
-  | { kind: 'lidar'; sensor: LidarSensorKey; label: string };
+  | { kind: 'lidar'; sensor: LidarMode; label: string };
 
 function VisionMonitoringViewContent() {
   const { t } = useTranslation('goliath-crane');
@@ -42,13 +42,11 @@ function VisionMonitoringViewContent() {
     const cameraSlots = CAMERA_CHANNELS.map(
       (channel) => ({ kind: 'camera', channel }) satisfies VisionSlot,
     );
-    const individualLidarSlots = LIDAR_CHANNELS.filter(
-      (ch) => ch.sensorKey !== 'fusion',
-    ).map(
+    const individualLidarSlots = INDIVIDUAL_LIDAR_CHANNELS.map(
       (ch) =>
         ({
           kind: 'lidar',
-          sensor: ch.sensorKey,
+          sensor: ch.mode,
           label: ch.label,
         }) satisfies VisionSlot,
     );

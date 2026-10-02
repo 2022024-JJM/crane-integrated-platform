@@ -20,10 +20,11 @@ import {
   getDashboardPreviewDefaultSize,
   isSamePosition,
 } from '@crane/core/lib/preview-helpers';
-import type {
-  CameraChannel,
-  ExpandedView,
-  LidarSensorKey,
+import {
+  LIDAR_BY_MODE,
+  type CameraChannel,
+  type ExpandedView,
+  type LidarMode,
 } from './vision/types';
 import { PointCloudViewer } from './point-cloud-viewer';
 
@@ -164,15 +165,9 @@ function CameraFeedContent({ channel }: { channel: CameraChannel }) {
 }
 
 // ── LiDAR feed content — 포인트 클라우드 ────────────────────────────────────
-function LidarFeedContent({ sensor }: { sensor: LidarSensorKey }) {
+function LidarFeedContent({ sensor }: { sensor: LidarMode }) {
   return <PointCloudViewer mode={sensor} />;
 }
-
-const LIDAR_PIP_TITLE: Record<LidarSensorKey, string> = {
-  soslab1: 'SOSLAB 1',
-  soslab2: 'SOSLAB 2',
-  fusion: 'Fusion',
-};
 
 // ── PiP shell (드래그·리사이즈) ───────────────────────────────────────────────
 interface GoliathVisionPipProps {
@@ -347,7 +342,7 @@ export function GoliathVisionPip({
   const pipTitle = isCamera
     ? channel.label
     : lidarSensor
-      ? LIDAR_PIP_TITLE[lidarSensor]
+      ? LIDAR_BY_MODE[lidarSensor].pipTitle
       : 'LiDAR';
   const pipSub = isCamera ? t(channel.descriptionKey) : 'Point Cloud';
   const accentColor = isCamera ? 'border-orange-500/30' : 'border-cyan-500/30';

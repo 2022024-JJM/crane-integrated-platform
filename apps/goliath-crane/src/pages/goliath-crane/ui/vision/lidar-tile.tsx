@@ -2,21 +2,15 @@ import { Maximize2, ScanLine } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { PointCloudViewer } from '../point-cloud-viewer';
-import type { LidarSensorKey } from './types';
+import { LIDAR_BY_MODE, type LidarMode } from './types';
 
 interface LidarTileProps {
-  sensor: LidarSensorKey;
+  sensor: LidarMode;
   label: string;
   isActive: boolean;
   onExpand?: () => void;
   fullView?: boolean;
 }
-
-const BADGE_TEXT: Record<LidarSensorKey, string> = {
-  soslab1: 'SOSLAB',
-  soslab2: 'SOSLAB',
-  fusion: 'FUSION',
-};
 
 export function LidarTile({
   sensor,
@@ -26,6 +20,7 @@ export function LidarTile({
   fullView = false,
 }: LidarTileProps) {
   const interactive = typeof onExpand === 'function';
+  const badge = LIDAR_BY_MODE[sensor].badge;
   return (
     <div
       className={cn(
@@ -72,7 +67,7 @@ export function LidarTile({
           variant="outline"
           className="border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0 text-[9px] text-cyan-600 dark:text-cyan-400"
         >
-          {BADGE_TEXT[sensor]}
+          {badge}
         </Badge>
       </div>
     </div>

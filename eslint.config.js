@@ -44,6 +44,18 @@ const publicApiPatterns = [
   },
 ]
 
+// ── Sibling-slice cross-import (relative paths) ──────────────────────────────
+// Inside packages/<layer>/src/<slice-A>/<segment>/file, reaching `../../<slice-B>`
+// is a cross-slice import. Must go through the sibling slice's public API.
+
+const siblingSliceRelativePatterns = [
+  {
+    group: ['../../*', '../../*/*', '../../*/*/*'],
+    message:
+      'FSD: sibling slice는 공개 API(@crane/<layer>/<slice>)로 import 하세요. 상대경로 cross-slice 금지.',
+  },
+]
+
 // ── Config ───────────────────────────────────────────────────────────────────
 
 export default defineConfig([
@@ -119,6 +131,7 @@ export default defineConfig([
     rules: {
       'no-restricted-imports': createBoundaryRule([
         ...publicApiPatterns,
+        ...siblingSliceRelativePatterns,
         {
           group: [
             '@crane/widgets',
@@ -140,6 +153,7 @@ export default defineConfig([
     rules: {
       'no-restricted-imports': createBoundaryRule([
         ...publicApiPatterns,
+        ...siblingSliceRelativePatterns,
         {
           group: [
             '@crane/hanwha-ocean',
