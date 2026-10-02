@@ -17,7 +17,6 @@ const collections: AssetCollection[] = [
 const full: AssetQuery = {
   ...DEFAULT_ASSET_QUERY,
   text: '  crane ',
-  site: 'philly',
   kinds: ['model', 'map'],
   statuses: ['draft'],
   tags: ['a', 'b'],
@@ -27,11 +26,11 @@ const full: AssetQuery = {
 };
 
 describe('listActiveFilters', () => {
-  it('기본 탐색 상태에는 칩이 없다(조선소·정렬은 필터가 아니다)', () => {
+  it('기본 탐색 상태에는 칩이 없다(정렬은 필터가 아니다)', () => {
     expect(listActiveFilters(DEFAULT_ASSET_QUERY, collections)).toEqual([]);
     expect(
       listActiveFilters(
-        { ...DEFAULT_ASSET_QUERY, site: 'okpo', sort: 'size' },
+        { ...DEFAULT_ASSET_QUERY, sort: 'size', reverse: true },
         collections,
       ),
     ).toEqual([]);
@@ -52,20 +51,31 @@ describe('listActiveFilters', () => {
     ]);
   });
 
-  it('계층의 위치(종류 하나 › 분류)는 칩이 아니다', () => {
+  it('계층의 위치(종류 하나)는 칩이 아니다', () => {
     expect(
       listActiveFilters(
-        { ...DEFAULT_ASSET_QUERY, kinds: ['model'], category: 'indoor' },
+        { ...DEFAULT_ASSET_QUERY, kinds: ['model'] },
         collections,
       ),
     ).toEqual([]);
   });
 
-  it('계층으로 나타낼 수 없는 분류(종류 없이)는 칩으로 낸다', () => {
-    const query = { ...DEFAULT_ASSET_QUERY, category: 'indoor' };
+  it('계층에서 체크한 태그는 칩이다 — 위치가 아니라 필터다', () => {
+    const query: AssetQuery = {
+      ...DEFAULT_ASSET_QUERY,
+      kinds: ['model'],
+      tags: ['indoor', 'crane'],
+    };
     const filters = listActiveFilters(query, collections);
-    expect(filters).toEqual([{ type: 'category', value: 'indoor' }]);
-    expect(removeActiveFilter(query, filters[0])).toEqual(DEFAULT_ASSET_QUERY);
+    expect(filters).toEqual([
+      { type: 'tag', value: 'indoor' },
+      { type: 'tag', value: 'crane' },
+    ]);
+    // 칩을 풀면 종류는 그대로고 그 태그만 빠진다.
+    expect(removeActiveFilter(query, filters[0])).toEqual({
+      ...query,
+      tags: ['crane'],
+    });
   });
 
   it('공백뿐인 검색어는 칩이 아니다', () => {
@@ -89,12 +99,21 @@ describe('listActiveFilters', () => {
 });
 
 describe('removeActiveFilter', () => {
-  it('칩을 전부 풀면 조선소만 남은 기본 상태다', () => {
+  it('칩을 전부 풀면 기본 상태다', () => {
     const cleared = listActiveFilters(full, collections).reduce(
       removeActiveFilter,
       full,
     );
-    expect(cleared).toEqual({ ...DEFAULT_ASSET_QUERY, site: 'philly' });
+    expect(cleared).toEqual(DEFAULT_ASSET_QUERY);
+  });
+
+  it('종류 하나에 있을 때 칩을 전부 풀면 그 위치만 남는다', () => {
+    const scoped: AssetQuery = { ...full, kinds: ['map'] };
+    const cleared = listActiveFilters(scoped, collections).reduce(
+      removeActiveFilter,
+      scoped,
+    );
+    expect(cleared).toEqual({ ...DEFAULT_ASSET_QUERY, kinds: ['map'] });
   });
 
   it('목록형 필터는 그 값 하나만 뺀다', () => {

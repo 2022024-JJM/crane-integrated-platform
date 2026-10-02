@@ -17,8 +17,6 @@ const asset = (
   origin: 'user',
   name: id,
   description: '',
-  category: '',
-  sites: [],
   tags,
   owner: '',
   defaultScale: [1, 1, 1],

@@ -30,8 +30,6 @@ const asset = (versions: AssetVersion[], currentVersion = 1): AssetRecord => ({
   origin: 'user',
   name: 'A',
   description: '',
-  category: '',
-  sites: [],
   tags: [],
   owner: '',
   defaultScale: [1, 1, 1],

@@ -1,12 +1,10 @@
 import { getAssetContentHash } from '@crane/core/lib/asset-url';
 import {
   ASSET_KINDS,
-  ASSET_SITES,
   ASSET_VERSION_STATUSES,
   type AssetCollection,
   type AssetKind,
   type AssetRecord,
-  type AssetSiteId,
   type AssetStats,
   type AssetStatsTable,
   type AssetStatsTableEntry,
@@ -26,19 +24,14 @@ import { getCurrentAssetVersion } from './asset-versions';
 
 const EMPTY_PLACEMENTS: ReadonlyMap<string, number> = new Map();
 
-/** `all` = 전체, `common` = 공용(조선소 미지정)만. */
-export type AssetSiteFilter = 'all' | 'common' | AssetSiteId;
-
 export const ASSET_SORT_KEYS = ['name', 'updated', 'size', 'triangles'] as const;
 export type AssetSortKey = (typeof ASSET_SORT_KEYS)[number];
 
 export interface AssetQuery {
   text: string;
-  site: AssetSiteFilter;
   kinds: AssetKind[];
-  /** 분류(자산의 `category`)가 정확히 이 값인 자산만. */
-  category: string | null;
   statuses: AssetVersionStatus[];
+  /** 고른 태그를 **모두** 가진 자산만. 대소문자를 가리지 않는다. */
   tags: string[];
   collectionId: string | null;
   favoritesOnly: boolean;
@@ -51,9 +44,7 @@ export interface AssetQuery {
 
 export const DEFAULT_ASSET_QUERY: AssetQuery = {
   text: '',
-  site: 'all',
   kinds: [],
-  category: null,
   statuses: [],
   tags: [],
   collectionId: null,
@@ -111,20 +102,6 @@ export function resolveVersionStats(
   return findFreshStatsEntry(version, statsTable)?.stats ?? null;
 }
 
-/**
- * 조선소 필터 판정. 특정 조선소를 고르면 그 조선소 자산과 **공용 자산**이
- * 함께 나온다 — 공용은 모든 조선소가 쓰는 자산이라 "이 조선소에 필요한
- * 자산" 에 들어간다. 공용만 보려면 `common`.
- */
-export function matchesSiteFilter(
-  asset: AssetRecord,
-  site: AssetSiteFilter,
-): boolean {
-  if (site === 'all') return true;
-  if (site === 'common') return asset.sites.length === 0;
-  return asset.sites.length === 0 || asset.sites.includes(site);
-}
-
 function matchesText(asset: AssetRecord, text: string): boolean {
   const needle = text.trim().toLowerCase();
   if (!needle) return true;
@@ -133,7 +110,6 @@ function matchesText(asset: AssetRecord, text: string): boolean {
     asset.name,
     asset.id,
     asset.description,
-    asset.category,
     asset.drawingNo ?? '',
     current.file.fileName,
     ...asset.tags,
@@ -167,11 +143,7 @@ export function queryAssets(
   };
 
   const filtered = assets.filter((asset) => {
-    if (!matchesSiteFilter(asset, query.site)) return false;
     if (query.kinds.length > 0 && !query.kinds.includes(asset.kind)) {
-      return false;
-    }
-    if (query.category !== null && asset.category !== query.category) {
       return false;
     }
     if (
@@ -257,7 +229,6 @@ export function queryAssets(
 
 export interface AssetFacets {
   total: number;
-  sites: Record<AssetSiteFilter, number>;
   kinds: Record<AssetKind, number>;
   statuses: Record<AssetVersionStatus, number>;
   /** 많이 쓰인 순. */
@@ -266,11 +237,6 @@ export interface AssetFacets {
 
 /** 필터 레일의 개수 표시용 집계 — 필터를 걸기 전 전체 기준이다. */
 export function countAssetFacets(assets: readonly AssetRecord[]): AssetFacets {
-  const sites = { all: assets.length, common: 0 } as Record<
-    AssetSiteFilter,
-    number
-  >;
-  for (const site of ASSET_SITES) sites[site] = 0;
   const kinds = Object.fromEntries(ASSET_KINDS.map((k) => [k, 0])) as Record<
     AssetKind,
     number
@@ -283,10 +249,6 @@ export function countAssetFacets(assets: readonly AssetRecord[]): AssetFacets {
   const tagCounts = new Map<string, { tag: string; count: number }>();
 
   for (const asset of assets) {
-    if (asset.sites.length === 0) sites.common += 1;
-    for (const site of ASSET_SITES) {
-      if (matchesSiteFilter(asset, site)) sites[site] += 1;
-    }
     kinds[asset.kind] += 1;
     statuses[getCurrentAssetVersion(asset).status] += 1;
     for (const tag of asset.tags) {
@@ -299,7 +261,6 @@ export function countAssetFacets(assets: readonly AssetRecord[]): AssetFacets {
 
   return {
     total: assets.length,
-    sites,
     kinds,
     statuses,
     tags: [...tagCounts.values()].sort(

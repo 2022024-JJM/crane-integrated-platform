@@ -12,7 +12,7 @@ import type {
  * 만들고, 저장된 문서와 합친다.
  *
  * 카탈로그가 정체성(id·종류·파일 경로·기본 스케일)의 원천이고 저장 문서가
- * 메타데이터(이름·설명·조선소·태그·상태·추가 버전·이력)의 원천이다. 카탈로그에
+ * 메타데이터(이름·설명·태그·상태·추가 버전·이력)의 원천이다. 카탈로그에
  * 항목을 추가하면 문서를 고치지 않아도 라이브러리에 나타나고, 카탈로그에서
  * 뺀 항목은 문서에 남아 있어도 사라진다.
  */
@@ -27,8 +27,6 @@ export function buildBuiltinAssetRecord(source: BuiltinAssetSource): AssetRecord
     origin: 'builtin',
     name: source.name,
     description: source.description ?? '',
-    category: source.category,
-    sites: source.sites ?? [],
     tags: source.tags ?? [],
     owner: '',
     ...(source.catalogId ? { catalogId: source.catalogId } : {}),

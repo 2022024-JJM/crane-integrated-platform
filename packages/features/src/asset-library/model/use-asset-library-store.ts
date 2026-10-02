@@ -3,7 +3,6 @@ import { createId } from '@crane/core/lib/create-id';
 import { getStorageJson, setStorageJson } from '@crane/core/lib/safe-storage';
 import {
   AssetLibraryConflictError,
-  ASSET_CATEGORY_MAX,
   addAssetVersion,
   ASSET_COLLECTION_NAME_MAX,
   ASSET_COLLECTIONS_MAX,
@@ -28,7 +27,6 @@ import {
   type AssetLibraryRepository,
   type AssetMetadataPatch,
   type AssetRecord,
-  type AssetSiteId,
   type AssetStats,
   type AssetStatsTable,
   type AssetUsageIndex,
@@ -73,9 +71,7 @@ export interface ImportAssetInput {
   kind: AssetKind;
   name: string;
   description: string;
-  /** 분류 — 탐색 계층의 셋째 단. 없으면 종류 바로 아래에 놓인다. */
-  category?: string;
-  sites: AssetSiteId[];
+  /** 종류 안의 세부 분류 — 탐색 계층의 체크박스가 이 값으로 좁힌다. */
   tags: string[];
   note: string;
   revision?: string;
@@ -473,8 +469,6 @@ export function createAssetLibraryStore(
             kind: input.kind,
             name: input.name,
             description: input.description,
-            category: (input.category ?? '').trim().slice(0, ASSET_CATEGORY_MAX),
-            sites: input.sites,
             tags: input.tags,
             file: toAssetFile(stored, fileName, input.file, input.contentHash),
             note: input.note,

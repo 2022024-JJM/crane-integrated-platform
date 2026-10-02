@@ -3,10 +3,7 @@ import {
   getSceneFileUrlByRegionId,
   loadSceneInfoByRegionId,
 } from '@crane/domain/3d';
-import type {
-  AssetSiteId,
-  SceneAssetSource,
-} from '@crane/domain/asset-library';
+import type { SceneAssetSource } from '@crane/domain/asset-library';
 import { getRegionById } from '@crane/domain/region';
 
 /**
@@ -15,18 +12,6 @@ import { getRegionById } from '@crane/domain/region';
  * region 여러 개가 한 씬 파일을 공유할 수 있으므로(옥포 dock-1·dock-2)
  * 파일 단위로 묶어 한 번만 읽는다.
  */
-
-/** region 의 사이트 종류 → 조선소. 골리앗 씬은 필리조선소 지도 위에 있다. */
-const SITE_BY_SITE_TYPE: Record<string, AssetSiteId> = {
-  'hanwha-ocean': 'okpo',
-  'philly-shipyard': 'philly',
-  'goliath-crane': 'philly',
-};
-
-export function getAssetSiteByRegionId(regionId: string): AssetSiteId | null {
-  const region = getRegionById(regionId);
-  return region ? (SITE_BY_SITE_TYPE[region.siteType] ?? null) : null;
-}
 
 function toSceneFileName(regionId: string): string | null {
   const url = getSceneFileUrlByRegionId(regionId);
@@ -70,7 +55,6 @@ export async function loadSceneAssetSources(): Promise<{
       return {
         sceneFile: group.sceneFile,
         regionIds: group.regionIds,
-        site: getAssetSiteByRegionId(firstRegionId),
         editorPath: region ? `${region.navigateTo}/3d-viewer-edit` : '',
         modelPaths: info.models.map((model) => model.path),
         mapPaths: (info.maps ?? []).map((map) => map.path),

@@ -8,6 +8,10 @@
  *  - 없어진 id는 "배경 없음"으로 안전하게 떨어진다(경로였다면 404 로더 오류).
  *
  * 파일은 apps/shell/public/scenes/에 둔다.
+ *
+ * 이 목록의 항목은 3D 자산 라이브러리에 전사 공용 배경 자산으로 나타난다
+ * (id 가 곧 자산 id — 바꾸지 않는다). 항목을 추가·교체하면 `pnpm assets:stats`
+ * 를 다시 돌린다.
  */
 
 export interface SceneEnvironmentCatalogItem {

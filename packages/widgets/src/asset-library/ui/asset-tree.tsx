@@ -2,34 +2,35 @@ import { ChevronRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
+  AssetKind,
   AssetScope,
-  AssetTreeSiteNode,
+  AssetTree as AssetTreeData,
 } from '@crane/domain/asset-library';
 import { cn } from '@crane/core/lib/utils';
+import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { AssetKindIcon } from './asset-badges';
 
 interface AssetTreeProps {
-  tree: readonly AssetTreeSiteNode[];
+  tree: AssetTreeData;
   scope: AssetScope;
+  /** 고른 태그가 하나라도 있는지 — 있으면 종류 줄은 "그 종류 전부" 가 아니다. */
+  hasTags: boolean;
   onSelect: (scope: AssetScope) => void;
+  onToggleTag: (kind: AssetKind, tag: string) => void;
 }
 
 interface TreeRowProps {
-  depth: 0 | 1 | 2;
   label: string;
   count: number;
   active: boolean;
-  /** 접고 펼 수 있는 마디면 지금 펼쳐져 있는지. 잎이면 undefined. */
+  /** 접고 펼 수 있는 마디면 지금 펼쳐져 있는지. 펼 것이 없으면 undefined. */
   open?: boolean;
   leading?: ReactNode;
   onSelect: () => void;
   onToggle?: () => void;
 }
 
-const DEPTH_INDENT = ['pl-1', 'pl-5', 'pl-[4.125rem]'] as const;
-
 function TreeRow({
-  depth,
   label,
   count,
   active,
@@ -43,8 +44,7 @@ function TreeRow({
   return (
     <div
       className={cn(
-        'group/row relative flex h-8 items-center rounded-md transition-colors',
-        DEPTH_INDENT[depth],
+        'group/row relative flex h-8 items-center rounded-md pl-1 transition-colors',
         active ? 'bg-foreground/8' : 'hover:bg-muted',
       )}
     >
@@ -71,9 +71,9 @@ function TreeRow({
             className={cn('size-3.5 transition-transform', open && 'rotate-90')}
           />
         </button>
-      ) : depth < 2 ? (
+      ) : (
         <span aria-hidden className="size-6 shrink-0" />
-      ) : null}
+      )}
       <button
         type="button"
         aria-current={active ? 'true' : undefined}
@@ -106,97 +106,128 @@ function TreeRow({
   );
 }
 
+/** 종류 아래의 태그 한 줄 — 체크하면 그 태그를 가진 자산으로 좁힌다. */
+function TagRow({
+  tag,
+  count,
+  checked,
+  onToggle,
+}: {
+  tag: string;
+  count: number;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  // 더 걸면 남는 자산이 없는 태그는 고를 수 없다. 이미 고른 것은 풀 수 있어야
+  // 하므로 막지 않는다.
+  const disabled = count === 0 && !checked;
+  return (
+    <label
+      className={cn(
+        'flex h-7 items-center gap-2.5 rounded-md pr-2.5 pl-[2.125rem] text-[13px] transition-colors',
+        disabled
+          ? 'text-muted-foreground/50'
+          : cn(
+              'hover:bg-muted cursor-pointer',
+              checked ? 'text-foreground font-medium' : 'text-foreground/80',
+            ),
+      )}
+    >
+      <Checkbox
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onToggle}
+        className="size-3.5 after:hidden"
+      />
+      <span className="min-w-0 flex-1 truncate">{tag}</span>
+      <span
+        className={cn(
+          'shrink-0 text-xs tabular-nums',
+          disabled ? 'text-muted-foreground/50' : 'text-muted-foreground',
+        )}
+      >
+        {count}
+      </span>
+    </label>
+  );
+}
+
 /**
- * 탐색 계층 — 조선소 › 종류 › 분류. 자산이 어디에 있는지 폴더처럼 내려가며
- * 찾는다. 지금 있는 위치의 길은 늘 펼쳐져 있고, 나머지는 사용자가 여닫는다.
- * 종류는 자산이 없어도 흐리게 보인다 — 그 자리에 무엇을 둘 수 있는지 알린다.
+ * 탐색 계층 — 종류 › 태그. 종류 줄을 누르면 그 종류 전부를 보고, 그 아래의
+ * 태그를 체크하면 그 종류 안에서 좁혀 간다. 보고 있는 종류는 늘 펼쳐져 있고,
+ * 나머지는 사용자가 여닫는다. 종류는 자산이 없어도 흐리게 보인다 — 그 자리에
+ * 무엇을 둘 수 있는지 알린다.
  */
-export function AssetTree({ tree, scope, onSelect }: AssetTreeProps) {
+export function AssetTree({
+  tree,
+  scope,
+  hasTags,
+  onSelect,
+  onToggleTag,
+}: AssetTreeProps) {
   const { t } = useTranslation();
   // 사용자가 직접 여닫은 마디만 기억한다. 손대지 않은 마디는 지금 위치의
   // 길 위에 있을 때만 펼쳐진다.
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
-  const isOpen = (key: string, onPath: boolean) => toggled[key] ?? onPath;
-  const toggle = (key: string, onPath: boolean) =>
-    setToggled((current) => ({ ...current, [key]: !(current[key] ?? onPath) }));
+  const [toggled, setToggled] = useState<Partial<Record<AssetKind, boolean>>>(
+    {},
+  );
 
   return (
     <ul className="flex flex-col gap-px">
-      {tree.map((siteNode) => {
-        const siteKey = siteNode.site;
-        const siteOnPath = scope.site === siteNode.site;
-        const siteOpen = isOpen(siteKey, siteOnPath);
+      <li>
+        <TreeRow
+          label={t('asset-library:tree.all')}
+          count={tree.total}
+          active={scope.kind === null && !hasTags}
+          onSelect={() => onSelect({ kind: null })}
+        />
+      </li>
+      {tree.kinds.map((kindNode) => {
+        const { kind } = kindNode;
+        // 길 위 — 보고 있는 종류이거나, 전체를 보는 중에 이 종류의 태그가
+        // 걸려 있다.
+        const onPath =
+          scope.kind === kind || kindNode.tags.some((node) => node.checked);
+        const hasChildren = kindNode.tags.length > 0;
+        const open = hasChildren && (toggled[kind] ?? onPath);
         return (
-          <li key={siteKey}>
+          <li key={kind}>
             <TreeRow
-              depth={0}
-              label={t(`asset-library:site.${siteNode.site}`)}
-              count={siteNode.count}
-              active={siteOnPath && scope.kind === null}
-              open={siteOpen}
-              onSelect={() =>
-                onSelect({ site: siteNode.site, kind: null, category: null })
+              label={t(`asset-library:kind.${kind}`)}
+              count={kindNode.count}
+              active={scope.kind === kind && !hasTags}
+              open={hasChildren ? open : undefined}
+              leading={<AssetKindIcon kind={kind} />}
+              onSelect={() => onSelect({ kind })}
+              onToggle={
+                hasChildren
+                  ? () =>
+                      setToggled((current) => ({
+                        ...current,
+                        [kind]: !(current[kind] ?? onPath),
+                      }))
+                  : undefined
               }
-              onToggle={() => toggle(siteKey, siteOnPath)}
             />
-            {siteOpen ? (
-              // 펼친 마디 아래에 세로 안내선 — 어느 조선소의 가지인지 눈으로
+            {open ? (
+              // 펼친 종류 아래에 세로 안내선 — 어느 종류의 태그인지 눈으로
               // 따라갈 수 있다.
-              <ul className="before:bg-border relative flex flex-col gap-px before:absolute before:top-1 before:bottom-1 before:left-[15px] before:w-px">
-                {siteNode.kinds.map((kindNode) => {
-                  const kindKey = `${siteKey}/${kindNode.kind}`;
-                  const kindOnPath = siteOnPath && scope.kind === kindNode.kind;
-                  const hasChildren = kindNode.categories.length > 0;
-                  const kindOpen = hasChildren && isOpen(kindKey, kindOnPath);
-                  return (
-                    <li key={kindKey}>
-                      <TreeRow
-                        depth={1}
-                        label={t(`asset-library:kind.${kindNode.kind}`)}
-                        count={kindNode.count}
-                        active={kindOnPath && scope.category === null}
-                        open={hasChildren ? kindOpen : undefined}
-                        leading={<AssetKindIcon kind={kindNode.kind} />}
-                        onSelect={() =>
-                          onSelect({
-                            site: siteNode.site,
-                            kind: kindNode.kind,
-                            category: null,
-                          })
-                        }
-                        onToggle={
-                          hasChildren
-                            ? () => toggle(kindKey, kindOnPath)
-                            : undefined
-                        }
-                      />
-                      {kindOpen ? (
-                        <ul className="before:bg-border relative flex flex-col gap-px before:absolute before:top-1 before:bottom-1 before:left-[31px] before:w-px">
-                          {kindNode.categories.map((categoryNode) => (
-                            <li key={categoryNode.category}>
-                              <TreeRow
-                                depth={2}
-                                label={categoryNode.category}
-                                count={categoryNode.count}
-                                active={
-                                  kindOnPath &&
-                                  scope.category === categoryNode.category
-                                }
-                                onSelect={() =>
-                                  onSelect({
-                                    site: siteNode.site,
-                                    kind: kindNode.kind,
-                                    category: categoryNode.category,
-                                  })
-                                }
-                              />
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </li>
-                  );
+              <ul
+                aria-label={t('asset-library:tree.tagsOf', {
+                  name: t(`asset-library:kind.${kind}`),
                 })}
+                className="before:bg-border relative flex flex-col gap-px before:absolute before:top-1 before:bottom-1 before:left-[15px] before:w-px"
+              >
+                {kindNode.tags.map((tagNode) => (
+                  <li key={tagNode.tag}>
+                    <TagRow
+                      tag={tagNode.tag}
+                      count={tagNode.count}
+                      checked={tagNode.checked}
+                      onToggle={() => onToggleTag(kind, tagNode.tag)}
+                    />
+                  </li>
+                ))}
               </ul>
             ) : null}
           </li>

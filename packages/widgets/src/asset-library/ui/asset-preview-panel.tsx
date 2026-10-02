@@ -17,8 +17,8 @@ import {
   getAssetPreviewMode,
   getAssetVersion,
   getCurrentAssetVersion,
-  getPrimaryAssetSite,
   isDocumentAssetKind,
+  isGeometryAssetKind,
   resolveVersionSizeBytes,
   resolveVersionStats,
   toMeterSize,
@@ -45,6 +45,7 @@ import { useAssetSaveReport } from '../model/use-asset-save-report';
 import { useSettled } from '../model/use-settled';
 import { AssetAttentionList } from './asset-attention';
 import { AssetBreadcrumb } from './asset-breadcrumb';
+import { AssetEnvironmentViewer } from './asset-environment-viewer';
 import { AssetLifecycle } from './asset-lifecycle';
 import { AssetModelViewer } from './asset-model-viewer';
 import { AssetThumbnail } from './asset-thumbnail';
@@ -210,9 +211,11 @@ export function AssetPreviewPanel({
   const small = sizeBytes !== null && sizeBytes <= AUTO_3D_MAX_BYTES;
   const settled = useSettled(asset.id, OPEN_3D_DELAY_MS);
   const wants3d = small || opened3dFor === asset.id;
+  // 돌려 볼 수 있는 자산 — 모델·지도(GLB)와 배경(파노라마).
+  const interactive = mode === 'model' || mode === 'environment';
   const show3d =
     previewMode === '3d' &&
-    mode === 'model' &&
+    interactive &&
     file.status === 'ready' &&
     wants3d &&
     settled;
@@ -244,11 +247,7 @@ export function AssetPreviewPanel({
           <AssetBreadcrumb
             hideRoot
             className="mt-0.5"
-            scope={{
-              site: getPrimaryAssetSite(asset),
-              kind: asset.kind,
-              category: asset.category || null,
-            }}
+            scope={{ kind: asset.kind }}
             renderCrumb={(target, label) => (
               <button
                 type="button"
@@ -303,17 +302,24 @@ export function AssetPreviewPanel({
         <div className="border-border relative aspect-[16/10] w-full border-b">
           {show3d ? (
             // 자산마다 새로 마운트한다 — 앞 자산의 표시 상태·카메라가 남지 않게.
-            <AssetModelViewer
-              key={`${asset.id}@${version.version}`}
-              url={file.url}
-              defaultScale={asset.defaultScale}
-              toolbar="compact"
-            />
+            mode === 'environment' ? (
+              <AssetEnvironmentViewer
+                key={`${asset.id}@${version.version}`}
+                url={file.url}
+              />
+            ) : (
+              <AssetModelViewer
+                key={`${asset.id}@${version.version}`}
+                url={file.url}
+                defaultScale={asset.defaultScale}
+                toolbar="compact"
+              />
+            )
           ) : (
             <>
               <AssetThumbnail asset={asset} className="absolute inset-0" />
               {previewMode === '3d' &&
-              mode === 'model' &&
+              interactive &&
               file.status === 'ready' &&
               !wants3d ? (
                 <div className="absolute inset-x-0 bottom-3 flex justify-center">
@@ -333,8 +339,8 @@ export function AssetPreviewPanel({
             </>
           )}
           {/* 이미지 ↔ 3D — Unity Asset Manager 의 미리보기 띠처럼 그림 아래쪽에
-              둔다. 3D 자산에만 있다. */}
-          {mode === 'model' ? (
+              둔다. 돌려 볼 수 있는 자산에만 있다. */}
+          {interactive ? (
             <div
               role="group"
               aria-label={t('asset-library:preview.modeLabel')}
@@ -426,7 +432,7 @@ export function AssetPreviewPanel({
           <Fact label={t('asset-library:field.updated')}>
             {formatAssetDate(asset.updatedAt, locale)}
           </Fact>
-          {!document && usageStatus === 'ready' ? (
+          {isGeometryAssetKind(asset.kind) && usageStatus === 'ready' ? (
             <Fact label={t('asset-library:preview.placements')}>
               {placements > 0
                 ? t('asset-library:usage.count', { count: placements })

@@ -13,20 +13,28 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  */
 
 /**
- * 자산 종류. `model`·`map` 은 씬에 놓는 3D 자산(GLB)이고, `drawing`(보는 도면:
- * PDF·그림)과 `cad`(CAD 원본: DWG·DXF·STEP …)는 씬에 놓지 않는 문서형 자산이다.
+ * 자산 종류. `model`·`map` 은 씬에 놓는 3D 자산(GLB)이고, `environment` 는 씬의
+ * 배경(등장방형 파노라마 EXR)이다. `drawing`(보는 도면: PDF·그림)과 `cad`(CAD
+ * 원본: DWG·DXF·STEP …)는 씬에 놓지 않는 문서형 자산이다.
  */
-export const ASSET_KINDS = ['model', 'map', 'drawing', 'cad'] as const;
+export const ASSET_KINDS = [
+  'model',
+  'map',
+  'environment',
+  'drawing',
+  'cad',
+] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
+
+/** 형상이 있는 자산(GLB)인가 — 기하 통계·권장 상한·기본 스케일·씬 배치가 있다. */
+export function isGeometryAssetKind(kind: AssetKind): boolean {
+  return kind === 'model' || kind === 'map';
+}
 
 /** 문서형 자산인가 — 씬에 배치하지 않고 기하 통계가 없으며 도면 번호·리비전을 가진다. */
 export function isDocumentAssetKind(kind: AssetKind): boolean {
   return kind === 'drawing' || kind === 'cad';
 }
-
-/** 조선소. 자산의 `sites` 가 비어 있으면 전사 공용이다. */
-export const ASSET_SITES = ['okpo', 'philly'] as const;
-export type AssetSiteId = (typeof ASSET_SITES)[number];
 
 /**
  * 버전 상태. 새 버전은 항상 draft 로 시작하고 전이는
@@ -140,9 +148,10 @@ export interface AssetRecord {
   origin: AssetOrigin;
   name: string;
   description: string;
-  /** 자유 분류(indoor·outdoor·ground·context·runtime …). */
-  category: string;
-  sites: AssetSiteId[];
+  /**
+   * 종류 안의 세부 분류(indoor·crane·okpo …). 탐색 계층의 체크박스가 이 값으로
+   * 좁힌다.
+   */
   tags: string[];
   owner: string;
   /** 씬 편집기 카탈로그 id. 있으면 팔레트에서 배치할 수 있는 자산이다. */
@@ -191,10 +200,8 @@ export interface BuiltinAssetSource {
   name: string;
   /** public 절대 경로. */
   path: string;
-  category: string;
   catalogId?: string;
   defaultScale?: Vector3Tuple;
-  sites?: AssetSiteId[];
   tags?: string[];
   description?: string;
 }
@@ -205,7 +212,6 @@ export const ASSET_NOTE_MAX = 500;
 export const ASSET_TAG_MAX = 24;
 export const ASSET_TAGS_MAX = 20;
 export const ASSET_OWNER_MAX = 60;
-export const ASSET_CATEGORY_MAX = 40;
 export const ASSET_REVISION_MAX = 12;
 export const ASSET_DRAWING_NO_MAX = 60;
 export const ASSET_RELATED_MAX = 50;

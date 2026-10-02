@@ -44,12 +44,12 @@ import {
   getAssetScope,
   getCurrentAssetVersion,
   isDocumentAssetKind,
+  isGeometryAssetKind,
   queryAssets,
   resolveVersionSizeBytes,
   resolveVersionStats,
   type AssetAttentionKind,
   type AssetQuery,
-  type AssetSiteId,
   type AssetSortKey,
   type AssetVersionStatus,
   withAssetScope,
@@ -266,8 +266,11 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   );
 
   const favorites = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-  const tree = useMemo(() => buildAssetTree(assets), [assets]);
   const scope = getAssetScope(query);
+  const tree = useMemo(
+    () => buildAssetTree(assets, { kind: scope.kind, tags: query.tags }),
+    [assets, query.tags, scope.kind],
+  );
   const placements = useMemo(() => {
     const map = new Map<string, number>();
     for (const asset of assets) {
@@ -284,21 +287,20 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     () => ({ statsTable, placements, usageKnown }),
     [placements, statsTable, usageKnown],
   );
-  // 지금 위치에 놓인 자산(필터 전). 레일의 처리할 일 개수와 상태 선택의
-  // 개수는 이 범위로 센다 — 누르면 이 위치 안에서 걸리므로, 전체 기준으로
-  // 세면 "5" 를 눌렀는데 1개가 나온다.
+  // 지금 위치에서 고른 태그까지 건 자산(나머지 필터 전). 레일의 처리할 일
+  // 개수와 상태 선택의 개수는 이 범위로 센다 — 누르면 이 안에서 걸리므로, 전체
+  // 기준으로 세면 "5" 를 눌렀는데 1개가 나온다.
   const scopedAssets = useMemo(
     () =>
       queryAssets(
         assets,
-        withAssetScope(DEFAULT_ASSET_QUERY, {
-          site: scope.site,
-          kind: scope.kind,
-          category: scope.category,
-        }),
+        {
+          ...withAssetScope(DEFAULT_ASSET_QUERY, { kind: scope.kind }),
+          tags: query.tags,
+        },
         { collections: [], favorites: new Set<string>(), statsTable: {} },
       ),
-    [assets, scope.category, scope.kind, scope.site],
+    [assets, query.tags, scope.kind],
   );
   const scopedFacets = useMemo(
     () => countAssetFacets(scopedAssets),
@@ -549,13 +551,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     () => listBulkTags(selectedAssets),
     [selectedAssets],
   );
-  const selectionCategories = useMemo(
-    () =>
-      [
-        ...new Set(assets.map((asset) => asset.category).filter(Boolean)),
-      ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
-    [assets],
-  );
   const removableAssets = selectedAssets.filter(
     (asset) => asset.origin === 'user',
   );
@@ -617,8 +612,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
       'id',
       t('asset-library:field.name'),
       t('asset-library:field.kind'),
-      t('asset-library:field.category'),
-      t('asset-library:field.site'),
       t('asset-library:field.status'),
       t('asset-library:field.version'),
       t('asset-library:field.drawingNo'),
@@ -636,10 +629,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         asset.id,
         asset.name,
         t(`asset-library:kind.${asset.kind}`),
-        asset.category,
-        asset.sites.length === 0
-          ? t('asset-library:site.common')
-          : asset.sites.map((site) => t(`asset-library:site.${site}`)).join(' '),
         t(`asset-library:status.${current.status}`),
         current.version,
         asset.drawingNo ?? '',
@@ -661,8 +650,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   const isFileDrag = (event: DragEvent) =>
     Array.from(event.dataTransfer.types).includes('Files');
 
-  const defaultSites: AssetSiteId[] =
-    query.site === 'all' || query.site === 'common' ? [] : [query.site];
   const activeFilters = listActiveFilters(query, collections);
   const filterLabel = (filter: ActiveFilter): string => {
     switch (filter.type) {
@@ -672,8 +659,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         return t(`asset-library:attention.${filter.value}.label`);
       case 'kind':
         return t(`asset-library:kind.${filter.value}`);
-      case 'category':
-        return filter.value;
       case 'status':
         return t(`asset-library:status.${filter.value}`);
       case 'tag':
@@ -975,7 +960,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                   count={selectedIds.size}
                   collections={collections}
                   tags={selectionTags}
-                  categories={selectionCategories}
                   transitions={selectionTransitions}
                   removableCount={removableCount}
                   onTransition={(to) =>
@@ -983,16 +967,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                     to === 'rejected' || to === 'withdrawn'
                       ? setBulkConfirm({ kind: 'status', to })
                       : void runBulk(transitionManyStatus(selection, to, actor))
-                  }
-                  onAssignSites={(sites) =>
-                    void runBulk(
-                      updateManyMetadata(selection, () => ({ sites }), actor),
-                    )
-                  }
-                  onAssignCategory={(category) =>
-                    void runBulk(
-                      updateManyMetadata(selection, () => ({ category }), actor),
-                    )
                   }
                   onAddTag={(tag) =>
                     void runBulk(
@@ -1141,7 +1115,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                       favorites={favorites}
                       attention={attentionByAsset}
                       previewId={previewId}
-                      showSite={scope.site === 'all'}
                       now={now}
                       hrefFor={hrefFor}
                       onPreview={handlePreview}
@@ -1162,9 +1135,11 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                 attention={attentionByAsset}
                 previewId={previewId}
                 columns={
-                  scope.kind !== null && isDocumentAssetKind(scope.kind)
-                    ? 'document'
-                    : 'geometry'
+                  scope.kind === null || isGeometryAssetKind(scope.kind)
+                    ? 'geometry'
+                    : isDocumentAssetKind(scope.kind)
+                      ? 'document'
+                      : 'basic'
                 }
                 showKind={scope.kind === null}
                 hrefFor={hrefFor}
@@ -1268,8 +1243,8 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         initialFile={droppedFile}
         assets={assets}
         statsTable={statsTable}
-        defaultSites={defaultSites}
-        defaultCategory={scope.category ?? ''}
+        defaultKind={scope.kind}
+        defaultTags={query.tags}
         localOnly={localOnly}
         canOptimize={canOptimize}
         onClose={() => {

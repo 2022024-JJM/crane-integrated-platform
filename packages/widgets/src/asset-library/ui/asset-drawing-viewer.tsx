@@ -16,7 +16,7 @@ const WHEEL_ZOOM_STEP = 1.12;
 
 interface AssetDrawingViewerProps {
   url: string;
-  mode: Exclude<AssetPreviewMode, 'model'>;
+  mode: Exclude<AssetPreviewMode, 'model' | 'environment'>;
   fileName: string;
   titleBlock?: ReactNode;
 }

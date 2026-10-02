@@ -1,20 +1,21 @@
 import { AlertTriangle, FileUp, Loader2, OctagonAlert } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ASSET_CATEGORY_MAX,
   ASSET_DESCRIPTION_MAX,
   ASSET_DRAWING_NO_MAX,
   ASSET_NAME_MAX,
   ASSET_NOTE_MAX,
   ASSET_REVISION_MAX,
+  ASSET_TAG_MAX,
+  ASSET_TAGS_MAX,
   ASSET_UPLOAD_EXTENSIONS,
   formatBytes,
   humanizeAssetFileName,
   isDocumentAssetKind,
+  listAssetKindTags,
   type AssetKind,
   type AssetRecord,
-  type AssetSiteId,
   type AssetStatsTable,
 } from '@crane/domain/asset-library';
 import type { ImportAssetInput } from '@crane/features/asset-library';
@@ -32,7 +33,7 @@ import {
   type AssetFileAnalysis,
 } from '../lib/analyze-asset-file';
 import { AssetKindIcon } from './asset-badges';
-import { FormRow, SitePicker, TagEditor, TextArea } from './asset-form-fields';
+import { FormRow, TagEditor, TextArea } from './asset-form-fields';
 import { AssetOptimizeOption } from './asset-optimize-option';
 
 const ACCEPT = ASSET_UPLOAD_EXTENSIONS.map((ext) => `.${ext}`).join(',');
@@ -43,9 +44,12 @@ interface AssetImportDialogProps {
   initialFile: File | null;
   assets: readonly AssetRecord[];
   statsTable: AssetStatsTable;
-  defaultSites: AssetSiteId[];
-  /** 목록이 보고 있던 분류 — 그 위치에서 등록하면 그 분류로 시작한다. */
-  defaultCategory: string;
+  /**
+   * 목록이 보고 있던 종류와 거기서 고른 태그 — 같은 종류의 파일을 등록하면
+   * 그 태그로 시작한다.
+   */
+  defaultKind: AssetKind | null;
+  defaultTags: readonly string[];
   localOnly: boolean;
   /** 등록할 때 모델을 최적화할 수 있는 환경인지. */
   canOptimize: boolean;
@@ -59,8 +63,8 @@ export function AssetImportDialog({
   initialFile,
   assets,
   statsTable,
-  defaultSites,
-  defaultCategory,
+  defaultKind,
+  defaultTags,
   localOnly,
   canOptimize,
   onClose,
@@ -80,8 +84,8 @@ export function AssetImportDialog({
             initialFile={initialFile}
             assets={assets}
             statsTable={statsTable}
-            defaultSites={defaultSites}
-            defaultCategory={defaultCategory}
+            defaultKind={defaultKind}
+            defaultTags={defaultTags}
             localOnly={localOnly}
             canOptimize={canOptimize}
             onClose={onClose}
@@ -97,15 +101,14 @@ function ImportForm({
   initialFile,
   assets,
   statsTable,
-  defaultSites,
-  defaultCategory,
+  defaultKind,
+  defaultTags,
   localOnly,
   canOptimize,
   onClose,
   onSubmit,
 }: Omit<AssetImportDialogProps, 'open'>) {
   const { t } = useTranslation();
-  const categoryListId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(initialFile);
   const [analysis, setAnalysis] = useState<AssetFileAnalysis | null>(null);
@@ -116,25 +119,25 @@ function ImportForm({
   // 이름을 직접 고치기 전까지는 고른 파일의 이름을 따라간다.
   const [nameEdited, setNameEdited] = useState(false);
   const [kind, setKind] = useState<AssetKind | null>(null);
-  const [sites, setSites] = useState<AssetSiteId[]>(defaultSites);
   const [optimize, setOptimize] = useState(true);
-  const [category, setCategory] = useState(defaultCategory);
-  const [tags, setTags] = useState<string[]>([]);
+  // 손대기 전(null)에는 목록에서 고른 태그를 따른다 — 단, 보고 있던 종류와
+  // 같은 종류의 파일일 때만. 모델의 태그를 도면에 붙이지 않는다.
+  const [editedTags, setEditedTags] = useState<string[] | null>(null);
   const [description, setDescription] = useState('');
   const [note, setNote] = useState('');
   const [drawingNo, setDrawingNo] = useState('');
   const [revision, setRevision] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const knownCategories = useMemo(
-    () =>
-      [
-        ...new Set(
-          assets
-            .filter((item) => item.kind === kind && item.category)
-            .map((item) => item.category),
-        ),
-      ].sort((x, y) => x.localeCompare(y, undefined, { numeric: true })),
+  const tags =
+    editedTags ??
+    (kind !== null && kind === defaultKind
+      ? defaultTags
+          .slice(0, ASSET_TAGS_MAX)
+          .map((tag) => tag.slice(0, ASSET_TAG_MAX))
+      : []);
+  const kindTags = useMemo(
+    () => (kind !== null ? listAssetKindTags(assets, kind) : []),
     [assets, kind],
   );
 
@@ -180,9 +183,7 @@ function ImportForm({
       kind,
       name: name.trim(),
       description: description.trim(),
-      category: category.trim(),
       optimize: canOptimize && kind === 'model' && optimize,
-      sites,
       tags,
       note: note.trim(),
       contentHash: analysis.contentHash,
@@ -348,35 +349,6 @@ function ImportForm({
             <AssetOptimizeOption checked={optimize} onChange={setOptimize} />
           ) : null}
 
-          <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-[11px]">
-              {t('asset-library:field.site')}
-            </span>
-            <SitePicker value={sites} onChange={setSites} />
-          </div>
-
-          <FormRow label={t('asset-library:field.category')}>
-            {(id) => (
-              <>
-                <Input
-                  id={id}
-                  value={category}
-                  maxLength={ASSET_CATEGORY_MAX}
-                  list={categoryListId}
-                  placeholder={t('asset-library:import.categoryPlaceholder')}
-                  onChange={(event) => setCategory(event.target.value)}
-                />
-                {/* 같은 종류에 이미 있는 분류를 권한다 — 철자가 갈리면 계층의
-                    마디가 둘로 나뉜다. */}
-                <datalist id={categoryListId}>
-                  {knownCategories.map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
-              </>
-            )}
-          </FormRow>
-
           {kind !== null && isDocumentAssetKind(kind) ? (
             <div className="grid grid-cols-[1fr_7rem] gap-3">
               <FormRow label={t('asset-library:field.drawingNo')}>
@@ -403,8 +375,18 @@ function ImportForm({
             </div>
           ) : null}
 
-          <FormRow label={t('asset-library:field.tags')}>
-            {(id) => <TagEditor id={id} value={tags} onChange={setTags} />}
+          <FormRow
+            label={t('asset-library:field.tags')}
+            hint={t('asset-library:import.tagsHint')}
+          >
+            {(id) => (
+              <TagEditor
+                id={id}
+                value={tags}
+                suggestions={kindTags}
+                onChange={setEditedTags}
+              />
+            )}
           </FormRow>
 
           <FormRow label={t('asset-library:field.description')}>

@@ -4,7 +4,6 @@ import {
   getFileExtension,
 } from '../model/asset-library-paths';
 import {
-  ASSET_CATEGORY_MAX,
   ASSET_COLLECTION_NAME_MAX,
   ASSET_COLLECTIONS_MAX,
   ASSET_DESCRIPTION_MAX,
@@ -18,7 +17,6 @@ import {
   ASSET_OWNER_MAX,
   ASSET_RELATED_MAX,
   ASSET_REVISION_MAX,
-  ASSET_SITES,
   ASSET_TAG_MAX,
   ASSET_TAGS_MAX,
   ASSET_VERSION_STATUSES,
@@ -31,7 +29,6 @@ import {
   type AssetKind,
   type AssetLibraryDocument,
   type AssetRecord,
-  type AssetSiteId,
   type AssetStats,
   type AssetStatsTable,
   type AssetThumbnail,
@@ -90,12 +87,6 @@ export function sanitizeAssetTags(value: unknown): string[] {
     if (tags.length >= ASSET_TAGS_MAX) break;
   }
   return tags;
-}
-
-export function sanitizeAssetSites(value: unknown): AssetSiteId[] {
-  if (!Array.isArray(value)) return [];
-  // 표의 순서로 정규화한다 — 선택 순서가 달라도 같은 값이 같은 배열이 되게.
-  return ASSET_SITES.filter((site) => value.includes(site));
 }
 
 /**
@@ -278,8 +269,6 @@ export function sanitizeAssetRecord(value: unknown): AssetRecord | null {
     origin: value.origin === 'builtin' ? 'builtin' : 'user',
     name: toText(value.name, ASSET_NAME_MAX) || id,
     description: toText(value.description, ASSET_DESCRIPTION_MAX),
-    category: toText(value.category, ASSET_CATEGORY_MAX),
-    sites: sanitizeAssetSites(value.sites),
     tags: sanitizeAssetTags(value.tags),
     owner: toText(value.owner, ASSET_OWNER_MAX),
     ...(catalogId ? { catalogId } : {}),

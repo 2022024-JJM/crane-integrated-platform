@@ -8,8 +8,8 @@ const source: BuiltinAssetSource = {
   kind: 'model',
   name: 'Okpo TTC',
   path: '/models/okpo_ttc.glb',
-  category: 'outdoor',
   catalogId: 'okpo-ttc',
+  tags: ['outdoor'],
   defaultScale: [1, 1, 1],
 };
 
@@ -21,7 +21,8 @@ describe('buildBuiltinAssetRecord', () => {
       origin: 'builtin',
       catalogId: 'okpo-ttc',
       currentVersion: 1,
-      sites: [],
+      // 원천의 태그가 첫 태그다 — 탐색 계층의 체크박스 아래에 바로 놓인다.
+      tags: ['outdoor'],
     });
     expect(record.versions).toHaveLength(1);
     expect(record.versions[0]).toMatchObject({
@@ -54,8 +55,7 @@ describe('mergeAssetLibrary', () => {
       origin: 'builtin',
       kind: 'map',
       name: '옥포 타워크레인',
-      sites: ['okpo'],
-      tags: ['crane'],
+      tags: ['crane', 'okpo'],
       defaultScale: [9, 9, 9],
       catalogId: 'stale-id',
       versions: [
@@ -75,8 +75,9 @@ describe('mergeAssetLibrary', () => {
     const { assets } = mergeAssetLibrary([source], document([stored]));
     expect(assets[0]).toMatchObject({
       name: '옥포 타워크레인',
-      sites: ['okpo'],
-      tags: ['crane'],
+      // 저장본의 태그가 원천의 태그(outdoor)를 이긴다 — 사용자가 뺀 태그가
+      // 되살아나지 않는다.
+      tags: ['crane', 'okpo'],
       kind: 'model',
       origin: 'builtin',
       catalogId: 'okpo-ttc',

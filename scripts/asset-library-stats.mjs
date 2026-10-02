@@ -5,11 +5,11 @@
 //   pnpm assets:stats --check    # 표가 현재 파일과 맞는지만 확인(쓰지 않음)
 //
 // 무엇을 하나:
-//   apps/shell/public 의 models·maps·asset-library/files 아래 GLB 와 drawings
-//   아래 도면 파일을 훑어 `public/asset-library/stats.json` 에
-//   { '/models/x.glb': { hash, bytes, stats } } 를 쓴다. 자산 라이브러리 목록은
-//   이 표로 파일 크기·삼각형 수를 보여 주고 정렬한다 — GLB 수십 개를 브라우저가
-//   열어 보지 않아도 된다.
+//   apps/shell/public 의 models·maps·asset-library/files 아래 GLB, scenes 아래
+//   배경(EXR), drawings 아래 도면 파일을 훑어 `public/asset-library/stats.json`
+//   에 { '/models/x.glb': { hash, bytes, stats } } 를 쓴다. 자산 라이브러리
+//   목록은 이 표로 파일 크기·삼각형 수를 보여 주고 정렬한다 — GLB 수십 개를
+//   브라우저가 열어 보지 않아도 된다. GLB 가 아닌 파일은 크기·해시만 적는다.
 //
 //   hash 는 자산 해시 매니페스트(vite-plugin-asset-hash.ts)와 같은 값
 //   (sha256 앞 8자)이다. GLB 를 교체하고 이 스크립트를 다시 돌리지 않으면
@@ -44,6 +44,8 @@ const OUTPUT_PATH = join(PUBLIC_DIR, 'asset-library/stats.json');
 const SOURCES = [
   { dir: 'models', extensions: ['glb'] },
   { dir: 'maps', extensions: ['glb'] },
+  // scenes 에는 씬 JSON 도 있다 — 배경 파일만 고른다.
+  { dir: 'scenes', extensions: ['exr'] },
   { dir: 'asset-library/files', extensions: null },
   { dir: 'drawings', extensions: null },
 ];

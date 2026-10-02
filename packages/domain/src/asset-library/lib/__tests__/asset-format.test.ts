@@ -133,9 +133,11 @@ describe('evaluateAssetBudget', () => {
     ]);
   });
 
-  it('도면은 예산이 없다', () => {
-    expect(evaluateAssetBudget('drawing', stats({ triangles: 9e9 }))).toEqual([]);
-    expect(evaluateAssetBudget('cad', stats({ triangles: 9e9 }))).toEqual([]);
+  it('형상이 없는 종류(도면·CAD·배경)는 예산이 없다', () => {
+    const heavy = stats({ triangles: 9e9, textureMemoryBytes: 9e12 });
+    expect(evaluateAssetBudget('drawing', heavy)).toEqual([]);
+    expect(evaluateAssetBudget('cad', heavy)).toEqual([]);
+    expect(evaluateAssetBudget('environment', heavy)).toEqual([]);
   });
 });
 

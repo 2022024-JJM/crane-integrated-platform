@@ -1,16 +1,13 @@
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ASSET_SITES,
-  ASSET_TAG_MAX,
-  ASSET_TAGS_MAX,
-  type AssetSiteId,
-} from '@crane/domain/asset-library';
+import { ASSET_TAG_MAX, ASSET_TAGS_MAX } from '@crane/domain/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
-import { parseTagInput } from '../lib/asset-presentation';
-import { toggleListValue } from '../lib/asset-library-url';
+import {
+  listTagSuggestions,
+  parseTagInput,
+} from '../lib/asset-presentation';
 
 /**
  * 인스펙터의 조용한 입력 — 평소에는 테두리 없이 값처럼 읽히고, 올리거나
@@ -63,73 +60,27 @@ export function TextArea({
 }
 
 /**
- * 조선소 선택. 아무것도 고르지 않은 상태가 "전사 공용" 이다 — 공용을 별도
- * 선택지로 두지 않아 "공용이면서 옥포" 같은 모순이 생기지 않는다.
+ * 태그 편집 — Enter·쉼표로 추가, 칩의 × 로 제거. `suggestions` 는 같은 종류의
+ * 자산이 이미 쓰는 태그다 — 눌러서 붙이게 해 철자가 갈리지 않게 한다(갈리면
+ * 탐색 계층의 체크박스가 둘로 나뉜다).
  */
-export function SitePicker({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: readonly AssetSiteId[];
-  onChange: (sites: AssetSiteId[]) => void;
-  disabled?: boolean;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap gap-1.5">
-        {ASSET_SITES.map((site) => {
-          const active = value.includes(site);
-          return (
-            <button
-              key={site}
-              type="button"
-              disabled={disabled}
-              aria-pressed={active}
-              onClick={() =>
-                onChange(
-                  ASSET_SITES.filter((item) =>
-                    toggleListValue(value, site).includes(item),
-                  ),
-                )
-              }
-              className={cn(
-                'focus-visible:ring-ring/50 h-8 cursor-pointer rounded-md border px-3 text-[13px] transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
-                active
-                  ? 'border-foreground bg-foreground text-background font-medium'
-                  : 'border-border text-foreground/75 hover:bg-muted hover:text-foreground',
-              )}
-            >
-              {t(`asset-library:site.${site}`)}
-            </button>
-          );
-        })}
-      </div>
-      <p className="text-muted-foreground text-xs">
-        {value.length === 0
-          ? t('asset-library:form.siteCommonHint')
-          : t('asset-library:form.siteScopedHint')}
-      </p>
-    </div>
-  );
-}
-
-/** 태그 편집 — Enter·쉼표로 추가, 칩의 × 로 제거. */
 export function TagEditor({
   id,
   value,
   onChange,
   disabled,
+  suggestions,
 }: {
   id?: string;
   value: readonly string[];
   onChange: (tags: string[]) => void;
   disabled?: boolean;
+  suggestions?: readonly string[];
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
   const full = value.length >= ASSET_TAGS_MAX;
+  const offered = full ? [] : listTagSuggestions(suggestions ?? [], value);
 
   const commit = (raw: string) => {
     const lower = new Set(value.map((tag) => tag.toLowerCase()));
@@ -204,6 +155,24 @@ export function TagEditor({
           }
         }}
       />
+      {offered.length > 0 ? (
+        <ul className="flex flex-wrap gap-1">
+          {offered.map((tag) => (
+            <li key={tag}>
+              <button
+                type="button"
+                disabled={disabled}
+                aria-label={t('asset-library:form.addSuggestedTag', { tag })}
+                onClick={() => commit(tag)}
+                className="border-border text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring/50 inline-flex h-6 cursor-pointer items-center gap-1 rounded-full border border-dashed pr-2 pl-1.5 text-[11px] outline-none focus-visible:ring-2 disabled:pointer-events-none"
+              >
+                <Plus className="size-3" />
+                {tag}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

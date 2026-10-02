@@ -35,6 +35,8 @@ export const ASSET_FILE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
 /** 3D 자산(모델·지도)으로 받을 수 있는 확장자. 외부 버퍼를 끄는 .gltf 는 받지 않는다. */
 export const ASSET_MODEL_EXTENSIONS = ['glb'] as const;
+/** 배경(등장방형 파노라마)으로 받을 수 있는 확장자. */
+export const ASSET_ENVIRONMENT_EXTENSIONS = ['exr'] as const;
 /** 도면(화면에서 바로 보는 문서)으로 받을 수 있는 확장자. */
 export const ASSET_DRAWING_EXTENSIONS = [
   'pdf',
@@ -55,6 +57,7 @@ export const ASSET_CAD_EXTENSIONS = [
 ] as const;
 export const ASSET_UPLOAD_EXTENSIONS: readonly string[] = [
   ...ASSET_MODEL_EXTENSIONS,
+  ...ASSET_ENVIRONMENT_EXTENSIONS,
   ...ASSET_DRAWING_EXTENSIONS,
   ...ASSET_CAD_EXTENSIONS,
 ];

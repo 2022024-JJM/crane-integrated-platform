@@ -3,17 +3,9 @@
   "kind": {
     "model": "모델",
     "map": "지도",
+    "environment": "배경",
     "drawing": "도면",
     "cad": "CAD"
-  },
-  "site": {
-    "all": "전체",
-    "okpo": "옥포조선소",
-    "philly": "필리조선소",
-    "common": "공용",
-    "okpoShort": "옥포",
-    "phillyShort": "필리",
-    "commonShort": "공용"
   },
   "status": {
     "draft": "초안",
@@ -45,14 +37,12 @@
     "name": "이름",
     "description": "설명",
     "kind": "종류",
-    "site": "조선소",
     "status": "상태",
     "version": "버전",
     "revision": "리비전",
     "drawingNo": "도면 번호",
     "tags": "태그",
     "owner": "담당자",
-    "category": "분류",
     "file": "파일",
     "size": "크기",
     "sizeBytes": "크기(바이트)",
@@ -126,6 +116,7 @@
     "emptyScopeHint": {
       "model": "GLB 파일을 올리고 종류를 모델로 고르면 여기에 놓입니다.",
       "map": "GLB 파일을 올리고 종류를 지도로 고르면 여기에 놓입니다.",
+      "environment": "EXR 파일을 올리면 여기에 놓입니다.",
       "drawing": "PDF·SVG·이미지 파일을 올리면 여기에 놓입니다.",
       "cad": "DWG·DXF·STEP·IGES 파일을 올리면 여기에 놓입니다."
     },
@@ -135,14 +126,10 @@
   "bulk": {
     "label": "선택한 자산 일괄 작업",
     "selected": "{{count}}개 선택",
-    "assignSite": "조선소 지정",
-    "bothSites": "옥포·필리 모두",
     "addTag": "태그 추가",
     "addToCollection": "컬렉션에 담기",
     "clear": "선택 해제",
     "changeStatus": "상태 바꾸기",
-    "assignCategory": "분류 지정",
-    "categoryPlaceholder": "분류 (비우면 분류 없음)",
     "removeTag": "태그 빼기",
     "remove": "삭제 ({{count}})",
     "removeTitle": "등록한 자산 {{count}}개를 삭제할까요?",
@@ -150,27 +137,27 @@
     "statusTitle": "고른 자산을 {{action}} 처리할까요?"
   },
   "form": {
-    "siteCommonHint": "조선소를 고르지 않으면 전사 공용 자산입니다.",
-    "siteScopedHint": "고른 조선소의 자산으로 분류됩니다.",
     "tagPlaceholder": "태그 입력 후 Enter",
     "tagsFull": "태그는 {{max}}개까지 붙일 수 있습니다",
-    "removeTag": "{{tag}} 태그 제거"
+    "removeTag": "{{tag}} 태그 제거",
+    "addSuggestedTag": "{{tag}} 태그 붙이기"
   },
   "import": {
     "title": "자산 등록",
-    "description": "파일을 올리면 버전 1로 등록됩니다. 3D 자산은 GLB, 도면은 PDF·SVG·이미지, CAD는 DWG·DXF·STEP·IGES를 받습니다.",
+    "description": "파일을 올리면 버전 1로 등록됩니다. 3D 자산은 GLB, 배경은 EXR, 도면은 PDF·SVG·이미지, CAD는 DWG·DXF·STEP·IGES를 받습니다.",
     "pickFile": "파일 선택 또는 여기에 끌어다 놓기",
-    "formats": "GLB, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
+    "formats": "GLB, EXR, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
     "changeFile": "다른 파일",
     "analyzing": "파일을 확인하는 중",
     "noteHint": "이 버전에서 달라진 점을 적어 두면 버전 목록에 함께 보입니다.",
+    "tagsHint": "같은 종류에서 이미 쓰는 태그를 눌러 붙이면 탐색의 체크박스가 갈리지 않습니다.",
     "startsAsDraft": "등록한 자산은 초안 상태로 시작합니다.",
     "localOnly": "파일은 이 브라우저에만 저장됩니다.",
     "submit": "등록",
     "duplicate": "같은 내용의 파일이 이미 있습니다: {{names}}. 그 자산의 새 버전이 아닌지 확인하세요.",
     "large": "100 MB가 넘는 파일입니다. 화면에서 여는 데 시간이 걸릴 수 있습니다.",
     "problem": {
-      "unsupported": ".{{format}} 형식은 등록할 수 없습니다. GLB, 도면 또는 CAD 형식의 파일을 고르세요.",
+      "unsupported": ".{{format}} 형식은 등록할 수 없습니다. GLB, EXR, 도면 또는 CAD 형식의 파일을 고르세요.",
       "empty": "빈 파일입니다. 다른 파일을 고르세요.",
       "glb": {
         "too-short": "GLB 파일이 아닙니다. 파일이 너무 짧습니다.",
@@ -178,8 +165,7 @@
         "bad-version": "glTF 2.0이 아닌 GLB입니다. glTF 2.0으로 다시 내보내세요.",
         "bad-length": "GLB 파일이 손상됐습니다. 헤더의 길이와 실제 크기가 다릅니다. 전송 중 잘렸을 수 있습니다."
       }
-    },
-    "categoryPlaceholder": "예: indoor, hull — 비우면 종류 바로 아래에 놓입니다"
+    }
   },
   "detail": {
     "backToLibrary": "라이브러리로",
@@ -245,6 +231,7 @@
     "sourceStored": "미리 재어 둔 값입니다. LOD가 있으면 LOD 0 기준입니다.",
     "pending": "파일이 열리면 통계를 잽니다.",
     "drawing": "도면·CAD에는 기하 통계가 없습니다. 파일 정보는 정보 탭에 있습니다.",
+    "environment": "배경에는 기하 통계가 없습니다. 파일 정보는 정보 탭에 있습니다.",
     "budgetHint": "씬에 여러 개 놓이는 자산이면 프리미티브 병합이나 LOD를 검토하세요. 등록을 막는 기준은 아닙니다.",
     "budgetHeading": "권장 상한 대비",
     "budgetLegend": "막대는 권장 상한에서 가득 찹니다. 넘어도 등록은 됩니다."
@@ -267,11 +254,12 @@
       "published": "게시",
       "withdrawn": "철회"
     },
-    "kindMismatch": "이 자산과 다른 종류의 파일입니다. 3D 자산에는 GLB를, 도면에는 PDF·SVG·이미지를, CAD에는 CAD 파일을 올리세요.",
+    "kindMismatch": "이 자산과 다른 종류의 파일입니다. 3D 자산에는 GLB를, 배경에는 EXR을, 도면에는 PDF·SVG·이미지를, CAD에는 CAD 파일을 올리세요.",
     "sameContent": "이 자산에 이미 있는 버전과 같은 내용의 파일입니다.",
     "catalogNotice": "씬은 버전 1의 배포 파일을 사용합니다. 새 버전을 씬에 반영하려면 자산 파이프라인(assets-src → optimize:glb)으로 배포 파일을 교체해야 합니다.",
     "revisionShort": "Rev {{revision}}",
     "paletteNotice": "3D 화면 편집의 팔레트는 현재 버전의 파일을 놓습니다. 이미 씬에 놓은 것은 놓을 때의 버전 그대로입니다.",
+    "environmentNotice": "씬 배경은 3D 화면 편집의 배경 선택에 있는 배포 파일을 씁니다. 여기서 등록한 배경과 새 버전은 아직 씬에 적용되지 않습니다.",
     "remove": "버전 삭제",
     "removeTitle": "v{{version}} 버전을 삭제할까요?",
     "removeHint": "이 버전의 파일이 지워지며 되돌릴 수 없습니다. 게시된 적 없는 버전만 지울 수 있습니다."
@@ -288,6 +276,7 @@
     "count": "{{count}}개",
     "openEditor": "3D 화면 편집에서 열기",
     "drawing": "도면·CAD는 씬에 배치하지 않습니다. 연결된 자산은 정보 탭에서 봅니다.",
+    "environment": "배경은 씬에 배치하지 않습니다. 씬의 배경은 3D 화면 편집의 배경 선택에서 고릅니다.",
     "noneUserMapHint": "등록한 지도는 아직 3D 화면 편집의 맵 탭에 나타나지 않습니다."
   },
   "activity": {
@@ -315,7 +304,9 @@
   },
   "viewer": {
     "loading": "모델을 불러오는 중 {{percent}}%",
+    "loadingEnvironment": "배경을 불러오는 중 {{percent}}%",
     "loadFailed": "모델을 열지 못했습니다",
+    "environmentLoadFailed": "배경을 열지 못했습니다",
     "loadFailedHint": "파일이 없거나 손상됐을 수 있습니다. 다른 버전을 열어 보거나 파일을 다시 올리세요.",
     "viewMode": "표시 방식",
     "mode": {
@@ -343,7 +334,8 @@
       "top": "평면"
     },
     "fit": "화면에 맞추기",
-    "display": "표시 옵션"
+    "display": "표시 옵션",
+    "panoramaHint": "끌어서 둘러보기"
   },
   "drawing": {
     "noPreview": "이 형식은 화면에서 미리 볼 수 없습니다",
@@ -478,9 +470,11 @@
   },
   "tree": {
     "root": "자산 라이브러리",
+    "all": "전체",
     "path": "위치",
     "expand": "{{name}} 펼치기",
-    "collapse": "{{name}} 접기"
+    "collapse": "{{name}} 접기",
+    "tagsOf": "{{name}} 태그"
   },
   "optimize": {
     "label": "모델 최적화",

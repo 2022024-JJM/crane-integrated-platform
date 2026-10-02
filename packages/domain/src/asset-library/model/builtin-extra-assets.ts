@@ -16,7 +16,6 @@ export const builtinRuntimeModelSources: BuiltinAssetSource[] = [
     kind: 'model',
     name: 'Crane (MRO)',
     path: '/models/crane.glb',
-    category: 'runtime',
     tags: ['runtime', 'MRO'],
   },
   {
@@ -24,7 +23,6 @@ export const builtinRuntimeModelSources: BuiltinAssetSource[] = [
     kind: 'model',
     name: 'Gantry Crane (MRO)',
     path: '/models/gantry_crane.glb',
-    category: 'runtime',
     tags: ['runtime', 'MRO'],
   },
   {
@@ -32,7 +30,6 @@ export const builtinRuntimeModelSources: BuiltinAssetSource[] = [
     kind: 'model',
     name: 'TTC-27 (MRO)',
     path: '/models/TTC-27.glb',
-    category: 'runtime',
     tags: ['runtime', 'MRO'],
   },
   {
@@ -40,25 +37,20 @@ export const builtinRuntimeModelSources: BuiltinAssetSource[] = [
     kind: 'model',
     name: 'Goliath Crane Body',
     path: '/models/goliath_crane_body.glb',
-    category: 'runtime',
-    sites: ['philly'],
-    tags: ['runtime', 'MRO', 'part'],
+    tags: ['runtime', 'MRO', 'part', 'philly'],
   },
   {
     id: 'rt-goliath-crane-trolley',
     kind: 'model',
     name: 'Goliath Crane Trolley',
     path: '/models/goliath_crane_trolley.glb',
-    category: 'runtime',
-    sites: ['philly'],
-    tags: ['runtime', 'MRO', 'part'],
+    tags: ['runtime', 'MRO', 'part', 'philly'],
   },
   {
     id: 'rt-man',
     kind: 'model',
     name: 'Worker',
     path: '/models/man.glb',
-    category: 'runtime',
     tags: ['runtime', 'collision-guard'],
   },
   {
@@ -66,7 +58,6 @@ export const builtinRuntimeModelSources: BuiltinAssetSource[] = [
     kind: 'model',
     name: 'Vehicle',
     path: '/models/car.glb',
-    category: 'runtime',
     tags: ['runtime', 'collision-guard'],
   },
   {
@@ -74,7 +65,6 @@ export const builtinRuntimeModelSources: BuiltinAssetSource[] = [
     kind: 'model',
     name: 'Forklift',
     path: '/models/fork_lift.glb',
-    category: 'runtime',
     tags: ['runtime', 'collision-guard'],
   },
 ];
@@ -98,7 +88,5 @@ export const builtinDrawingSources: BuiltinAssetSource[] =
     kind: 'drawing',
     name: `${name} Equipment Layout`,
     path: `/drawings/equipment-layout/${file}.webp`,
-    category: 'equipment-layout',
-    sites: ['okpo'],
-    tags: ['equipment-layout', 'indoor'],
+    tags: ['equipment-layout', 'indoor', 'okpo'],
   }));

@@ -15,7 +15,6 @@ export type { AssetFileUrlState } from './model/use-asset-file-url';
 export { useAssetFileUrl } from './model/use-asset-file-url';
 export { collectBuiltinAssetSources } from './lib/builtin-asset-sources';
 export {
-  getAssetSiteByRegionId,
   groupRegionsBySceneFile,
   loadSceneAssetSources,
 } from './lib/scene-asset-sources';

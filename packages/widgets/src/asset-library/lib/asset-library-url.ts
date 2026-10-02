@@ -1,14 +1,12 @@
 import {
   ASSET_ATTENTION_KINDS,
   ASSET_KINDS,
-  ASSET_SITES,
   ASSET_SORT_KEYS,
   ASSET_VERSION_STATUSES,
   DEFAULT_ASSET_QUERY,
   type AssetAttentionKind,
   type AssetKind,
   type AssetQuery,
-  type AssetSiteFilter,
   type AssetSortKey,
   type AssetVersionStatus,
 } from '@crane/domain/asset-library';
@@ -22,6 +20,7 @@ import {
  */
 
 const LIST_SEPARATOR = ',';
+const RETIRED_PARAMS = ['site', 'cat'];
 
 /** 목록 옆 미리보기에 올린 자산 id. 필터가 아니라 보기 상태다. */
 export const PREVIEW_PARAM = 'preview';
@@ -36,20 +35,11 @@ function readList<T extends string>(
   return allowed.filter((item) => values.includes(item));
 }
 
-function readSite(raw: string | null): AssetSiteFilter {
-  if (raw === 'common') return 'common';
-  return (ASSET_SITES as readonly string[]).includes(raw ?? '')
-    ? (raw as AssetSiteFilter)
-    : 'all';
-}
-
 export function parseAssetQuery(params: URLSearchParams): AssetQuery {
   const sort = params.get('sort');
   return {
     text: params.get('q') ?? '',
-    site: readSite(params.get('site')),
     kinds: readList<AssetKind>(params.get('kind'), ASSET_KINDS),
-    category: params.get('cat')?.trim() || null,
     statuses: readList<AssetVersionStatus>(
       params.get('status'),
       ASSET_VERSION_STATUSES,
@@ -85,10 +75,11 @@ export function writeAssetQuery(
     if (value) next.set(key, value);
     else next.delete(key);
   };
+  // 없어진 필터(조선소·분류)의 파라미터 — 옛 링크로 들어온 것이 주소에
+  // 뜻 없이 남아 다시 공유되지 않게 지운다.
+  for (const key of RETIRED_PARAMS) next.delete(key);
   put('q', query.text.trim());
-  put('site', query.site === 'all' ? '' : query.site);
   put('kind', query.kinds.join(LIST_SEPARATOR));
-  put('cat', query.category ?? '');
   put('status', query.statuses.join(LIST_SEPARATOR));
   put('tag', query.tags.join(LIST_SEPARATOR));
   put('collection', query.collectionId ?? '');
@@ -97,12 +88,6 @@ export function writeAssetQuery(
   put('sort', query.sort === DEFAULT_ASSET_QUERY.sort ? '' : query.sort);
   put('rev', query.reverse ? '1' : '');
   return next;
-}
-
-export function toggleListValue<T>(list: readonly T[], value: T): T[] {
-  return list.includes(value)
-    ? list.filter((item) => item !== value)
-    : [...list, value];
 }
 
 export const DETAIL_TABS = [

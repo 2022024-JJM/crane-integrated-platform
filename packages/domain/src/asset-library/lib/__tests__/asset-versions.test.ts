@@ -213,20 +213,20 @@ describe('updateAssetMetadata', () => {
     const before = asset({ name: 'A', tags: ['x'] });
     const after = updateAssetMetadata(
       before,
-      { name: 'B', tags: ['x'], sites: ['okpo'] },
+      { name: 'B', tags: ['x'], owner: 'kim' },
       ctx(),
     );
-    expect(after).toMatchObject({ name: 'B', sites: ['okpo'] });
+    expect(after).toMatchObject({ name: 'B', owner: 'kim' });
     expect(after.history.at(-1)).toMatchObject({
       action: 'metadata',
-      fields: ['name', 'sites'],
+      fields: ['name', 'owner'],
     });
   });
 
   it('달라진 것이 없으면 같은 참조를 돌려준다', () => {
-    const before = asset({ name: 'A', tags: ['x'], sites: ['okpo'] });
+    const before = asset({ name: 'A', tags: ['x', 'okpo'] });
     expect(
-      updateAssetMetadata(before, { name: 'A', tags: ['x'], sites: ['okpo'] }, ctx()),
+      updateAssetMetadata(before, { name: 'A', tags: ['x', 'okpo'] }, ctx()),
     ).toBe(before);
     expect(updateAssetMetadata(before, {}, ctx())).toBe(before);
     // 없는 도면 번호를 빈 값으로 "고치는" 것도 변화가 아니다.
@@ -324,9 +324,7 @@ describe('createUserAssetRecord', () => {
         kind: 'drawing',
         name: 'New',
         description: '',
-        category: '',
-        sites: ['philly'],
-        tags: [],
+        tags: ['philly'],
         file,
         note: 'first',
         drawingNo: 'D-100',

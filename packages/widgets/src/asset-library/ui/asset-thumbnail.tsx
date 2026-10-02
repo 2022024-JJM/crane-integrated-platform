@@ -39,6 +39,9 @@ export const AssetThumbnail = memo(function AssetThumbnail({
     url = file.url;
   }
   const showImage = url !== null && failedUrl !== url;
+  // 배경의 썸네일은 화면을 가득 채운 그림이다 — 물체처럼 받침 위에 띄우지
+  // 않고 자리를 채운다.
+  const cover = asset.kind === 'environment';
 
   return (
     <div
@@ -56,9 +59,10 @@ export const AssetThumbnail = memo(function AssetThumbnail({
           loading="lazy"
           draggable={false}
           className={cn(
-            'absolute inset-0 h-full w-full object-contain',
+            'absolute inset-0 h-full w-full',
+            cover ? 'object-cover' : 'object-contain',
             // 도면은 종이처럼 여백을 두고, 3D 썸네일은 가장자리에 닿지 않게.
-            source.kind === 'image' ? 'p-[7%]' : 'p-[4%]',
+            !cover && (source.kind === 'image' ? 'p-[7%]' : 'p-[4%]'),
           )}
           onError={() => setFailedUrl(url)}
         />

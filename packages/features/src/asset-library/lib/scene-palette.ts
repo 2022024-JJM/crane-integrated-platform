@@ -14,7 +14,7 @@ import {
  *
  * 카탈로그는 "어떤 파일이 있는가" 를 알고, 라이브러리는 "그 자산이 지금
  * 무엇이라 불리고 어떤 상태인가" 를 안다. 팔레트는 둘을 합쳐, 라이브러리가
- * 말하는 이름·분류·썸네일로 보이고 **게시된 자산만** 놓게 한다.
+ * 말하는 이름·묶음·썸네일로 보이고 **게시된 자산만** 놓게 한다.
  * 이 화면에서 등록한 모델도 게시하면 팔레트에 나온다.
  *
  * 씬은 자산을 파일 경로로 참조한다 — 팔레트는 놓는 순간의 파일(카탈로그
@@ -34,7 +34,7 @@ export interface ScenePaletteModel {
   item: SceneModelCatalogItem;
   /** 코드 카탈로그의 항목인가(아니면 이 화면에서 등록한 자산). */
   fromCatalog: boolean;
-  /** 팔레트의 묶음 — 라이브러리의 분류. 비어 있으면 빈 문자열. */
+  /** 팔레트의 묶음(`resolvePaletteGroup`). 정해지지 않으면 빈 문자열. */
   group: string;
   /** 라이브러리 자산 id. 라이브러리에 없는 카탈로그 항목은 null. */
   assetId: string | null;
@@ -51,15 +51,37 @@ function toThumbnail(asset: AssetRecord): ScenePaletteModel['thumbnail'] {
   return { path: thumbnail.ref.path, stamp: thumbnail.updatedAt };
 }
 
+/** 팔레트의 묶음이 될 수 있는 값 — 카탈로그의 모델 분류(지도는 맵 탭이 맡는다). */
+type PaletteGroup = Exclude<SceneModelCategory, 'map'>;
+const PALETTE_GROUPS = SCENE_MODEL_CATEGORIES.filter(
+  (category): category is PaletteGroup => category !== 'map',
+);
+
+/**
+ * 자산의 팔레트 묶음. 태그 가운데 묶음 이름(`indoor`·`outdoor`)인 것이 정한다 —
+ * 둘 다 있으면 앞에 적힌 태그다. 그런 태그가 없으면 `fallback`(카탈로그 자산은
+ * 카탈로그의 분류, 등록한 자산은 빈 묶음).
+ *
+ * 묶음을 옮기려면 라이브러리에서 그 태그를 바꾼다.
+ */
+export function resolvePaletteGroup(
+  tags: readonly string[],
+  fallback: string,
+): string {
+  for (const tag of tags) {
+    const key = tag.toLowerCase();
+    const group = PALETTE_GROUPS.find((item) => item === key);
+    if (group) return group;
+  }
+  return fallback;
+}
+
 /**
  * 등록한 자산의 카탈로그 분류. 씬에 놓을 때는 쓰이지 않는 값이다(팔레트의
  * 묶음은 `group` 이 맡는다) — 타입이 요구하는 자리를 가장 가까운 값으로 채운다.
  */
-function toCatalogCategory(category: string): SceneModelCategory {
-  return (SCENE_MODEL_CATEGORIES as readonly string[]).includes(category) &&
-    category !== 'map'
-    ? (category as SceneModelCategory)
-    : 'outdoor';
+function toCatalogCategory(group: string): SceneModelCategory {
+  return PALETTE_GROUPS.find((item) => item === group) ?? 'outdoor';
 }
 
 function blockReason(status: AssetVersionStatus): ScenePaletteBlockReason | null {
@@ -111,7 +133,7 @@ export function buildScenePaletteModels(
       // (경로·스케일)은 카탈로그가 원천이고, 씬과 다른 화면이 그 값을 쓴다.
       item: { ...item, label: asset.name || item.label },
       fromCatalog: true,
-      group: asset.category,
+      group: resolvePaletteGroup(asset.tags, item.category),
       assetId: asset.id,
       status,
       blocked: blockReason(status),
@@ -125,16 +147,17 @@ export function buildScenePaletteModels(
   for (const asset of registered) {
     const current = getCurrentAssetVersion(asset);
     const ref = current.file.ref;
+    const group = resolvePaletteGroup(asset.tags, '');
     models.push({
       item: {
         id: asset.id,
         label: asset.name,
-        category: toCatalogCategory(asset.category),
+        category: toCatalogCategory(group),
         path: ref.storage === 'public' ? ref.path : '',
         defaultScale: asset.defaultScale,
       },
       fromCatalog: false,
-      group: asset.category,
+      group,
       assetId: asset.id,
       status: current.status,
       blocked:
@@ -191,8 +214,8 @@ export interface ScenePaletteGroup {
 
 /**
  * 팔레트의 묶음 목록. `preferred`(카탈로그의 분류)가 앞에 오고 자산이 없어도
- * 나온다. 라이브러리에서 새로 생긴 분류는 그 뒤에 이름순으로 붙는다.
- * 분류가 빈 자산은 빈 문자열 묶음에 모인다.
+ * 나온다. 그 밖의 묶음은 그 뒤에 이름순으로 붙는다. 묶음이 정해지지 않은
+ * 자산은 빈 문자열 묶음에 모인다.
  */
 export function listScenePaletteGroups(
   models: readonly ScenePaletteModel[],

@@ -121,3 +121,60 @@ export function renderThumbnail(
   );
   return output;
 }
+
+/**
+ * 원본 한가운데에서 `aspect`(가로 ÷ 세로) 비율로 잘라낼 수 있는 가장 큰 자리.
+ * 배경(파노라마)처럼 화면을 가득 채운 그림의 썸네일에 쓴다 — 물체의 범위를
+ * 찾을 것이 없어, 비율만 맞춰 가운데를 쓴다. 크기나 비율이 올바르지 않으면
+ * 원본 전체를 돌려준다.
+ */
+export function centerCropRect(
+  source: Pick<PixelRect, 'width' | 'height'>,
+  aspect: number,
+): PixelRect {
+  const full = { x: 0, y: 0, width: source.width, height: source.height };
+  if (!(source.width > 0) || !(source.height > 0)) return full;
+  if (!Number.isFinite(aspect) || aspect <= 0) return full;
+  if (source.width / source.height > aspect) {
+    const width = source.height * aspect;
+    return {
+      x: (source.width - width) / 2,
+      y: 0,
+      width,
+      height: source.height,
+    };
+  }
+  const height = source.width / aspect;
+  return { x: 0, y: (source.height - height) / 2, width: source.width, height };
+}
+
+/**
+ * 방금 렌더한 WebGL 캔버스의 가운데를 `width × height` 로 잘라 채운 썸네일.
+ * 2D 컨텍스트를 못 얻거나 캔버스가 비어 있으면 null.
+ */
+export function renderCoverThumbnail(
+  source: HTMLCanvasElement,
+  width: number,
+  height: number,
+): HTMLCanvasElement | null {
+  if (source.width <= 0 || source.height <= 0) return null;
+  const output = document.createElement('canvas');
+  output.width = width;
+  output.height = height;
+  const context = output.getContext('2d');
+  if (!context) return null;
+  const crop = centerCropRect(source, width / height);
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(
+    source,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    width,
+    height,
+  );
+  return output;
+}

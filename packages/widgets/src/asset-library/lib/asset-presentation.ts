@@ -55,6 +55,10 @@ export function withCacheStamp(url: string, stamp: string): string {
   return fragment === undefined ? stamped : `${stamped}#${fragment}`;
 }
 
+/** 뷰어 위 조작 묶음 — 배경이 무엇이든 읽히는 어두운 유리판. */
+export const VIEWER_GLASS_BAR =
+  'flex h-9 items-center gap-0.5 rounded-lg bg-black/50 p-1 shadow-sm backdrop-blur-md';
+
 /** 카드 격자 — 최소 폭으로 칸 수를 정한다. 불러오는 동안의 자리 표시도 같이 쓴다. */
 export const ASSET_CARD_GRID =
   'grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3';
@@ -184,4 +188,20 @@ export function parseTagInput(raw: string): string[] {
     .split(/[,\n]/)
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+/** 권할 태그 — 이미 붙은 것(대소문자 무시)을 뺀 나머지. 순서는 그대로다. */
+export function listTagSuggestions(
+  suggestions: readonly string[],
+  current: readonly string[],
+): string[] {
+  const taken = new Set(current.map((tag) => tag.toLowerCase()));
+  const offered: string[] = [];
+  for (const tag of suggestions) {
+    const key = tag.toLowerCase();
+    if (taken.has(key)) continue;
+    taken.add(key);
+    offered.push(tag);
+  }
+  return offered;
 }

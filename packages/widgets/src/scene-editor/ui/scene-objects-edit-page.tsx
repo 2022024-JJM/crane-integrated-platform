@@ -1044,13 +1044,13 @@ function ProjectPalettePanel({
   );
   const [assetSearch, setAssetSearch] = useState('');
   const [showThumbnailGenerator, setShowThumbnailGenerator] = useState(false);
-  // 묶음은 라이브러리의 분류를 따른다 — 카탈로그의 분류가 앞에 오고,
-  // 라이브러리에서 새로 붙인 분류가 그 뒤에 붙는다.
+  // 묶음은 라이브러리의 태그(indoor·outdoor)가 정한다 — 카탈로그의 분류가
+  // 앞에 오고, 묶음이 정해지지 않은 자산은 그 뒤의 빈 묶음에 모인다.
   const groups = useMemo(
     () => listScenePaletteGroups(items, MODEL_PANEL_CATEGORIES),
     [items],
   );
-  // 고른 묶음이 사라지면(분류를 고쳤을 때) 첫 묶음으로 돌아간다.
+  // 고른 묶음이 사라지면(태그를 고쳤을 때) 첫 묶음으로 돌아간다.
   const activeCategory = groups.some((entry) => entry.group === selectedCategory)
     ? selectedCategory
     : (groups[0]?.group ?? DEFAULT_MODEL_CATEGORY);

@@ -3,13 +3,14 @@ import { useId, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  ASSET_CATEGORY_MAX,
   ASSET_DESCRIPTION_MAX,
   ASSET_DRAWING_NO_MAX,
   ASSET_NAME_MAX,
   ASSET_OWNER_MAX,
   formatBytes,
   isDocumentAssetKind,
+  isGeometryAssetKind,
+  listAssetKindTags,
   resolveVersionSizeBytes,
   type AssetMetadataPatch,
   type AssetRecord,
@@ -27,7 +28,6 @@ import { AssetKindIcon } from './asset-badges';
 import {
   CommitInput,
   CommitTextArea,
-  SitePicker,
   TagEditor,
 } from './asset-form-fields';
 
@@ -100,15 +100,10 @@ export function AssetInfoTab({
   const { t } = useTranslation();
   const report = useAssetSaveReport();
   const assets = useAssetLibraryStore((state) => state.assets);
-  const knownCategories = useMemo(
-    () =>
-      [
-        ...new Set(
-          assets
-            .filter((item) => item.kind === asset.kind && item.category)
-            .map((item) => item.category),
-        ),
-      ].sort((x, y) => x.localeCompare(y, undefined, { numeric: true })),
+  // 같은 종류에 이미 있는 태그를 권한다 — 철자가 갈리면 탐색 계층의
+  // 체크박스가 둘로 나뉜다.
+  const kindTags = useMemo(
+    () => listAssetKindTags(assets, asset.kind),
     [asset.kind, assets],
   );
   const collections = useAssetLibraryStore((state) => state.collections);
@@ -164,7 +159,6 @@ export function AssetInfoTab({
     name: `${baseId}-name`,
     description: `${baseId}-description`,
     owner: `${baseId}-owner`,
-    category: `${baseId}-category`,
     drawingNo: `${baseId}-drawing-no`,
     tags: `${baseId}-tags`,
   };
@@ -202,25 +196,6 @@ export function AssetInfoTab({
             onCommit={(owner) => patch({ owner })}
           />
         </PropertyRow>
-        <PropertyRow
-          label={t('asset-library:field.category')}
-          htmlFor={ids.category}
-        >
-          <CommitInput
-            id={ids.category}
-            value={asset.category}
-            maxLength={ASSET_CATEGORY_MAX}
-            // 같은 종류에 이미 있는 분류를 권한다 — 철자가 갈리면 탐색 계층의
-            // 마디가 둘로 나뉜다.
-            listId={`${ids.category}-options`}
-            onCommit={(category) => patch({ category })}
-          />
-          <datalist id={`${ids.category}-options`}>
-            {knownCategories.map((item) => (
-              <option key={item} value={item} />
-            ))}
-          </datalist>
-        </PropertyRow>
         {isDocumentAssetKind(asset.kind) ? (
           <PropertyRow
             label={t('asset-library:field.drawingNo')}
@@ -237,12 +212,6 @@ export function AssetInfoTab({
       </Section>
 
       <Section title={t('asset-library:info.classification')}>
-        <PropertyRow label={t('asset-library:field.site')} top>
-          <SitePicker
-            value={asset.sites}
-            onChange={(sites) => patch({ sites })}
-          />
-        </PropertyRow>
         <PropertyRow
           label={t('asset-library:field.tags')}
           htmlFor={ids.tags}
@@ -251,6 +220,7 @@ export function AssetInfoTab({
           <TagEditor
             id={ids.tags}
             value={asset.tags}
+            suggestions={kindTags}
             onChange={(tags) => patch({ tags })}
           />
         </PropertyRow>
@@ -405,7 +375,7 @@ export function AssetInfoTab({
             </span>
           </ReadOnlyRow>
           <ReadOnlyRow label="ID">{asset.id}</ReadOnlyRow>
-          {isDocumentAssetKind(asset.kind) ? null : (
+          {isGeometryAssetKind(asset.kind) ? (
             <ReadOnlyRow label={t('asset-library:field.defaultScale')}>
               {editable ? (
                 <InputNumber
@@ -423,16 +393,16 @@ export function AssetInfoTab({
                 asset.defaultScale.join(' × ')
               )}
             </ReadOnlyRow>
-          )}
+          ) : null}
           <ReadOnlyRow label={t('asset-library:field.origin')}>
             {t(`asset-library:origin.${asset.origin}`)}
           </ReadOnlyRow>
         </dl>
-        {isDocumentAssetKind(asset.kind) ? null : (
+        {isGeometryAssetKind(asset.kind) ? (
           <p className="text-muted-foreground text-xs leading-relaxed">
             {t('asset-library:info.defaultScaleHint')}
           </p>
-        )}
+        ) : null}
       </Section>
     </div>
   );

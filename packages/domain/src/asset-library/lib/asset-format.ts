@@ -1,6 +1,6 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
 import {
-  isDocumentAssetKind,
+  isGeometryAssetKind,
   type AssetKind,
   type AssetStats,
 } from '../model/types';
@@ -123,7 +123,7 @@ export function evaluateAssetBudget(
   kind: AssetKind,
   stats: AssetStats,
 ): AssetBudgetWarning[] {
-  if (isDocumentAssetKind(kind)) return [];
+  if (!isGeometryAssetKind(kind)) return [];
   const warnings: AssetBudgetWarning[] = [];
   const check = (metric: AssetBudgetMetric, value: number, limit: number) => {
     if (value > limit) warnings.push({ metric, value, limit });

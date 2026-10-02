@@ -7,7 +7,6 @@ import {
   createEmptyAssetLibraryDocument,
   sanitizeAssetLibraryDocument,
   sanitizeAssetRecord,
-  sanitizeAssetSites,
   sanitizeAssetStats,
   sanitizeAssetStatsTable,
   sanitizeAssetTags,
@@ -78,7 +77,6 @@ describe('sanitizeAssetRecord', () => {
       origin: 'whatever',
       name: 42,
       description: null,
-      sites: 'okpo',
       tags: { a: 1 },
       owner: [],
       defaultScale: [1, 'x', 1],
@@ -92,7 +90,6 @@ describe('sanitizeAssetRecord', () => {
       // 이름이 비면 id 로 대신한다.
       name: 'a',
       description: '',
-      sites: [],
       tags: [],
       owner: '',
       defaultScale: [1, 1, 1],
@@ -236,13 +233,28 @@ describe('sanitizeAssetTags', () => {
   });
 });
 
-describe('sanitizeAssetSites', () => {
-  it('아는 조선소만 표의 순서로 남긴다', () => {
-    expect(sanitizeAssetSites(['philly', 'mars', 'okpo', 'okpo'])).toEqual([
-      'okpo',
-      'philly',
-    ]);
-    expect(sanitizeAssetSites('okpo')).toEqual([]);
+describe('sanitizeAssetRecord — 구버전 필드', () => {
+  it('조선소·분류 필드가 남은 옛 레코드도 읽고, 그 키는 버린다', () => {
+    const result = sanitizeAssetRecord({
+      ...asset({ tags: ['crane'] }),
+      sites: ['okpo'],
+      category: 'indoor',
+    });
+    expect(result).not.toBeNull();
+    expect(result).not.toHaveProperty('sites');
+    expect(result).not.toHaveProperty('category');
+    // 옛 값은 태그로 옮겨 오지 않는다 — 배포 문서는 이미 옮겨져 있다.
+    expect(result?.tags).toEqual(['crane']);
+  });
+
+  it('옛 필드가 오염돼 있어도 레코드를 버리지 않는다', () => {
+    for (const legacy of [
+      { sites: 'okpo', category: 42 },
+      { sites: null, category: null },
+      { sites: [null, 7], category: { a: 1 } },
+    ]) {
+      expect(sanitizeAssetRecord({ ...asset(), ...legacy })).toEqual(asset());
+    }
   });
 });
 

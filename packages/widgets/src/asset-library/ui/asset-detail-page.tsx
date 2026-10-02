@@ -26,7 +26,6 @@ import {
   getAssetPreviewMode,
   getAssetVersion,
   getCurrentAssetVersion,
-  getPrimaryAssetSite,
   resolveVersionSizeBytes,
   resolveVersionStats,
   toMeterSize,
@@ -79,6 +78,7 @@ import { AssetKindIcon, AssetStatusBadge } from './asset-badges';
 import { AssetBreadcrumb } from './asset-breadcrumb';
 import { AssetCompareView } from './asset-compare-view';
 import { AssetDrawingViewer } from './asset-drawing-viewer';
+import { AssetEnvironmentViewer } from './asset-environment-viewer';
 import { AssetInfoTab } from './asset-info-tab';
 import { AssetLifecycle } from './asset-lifecycle';
 import { AssetSaveBanner } from './asset-save-banner';
@@ -396,7 +396,7 @@ function AssetDetailView({
   );
 
   // 썸네일이 없는 자산은 처음 열렸을 때 한 번 찍어 둔다. 뷰어가 카메라를 맞춘
-  // 뒤에 부르므로 모델 전체가 담긴다.
+  // 뒤에 부르므로 모델 전체가 담긴다(배경은 처음 보이는 시점이 담긴다).
   const handleReady = useCallback(() => {
     if (!needsThumbnail || !isCurrentVersion) return;
     if (autoThumbnailTriedRef.current) return;
@@ -539,17 +539,13 @@ function AssetDetailView({
           <AssetBreadcrumb
             hideRoot
             className="mt-1"
-            scope={{
-              site: getPrimaryAssetSite(asset),
-              kind: asset.kind,
-              category: asset.category || null,
-            }}
+            scope={{ kind: asset.kind }}
             renderCrumb={(target, label) => (
               <AppLink
                 to={scopeHref(target)}
                 className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 truncate rounded text-xs outline-none hover:underline focus-visible:ring-2"
               >
-                {target.kind !== null && target.category === null ? (
+                {target.kind !== null ? (
                   <AssetKindIcon kind={target.kind} />
                 ) : null}
                 {label}
@@ -646,6 +642,14 @@ function AssetDetailView({
               titleBlock={titleBlock}
               handleRef={viewerRef}
               onLoaded={handleLoaded}
+              onReady={handleReady}
+              onSaveThumbnail={() => void handleSaveThumbnail()}
+            />
+          ) : previewMode === 'environment' ? (
+            <AssetEnvironmentViewer
+              url={file.url}
+              titleBlock={titleBlock}
+              handleRef={viewerRef}
               onReady={handleReady}
               onSaveThumbnail={() => void handleSaveThumbnail()}
             />

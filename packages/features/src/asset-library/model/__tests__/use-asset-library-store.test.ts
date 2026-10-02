@@ -1,5 +1,4 @@
 import {
-  ASSET_CATEGORY_MAX,
   AssetLibraryConflictError,
 } from '@crane/domain/asset-library';
 // @vitest-environment jsdom
@@ -21,8 +20,8 @@ const builtin: BuiltinAssetSource = {
   kind: 'model',
   name: 'Okpo TTC',
   path: '/models/okpo_ttc.glb',
-  category: 'outdoor',
   catalogId: 'okpo-ttc',
+  tags: ['outdoor'],
 };
 
 const emptyDocument: AssetLibraryDocument = {
@@ -118,7 +117,6 @@ function setup(initial?: AssetLibraryDocument) {
         {
           sceneFile: 'okpo.json',
           regionIds: ['dock-1'],
-          site: 'okpo',
           editorPath: '/outdoor-work/dock-1/3d-viewer-edit',
           modelPaths: ['/models/okpo_ttc.glb', '/models/okpo_ttc.glb'],
           mapPaths: [],
@@ -180,14 +178,18 @@ describe('메타데이터·상태', () => {
     await store.getState().load();
 
     expect(
-      await store.getState().updateMetadata('okpo-ttc', { sites: ['okpo'] }, 'me'),
+      await store
+        .getState()
+        .updateMetadata('okpo-ttc', { tags: ['outdoor', 'okpo'] }, 'me'),
     ).toBe(true);
     expect(repo.saved).toHaveLength(1);
-    expect(repo.saved[0].assets[0].sites).toEqual(['okpo']);
+    expect(repo.saved[0].assets[0].tags).toEqual(['outdoor', 'okpo']);
 
     const before = store.getState().assets;
     expect(
-      await store.getState().updateMetadata('okpo-ttc', { sites: ['okpo'] }, 'me'),
+      await store
+        .getState()
+        .updateMetadata('okpo-ttc', { tags: ['outdoor', 'okpo'] }, 'me'),
     ).toBe(false);
     expect(store.getState().assets).toBe(before);
     expect(repo.saved).toHaveLength(1);
@@ -279,8 +281,7 @@ describe('importAsset', () => {
         kind: 'model',
         name: 'Crane Model',
         description: '',
-        sites: ['philly'],
-        tags: ['crane'],
+        tags: ['crane', 'philly'],
         note: 'first',
         contentHash: 'sha256:abc',
       },
@@ -290,7 +291,7 @@ describe('importAsset', () => {
       id: 'crane-model',
       origin: 'user',
       owner: 'crane.ocean',
-      sites: ['philly'],
+      tags: ['crane', 'philly'],
     });
     expect(record?.versions[0]).toMatchObject({
       version: 1,
@@ -319,7 +320,6 @@ describe('importAsset', () => {
       kind: 'model' as const,
       name: 'Okpo TTC',
       description: '',
-      sites: [],
       tags: [],
       note: '',
       contentHash: null,
@@ -328,31 +328,24 @@ describe('importAsset', () => {
     expect((await store.getState().importAsset(input, 'me'))?.id).toBe('okpo-ttc-3');
   });
 
-  it('분류를 다듬어 싣고, 주지 않으면 비운다', async () => {
+  it('태그 없이 등록하면 종류 바로 아래에 놓인다(조선소·분류 필드는 없다)', async () => {
     const { store } = setup();
     await store.getState().load();
-    const base = {
-      file: glbFile(),
-      kind: 'model' as const,
-      description: '',
-      sites: [],
-      tags: [],
-      note: '',
-      contentHash: null,
-    };
-    const withCategory = await store
-      .getState()
-      .importAsset({ ...base, name: 'A', category: '  hull  ' }, 'me');
-    expect(withCategory?.category).toBe('hull');
-    const without = await store
-      .getState()
-      .importAsset({ ...base, name: 'B' }, 'me');
-    expect(without?.category).toBe('');
-    // 상한을 넘는 분류는 잘라 싣는다.
-    const long = await store
-      .getState()
-      .importAsset({ ...base, name: 'C', category: 'x'.repeat(200) }, 'me');
-    expect(long?.category).toHaveLength(ASSET_CATEGORY_MAX);
+    const record = await store.getState().importAsset(
+      {
+        file: glbFile(),
+        kind: 'model',
+        name: 'Bare',
+        description: '',
+        tags: [],
+        note: '',
+        contentHash: null,
+      },
+      'me',
+    );
+    expect(record?.tags).toEqual([]);
+    expect(record).not.toHaveProperty('sites');
+    expect(record).not.toHaveProperty('category');
   });
 
   it('파일 저장이 실패하면 자산을 만들지 않는다', async () => {
@@ -365,7 +358,6 @@ describe('importAsset', () => {
         kind: 'model',
         name: 'Crane',
         description: '',
-        sites: [],
         tags: [],
         note: '',
         contentHash: null,
@@ -449,7 +441,6 @@ describe('removeAsset', () => {
         kind: 'model',
         name: 'Temp',
         description: '',
-        sites: [],
         tags: [],
         note: '',
         contentHash: null,
@@ -480,7 +471,6 @@ describe('removeAsset', () => {
         kind: 'model',
         name: 'Temp',
         description: '',
-        sites: [],
         tags: [],
         note: '',
         contentHash: null,
@@ -592,7 +582,6 @@ describe('읽기 전·읽기 실패 상태에서는 고치지도 저장하지도
     kind: 'model' as const,
     name: 'Crane',
     description: '',
-    sites: [],
     tags: [],
     note: '',
     contentHash: null,
@@ -667,7 +656,6 @@ describe('removeAsset — 저장 실패', () => {
         kind: 'model',
         name: 'Temp',
         description: '',
-        sites: [],
         tags: [],
         note: '',
         contentHash: null,
@@ -689,7 +677,6 @@ describe('버전 지우기·일괄 작업', () => {
     kind: 'model' as const,
     name,
     description: '',
-    sites: [],
     tags: [],
     note: '',
     contentHash: null,
@@ -731,11 +718,11 @@ describe('버전 지우기·일괄 작업', () => {
     const before = repo.saved.length;
     const changed = await store
       .getState()
-      .updateManyMetadata([a!.id, b!.id, 'nope'], () => ({ category: 'hull' }), 'me');
+      .updateManyMetadata([a!.id, b!.id, 'nope'], () => ({ tags: ['hull'] }), 'me');
     expect(changed).toBe(2);
     expect(repo.saved.length).toBe(before + 1);
     expect(
-      store.getState().assets.filter((x) => x.category === 'hull'),
+      store.getState().assets.filter((x) => x.tags.includes('hull')),
     ).toHaveLength(2);
   });
 
@@ -785,7 +772,6 @@ describe('버전 지우기·일괄 작업', () => {
 describe('등록 시 최적화', () => {
   const base = {
     description: '',
-    sites: [],
     tags: [],
     note: '',
     contentHash: 'sha256:orig',

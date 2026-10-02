@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ASSET_ID_PATTERN, ASSET_KINDS } from '@crane/domain/asset-library';
-import { sceneMapCatalog, sceneModelCatalog } from '@crane/domain/3d';
+import {
+  sceneEnvironmentCatalog,
+  sceneMapCatalog,
+  sceneModelCatalog,
+} from '@crane/domain/3d';
 import { collectBuiltinAssetSources } from '../builtin-asset-sources';
 
 describe('collectBuiltinAssetSources', () => {
@@ -10,6 +14,38 @@ describe('collectBuiltinAssetSources', () => {
     const ids = new Set(sources.map((source) => source.id));
     for (const item of [...sceneModelCatalog, ...sceneMapCatalog]) {
       expect(ids.has(item.id)).toBe(true);
+    }
+  });
+
+  it('씬 배경 카탈로그가 배경 자산으로 들어 있다', () => {
+    expect(sceneEnvironmentCatalog.length).toBeGreaterThan(0);
+    for (const item of sceneEnvironmentCatalog) {
+      const source = sources.find((candidate) => candidate.id === item.id);
+      expect(source, item.id).toBeDefined();
+      expect(source?.kind).toBe('environment');
+      // 카탈로그 경로에는 선행 슬래시가 없다 — public 절대 경로로 맞춰져야
+      // 통계 표·자산 해시 매니페스트의 키와 만난다.
+      expect(source?.path).toBe(`/${item.path}`);
+      // 팔레트로 놓는 자산이 아니다.
+      expect(source?.catalogId).toBeUndefined();
+    }
+  });
+
+  it('모델·지도는 카탈로그의 분류를 첫 태그로 받는다 — 계층의 체크박스 아래에 놓인다', () => {
+    for (const item of sceneModelCatalog) {
+      const source = sources.find((candidate) => candidate.id === item.id);
+      expect(source?.tags, item.id).toEqual([item.category]);
+    }
+    for (const item of sceneMapCatalog) {
+      const source = sources.find((candidate) => candidate.id === item.id);
+      expect(source?.tags, item.id).toEqual([item.kind]);
+    }
+  });
+
+  it('원천에는 조선소·분류 필드가 없다', () => {
+    for (const source of sources) {
+      expect(source, source.id).not.toHaveProperty('sites');
+      expect(source, source.id).not.toHaveProperty('category');
     }
   });
 

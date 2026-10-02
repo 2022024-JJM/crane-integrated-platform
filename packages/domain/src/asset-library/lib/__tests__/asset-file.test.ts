@@ -44,8 +44,10 @@ describe('validateGlbHeader', () => {
 });
 
 describe('getAllowedAssetKinds', () => {
-  it('GLB 는 모델·지도, 보는 문서는 도면, CAD 원본은 CAD', () => {
+  it('GLB 는 모델·지도, EXR 은 배경, 보는 문서는 도면, CAD 원본은 CAD', () => {
     expect(getAllowedAssetKinds('a.GLB')).toEqual(['model', 'map']);
+    expect(getAllowedAssetKinds('sky.exr')).toEqual(['environment']);
+    expect(getAllowedAssetKinds('SKY.EXR')).toEqual(['environment']);
     for (const name of ['a.pdf', 'a.svg', 'a.PNG', 'a.jpeg', 'a.webp']) {
       expect(getAllowedAssetKinds(name)).toEqual(['drawing']);
     }
@@ -61,7 +63,8 @@ describe('getAllowedAssetKinds', () => {
   });
 
   it('받지 않는 형식과 확장자 없는 파일은 빈 배열', () => {
-    for (const name of ['a.gltf', 'a.fbx', 'a.exe', 'noext', '']) {
+    // .hdr 는 받지 않는다 — 씬 배경 로더가 EXR 만 읽는다.
+    for (const name of ['a.gltf', 'a.fbx', 'a.exe', 'a.hdr', 'exr', 'noext', '']) {
       expect(getAllowedAssetKinds(name)).toEqual([]);
     }
   });
@@ -70,6 +73,8 @@ describe('getAllowedAssetKinds', () => {
 describe('getAssetPreviewMode', () => {
   it('형식별 미리보기 방식', () => {
     expect(getAssetPreviewMode('GLB')).toBe('model');
+    expect(getAssetPreviewMode('exr')).toBe('environment');
+    expect(getAssetPreviewMode('EXR')).toBe('environment');
     expect(getAssetPreviewMode('webp')).toBe('image');
     expect(getAssetPreviewMode('svg')).toBe('image');
     expect(getAssetPreviewMode('pdf')).toBe('pdf');

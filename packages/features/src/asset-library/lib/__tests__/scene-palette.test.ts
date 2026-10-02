@@ -8,6 +8,7 @@ import type {
 import {
   buildScenePaletteModels,
   listScenePaletteGroups,
+  resolvePaletteGroup,
   selectPlaceableCatalog,
 } from '../scene-palette';
 
@@ -40,8 +41,6 @@ function asset(patch: Partial<AssetRecord> & { id: string }, options: {
     origin: 'builtin',
     name: patch.id,
     description: '',
-    category: 'outdoor',
-    sites: [],
     tags: [],
     owner: '',
     defaultScale: [1, 1, 1],
@@ -89,12 +88,13 @@ describe('buildScenePaletteModels — 라이브러리를 읽지 못했을 때', 
 });
 
 describe('buildScenePaletteModels — 카탈로그 자산', () => {
-  it('이름·분류는 라이브러리를 따르고 파일·기본 스케일은 카탈로그 것이다', () => {
+  it('이름·묶음은 라이브러리를 따르고 파일·기본 스케일은 카탈로그 것이다', () => {
     const [model] = buildScenePaletteModels(catalog, [
       asset({
         id: 'crane-a',
         name: '크레인 A',
-        category: 'heavy',
+        // 카탈로그는 outdoor 지만 라이브러리에서 indoor 태그로 옮겼다.
+        tags: ['crane', 'indoor'],
         defaultScale: [2, 2, 2],
         catalogId: 'crane-a',
       }),
@@ -108,8 +108,16 @@ describe('buildScenePaletteModels — 카탈로그 자산', () => {
     });
     // 놓는 방식에 관한 값(미리보기 프리셋 등)은 카탈로그 것을 유지한다.
     expect(model.item.preview).toBe(preview);
-    expect(model.group).toBe('heavy');
+    expect(model.group).toBe('indoor');
     expect(model.assetId).toBe('crane-a');
+  });
+
+  it('묶음 태그가 없는 카탈로그 자산은 카탈로그의 분류로 묶인다', () => {
+    const models = buildScenePaletteModels(catalog, [
+      asset({ id: 'crane-a', tags: [] }),
+      asset({ id: 'bay-b', tags: ['bay', 'okpo'] }),
+    ]);
+    expect(models.map((model) => model.group)).toEqual(['outdoor', 'indoor']);
   });
 
   it('떠 있는 모델 표시는 카탈로그에서 그대로 온다', () => {
@@ -211,7 +219,7 @@ describe('buildScenePaletteModels — 등록한 자산', () => {
       user('zeta', { name: 'Zeta' }),
       user(
         'alpha',
-        { name: 'Alpha', category: 'hull', defaultScale: [3, 3, 3] },
+        { name: 'Alpha', tags: ['hull'], defaultScale: [3, 3, 3] },
         { ref: { storage: 'public', path: '/asset-library/files/alpha/v1/a.glb' } },
       ),
     ]);
@@ -227,25 +235,27 @@ describe('buildScenePaletteModels — 등록한 자산', () => {
         label: 'Alpha',
         path: '/asset-library/files/alpha/v1/a.glb',
         defaultScale: [3, 3, 3],
-        // 모르는 분류는 카탈로그 타입의 가장 가까운 값으로 채운다.
+        // 묶음이 정해지지 않으면 카탈로그 타입의 가장 가까운 값으로 채운다.
         category: 'outdoor',
       },
-      group: 'hull',
+      // 묶음 태그(indoor·outdoor)가 없는 등록 자산은 빈 묶음에 모인다.
+      group: '',
       blocked: null,
       fromCatalog: false,
     });
     expect(models[0].fromCatalog).toBe(true);
   });
 
-  it('카탈로그에 있는 분류 이름은 그대로 쓰되 map 은 쓰지 않는다', () => {
+  it('묶음 태그가 카탈로그 분류가 되되 map 은 묶음이 아니다', () => {
     const models = buildScenePaletteModels([], [
-      user('a', { category: 'indoor' }),
-      user('b', { category: 'map' }),
+      user('a', { tags: ['crane', 'indoor'] }),
+      user('b', { tags: ['map'] }),
     ]);
     expect(models.map((model) => model.item.category)).toEqual([
       'indoor',
       'outdoor',
     ]);
+    expect(models.map((model) => model.group)).toEqual(['indoor', '']);
   });
 
   it('게시 전에는 보이지만 놓을 수 없다', () => {
@@ -332,18 +342,57 @@ describe('listScenePaletteGroups', () => {
     ]);
   });
 
-  it('새 분류는 뒤에 이름순으로 붙고, 빈 분류도 한 묶음이다', () => {
+  it('묶음이 정해지지 않은 자산은 뒤의 빈 묶음에 모인다', () => {
     const models = buildScenePaletteModels(catalog, [
-      asset({ id: 'crane-a', category: 'yard 10' }),
-      asset({ id: 'x', origin: 'user', category: 'yard 2' }),
-      asset({ id: 'y', origin: 'user', category: '' }),
+      asset({ id: 'crane-a', tags: ['indoor'] }),
+      asset({ id: 'x', origin: 'user', tags: ['outdoor'] }),
+      asset({ id: 'y', origin: 'user', tags: ['hull'] }),
+      asset({ id: 'z', origin: 'user', tags: [] }),
     ]);
     expect(listScenePaletteGroups(models, ['indoor', 'outdoor'])).toEqual([
-      { group: 'indoor', count: 1 },
-      { group: 'outdoor', count: 0 },
-      { group: '', count: 1 },
-      { group: 'yard 2', count: 1 },
-      { group: 'yard 10', count: 1 },
+      { group: 'indoor', count: 2 },
+      { group: 'outdoor', count: 1 },
+      { group: '', count: 2 },
     ]);
+  });
+
+  it('그 밖의 묶음은 뒤에 이름순(숫자는 수로)으로 붙는다', () => {
+    const model = (group: string) => ({
+      ...buildScenePaletteModels(catalog, null)[0],
+      group,
+    });
+    expect(
+      listScenePaletteGroups(
+        [model('yard 10'), model('yard 2'), model('')],
+        ['indoor'],
+      ).map((entry) => entry.group),
+    ).toEqual(['indoor', '', 'yard 2', 'yard 10']);
+  });
+});
+
+describe('resolvePaletteGroup', () => {
+  it('묶음 태그가 있으면 그것이 묶음이다', () => {
+    expect(resolvePaletteGroup(['crane', 'indoor'], 'outdoor')).toBe('indoor');
+    expect(resolvePaletteGroup(['outdoor'], '')).toBe('outdoor');
+  });
+
+  it('둘 다 있으면 앞에 적힌 태그다', () => {
+    expect(resolvePaletteGroup(['outdoor', 'indoor'], '')).toBe('outdoor');
+    expect(resolvePaletteGroup(['indoor', 'outdoor'], '')).toBe('indoor');
+  });
+
+  it('대소문자를 가리지 않고, 묶음 이름은 소문자로 맞춘다', () => {
+    expect(resolvePaletteGroup(['Indoor'], '')).toBe('indoor');
+    expect(resolvePaletteGroup(['OUTDOOR'], 'indoor')).toBe('outdoor');
+  });
+
+  it('묶음 태그가 없으면 fallback — 빈 태그 목록도', () => {
+    expect(resolvePaletteGroup([], 'outdoor')).toBe('outdoor');
+    expect(resolvePaletteGroup(['crane', 'okpo'], '')).toBe('');
+  });
+
+  it('map 과 묶음 이름을 품은 다른 태그는 묶음이 아니다', () => {
+    expect(resolvePaletteGroup(['map'], '')).toBe('');
+    expect(resolvePaletteGroup(['indoors', 'outdoor-crane'], 'x')).toBe('x');
   });
 });

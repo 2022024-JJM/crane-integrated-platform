@@ -205,7 +205,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 수면 아래 잠김 안개 / 바다 도달 마스크 | `packages/domain/src/3d/lib/{sea-submersion,sea-reach-grid,sea-reach-mask,sea-reach-uniforms}.ts`, `packages/features/src/3d/model/sea-reach-controller.ts`, `ui/scene-sea-reach.tsx` — `docs/agents/rendering-perf.md` |
 | 프레임 거버너 / shadow map 온디맨드 / 바다 미러 반사·스텐실 / 낮·밤 태양 / 워밍업 큐 | `packages/features/src/3d/ui/scene-frame-governor.tsx`, `ui/scene-render-preset.tsx`(`SceneLighting`), `ui/scene-water.tsx`, `lib/ocean-water.ts`, `lib/sky-lighting.ts`, `packages/domain/src/3d/lib/{scene-stencil,bvh-build-queue}.ts` — `docs/agents/rendering-perf.md` |
 | GLB 자산 파이프라인(압축·타일·LOD·KTX2·philly 지도 3장·썸네일) | `assets-src/README.md`, `scripts/*.mjs`, `packages/domain/src/3d/lib/ktx2-loader.ts` — `docs/agents/assets-glb.md` |
-| 3D 자산 라이브러리(조선소 › 종류 › 분류 계층·미리보기·상세 뷰어·버전 비교·상태·처리할 일·사용처, 서버 없는 저장) | `packages/domain/src/asset-library/`, `packages/features/src/asset-library/`, `packages/widgets/src/asset-library/`, `apps/shell/public/asset-library/` — `docs/agents/asset-library.md` |
+| 3D 자산 라이브러리(모델·지도·배경·도면·CAD, 종류 › 태그 계층·미리보기·상세 뷰어·버전 비교·상태·처리할 일·사용처, 서버 없는 저장) | `packages/domain/src/asset-library/`, `packages/features/src/asset-library/`, `packages/widgets/src/asset-library/`, `apps/shell/public/asset-library/` — `docs/agents/asset-library.md` |
 | 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
 
 ## packages/ui 구조 (Atomic Design)
@@ -288,7 +288,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
 - GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돌린다. 타일·LOD 지도(`philly-terrain.glb`·`okpo-terrain.glb`·`okpo-tree.glb`)에 `pnpm optimize:map` 을 원본 없이 재실행하지 않는다 (assets-glb).
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 에 "얹힌 표시" 가 없는지 본다. 바닥과 같은 높이로 겹친 표시는 로그 깊이로도 갈리지 않아 깜빡인다 (assets-glb).
-- GLB 를 반입·교체하거나 카탈로그 밖에서 직접 로드하는 GLB 를 추가하면 `pnpm assets:stats` 를 돌리고, 후자는 `builtin-extra-assets.ts` 에도 올린다. 자산 id(= 카탈로그 id)는 바꾸지 않는다 (asset-library).
+- GLB·배경 EXR 을 반입·교체하거나 카탈로그 밖에서 직접 로드하는 GLB 를 추가하면 `pnpm assets:stats` 를 돌리고, 후자는 `builtin-extra-assets.ts` 에도 올린다. 자산 id(= 카탈로그 id)는 바꾸지 않는다 (asset-library).
 - GLB·씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 `pnpm perf:scene` 등으로 직접 확인한다. 자동 성능 게이트는 없다 (assets-glb).
 
 ### 다시 시도하지 않는 것

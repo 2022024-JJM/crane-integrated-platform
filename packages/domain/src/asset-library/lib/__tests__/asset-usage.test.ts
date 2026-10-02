@@ -10,7 +10,6 @@ import { asset, version } from './fixtures';
 const okpo: SceneAssetSource = {
   sceneFile: 'okpo.json',
   regionIds: ['dock-1', 'dock-2'],
-  site: 'okpo',
   editorPath: '/outdoor-work/dock-1/3d-viewer-edit',
   modelPaths: ['/models/a.glb', '/models/a.glb', '/models/b.glb', ''],
   mapPaths: ['/maps/okpo.glb'],
@@ -18,7 +17,6 @@ const okpo: SceneAssetSource = {
 const philly: SceneAssetSource = {
   sceneFile: 'philly.json',
   regionIds: ['philly-dock-2'],
-  site: 'philly',
   editorPath: '/outdoor-work/philly-dock-2/3d-viewer-edit',
   modelPaths: ['/models/a.glb'],
   mapPaths: [],
@@ -28,7 +26,7 @@ describe('buildAssetUsageIndex', () => {
   it('씬마다 파일별 배치 개수를 센다(빈 경로는 뺀다)', () => {
     const index = buildAssetUsageIndex([okpo, philly]);
     expect(index.get('/models/a.glb')).toEqual([
-      expect.objectContaining({ sceneFile: 'okpo.json', count: 2, site: 'okpo' }),
+      expect.objectContaining({ sceneFile: 'okpo.json', count: 2 }),
       expect.objectContaining({ sceneFile: 'philly.json', count: 1 }),
     ]);
     expect(index.get('/maps/okpo.glb')?.[0].count).toBe(1);

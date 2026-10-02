@@ -569,6 +569,8 @@ export function AssetVersionsTab({
           <p>{t('asset-library:versions.catalogNotice')}</p>
         ) : asset.kind === 'model' ? (
           <p>{t('asset-library:versions.paletteNotice')}</p>
+        ) : asset.kind === 'environment' ? (
+          <p>{t('asset-library:versions.environmentNotice')}</p>
         ) : null}
       </div>
       <AssetConfirmDialog

@@ -51,8 +51,6 @@ interface AssetGridProps extends AssetCardActions {
   /** 자산 id → 손이 가야 하는 이유(급한 순). */
   attention: ReadonlyMap<string, readonly AssetAttentionKind[]>;
   previewId: string | null;
-  /** 조선소를 카드에 적을지 — 조선소를 고르지 않은 위치에서만 적는다. */
-  showSite: boolean;
   /** "얼마 전" 표기의 기준 시각(ms). */
   now: number;
   hrefFor: (assetId: string) => string;
@@ -66,7 +64,6 @@ interface AssetCardProps extends AssetCardActions {
   previewed: boolean;
   /** 가장 급한 이유 하나. 없으면 표식을 그리지 않는다. */
   topAttention: AssetAttentionKind | null;
-  showSite: boolean;
   now: number;
   href: string;
 }
@@ -86,7 +83,6 @@ const AssetCard = memo(function AssetCard({
   favorite,
   previewed,
   topAttention,
-  showSite,
   now,
   href,
   onPreview,
@@ -100,17 +96,7 @@ const AssetCard = memo(function AssetCard({
   const current = getCurrentAssetVersion(asset);
   const sizeBytes = resolveVersionSizeBytes(current, statsTable);
   const status = t(`asset-library:status.${current.status}`);
-  const fileFacts = [
-    showSite
-      ? asset.sites.length === 0
-        ? t('asset-library:site.commonShort')
-        : asset.sites
-            .map((site) => t(`asset-library:site.${site}Short`))
-            .join('·')
-      : '',
-    current.file.format.toUpperCase(),
-    formatBytes(sizeBytes),
-  ].filter(Boolean);
+  const fileFacts = [current.file.format.toUpperCase(), formatBytes(sizeBytes)];
   const overlayVisible =
     'opacity-0 group-focus-within/card:opacity-100 group-hover/card:opacity-100';
 
@@ -305,7 +291,6 @@ export function AssetGrid({
   favorites,
   attention,
   previewId,
-  showSite,
   now,
   hrefFor,
   onPreview,
@@ -325,7 +310,6 @@ export function AssetGrid({
           favorite={favorites.has(asset.id)}
           previewed={previewId === asset.id}
           topAttention={attention.get(asset.id)?.[0] ?? null}
-          showSite={showSite}
           now={now}
           href={hrefFor(asset.id)}
           onPreview={onPreview}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  centerCropRect,
   findOpaqueBounds,
   fitRectInSquare,
   THUMBNAIL_FILL,
@@ -96,5 +97,76 @@ describe('fitRectInSquare', () => {
   it('크기 0 인 사각형에도 유한한 자리를 낸다', () => {
     const rect = fitRectInSquare({ width: 0, height: 0 }, 512);
     expect(Object.values(rect).every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe('centerCropRect', () => {
+  it('원본이 더 넓으면 좌우를 같은 만큼 잘라 낸다', () => {
+    expect(centerCropRect({ width: 2000, height: 500 }, 1.6)).toEqual({
+      x: 600,
+      y: 0,
+      width: 800,
+      height: 500,
+    });
+  });
+
+  it('원본이 더 좁으면 위아래를 같은 만큼 잘라 낸다', () => {
+    expect(centerCropRect({ width: 400, height: 1000 }, 1.6)).toEqual({
+      x: 0,
+      y: 375,
+      width: 400,
+      height: 250,
+    });
+  });
+
+  it('비율이 이미 같으면 원본 전체다', () => {
+    expect(centerCropRect({ width: 640, height: 400 }, 1.6)).toEqual({
+      x: 0,
+      y: 0,
+      width: 640,
+      height: 400,
+    });
+  });
+
+  it('잘라 낸 자리는 원본을 벗어나지 않고 요청한 비율이다', () => {
+    for (const [width, height] of [
+      [1, 1],
+      [3, 1000],
+      [1920, 1080],
+      [1080, 1920],
+    ]) {
+      for (const aspect of [0.25, 1, 1.6, 4]) {
+        const rect = centerCropRect({ width, height }, aspect);
+        expect(rect.x).toBeGreaterThanOrEqual(0);
+        expect(rect.y).toBeGreaterThanOrEqual(0);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(width + 1e-9);
+        expect(rect.y + rect.height).toBeLessThanOrEqual(height + 1e-9);
+        expect(rect.width / rect.height).toBeCloseTo(aspect, 9);
+      }
+    }
+  });
+
+  it('크기가 0·음수·NaN 이면 원본을 그대로 돌려준다(나누지 않는다)', () => {
+    expect(centerCropRect({ width: 0, height: 0 }, 1.6)).toEqual({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    });
+    expect(centerCropRect({ width: 100, height: 0 }, 1.6)).toEqual({
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 0,
+    });
+    expect(centerCropRect({ width: -5, height: 10 }, 1.6).width).toBe(-5);
+    expect(centerCropRect({ width: Number.NaN, height: 10 }, 1.6).x).toBe(0);
+  });
+
+  it('비율이 0·음수·NaN·Infinity 면 원본 전체다', () => {
+    const full = { x: 0, y: 0, width: 300, height: 200 };
+    for (const aspect of [0, -1, Number.NaN, Infinity, -Infinity]) {
+      expect(centerCropRect({ width: 300, height: 200 }, aspect)).toEqual(full);
+    }
   });
 });

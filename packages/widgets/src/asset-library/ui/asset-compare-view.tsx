@@ -23,6 +23,7 @@ import {
 import type { ViewerDisplay } from '../lib/viewer-display-state';
 import { useViewerDisplay } from '../model/use-viewer-display';
 import { AssetDrawingViewer } from './asset-drawing-viewer';
+import { AssetEnvironmentViewer } from './asset-environment-viewer';
 import { AssetModelViewer } from './asset-model-viewer';
 
 interface ComparePaneProps {
@@ -92,6 +93,8 @@ function ComparePane({
           cornerLabel={label}
           onLoaded={({ stats }) => onMeasured(version.version, stats)}
         />
+      ) : mode === 'environment' ? (
+        <AssetEnvironmentViewer url={file.url} cornerLabel={label} />
       ) : (
         <>
           <AssetDrawingViewer

@@ -107,12 +107,35 @@ describe('getAssetAttention', () => {
     const unknown = ctx({ usageKnown: false });
     expect(getAssetAttention(healthy, unknown)).toEqual([]);
     expect(getAssetAttention(healthy, ctx())).toEqual(['unused']);
+    // 지도도 놓이는 자산이다 — 놓인 곳이 없으면 미사용.
+    expect(getAssetAttention(asset({ kind: 'map' }), ctx())).toEqual([
+      'unused',
+    ]);
   });
 
-  it('도면·CAD 와 런타임 자산은 놓인 곳이 없어도 미사용이 아니다', () => {
+  it('도면·CAD·배경은 놓인 곳이 없어도 미사용이 아니다', () => {
     expect(getAssetAttention(asset({ kind: 'drawing' }), ctx())).toEqual([]);
     expect(getAssetAttention(asset({ kind: 'cad' }), ctx())).toEqual([]);
-    expect(getAssetAttention(asset({ category: 'runtime' }), ctx())).toEqual([]);
+    // 배경은 씬에 놓는 것이 아니라 씬이 고르는 것이다 — 배치 수가 없다.
+    expect(getAssetAttention(asset({ kind: 'environment' }), ctx())).toEqual(
+      [],
+    );
+  });
+
+  it('런타임 자산(카탈로그에 없는 배포 자산)은 놓인 곳이 없어도 미사용이 아니다', () => {
+    // 화면 코드가 직접 불러 쓴다 — 씬에 놓이지 않는 것이 정상이다.
+    expect(getAssetAttention(asset({ origin: 'builtin' }), ctx())).toEqual([]);
+    // 카탈로그 자산은 팔레트로 놓는 자산이다.
+    expect(
+      getAssetAttention(asset({ origin: 'builtin', catalogId: 'x' }), ctx()),
+    ).toEqual(['unused']);
+    // 태그는 판정에 쓰지 않는다 — 사용자가 고칠 수 있는 값이다.
+    expect(getAssetAttention(asset({ tags: ['runtime'] }), ctx())).toEqual([
+      'unused',
+    ]);
+    expect(
+      getAssetAttention(asset({ origin: 'builtin', tags: [] }), ctx()),
+    ).toEqual([]);
   });
 });
 

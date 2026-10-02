@@ -1,5 +1,5 @@
 import {
-  isDocumentAssetKind,
+  isGeometryAssetKind,
   type AssetRecord,
   type AssetStatsTable,
 } from '../model/types';
@@ -45,11 +45,20 @@ export interface AssetAttentionContext {
 }
 
 /**
- * 씬에 배치하지 않는 것이 정상인 자산 — 도면·CAD, 그리고 화면 코드가 직접
- * 불러 쓰는 런타임 자산. 이들은 놓인 곳이 없어도 "미사용" 이 아니다.
+ * 화면 코드가 직접 불러 쓰는 런타임 자산인가 — 배포 자산인데 편집 팔레트의
+ * 카탈로그에는 없는 것(`builtin-extra-assets.ts`). 태그로 묻지 않는다 — 태그는
+ * 사용자가 고칠 수 있다.
+ */
+function isRuntimeAsset(asset: AssetRecord): boolean {
+  return asset.origin === 'builtin' && !asset.catalogId;
+}
+
+/**
+ * 씬에 배치하는 것이 정상인 자산. 도면·CAD·배경과 런타임 자산은 놓인 곳이
+ * 없어도 "미사용" 이 아니다.
  */
 function isPlacedByDesign(asset: AssetRecord): boolean {
-  return !isDocumentAssetKind(asset.kind) && asset.category !== 'runtime';
+  return isGeometryAssetKind(asset.kind) && !isRuntimeAsset(asset);
 }
 
 export function getAssetAttention(

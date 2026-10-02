@@ -3,17 +3,9 @@
   "kind": {
     "model": "Models",
     "map": "Maps",
+    "environment": "Backgrounds",
     "drawing": "Drawings",
     "cad": "CAD"
-  },
-  "site": {
-    "all": "All",
-    "okpo": "Okpo Shipyard",
-    "philly": "Philly Shipyard",
-    "common": "Shared",
-    "okpoShort": "Okpo",
-    "phillyShort": "Philly",
-    "commonShort": "Shared"
   },
   "status": {
     "draft": "Draft",
@@ -45,14 +37,12 @@
     "name": "Name",
     "description": "Description",
     "kind": "Type",
-    "site": "Shipyard",
     "status": "Status",
     "version": "Version",
     "revision": "Revision",
     "drawingNo": "Drawing number",
     "tags": "Tags",
     "owner": "Owner",
-    "category": "Category",
     "file": "File",
     "size": "Size",
     "sizeBytes": "Size (bytes)",
@@ -126,6 +116,7 @@
     "emptyScopeHint": {
       "model": "Upload a GLB and choose Models to place it here.",
       "map": "Upload a GLB and choose Maps to place it here.",
+      "environment": "Upload an EXR file to place it here.",
       "drawing": "Upload a PDF, SVG or image to place it here.",
       "cad": "Upload a DWG, DXF, STEP or IGES file to place it here."
     },
@@ -135,14 +126,10 @@
   "bulk": {
     "label": "Actions for selected assets",
     "selected": "{{count}} selected",
-    "assignSite": "Set shipyard",
-    "bothSites": "Both Okpo and Philly",
     "addTag": "Add tag",
     "addToCollection": "Add to collection",
     "clear": "Clear selection",
     "changeStatus": "Change status",
-    "assignCategory": "Set category",
-    "categoryPlaceholder": "Category (empty for none)",
     "removeTag": "Remove tag",
     "remove": "Delete ({{count}})",
     "removeTitle": "Delete {{count}} added assets?",
@@ -150,27 +137,27 @@
     "statusTitle": "{{action}} the selected assets?"
   },
   "form": {
-    "siteCommonHint": "With no shipyard selected, the asset is shared company-wide.",
-    "siteScopedHint": "The asset belongs to the selected shipyards.",
     "tagPlaceholder": "Type a tag, then Enter",
     "tagsFull": "An asset can have up to {{max}} tags",
-    "removeTag": "Remove tag {{tag}}"
+    "removeTag": "Remove tag {{tag}}",
+    "addSuggestedTag": "Add tag {{tag}}"
   },
   "import": {
     "title": "Add asset",
-    "description": "The file you upload becomes version 1. 3D assets take GLB; drawings take PDF, SVG and images; CAD takes DWG, DXF, STEP and IGES.",
+    "description": "The file you upload becomes version 1. 3D assets take GLB; backgrounds take EXR; drawings take PDF, SVG and images; CAD takes DWG, DXF, STEP and IGES.",
     "pickFile": "Choose a file or drop it here",
-    "formats": "GLB, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
+    "formats": "GLB, EXR, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
     "changeFile": "Change file",
     "analyzing": "Checking the file",
     "noteHint": "Describe what changed in this version. It shows in the version list.",
+    "tagsHint": "Pick tags already used by this kind so the browse checkboxes stay in one row.",
     "startsAsDraft": "New assets start as drafts.",
     "localOnly": "The file is saved in this browser only.",
     "submit": "Add",
     "duplicate": "A file with the same content already exists: {{names}}. Check whether this should be a new version of that asset.",
     "large": "This file is over 100 MB. It may take a while to open.",
     "problem": {
-      "unsupported": ".{{format}} files cannot be added. Choose a GLB, drawing or CAD file.",
+      "unsupported": ".{{format}} files cannot be added. Choose a GLB, EXR, drawing or CAD file.",
       "empty": "The file is empty. Choose another file.",
       "glb": {
         "too-short": "This is not a GLB file. The file is too short.",
@@ -178,8 +165,7 @@
         "bad-version": "This GLB is not glTF 2.0. Export it again as glTF 2.0.",
         "bad-length": "The GLB file is damaged. Its header length does not match the file size, so it may have been cut off in transfer."
       }
-    },
-    "categoryPlaceholder": "e.g. indoor, hull — leave empty to keep it directly under the type"
+    }
   },
   "detail": {
     "backToLibrary": "Back to library",
@@ -245,6 +231,7 @@
     "sourceStored": "Measured ahead of time. With LODs, this is LOD 0.",
     "pending": "Stats are measured once the file opens.",
     "drawing": "Drawings and CAD files have no geometry stats. File details are on the Info tab.",
+    "environment": "Backgrounds have no geometry stats. File details are on the Info tab.",
     "budgetHint": "If this asset is placed many times in a scene, consider merging primitives or adding LODs. This does not block adding it.",
     "budgetHeading": "Against recommended limits",
     "budgetLegend": "Each bar is full at the recommended limit. Going over does not block adding the asset."
@@ -267,11 +254,12 @@
       "published": "Publish",
       "withdrawn": "Withdraw"
     },
-    "kindMismatch": "This file is a different type from the asset. Upload a GLB for 3D assets, a PDF, SVG or image for drawings, and a CAD file for CAD.",
+    "kindMismatch": "This file is a different type from the asset. Upload a GLB for 3D assets, an EXR for backgrounds, a PDF, SVG or image for drawings, and a CAD file for CAD.",
     "sameContent": "This file has the same content as a version this asset already has.",
     "catalogNotice": "Scenes use the deployed file of version 1. To use a new version in scenes, replace the deployed file through the asset pipeline (assets-src → optimize:glb).",
     "revisionShort": "Rev {{revision}}",
     "paletteNotice": "The 3D editor palette places the current version’s file. Objects already placed keep the version they were placed with.",
+    "environmentNotice": "Scenes use the deployed files in the 3D editor’s background picker. Backgrounds added here and their new versions are not applied to scenes yet.",
     "remove": "Delete version",
     "removeTitle": "Delete version v{{version}}?",
     "removeHint": "The file for this version is deleted and cannot be restored. Only versions that were never published can be deleted."
@@ -288,6 +276,7 @@
     "count": "{{count}} placed",
     "openEditor": "Open in the 3D editor",
     "drawing": "Drawings and CAD files are not placed in scenes. See linked assets on the Info tab.",
+    "environment": "Backgrounds are not placed in scenes. A scene’s background is chosen in the 3D editor’s background picker.",
     "noneUserMapHint": "Maps added here do not appear in the 3D editor’s Map tab yet."
   },
   "activity": {
@@ -315,7 +304,9 @@
   },
   "viewer": {
     "loading": "Loading model {{percent}}%",
+    "loadingEnvironment": "Loading background {{percent}}%",
     "loadFailed": "The model could not be opened",
+    "environmentLoadFailed": "The background could not be opened",
     "loadFailedHint": "The file may be missing or damaged. Open another version or upload the file again.",
     "viewMode": "Display",
     "mode": {
@@ -343,7 +334,8 @@
       "top": "Top"
     },
     "fit": "Fit to view",
-    "display": "Display options"
+    "display": "Display options",
+    "panoramaHint": "Drag to look around"
   },
   "drawing": {
     "noPreview": "This format cannot be previewed here",
@@ -478,9 +470,11 @@
   },
   "tree": {
     "root": "Asset library",
+    "all": "All",
     "path": "Location",
     "expand": "Expand {{name}}",
-    "collapse": "Collapse {{name}}"
+    "collapse": "Collapse {{name}}",
+    "tagsOf": "{{name}} tags"
   },
   "optimize": {
     "label": "Optimize model",

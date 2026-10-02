@@ -1,5 +1,6 @@
 import {
   Box,
+  CloudSun,
   DraftingCompass,
   FileText,
   Mountain,
@@ -8,7 +9,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import type {
   AssetKind,
-  AssetSiteId,
   AssetVersionStatus,
 } from '@crane/domain/asset-library';
 import { cn } from '@crane/core/lib/utils';
@@ -17,6 +17,7 @@ import { ASSET_STATUS_TONE } from '../lib/asset-presentation';
 const KIND_ICON: Record<AssetKind, LucideIcon> = {
   model: Box,
   map: Mountain,
+  environment: CloudSun,
   drawing: FileText,
   cad: DraftingCompass,
 };
@@ -57,38 +58,6 @@ export function AssetStatusBadge({
     >
       <span aria-hidden className={cn('size-2 rounded-full', tone.dot)} />
       {t(`asset-library:status.${status}`)}
-    </span>
-  );
-}
-
-/** 조선소 표기. 지정이 없으면 공용이다. */
-export function AssetSiteChips({
-  sites,
-  className,
-}: {
-  sites: readonly AssetSiteId[];
-  className?: string;
-}) {
-  const { t } = useTranslation();
-  const labels =
-    sites.length === 0
-      ? [t('asset-library:site.commonShort')]
-      : sites.map((site) => t(`asset-library:site.${site}Short`));
-  return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1', className)}>
-      {labels.map((label) => (
-        <span
-          key={label}
-          className={cn(
-            'rounded px-1.5 py-1 text-[11px] leading-none font-medium whitespace-nowrap',
-            sites.length === 0
-              ? 'text-muted-foreground border-border border border-dashed'
-              : 'bg-foreground/8 text-foreground/85',
-          )}
-        >
-          {label}
-        </span>
-      ))}
     </span>
   );
 }

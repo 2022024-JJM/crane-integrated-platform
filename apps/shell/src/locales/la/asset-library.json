@@ -3,17 +3,9 @@
   "kind": {
     "model": "Exemplaria",
     "map": "Tabulae",
+    "environment": "Fundi",
     "drawing": "Delineationes",
     "cad": "CAD"
-  },
-  "site": {
-    "all": "Omnia",
-    "okpo": "Navale Okpo",
-    "philly": "Navale Philly",
-    "common": "Communia",
-    "okpoShort": "Okpo",
-    "phillyShort": "Philly",
-    "commonShort": "Commune"
   },
   "status": {
     "draft": "Adumbratio",
@@ -45,14 +37,12 @@
     "name": "Nomen",
     "description": "Descriptio",
     "kind": "Genus",
-    "site": "Navale",
     "status": "Status",
     "version": "Versio",
     "revision": "Recensio",
     "drawingNo": "Numerus delineationis",
     "tags": "Notae",
     "owner": "Curator",
-    "category": "Classis",
     "file": "Fasciculus",
     "size": "Magnitudo",
     "sizeBytes": "Magnitudo (octeti)",
@@ -126,6 +116,7 @@
     "emptyScopeHint": {
       "model": "Fasciculum GLB mitte et genus Exemplaria elige ut hic ponatur.",
       "map": "Fasciculum GLB mitte et genus Tabulae elige ut hic ponatur.",
+      "environment": "Fasciculum EXR mitte ut hic ponatur.",
       "drawing": "Fasciculum PDF, SVG vel imaginem mitte ut hic ponatur.",
       "cad": "Fasciculum DWG, DXF, STEP vel IGES mitte ut hic ponatur."
     },
@@ -135,14 +126,10 @@
   "bulk": {
     "label": "Actiones in res electas",
     "selected": "{{count}} electae",
-    "assignSite": "Navale constitue",
-    "bothSites": "Okpo et Philly",
     "addTag": "Notam adde",
     "addToCollection": "Collectioni adde",
     "clear": "Electionem tolle",
     "changeStatus": "Statum muta",
-    "assignCategory": "Classem assigna",
-    "categoryPlaceholder": "Classis (vacua: nulla)",
     "removeTag": "Notam tolle",
     "remove": "Dele ({{count}})",
     "removeTitle": "{{count}} res additas delere vis?",
@@ -150,27 +137,27 @@
     "statusTitle": "Res electas: {{action}}?"
   },
   "form": {
-    "siteCommonHint": "Nullo navali electo, res toti societati communis est.",
-    "siteScopedHint": "Res ad navalia electa pertinet.",
     "tagPlaceholder": "Notam scribe, deinde Enter",
     "tagsFull": "Res usque ad {{max}} notas habere potest",
-    "removeTag": "Notam {{tag}} tolle"
+    "removeTag": "Notam {{tag}} tolle",
+    "addSuggestedTag": "Notam {{tag}} adde"
   },
   "import": {
     "title": "Rem adde",
-    "description": "Fasciculus missus fit versio 1. Res 3D GLB accipiunt; delineationes PDF, SVG, imagines; CAD DWG, DXF, STEP, IGES.",
+    "description": "Fasciculus missus fit versio 1. Res 3D GLB accipiunt; fundi EXR; delineationes PDF, SVG, imagines; CAD DWG, DXF, STEP, IGES.",
     "pickFile": "Fasciculum elige vel huc depone",
-    "formats": "GLB, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
+    "formats": "GLB, EXR, PDF, SVG, PNG, JPG, WebP, DWG, DXF, STEP, IGES",
     "changeFile": "Alium fasciculum",
     "analyzing": "Fasciculus inspicitur",
     "noteHint": "Scribe quid in hac versione mutatum sit. In indice versionum apparebit.",
+    "tagsHint": "Notas huic generi iam usitatas elige, ne indices in duas partes dividantur.",
     "startsAsDraft": "Res novae ut adumbrationes incipiunt.",
     "localOnly": "Fasciculus in hoc navigatore tantum servatur.",
     "submit": "Adde",
     "duplicate": "Fasciculus eiusdem contenti iam exstat: {{names}}. Vide num nova versio illius rei esse debeat.",
     "large": "Hic fasciculus 100 MB excedit. Aperiri tardius potest.",
     "problem": {
-      "unsupported": "Forma .{{format}} addi non potest. Fasciculum GLB, delineationis vel CAD elige.",
+      "unsupported": "Forma .{{format}} addi non potest. Fasciculum GLB, EXR, delineationis vel CAD elige.",
       "empty": "Fasciculus vacuus est. Alium elige.",
       "glb": {
         "too-short": "Hic fasciculus GLB non est. Nimis brevis est.",
@@ -178,8 +165,7 @@
         "bad-version": "Hoc GLB non est glTF 2.0. Iterum ut glTF 2.0 exporta.",
         "bad-length": "Fasciculus GLB corruptus est. Longitudo in capite cum magnitudine non congruit; fortasse in transmissione truncatus est."
       }
-    },
-    "categoryPlaceholder": "e.g. indoor, hull — vacuum relinque ut sub genere ipso ponatur"
+    }
   },
   "detail": {
     "backToLibrary": "Ad bibliothecam",
@@ -245,6 +231,7 @@
     "sourceStored": "Antea mensum. Si LOD adsunt, LOD 0.",
     "pending": "Numeri metiuntur cum fasciculus aperitur.",
     "drawing": "Delineationes et CAD numeros geometricos non habent. De fasciculo in scheda Notitia.",
+    "environment": "Fundi numeros geometricos non habent. De fasciculo in scheda Notitia.",
     "budgetHint": "Si haec res saepe in scaena ponitur, primitiva coniungere vel LOD addere considera. Additionem non impedit.",
     "budgetHeading": "Ad modos commendatos",
     "budgetLegend": "Quaeque virga ad modum commendatum plena est. Modum excedere additionem non impedit."
@@ -267,11 +254,12 @@
       "published": "Ede",
       "withdrawn": "Revoca"
     },
-    "kindMismatch": "Hic fasciculus alterius generis est. Rebus 3D GLB, delineationibus PDF vel SVG vel imaginem, CAD fasciculum CAD mitte.",
+    "kindMismatch": "Hic fasciculus alterius generis est. Rebus 3D GLB, fundis EXR, delineationibus PDF vel SVG vel imaginem, CAD fasciculum CAD mitte.",
     "sameContent": "Hic fasciculus idem contentum habet ac versio quam haec res iam habet.",
     "catalogNotice": "Scaenae fasciculo edito versionis 1 utuntur. Ut nova versio in scaenis adhibeatur, fasciculum editum per fistulam rerum (assets-src → optimize:glb) muta.",
     "revisionShort": "Rec. {{revision}}",
     "paletteNotice": "Palaestra editoris 3D fasciculum versionis praesentis ponit. Iam posita versionem qua posita sunt retinent.",
+    "environmentNotice": "Scaenae fasciculis editis ex electione fundi editoris 3D utuntur. Fundi hic additi eorumque versiones novae scaenis nondum adhibentur.",
     "remove": "Versionem dele",
     "removeTitle": "Versionem v{{version}} delere vis?",
     "removeHint": "Fasciculus huius versionis deletur neque restitui potest. Tantum versiones numquam editae deleri possunt."
@@ -288,6 +276,7 @@
     "count": "{{count}} positae",
     "openEditor": "In editore 3D aperi",
     "drawing": "Delineationes et CAD in scaenis non ponuntur. Res conexas in scheda Notitia vide.",
+    "environment": "Fundi in scaenis non ponuntur. Fundus scaenae in editore 3D eligitur.",
     "noneUserMapHint": "Tabulae hic additae nondum in scheda Tabula editoris 3D apparent."
   },
   "activity": {
@@ -315,7 +304,9 @@
   },
   "viewer": {
     "loading": "Exemplar arcessitur {{percent}}%",
+    "loadingEnvironment": "Fundus arcessitur {{percent}}%",
     "loadFailed": "Exemplar aperiri non potuit",
+    "environmentLoadFailed": "Fundus aperiri non potuit",
     "loadFailedHint": "Fasciculus fortasse deest vel corruptus est. Aliam versionem aperi vel fasciculum iterum mitte.",
     "viewMode": "Modus ostensionis",
     "mode": {
@@ -343,7 +334,8 @@
       "top": "Desuper"
     },
     "fit": "Ad aspectum apta",
-    "display": "Optiones ostensionis"
+    "display": "Optiones ostensionis",
+    "panoramaHint": "Trahe ut circumspicias"
   },
   "drawing": {
     "noPreview": "Haec forma hic praevideri non potest",
@@ -478,9 +470,11 @@
   },
   "tree": {
     "root": "Bibliotheca rerum",
+    "all": "Omnia",
     "path": "Locus",
     "expand": "{{name}} explica",
-    "collapse": "{{name}} complica"
+    "collapse": "{{name}} complica",
+    "tagsOf": "Notae: {{name}}"
   },
   "optimize": {
     "label": "Exemplar optima",

@@ -1,6 +1,7 @@
 import {
   ASSET_CAD_EXTENSIONS,
   ASSET_DRAWING_EXTENSIONS,
+  ASSET_ENVIRONMENT_EXTENSIONS,
   ASSET_ID_PATTERN,
   ASSET_MODEL_EXTENSIONS,
   getFileExtension,
@@ -12,11 +13,17 @@ import type { AssetKind } from '../model/types';
  * 미리 볼 수 있는지, GLB 로서 온전한지.
  */
 
-export type AssetPreviewMode = 'model' | 'image' | 'pdf' | 'none';
+export type AssetPreviewMode =
+  | 'model'
+  | 'environment'
+  | 'image'
+  | 'pdf'
+  | 'none';
 
 export function getAssetPreviewMode(format: string): AssetPreviewMode {
   const extension = format.toLowerCase();
   if (extension === 'glb') return 'model';
+  if (extension === 'exr') return 'environment';
   if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(extension)) return 'image';
   if (extension === 'pdf') return 'pdf';
   return 'none';
@@ -27,6 +34,9 @@ export function getAllowedAssetKinds(fileName: string): AssetKind[] {
   const extension = getFileExtension(fileName);
   if ((ASSET_MODEL_EXTENSIONS as readonly string[]).includes(extension)) {
     return ['model', 'map'];
+  }
+  if ((ASSET_ENVIRONMENT_EXTENSIONS as readonly string[]).includes(extension)) {
+    return ['environment'];
   }
   if ((ASSET_DRAWING_EXTENSIONS as readonly string[]).includes(extension)) {
     return ['drawing'];

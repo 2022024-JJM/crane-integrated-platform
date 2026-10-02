@@ -5,11 +5,12 @@ import {
   ASSET_ATTENTION_KINDS,
   ASSET_COLLECTION_NAME_MAX,
   getAssetScope,
+  toggleAssetScopeTag,
   withAssetScope,
   type AssetAttentionKind,
   type AssetCollection,
   type AssetQuery,
-  type AssetTreeSiteNode,
+  type AssetTree as AssetTreeData,
 } from '@crane/domain/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
@@ -18,8 +19,8 @@ import { AssetTree } from './asset-tree';
 
 interface AssetFilterRailProps {
   query: AssetQuery;
-  /** 탐색 계층(조선소 › 종류 › 분류). */
-  tree: readonly AssetTreeSiteNode[];
+  /** 탐색 계층(종류 › 태그). */
+  tree: AssetTreeData;
   /** 이유별로 손이 가야 하는 자산 수. */
   attention: Record<AssetAttentionKind, number>;
   collections: readonly AssetCollection[];
@@ -177,7 +178,11 @@ export function AssetFilterRail({
         <AssetTree
           tree={tree}
           scope={getAssetScope(query)}
+          hasTags={query.tags.length > 0}
           onSelect={(scope) => onChange(withAssetScope(query, scope))}
+          onToggleTag={(kind, tag) =>
+            onChange(toggleAssetScopeTag(query, kind, tag))
+          }
         />
       </RailSection>
 

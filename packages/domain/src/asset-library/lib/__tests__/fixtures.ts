@@ -30,8 +30,6 @@ export function asset(overrides: Partial<AssetRecord> = {}): AssetRecord {
     origin: 'user',
     name: 'Asset A',
     description: '',
-    category: 'outdoor',
-    sites: [],
     tags: [],
     owner: '',
     defaultScale: [1, 1, 1],

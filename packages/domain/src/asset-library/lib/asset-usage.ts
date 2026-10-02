@@ -1,4 +1,4 @@
-import type { AssetRecord, AssetSiteId } from '../model/types';
+import type { AssetRecord } from '../model/types';
 
 /**
  * 자산 사용처 — 어느 씬이 어떤 파일을 몇 번 배치했는지.
@@ -13,7 +13,6 @@ export interface SceneAssetSource {
   sceneFile: string;
   /** 이 씬 파일을 쓰는 region 들. */
   regionIds: string[];
-  site: AssetSiteId | null;
   /** 3D 화면 편집 경로. */
   editorPath: string;
   modelPaths: readonly string[];
@@ -23,7 +22,6 @@ export interface SceneAssetSource {
 export interface AssetUsage {
   sceneFile: string;
   regionIds: string[];
-  site: AssetSiteId | null;
   editorPath: string;
   /** 이 씬에 배치된 개수. */
   count: number;
@@ -47,7 +45,6 @@ export function buildAssetUsageIndex(
       list.push({
         sceneFile: source.sceneFile,
         regionIds: source.regionIds,
-        site: source.site,
         editorPath: source.editorPath,
         count,
       });

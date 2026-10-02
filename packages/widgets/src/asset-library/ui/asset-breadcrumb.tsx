@@ -16,8 +16,8 @@ interface AssetBreadcrumbProps {
 }
 
 /**
- * 계층 위의 위치 표기 — 라이브러리 › 조선소 › 종류 › 분류. 앞 마디를 누르면
- * 그 위치로 올라간다.
+ * 계층 위의 위치 표기 — 라이브러리 › 종류. 앞 마디를 누르면 그 위치로
+ * 올라간다. 고른 태그는 위치가 아니라 필터라 여기 적지 않는다(결과 위의 칩).
  */
 export function AssetBreadcrumb({
   scope,
@@ -27,30 +27,15 @@ export function AssetBreadcrumb({
   className,
 }: AssetBreadcrumbProps) {
   const { t } = useTranslation();
-  // 뿌리는 라이브러리 전체다. 조선소를 고르지 않은 위치는 뿌리 바로 아래에
-  // 종류가 온다.
+  // 뿌리는 라이브러리 전체다.
   const crumbs: { scope: AssetScope; label: string }[] = hideRoot
     ? []
-    : [
-        {
-          scope: { site: 'all', kind: null, category: null },
-          label: t('asset-library:tree.root'),
-        },
-      ];
-  if (scope.site !== 'all') {
-    crumbs.push({
-      scope: { site: scope.site, kind: null, category: null },
-      label: t(`asset-library:site.${scope.site}`),
-    });
-  }
+    : [{ scope: { kind: null }, label: t('asset-library:tree.root') }];
   if (scope.kind !== null) {
     crumbs.push({
-      scope: { site: scope.site, kind: scope.kind, category: null },
+      scope: { kind: scope.kind },
       label: t(`asset-library:kind.${scope.kind}`),
     });
-    if (scope.category !== null) {
-      crumbs.push({ scope, label: scope.category });
-    }
   }
 
   return (

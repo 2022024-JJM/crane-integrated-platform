@@ -1049,5 +1049,13 @@
       "lodLevels": 4,
       "animations": 0
     }
+  },
+  "/scenes/overcast-sky-over-the-atlantic-web.exr": {
+    "hash": "b5c36a63",
+    "bytes": 3575867
+  },
+  "/scenes/sky-blue-open-water-web.exr": {
+    "hash": "b962e022",
+    "bytes": 3219039
   }
 }

@@ -25,11 +25,7 @@ import {
 } from '@crane/ui/molecules/table';
 import { formatAssetDate } from '../lib/asset-presentation';
 import { AssetAttentionIcon } from './asset-attention';
-import {
-  AssetKindIcon,
-  AssetSiteChips,
-  AssetStatusBadge,
-} from './asset-badges';
+import { AssetKindIcon, AssetStatusBadge } from './asset-badges';
 import { AssetThumbnail } from './asset-thumbnail';
 
 interface AssetTableProps {
@@ -42,9 +38,10 @@ interface AssetTableProps {
   previewId: string | null;
   /**
    * 종류별 열. `geometry` 는 3D 자산의 값(삼각형·치수·배치), `document` 는
-   * 도면·CAD 의 값(도면 번호·리비전)이다. 섞인 목록은 `geometry` 로 본다.
+   * 도면·CAD 의 값(도면 번호·리비전)이다. 둘 다 없는 종류(배경)는 `basic` —
+   * 공통 열만 둔다. 섞인 목록은 `geometry` 로 본다.
    */
-  columns: 'geometry' | 'document';
+  columns: 'geometry' | 'document' | 'basic';
   /** 종류 열을 보일지 — 한 종류만 보는 위치에서는 뺀다. */
   showKind: boolean;
   hrefFor: (assetId: string) => string;
@@ -94,10 +91,7 @@ export function AssetTable({
               {t('asset-library:field.kind')}
             </TableHead>
           ) : null}
-          <TableHead className="w-32">
-            {t('asset-library:field.category')}
-          </TableHead>
-          <TableHead className="w-20">{t('asset-library:field.site')}</TableHead>
+          <TableHead className="w-44">{t('asset-library:field.tags')}</TableHead>
           <TableHead className="w-40">
             {t('asset-library:field.status')}
           </TableHead>
@@ -119,7 +113,7 @@ export function AssetTable({
                 {t('asset-library:field.revision')}
               </TableHead>
             </>
-          ) : (
+          ) : columns === 'basic' ? null : (
             <>
               <TableHead className="w-20 text-right">
                 {t('asset-library:field.triangles')}
@@ -212,11 +206,11 @@ export function AssetTable({
                   </span>
                 </TableCell>
               ) : null}
-              <TableCell className="text-muted-foreground max-w-32 truncate">
-                {asset.category || '—'}
-              </TableCell>
-              <TableCell>
-                <AssetSiteChips sites={asset.sites} />
+              <TableCell
+                className="text-muted-foreground max-w-44 truncate"
+                title={asset.tags.join(', ')}
+              >
+                {asset.tags.join(', ') || '—'}
               </TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
@@ -262,7 +256,7 @@ export function AssetTable({
                     {current.revision || '—'}
                   </TableCell>
                 </>
-              ) : (
+              ) : columns === 'basic' ? null : (
                 <>
                   <TableCell className="text-right tabular-nums">
                     {stats ? formatCount(stats.triangles) : '—'}

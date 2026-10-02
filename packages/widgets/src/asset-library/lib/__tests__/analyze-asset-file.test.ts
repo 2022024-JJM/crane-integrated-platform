@@ -26,8 +26,6 @@ function uploaded(contentHash: string): AssetRecord {
     origin: 'user',
     name: 'Existing',
     description: '',
-    category: '',
-    sites: [],
     tags: [],
     owner: '',
     defaultScale: [1, 1, 1],

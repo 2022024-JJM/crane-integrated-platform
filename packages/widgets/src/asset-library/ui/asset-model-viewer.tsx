@@ -1,23 +1,15 @@
-import {
-  Grid,
-  Html,
-  OrbitControls,
-  useGLTF,
-  useProgress,
-} from '@react-three/drei';
+import { Grid, Html, OrbitControls, useGLTF } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
   Box as BoxIcon,
   Camera,
   Grid3x3,
-  Loader2,
   Maximize,
   Rotate3d,
   Ruler,
   SunMoon,
 } from 'lucide-react';
 import {
-  Component,
   Suspense,
   useCallback,
   useEffect,
@@ -48,6 +40,7 @@ import {
   pickGridStep,
   type AssetStats,
 } from '@crane/domain/asset-library';
+import { VIEWER_GLASS_BAR } from '../lib/asset-presentation';
 import { renderThumbnail } from '../lib/thumbnail-crop';
 import {
   nextViewerBackground,
@@ -80,12 +73,12 @@ import {
   SelectPopup,
   SelectTrigger,
 } from '@crane/ui/molecules/select';
+import { TooltipProvider } from '@crane/ui/molecules/tooltip';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@crane/ui/molecules/tooltip';
+  ViewerErrorBoundary,
+  ViewerIconButton,
+  ViewerLoadingOverlay,
+} from './asset-viewer-chrome';
 
 /**
  * 자산 한 개를 살펴보는 3D 뷰어.
@@ -186,27 +179,6 @@ interface ModelInfo {
   stats: AssetStats;
   bounds: Box3;
   lodLevels: number;
-}
-
-class ViewerErrorBoundary extends Component<
-  { children: ReactNode; onError: () => void },
-  { failed: boolean }
-> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  componentDidCatch(error: Error) {
-    console.error('[asset-viewer] 모델을 불러오지 못했습니다.', error);
-    this.props.onError();
-  }
-
-  render() {
-    // Canvas 안이라 DOM 을 돌려줄 수 없다 — 안내는 바깥 오버레이가 맡는다.
-    return this.state.failed ? null : this.props.children;
-  }
 }
 
 function ViewerModel({
@@ -550,66 +522,6 @@ function ViewerEnvironment() {
   return null;
 }
 
-/** 뷰어 위 조작 버튼 — 배경이 무엇이든 읽히는 어두운 유리판 위의 아이콘. */
-function ViewerIconButton({
-  label,
-  pressed,
-  side = 'bottom',
-  onClick,
-  children,
-}: {
-  label: string;
-  pressed?: boolean;
-  side?: 'top' | 'bottom';
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label={label}
-            aria-pressed={pressed}
-            className={cn(
-              'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-white/70 [&_svg]:size-4',
-              pressed
-                ? 'bg-white text-zinc-900'
-                : 'text-white/75 hover:bg-white/15 hover:text-white',
-            )}
-          />
-        }
-        onClick={onClick}
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side={side}>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-const GLASS_BAR =
-  'flex h-9 items-center gap-0.5 rounded-lg bg-black/50 p-1 shadow-sm backdrop-blur-md';
-
-function LoadingOverlay({ light }: { light: boolean }) {
-  const { t } = useTranslation();
-  const { progress } = useProgress();
-  return (
-    <div
-      className={cn(
-        'pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2',
-        light ? 'text-zinc-600' : 'text-white/80',
-      )}
-    >
-      <Loader2 className="size-5 animate-spin" />
-      <p className="text-xs tabular-nums">
-        {t('asset-library:viewer.loading', { percent: Math.round(progress) })}
-      </p>
-    </div>
-  );
-}
-
 export function AssetModelViewer({
   url,
   defaultScale,
@@ -769,7 +681,7 @@ export function AssetModelViewer({
             </p>
           </div>
         ) : info ? null : (
-          <LoadingOverlay light={light} />
+          <ViewerLoadingOverlay light={light} subject="model" />
         )}
 
         {cornerLabel ? (
@@ -786,7 +698,7 @@ export function AssetModelViewer({
                   <div
                     role="group"
                     aria-label={t('asset-library:viewer.viewMode')}
-                    className={GLASS_BAR}
+                    className={VIEWER_GLASS_BAR}
                   >
                     {ASSET_VIEW_MODES.map((mode) => (
                       <button
@@ -830,7 +742,7 @@ export function AssetModelViewer({
               <div
                 role="group"
                 aria-label={t('asset-library:viewer.display')}
-                className={cn(GLASS_BAR, 'pointer-events-auto')}
+                className={cn(VIEWER_GLASS_BAR, 'pointer-events-auto')}
               >
                 <ViewerIconButton
                   label={t('asset-library:viewer.grid')}
@@ -883,7 +795,7 @@ export function AssetModelViewer({
               <div
                 role="group"
                 aria-label={t('asset-library:viewer.camera')}
-                className={cn(GLASS_BAR, 'pointer-events-auto')}
+                className={cn(VIEWER_GLASS_BAR, 'pointer-events-auto')}
               >
                 {toolbar === 'full' ? (
                   <>

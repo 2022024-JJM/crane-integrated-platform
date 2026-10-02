@@ -11,15 +11,14 @@ import {
  * 걸려 있는 필터 하나. 목록 위에 칩으로 늘어놓고 하나씩 풀 수 있게 한다 —
  * "왜 이것만 보이는지" 가 보인다.
  *
- * 계층의 위치(조선소 › 종류 › 분류)는 탐색의 범위라 칩이 아니라 경로 표기가
- * 맡는다. 다만 계층으로 나타낼 수 없는 상태(종류를 여럿 고름, 종류 없이
- * 분류만 고름 — 손으로 고친 링크)는 보이지 않는 필터가 되지 않게 칩으로 낸다.
+ * 계층의 위치(종류)는 탐색의 범위라 칩이 아니라 경로 표기가 맡는다. 다만
+ * 계층으로 나타낼 수 없는 상태(종류를 여럿 고름 — 손으로 고친 링크)는 보이지
+ * 않는 필터가 되지 않게 칩으로 낸다. 계층에서 체크한 태그는 필터라 칩이 있다.
  */
 export type ActiveFilter =
   | { type: 'text'; value: string }
   | { type: 'attention'; value: AssetAttentionKind }
   | { type: 'kind'; value: AssetKind }
-  | { type: 'category'; value: string }
   | { type: 'status'; value: AssetVersionStatus }
   | { type: 'tag'; value: string }
   | { type: 'collection'; value: string; name: string }
@@ -38,9 +37,6 @@ export function listActiveFilters(
   const scope = getAssetScope(query);
   if (scope.kind === null) {
     for (const kind of query.kinds) filters.push({ type: 'kind', value: kind });
-    if (query.category !== null) {
-      filters.push({ type: 'category', value: query.category });
-    }
   }
   for (const status of query.statuses) {
     filters.push({ type: 'status', value: status });
@@ -75,8 +71,6 @@ export function removeActiveFilter(
         ...query,
         kinds: query.kinds.filter((kind) => kind !== filter.value),
       };
-    case 'category':
-      return { ...query, category: null };
     case 'status':
       return {
         ...query,

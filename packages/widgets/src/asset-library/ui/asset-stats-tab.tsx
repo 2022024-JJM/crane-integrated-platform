@@ -7,6 +7,7 @@ import {
   formatCount,
   formatMeters,
   isDocumentAssetKind,
+  isGeometryAssetKind,
   toMeterSize,
   type AssetBudgetMetric,
   type AssetRecord,
@@ -91,10 +92,14 @@ function BudgetRow({ item }: { item: BudgetItem }) {
 export function AssetStatsTab({ asset, stats, live }: AssetStatsTabProps) {
   const { t } = useTranslation();
 
-  if (isDocumentAssetKind(asset.kind)) {
+  if (!isGeometryAssetKind(asset.kind)) {
     return (
       <p className="text-muted-foreground px-5 py-6 text-[13px] leading-relaxed">
-        {t('asset-library:stats.drawing')}
+        {t(
+          isDocumentAssetKind(asset.kind)
+            ? 'asset-library:stats.drawing'
+            : 'asset-library:stats.environment',
+        )}
       </p>
     );
   }

@@ -274,8 +274,6 @@ export type AssetMetadataPatch = Partial<
     AssetRecord,
     | 'name'
     | 'description'
-    | 'category'
-    | 'sites'
     | 'tags'
     | 'owner'
     | 'kind'
@@ -378,8 +376,6 @@ export interface CreateUserAssetInput {
   kind: AssetRecord['kind'];
   name: string;
   description: string;
-  category: string;
-  sites: AssetRecord['sites'];
   tags: string[];
   file: AssetFile;
   note: string;
@@ -399,8 +395,6 @@ export function createUserAssetRecord(
     origin: 'user',
     name: input.name,
     description: input.description,
-    category: input.category,
-    sites: input.sites,
     tags: input.tags,
     owner: context.actor,
     defaultScale: [1, 1, 1],

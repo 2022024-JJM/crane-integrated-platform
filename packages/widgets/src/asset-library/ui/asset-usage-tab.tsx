@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   getAssetUsage,
   isDocumentAssetKind,
+  isGeometryAssetKind,
   type AssetRecord,
 } from '@crane/domain/asset-library';
 import { useAssetLibraryStore } from '@crane/features/asset-library';
@@ -22,10 +23,14 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
   const failedScenes = useAssetLibraryStore((state) => state.usageFailedScenes);
   const loadUsage = useAssetLibraryStore((state) => state.loadUsage);
 
-  if (isDocumentAssetKind(asset.kind)) {
+  if (!isGeometryAssetKind(asset.kind)) {
     return (
       <p className="text-muted-foreground px-5 py-6 text-[13px] leading-relaxed">
-        {t('asset-library:usage.drawing')}
+        {t(
+          isDocumentAssetKind(asset.kind)
+            ? 'asset-library:usage.drawing'
+            : 'asset-library:usage.environment',
+        )}
       </p>
     );
   }
@@ -104,9 +109,6 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
                     </p>
                     <p className="text-muted-foreground mt-0.5 truncate text-xs">
                       {item.sceneFile}
-                      {item.site
-                        ? ` ${t(`asset-library:site.${item.site}`)}`
-                        : ''}
                     </p>
                   </div>
                   <span className="text-foreground font-condensed shrink-0 text-base font-semibold tabular-nums">

@@ -8,6 +8,7 @@ import {
   ASSET_STATUS_TONE,
   formatAssetDate,
   formatAssetDateTime,
+  listTagSuggestions,
   parseTagInput,
   resolveThumbnailSource,
   shortenContentHash,
@@ -22,8 +23,6 @@ function asset(overrides: Partial<AssetRecord> = {}): AssetRecord {
     origin: 'builtin',
     name: 'A',
     description: '',
-    category: '',
-    sites: [],
     tags: [],
     owner: '',
     defaultScale: [1, 1, 1],
@@ -204,5 +203,39 @@ describe('formatRelativeTime', () => {
   it('시각을 모르거나 읽을 수 없으면 —', () => {
     expect(formatRelativeTime('', now, 'ko')).toBe('—');
     expect(formatRelativeTime('not-a-date', now, 'ko')).toBe('—');
+  });
+});
+
+describe('listTagSuggestions', () => {
+  it('이미 붙은 태그를 빼고 순서를 지킨다', () => {
+    expect(
+      listTagSuggestions(['crane', 'indoor', 'bay', 'okpo'], ['indoor']),
+    ).toEqual(['crane', 'bay', 'okpo']);
+  });
+
+  it('대소문자만 다른 것은 이미 붙은 것으로 본다', () => {
+    expect(listTagSuggestions(['Crane', 'bay'], ['crane'])).toEqual(['bay']);
+    expect(listTagSuggestions(['crane'], ['CRANE'])).toEqual([]);
+  });
+
+  it('권할 목록 안의 중복은 먼저 나온 것 하나만 남긴다', () => {
+    expect(listTagSuggestions(['crane', 'Crane', 'bay'], [])).toEqual([
+      'crane',
+      'bay',
+    ]);
+  });
+
+  it('빈 목록·전부 붙은 경우는 빈 배열', () => {
+    expect(listTagSuggestions([], ['a'])).toEqual([]);
+    expect(listTagSuggestions(['a', 'b'], ['b', 'a'])).toEqual([]);
+    expect(listTagSuggestions([], [])).toEqual([]);
+  });
+
+  it('입력 배열을 바꾸지 않는다', () => {
+    const suggestions = ['crane', 'bay'];
+    const current = ['crane'];
+    listTagSuggestions(suggestions, current);
+    expect(suggestions).toEqual(['crane', 'bay']);
+    expect(current).toEqual(['crane']);
   });
 });

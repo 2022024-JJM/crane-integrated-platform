@@ -99,9 +99,19 @@ describe('parseAssetLibraryFileKey', () => {
     expect(parseAssetLibraryFileKey('files/a/v1/a.glb')).not.toBeNull();
   });
 
+  it('배경(EXR) 버전 파일 키를 받는다 — 미들웨어가 이 판정으로 쓴다', () => {
+    expect(parseAssetLibraryFileKey('files/sky/v2/sky-web.exr')).toEqual({
+      kind: 'version',
+      assetId: 'sky',
+      version: 2,
+      fileName: 'sky-web.exr',
+    });
+  });
+
   it('허용 목록 밖의 확장자와 썸네일의 png 아닌 확장자를 거부한다', () => {
     expect(parseAssetLibraryFileKey('files/a/v1/a.exe')).toBeNull();
     expect(parseAssetLibraryFileKey('files/a/v1/a.gltf')).toBeNull();
+    expect(parseAssetLibraryFileKey('files/a/v1/a.hdr')).toBeNull();
     expect(parseAssetLibraryFileKey('files/a/v1/noext')).toBeNull();
     expect(parseAssetLibraryFileKey('thumbnails/a.jpg')).toBeNull();
   });

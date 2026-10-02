@@ -5,7 +5,6 @@ import {
   countAssetFacets,
   DEFAULT_ASSET_QUERY,
   findAssetsByContentHash,
-  matchesSiteFilter,
   queryAssets,
   resolveVersionSizeBytes,
   resolveVersionStats,
@@ -40,7 +39,6 @@ const file = (path: string, extra = {}) => ({
 const okpoCrane = asset({
   id: 'okpo-crane',
   name: 'Okpo Crane 10',
-  sites: ['okpo'],
   tags: ['crane', 'outdoor'],
   updatedAt: '2026-03-01T00:00:00.000Z',
   versions: [version({ file: file('/models/okpo.glb') })],
@@ -49,7 +47,6 @@ const phillyMap = asset({
   id: 'philly-map',
   kind: 'map',
   name: 'Philly Area',
-  sites: ['philly'],
   tags: ['ground'],
   updatedAt: '2026-01-01T00:00:00.000Z',
   versions: [version({ status: 'draft', file: file('/maps/philly.glb') })],
@@ -57,7 +54,6 @@ const phillyMap = asset({
 const shared = asset({
   id: 'shared-worker',
   name: 'Okpo Crane 2',
-  sites: [],
   tags: ['Crane'],
   description: 'collision guard worker',
   updatedAt: '',
@@ -82,20 +78,6 @@ const ids = (query: Partial<AssetQuery>) =>
   queryAssets(assets, q(query), context).map((a) => a.id);
 
 afterEach(() => registerAssetHashManifest({}));
-
-describe('matchesSiteFilter', () => {
-  it('조선소를 고르면 그 조선소 자산과 공용 자산이 함께 나온다', () => {
-    expect(matchesSiteFilter(okpoCrane, 'okpo')).toBe(true);
-    expect(matchesSiteFilter(shared, 'okpo')).toBe(true);
-    expect(matchesSiteFilter(phillyMap, 'okpo')).toBe(false);
-  });
-
-  it('common 은 공용만, all 은 전부', () => {
-    expect(matchesSiteFilter(shared, 'common')).toBe(true);
-    expect(matchesSiteFilter(okpoCrane, 'common')).toBe(false);
-    expect(matchesSiteFilter(phillyMap, 'all')).toBe(true);
-  });
-});
 
 describe('queryAssets', () => {
   it('기본 쿼리는 전부를 이름순(숫자 인식)으로 돌려준다', () => {
@@ -127,6 +109,11 @@ describe('queryAssets', () => {
   it('태그는 고른 것을 모두 가진 자산만(대소문자 무시)', () => {
     expect(ids({ tags: ['crane'] })).toEqual(['shared-worker', 'okpo-crane']);
     expect(ids({ tags: ['crane', 'outdoor'] })).toEqual(['okpo-crane']);
+    // 가진 자산이 없는 태그가 하나라도 끼면 아무것도 남지 않는다.
+    expect(ids({ tags: ['crane', 'nope'] })).toEqual([]);
+    // 종류와 함께 걸면 그 종류 안에서 좁힌다.
+    expect(ids({ kinds: ['map'], tags: ['crane'] })).toEqual([]);
+    expect(ids({ kinds: ['map'], tags: ['ground'] })).toEqual(['philly-map']);
   });
 
   it('컬렉션·즐겨찾기 필터', () => {
@@ -201,11 +188,16 @@ describe('resolveVersionSizeBytes / resolveVersionStats', () => {
 });
 
 describe('countAssetFacets', () => {
-  it('조선소 개수는 필터와 같은 규칙(공용 포함)으로 센다', () => {
+  it('종류·상태별 개수를 센다', () => {
     const facets = countAssetFacets(assets);
     expect(facets.total).toBe(3);
-    expect(facets.sites).toEqual({ all: 3, common: 1, okpo: 2, philly: 2 });
-    expect(facets.kinds).toEqual({ model: 2, map: 1, drawing: 0, cad: 0 });
+    expect(facets.kinds).toEqual({
+      model: 2,
+      map: 1,
+      environment: 0,
+      drawing: 0,
+      cad: 0,
+    });
     expect(facets.statuses.published).toBe(2);
     expect(facets.statuses.draft).toBe(1);
   });
@@ -221,7 +213,11 @@ describe('countAssetFacets', () => {
 
   it('빈 목록도 모든 키를 0 으로 채운다', () => {
     const facets = countAssetFacets([]);
-    expect(facets.sites).toEqual({ all: 0, common: 0, okpo: 0, philly: 0 });
+    expect(facets.total).toBe(0);
+    expect(Object.values(facets.kinds).every((count) => count === 0)).toBe(true);
+    expect(Object.values(facets.statuses).every((count) => count === 0)).toBe(
+      true,
+    );
     expect(facets.tags).toEqual([]);
   });
 });

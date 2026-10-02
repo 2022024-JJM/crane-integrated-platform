@@ -7,13 +7,10 @@
       "origin": "builtin",
       "name": "Goliath Crane",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "outdoor",
-        "crane"
+        "crane",
+        "philly"
       ],
       "owner": "JoBeomHee",
       "defaultScale": [
@@ -50,8 +47,18 @@
         "updatedAt": "2026-10-01T08:04:30.618Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-08-20T01:23:05.000Z",
-      "history": [],
+      "updatedAt": "2026-10-02T01:45:29.480Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-u9z4qlzv",
+          "at": "2026-10-02T01:45:29.480Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ],
       "catalogId": "goliath-crane"
     },
     {
@@ -60,13 +67,10 @@
       "origin": "builtin",
       "name": "Okpo Goliath",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "outdoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -113,13 +117,10 @@
       "origin": "builtin",
       "name": "Okpo OC",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "outdoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -166,13 +167,10 @@
       "origin": "builtin",
       "name": "Okpo TC",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "outdoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -219,13 +217,10 @@
       "origin": "builtin",
       "name": "Okpo TTC",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "outdoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -272,13 +267,10 @@
       "origin": "builtin",
       "name": "LLC-002",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "outdoor",
-        "crane"
+        "crane",
+        "philly"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -315,8 +307,18 @@
         "updatedAt": "2026-10-01T08:04:57.941Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-09-23T07:45:15.000Z",
-      "history": [],
+      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-w9btgk3l",
+          "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ],
       "catalogId": "llc-002"
     },
     {
@@ -325,13 +327,10 @@
       "origin": "builtin",
       "name": "Block-001",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "outdoor",
-        "block"
+        "block",
+        "philly"
       ],
       "owner": "whdals6831",
       "defaultScale": [
@@ -368,8 +367,18 @@
         "updatedAt": "2026-10-01T08:05:02.571Z"
       },
       "createdAt": "2026-08-20T01:23:05.000Z",
-      "updatedAt": "2026-08-26T01:37:43.000Z",
-      "history": [],
+      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-kfc10wjv",
+          "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ],
       "catalogId": "block-001"
     },
     {
@@ -378,13 +387,10 @@
       "origin": "builtin",
       "name": "Block-002",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "outdoor",
-        "block"
+        "block",
+        "philly"
       ],
       "owner": "whdals6831",
       "defaultScale": [
@@ -421,8 +427,18 @@
         "updatedAt": "2026-10-01T08:05:07.259Z"
       },
       "createdAt": "2026-08-20T01:23:05.000Z",
-      "updatedAt": "2026-08-26T01:37:43.000Z",
-      "history": [],
+      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-z91kv9nk",
+          "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ],
       "catalogId": "block-002"
     },
     {
@@ -431,13 +447,10 @@
       "origin": "builtin",
       "name": "LNGC 174K",
       "description": "",
-      "category": "outdoor",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "outdoor",
-        "vessel"
+        "vessel",
+        "philly"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -474,8 +487,18 @@
         "updatedAt": "2026-10-01T08:05:13.264Z"
       },
       "createdAt": "2026-09-04T02:07:44.000Z",
-      "updatedAt": "2026-09-11T10:27:42.000Z",
-      "history": [],
+      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-m8jocet8",
+          "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ],
       "catalogId": "hanwha-ocean-lngc-174k"
     },
     {
@@ -484,13 +507,10 @@
       "origin": "builtin",
       "name": "1P 3Bay-test",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "bay"
+        "bay",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -553,13 +573,10 @@
       "origin": "builtin",
       "name": "3P",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "bay"
+        "bay",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -596,8 +613,18 @@
         "updatedAt": "2026-10-01T08:05:19.045Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": [],
+      "updatedAt": "2026-10-02T01:53:00.395Z",
+      "history": [
+        {
+          "id": "id-muqb6ggk-owxtgxkk",
+          "at": "2026-10-02T01:53:00.395Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ],
       "catalogId": "3p"
     },
     {
@@ -606,13 +633,10 @@
       "origin": "builtin",
       "name": "5P 1Bay",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "bay"
+        "bay",
+        "okpo"
       ],
       "owner": "조범희",
       "defaultScale": [
@@ -659,13 +683,10 @@
       "origin": "builtin",
       "name": "5P 2Bay",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "bay"
+        "bay",
+        "okpo"
       ],
       "owner": "조범희",
       "defaultScale": [
@@ -712,13 +733,10 @@
       "origin": "builtin",
       "name": "C-171",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -765,13 +783,10 @@
       "origin": "builtin",
       "name": "C-172",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -818,13 +833,10 @@
       "origin": "builtin",
       "name": "C-173",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -871,13 +883,10 @@
       "origin": "builtin",
       "name": "C-800",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -924,13 +933,10 @@
       "origin": "builtin",
       "name": "C-801",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -977,13 +983,10 @@
       "origin": "builtin",
       "name": "C-810",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1030,13 +1033,10 @@
       "origin": "builtin",
       "name": "C-811",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1083,13 +1083,10 @@
       "origin": "builtin",
       "name": "C-862",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1136,13 +1133,10 @@
       "origin": "builtin",
       "name": "C-863",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1189,13 +1183,10 @@
       "origin": "builtin",
       "name": "C-864",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1242,13 +1233,10 @@
       "origin": "builtin",
       "name": "C-865",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1295,13 +1283,10 @@
       "origin": "builtin",
       "name": "C-866",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1348,13 +1333,10 @@
       "origin": "builtin",
       "name": "C-867",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1401,13 +1383,10 @@
       "origin": "builtin",
       "name": "C-868",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1454,13 +1433,10 @@
       "origin": "builtin",
       "name": "C-869",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1507,13 +1483,10 @@
       "origin": "builtin",
       "name": "C-870",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1560,13 +1533,10 @@
       "origin": "builtin",
       "name": "C-871",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1613,13 +1583,10 @@
       "origin": "builtin",
       "name": "C-1806",
       "description": "",
-      "category": "indoor",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "indoor",
-        "crane"
+        "crane",
+        "okpo"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -1666,12 +1633,9 @@
       "origin": "builtin",
       "name": "Okpo",
       "description": "",
-      "category": "ground",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
-        "ground"
+        "ground",
+        "okpo"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -1718,13 +1682,10 @@
       "origin": "builtin",
       "name": "Okpo Terrain",
       "description": "",
-      "category": "context",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "context",
-        "terrain"
+        "terrain",
+        "okpo"
       ],
       "owner": "stupidbox",
       "defaultScale": [
@@ -1771,13 +1732,10 @@
       "origin": "builtin",
       "name": "Okpo Tree",
       "description": "",
-      "category": "context",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "context",
-        "terrain"
+        "terrain",
+        "okpo"
       ],
       "owner": "stupidbox",
       "defaultScale": [
@@ -1824,12 +1782,9 @@
       "origin": "builtin",
       "name": "Philly Area 1",
       "description": "",
-      "category": "ground",
-      "sites": [
-        "philly"
-      ],
       "tags": [
-        "ground"
+        "ground",
+        "philly"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -1876,12 +1831,9 @@
       "origin": "builtin",
       "name": "Philly Area 2",
       "description": "",
-      "category": "ground",
-      "sites": [
-        "philly"
-      ],
       "tags": [
-        "ground"
+        "ground",
+        "philly"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -1928,13 +1880,10 @@
       "origin": "builtin",
       "name": "Philly Terrain",
       "description": "",
-      "category": "context",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "context",
-        "terrain"
+        "terrain",
+        "philly"
       ],
       "owner": "정종민",
       "defaultScale": [
@@ -1981,8 +1930,6 @@
       "origin": "builtin",
       "name": "1 Dock",
       "description": "",
-      "category": "ground",
-      "sites": [],
       "tags": [
         "ground"
       ],
@@ -2031,8 +1978,6 @@
       "origin": "builtin",
       "name": "Plane",
       "description": "",
-      "category": "ground",
-      "sites": [],
       "tags": [
         "ground"
       ],
@@ -2076,16 +2021,123 @@
       "catalogId": "map-plane"
     },
     {
+      "id": "overcast-atlantic",
+      "kind": "environment",
+      "origin": "builtin",
+      "name": "Overcast Sky",
+      "description": "4096×2048 등장방형 파노라마(half-float, DWAA). 원본을 웹 배포용으로 줄인 파일입니다.",
+      "tags": [],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/scenes/overcast-sky-over-the-atlantic-web.exr"
+            },
+            "fileName": "overcast-sky-over-the-atlantic-web.exr",
+            "format": "exr",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-13T10:39:44.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/overcast-atlantic.png"
+        },
+        "updatedAt": "2026-10-02T00:44:14.000Z"
+      },
+      "createdAt": "2026-08-13T10:39:44.000Z",
+      "updatedAt": "2026-10-02T01:51:00.727Z",
+      "history": [
+        {
+          "id": "id-muqb3wny-trt7jsov",
+          "at": "2026-10-02T01:51:00.727Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blue-open-water",
+      "kind": "environment",
+      "origin": "builtin",
+      "name": "Blue Open Water",
+      "description": "4096×2048 등장방형 파노라마(half-float, DWAA). 원본을 웹 배포용으로 줄인 파일입니다.",
+      "tags": [],
+      "owner": "jobeomhee",
+      "defaultScale": [
+        1,
+        1,
+        1
+      ],
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/scenes/sky-blue-open-water-web.exr"
+            },
+            "fileName": "sky-blue-open-water-web.exr",
+            "format": "exr",
+            "sizeBytes": null,
+            "contentHash": null
+          },
+          "note": "",
+          "createdAt": "2026-08-13T10:39:44.000Z",
+          "createdBy": "jobeomhee"
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/blue-open-water.png"
+        },
+        "updatedAt": "2026-10-02T00:44:14.000Z"
+      },
+      "createdAt": "2026-08-13T10:39:44.000Z",
+      "updatedAt": "2026-10-02T01:55:36.078Z",
+      "history": [
+        {
+          "id": "id-muqb3wny-f3hljepv",
+          "at": "2026-10-02T01:55:36.078Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ]
+    },
+    {
       "id": "rt-crane",
       "kind": "model",
       "origin": "builtin",
       "name": "Crane (MRO)",
       "description": "",
-      "category": "runtime",
-      "sites": [],
       "tags": [
-        "runtime",
-        "MRO"
+        "runtime"
       ],
       "owner": "jobeomhee",
       "defaultScale": [
@@ -2122,8 +2174,18 @@
         "updatedAt": "2026-10-01T06:00:58.164Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-09-11T10:27:42.000Z",
-      "history": []
+      "updatedAt": "2026-10-02T01:32:06.331Z",
+      "history": [
+        {
+          "id": "id-muqafmt7-q9un02ud",
+          "at": "2026-10-02T01:32:06.331Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-gantry-crane",
@@ -2131,8 +2193,6 @@
       "origin": "builtin",
       "name": "Gantry Crane (MRO)",
       "description": "",
-      "category": "runtime",
-      "sites": [],
       "tags": [
         "runtime",
         "MRO"
@@ -2181,8 +2241,6 @@
       "origin": "builtin",
       "name": "TTC-27 (MRO)",
       "description": "",
-      "category": "runtime",
-      "sites": [],
       "tags": [
         "runtime",
         "MRO"
@@ -2231,14 +2289,11 @@
       "origin": "builtin",
       "name": "Goliath Crane Body",
       "description": "",
-      "category": "runtime",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "runtime",
         "MRO",
-        "part"
+        "part",
+        "philly"
       ],
       "owner": "조범희",
       "defaultScale": [
@@ -2275,8 +2330,18 @@
         "updatedAt": "2026-10-01T06:01:10.728Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-09-01T06:28:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-1r0yhy5p",
+          "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-goliath-crane-trolley",
@@ -2284,14 +2349,11 @@
       "origin": "builtin",
       "name": "Goliath Crane Trolley",
       "description": "",
-      "category": "runtime",
-      "sites": [
-        "philly"
-      ],
       "tags": [
         "runtime",
         "MRO",
-        "part"
+        "part",
+        "philly"
       ],
       "owner": "조범희",
       "defaultScale": [
@@ -2328,8 +2390,18 @@
         "updatedAt": "2026-10-01T06:01:14.366Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-09-01T06:28:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "history": [
+        {
+          "id": "id-muqawrpk-hlo9ikdg",
+          "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "tags"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-man",
@@ -2337,8 +2409,6 @@
       "origin": "builtin",
       "name": "Worker",
       "description": "",
-      "category": "runtime",
-      "sites": [],
       "tags": [
         "runtime",
         "collision-guard"
@@ -2387,8 +2457,6 @@
       "origin": "builtin",
       "name": "Vehicle",
       "description": "",
-      "category": "runtime",
-      "sites": [],
       "tags": [
         "runtime",
         "collision-guard"
@@ -2437,8 +2505,6 @@
       "origin": "builtin",
       "name": "Forklift",
       "description": "",
-      "category": "runtime",
-      "sites": [],
       "tags": [
         "runtime",
         "collision-guard"
@@ -2487,13 +2553,10 @@
       "origin": "builtin",
       "name": "BOS2 Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2532,8 +2595,6 @@
       "origin": "builtin",
       "name": "BOS3 Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [],
       "tags": [
         "equipment-layout",
         "indoor"
@@ -2585,13 +2646,10 @@
       "origin": "builtin",
       "name": "GOS Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2630,13 +2688,10 @@
       "origin": "builtin",
       "name": "NPS Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2675,13 +2730,10 @@
       "origin": "builtin",
       "name": "OFD1 Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2720,13 +2772,10 @@
       "origin": "builtin",
       "name": "OFD Shelter Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2765,13 +2814,10 @@
       "origin": "builtin",
       "name": "PAS Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2810,13 +2856,10 @@
       "origin": "builtin",
       "name": "PBS Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2855,13 +2898,10 @@
       "origin": "builtin",
       "name": "POS1 Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
@@ -2900,13 +2940,10 @@
       "origin": "builtin",
       "name": "POS2 DUMO Equipment Layout",
       "description": "",
-      "category": "equipment-layout",
-      "sites": [
-        "okpo"
-      ],
       "tags": [
         "equipment-layout",
-        "indoor"
+        "indoor",
+        "okpo"
       ],
       "owner": "박경민",
       "defaultScale": [
