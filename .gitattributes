@@ -7,3 +7,11 @@
 # 이유로 두고 있는 규칙이며, 이식 자산이 apps/shell/public/real-scan 으로 옮겨
 # 앉았으므로 이 레포에도 필요하다.
 *.bin binary
+
+# 컨테이너 · 리눅스 서버에서 sh 가 읽는 파일은 Windows 에서도 LF 로 체크아웃한다.
+# core.autocrlf=true 면 CRLF 로 풀려 docker build 가 그대로 이미지에 넣고, sh 가 'in\r' 을 못 읽어
+# nginx 가 뜨지 않는다 (15-base-path.envsh: syntax error: unexpected word (expecting "in")).
+*.sh                text eol=lf
+*.envsh             text eol=lf
+deploy/env/*.env    text eol=lf
+nginx.conf.template text eol=lf
