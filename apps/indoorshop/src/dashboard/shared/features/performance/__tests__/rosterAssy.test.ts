@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { setNowSource } from '../../../lib/now'
 import {
   blocksInZone,
   findBlock,
@@ -14,6 +15,11 @@ import {
 import { findAssyViolations } from '../model/aggregate'
 
 const BASE = '2026-09-02'
+
+/* 더미는 기준일을 실제 '오늘'로부터 되감는다(`rewindDaysOf`) — 시계를 기준일에 고정하지
+   않으면 날짜가 지날수록 수위가 내려가 결과가 실행일에 묶인다 */
+beforeEach(() => setNowSource(new Date(`${BASE}T12:00:00`).getTime()))
+afterEach(() => setNowSource(null))
 
 /**
  * **지도와 실적이 같은 이름을 부르는지.**

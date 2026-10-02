@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { setNowSource } from '../../../lib/now'
 import { generateAssyUnits, generatePaintingSteps } from '../api/performanceApi'
 import { isBlockInTransition, listBlocks } from '../../../entities/vessel'
 
@@ -13,6 +14,11 @@ import { isBlockInTransition, listBlocks } from '../../../entities/vessel'
  * 시작 전이다. 경계를 화면이 그릴 수 있어야 해서 로스터에 표본으로 둔다.
  */
 const BASE = '2026-09-03'
+
+/* 더미는 기준일을 실제 '오늘'로부터 되감는다(`rewindDaysOf`) — 시계를 기준일에 고정하지
+   않으면 날짜가 지날수록 수위가 내려가 결과가 실행일에 묶인다 */
+beforeEach(() => setNowSource(new Date(`${BASE}T12:00:00`).getTime()))
+afterEach(() => setNowSource(null))
 const daysBack = (date: string) =>
   Math.round((new Date(`${BASE}T00:00:00`).getTime() - new Date(`${date}T00:00:00`).getTime()) / 86_400_000)
 

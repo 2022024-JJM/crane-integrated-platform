@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { setNowSource } from '../../../lib/now'
 import { buildPaintingSteps } from '../model/aggregate'
 import {
   generateDailyProgress,
@@ -18,6 +19,13 @@ import type { PaintingStepPlan } from '../model/types'
  *  · **오늘 데이터 부재** — 등록이 하루 1회 일괄이라 최신 실적일이 언제나 '어제'다.
  *  · **완료 스텝은 100%** — % 는 참고 수치이고 완료 판정(전량 완료)을 흔들지 않는다.
  */
+
+const CLOCK = '2026-09-03'
+
+/* 더미는 기준일을 실제 '오늘'로부터 되감는다(`rewindDaysOf`) — 시계를 기준일에 고정하지
+   않으면 날짜가 지날수록 수위가 내려가 결과가 실행일에 묶인다 */
+beforeEach(() => setNowSource(new Date(`${CLOCK}T12:00:00`).getTime()))
+afterEach(() => setNowSource(null))
 
 const plan = (over: Partial<PaintingStepPlan> & Pick<PaintingStepPlan, 'step'>): PaintingStepPlan => ({
   elmtItemCodes: ['S1'],
