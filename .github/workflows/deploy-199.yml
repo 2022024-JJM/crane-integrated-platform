@@ -31,10 +31,11 @@ jobs:
       group: deploy-${{ github.ref_name }}
       cancel-in-progress: ${{ github.ref_name == 'develop' }}
     env:
+      # 199 접속 정보는 비밀이 아니므로 Variables 에 둔다. 키 · 비밀번호만 Secrets.
       DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/opt/crane-rnd' }}
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_PORT: ${{ secrets.SSH_PORT }}
-      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_HOST: ${{ vars.SSH_HOST }}
+      SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+      SSH_USER: ${{ vars.SSH_USER }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,12 +46,18 @@ jobs:
             develop) ENV=dev ;;
             *) echo "::error::develop · main 만 배포합니다 ($GITHUB_REF_NAME)"; exit 1 ;;
           esac
+          : "${SSH_HOST:?Variables 에 SSH_HOST 가 없습니다}" "${SSH_USER:?Variables 에 SSH_USER 가 없습니다}"
           echo "ENV=$ENV" >> "$GITHUB_ENV"
           echo "TAG=$ENV-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: 1. 이미지 빌드 (230)
+        env:
+          # 지도 키는 커밋되는 env 파일에 두지 않는다. 셸 변수 → compose build.args → Vite 번들
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          VITE_GOOGLE_MAPS_MAP_ID: ${{ secrets.VITE_GOOGLE_MAPS_MAP_ID }}
         run: |
-          set -a; . "deploy/env/$ENV.env"; set +a     # 경로 · 포트 · 지도 키 모두 env 파일에서
+          : "${VITE_GOOGLE_MAPS_API_KEY:?Secrets 에 VITE_GOOGLE_MAPS_API_KEY 가 없습니다}"
+          set -a; . "deploy/env/$ENV.env"; set +a     # 경로 · 포트 · 태그. 지도 키 줄을 env 파일에 쓰면 위 Secret 을 덮어쓴다
           IMAGE_TAG="$TAG" docker compose build         # 프로젝트 이름은 compose name: 이 DEPLOY_ENV 로 정함
 
       - name: 2. 이미지 저장 (230)
@@ -58,10 +65,10 @@ jobs:
 
       - name: 3. 199 로 전송
         env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/crane_199 && chmod 600 ~/.ssh/crane_199
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/crane_199 && chmod 600 ~/.ssh/crane_199
           OPTS="-i $HOME/.ssh/crane_199 -o StrictHostKeyChecking=accept-new"
           ssh $OPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p $DEPLOY_DIR/images"
           scp $OPTS -P "$SSH_PORT" "crane-shell-$TAG.tar.gz" "$SSH_USER@$SSH_HOST:$DEPLOY_DIR/images/"
@@ -69,11 +76,11 @@ jobs:
 
       - name: 4. 199 에서 배포 셸 실행
         env:
-          SUDO_PASS: ${{ secrets.SUDO_PASS }}      # 199 계정이 docker 그룹이면 비워 둔다
+          SUDO_PASSWORD: ${{ secrets.SUDO_PASSWORD }}      # 199 계정이 docker 그룹이면 비워 둔다
         run: |
           SSH="ssh -i $HOME/.ssh/crane_199 -p $SSH_PORT $SSH_USER@$SSH_HOST"
-          if [ -n "$SUDO_PASS" ]; then
-            printf '%s\n' "$SUDO_PASS" | $SSH "sudo -S -p '' bash $DEPLOY_DIR/deploy/deploy.sh $ENV $TAG"
+          if [ -n "$SUDO_PASSWORD" ]; then
+            printf '%s\n' "$SUDO_PASSWORD" | $SSH "sudo -S -p '' bash $DEPLOY_DIR/deploy/deploy.sh $ENV $TAG"
           else
             $SSH "bash $DEPLOY_DIR/deploy/deploy.sh $ENV $TAG"
           fi
