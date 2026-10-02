@@ -247,6 +247,8 @@ export function AssetFilterRail({
               onChange={(event) => setDraftName(event.target.value)}
               onBlur={() => void submitCollection()}
               onKeyDown={(event) => {
+                // 조합 중인 글자(한글)를 끝내는 Enter 는 확정이 아니다.
+                if (event.nativeEvent.isComposing) return;
                 if (event.key === 'Enter') void submitCollection();
                 if (event.key === 'Escape') {
                   setDraftName('');

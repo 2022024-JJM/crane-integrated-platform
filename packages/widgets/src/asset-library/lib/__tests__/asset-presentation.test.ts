@@ -239,3 +239,53 @@ describe('listTagSuggestions', () => {
     expect(current).toEqual(['crane']);
   });
 });
+
+describe('listTagSuggestions — 치는 글자로 거르기', () => {
+  const tags = ['crane', 'indoor', 'outdoor', 'Okpo', '크레인', '옥포 크레인'];
+
+  it('그 글자가 들어간 태그만 남기고 순서를 지킨다', () => {
+    expect(listTagSuggestions(tags, [], 'door')).toEqual(['indoor', 'outdoor']);
+    expect(listTagSuggestions(tags, [], 'c')).toEqual(['crane']);
+  });
+
+  it('대소문자를 가리지 않는다', () => {
+    expect(listTagSuggestions(tags, [], 'OKPO')).toEqual(['Okpo']);
+    expect(listTagSuggestions(tags, [], 'Crane')).toEqual(['crane']);
+  });
+
+  it('한글도 들어간 글자로 거른다', () => {
+    expect(listTagSuggestions(tags, [], '크레')).toEqual([
+      '크레인',
+      '옥포 크레인',
+    ]);
+    // 조합 중인 낱자(초성만)는 완성된 글자와 맞지 않는다 — 다 치면 맞는다.
+    expect(listTagSuggestions(tags, [], 'ㅋ')).toEqual([]);
+  });
+
+  it('빈 글자·공백뿐인 글자는 거르지 않고, 앞뒤 공백은 없는 것으로 본다', () => {
+    expect(listTagSuggestions(tags, [], '')).toEqual(tags);
+    expect(listTagSuggestions(tags, [], '   ')).toEqual(tags);
+    expect(listTagSuggestions(tags, [], '  door ')).toEqual([
+      'indoor',
+      'outdoor',
+    ]);
+    // 가운데 공백은 글자다.
+    expect(listTagSuggestions(tags, [], '옥포 크')).toEqual(['옥포 크레인']);
+  });
+
+  it('맞는 것이 없으면 빈 배열', () => {
+    expect(listTagSuggestions(tags, [], 'zzz')).toEqual([]);
+    expect(listTagSuggestions([], [], 'a')).toEqual([]);
+  });
+
+  it('이미 붙은 태그는 글자가 맞아도 권하지 않는다', () => {
+    expect(listTagSuggestions(tags, ['INDOOR'], 'door')).toEqual(['outdoor']);
+  });
+
+  it('정규식 글자는 그대로 글자로 본다', () => {
+    expect(listTagSuggestions(['a.b', 'axb', 'c(1)'], [], '.')).toEqual(['a.b']);
+    expect(listTagSuggestions(['a.b', 'axb', 'c(1)'], [], '(')).toEqual([
+      'c(1)',
+    ]);
+  });
+});

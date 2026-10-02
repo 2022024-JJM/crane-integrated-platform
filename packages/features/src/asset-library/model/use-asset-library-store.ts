@@ -73,7 +73,6 @@ export interface ImportAssetInput {
   description: string;
   /** 종류 안의 세부 분류 — 탐색 계층의 체크박스가 이 값으로 좁힌다. */
   tags: string[];
-  note: string;
   revision?: string;
   drawingNo?: string;
   contentHash: string | null;
@@ -483,7 +482,6 @@ export function createAssetLibraryStore(
             description: input.description,
             tags: input.tags,
             file: toAssetFile(stored, fileName, input.file, input.contentHash),
-            note: input.note,
             revision: input.revision,
             drawingNo: input.drawingNo,
           },

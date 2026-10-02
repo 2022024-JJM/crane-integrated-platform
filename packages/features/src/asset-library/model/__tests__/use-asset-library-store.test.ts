@@ -282,7 +282,6 @@ describe('importAsset', () => {
         name: 'Crane Model',
         description: '',
         tags: ['crane', 'philly'],
-        note: 'first',
         contentHash: 'sha256:abc',
       },
       'crane.ocean',
@@ -296,7 +295,8 @@ describe('importAsset', () => {
     expect(record?.versions[0]).toMatchObject({
       version: 1,
       status: 'draft',
-      note: 'first',
+      // 첫 버전은 변경 메모 없이 시작한다.
+      note: '',
       file: {
         ref: { storage: 'browser', key: 'files/crane-model/v1/Crane-Model.glb' },
         fileName: 'Crane-Model.glb',
@@ -321,7 +321,6 @@ describe('importAsset', () => {
       name: 'Okpo TTC',
       description: '',
       tags: [],
-      note: '',
       contentHash: null,
     };
     expect((await store.getState().importAsset(input, 'me'))?.id).toBe('okpo-ttc-2');
@@ -338,7 +337,6 @@ describe('importAsset', () => {
         name: 'Bare',
         description: '',
         tags: [],
-        note: '',
         contentHash: null,
       },
       'me',
@@ -359,7 +357,6 @@ describe('importAsset', () => {
         name: 'Crane',
         description: '',
         tags: [],
-        note: '',
         contentHash: null,
       },
       'me',
@@ -442,7 +439,6 @@ describe('removeAsset', () => {
         name: 'Temp',
         description: '',
         tags: [],
-        note: '',
         contentHash: null,
       },
       'me',
@@ -472,7 +468,6 @@ describe('removeAsset', () => {
         name: 'Temp',
         description: '',
         tags: [],
-        note: '',
         contentHash: null,
       },
       'me',
@@ -638,7 +633,6 @@ describe('즐겨찾기 — 없어진 자산', () => {
         name: 'Mine',
         description: '',
         tags: [],
-        note: '',
         contentHash: null,
       },
       'me',
@@ -682,7 +676,6 @@ describe('읽기 전·읽기 실패 상태에서는 고치지도 저장하지도
     name: 'Crane',
     description: '',
     tags: [],
-    note: '',
     contentHash: null,
   };
 
@@ -756,7 +749,6 @@ describe('removeAsset — 저장 실패', () => {
         name: 'Temp',
         description: '',
         tags: [],
-        note: '',
         contentHash: null,
       },
       'me',
@@ -777,7 +769,6 @@ describe('버전 지우기·일괄 작업', () => {
     name,
     description: '',
     tags: [],
-    note: '',
     contentHash: null,
   });
 
@@ -872,7 +863,6 @@ describe('등록 시 최적화', () => {
   const base = {
     description: '',
     tags: [],
-    note: '',
     contentHash: 'sha256:orig',
   };
 

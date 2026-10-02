@@ -17,6 +17,12 @@ import {
 const QUIET_FIELD =
   'border-transparent bg-muted/60 hover:bg-muted focus:border-ring focus:bg-background';
 
+/**
+ * 권하는 태그 목록의 높이 상한 — 칩 네 줄(줄 높이 1.5rem, 줄 사이 0.25rem)에
+ * 위아래 안쪽 여백을 더한 값이다.
+ */
+const SUGGESTIONS_MAX_HEIGHT = 'max-h-[7rem]';
+
 /** 라벨 + 입력 한 줄. 라벨과 입력은 id 로 묶인다. */
 export function FormRow({
   label,
@@ -62,7 +68,7 @@ export function TextArea({
 /**
  * 태그 편집 — Enter·쉼표로 추가, 칩의 × 로 제거. `suggestions` 는 같은 종류의
  * 자산이 이미 쓰는 태그다 — 눌러서 붙이게 해 철자가 갈리지 않게 한다(갈리면
- * 탐색 계층의 체크박스가 둘로 나뉜다).
+ * 탐색 계층의 체크박스가 둘로 나뉜다). 입력란에 치는 글자로 그 목록을 거른다.
  */
 export function TagEditor({
   id,
@@ -79,8 +85,11 @@ export function TagEditor({
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
+  const suggestionsRef = useRef<HTMLUListElement | null>(null);
   const full = value.length >= ASSET_TAGS_MAX;
-  const offered = full ? [] : listTagSuggestions(suggestions ?? [], value);
+  const offered = full
+    ? []
+    : listTagSuggestions(suggestions ?? [], value, draft);
 
   const commit = (raw: string) => {
     const lower = new Set(value.map((tag) => tag.toLowerCase()));
@@ -136,10 +145,21 @@ export function TagEditor({
           if (next.includes(',')) commit(next);
           else setDraft(next);
         }}
-        onBlur={() => {
+        onBlur={(event) => {
+          // 권하는 태그로 초점이 옮겨 간 것이면 치던 글자를 태그로 만들지
+          // 않는다 — 그 글자는 목록을 거르려고 친 것이다.
+          if (
+            suggestionsRef.current?.contains(event.relatedTarget as Node | null)
+          ) {
+            return;
+          }
           if (draft.trim()) commit(draft);
         }}
         onKeyDown={(event) => {
+          // 한글처럼 조합해 넣는 글자는 Enter 가 두 번 온다 — 조합을 끝내는
+          // Enter 와 그 뒤의 진짜 Enter. 앞의 것에서 확정하면 입력란을 비운
+          // 뒤에 조합 중이던 마지막 글자가 다시 들어와 태그가 하나 더 생긴다.
+          if (event.nativeEvent.isComposing) return;
           if (event.key === 'Enter') {
             event.preventDefault();
             if (draft.trim()) commit(draft);
@@ -156,13 +176,24 @@ export function TagEditor({
         }}
       />
       {offered.length > 0 ? (
-        <ul className="flex flex-wrap gap-1">
+        // 네 줄까지 보이고 넘치면 스크롤한다 — 태그가 많은 종류에서 목록이
+        // 아래 입력란을 밀어내지 않는다.
+        <ul
+          ref={suggestionsRef}
+          className={cn(
+            // 안쪽 여백은 스크롤 영역이 칩의 초점 테두리를 자르지 않게 한다.
+            '-m-0.5 flex flex-wrap gap-1 overflow-y-auto p-0.5',
+            SUGGESTIONS_MAX_HEIGHT,
+          )}
+        >
           {offered.map((tag) => (
             <li key={tag}>
               <button
                 type="button"
                 disabled={disabled}
                 aria-label={t('asset-library:form.addSuggestedTag', { tag })}
+                // 누르는 동안 입력란이 초점을 잃지 않게 한다 — 이어서 칠 수 있다.
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => commit(tag)}
                 className="border-border text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring/50 inline-flex h-6 cursor-pointer items-center gap-1 rounded-full border border-dashed pr-2 pl-1.5 text-[11px] outline-none focus-visible:ring-2 disabled:pointer-events-none"
               >

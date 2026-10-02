@@ -5,7 +5,6 @@ import {
   ASSET_DESCRIPTION_MAX,
   ASSET_DRAWING_NO_MAX,
   ASSET_NAME_MAX,
-  ASSET_NOTE_MAX,
   ASSET_REVISION_MAX,
   ASSET_TAG_MAX,
   ASSET_TAGS_MAX,
@@ -124,7 +123,6 @@ function ImportForm({
   // 같은 종류의 파일일 때만. 모델의 태그를 도면에 붙이지 않는다.
   const [editedTags, setEditedTags] = useState<string[] | null>(null);
   const [description, setDescription] = useState('');
-  const [note, setNote] = useState('');
   const [drawingNo, setDrawingNo] = useState('');
   const [revision, setRevision] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -185,7 +183,6 @@ function ImportForm({
       description: description.trim(),
       optimize: canOptimize && kind === 'model' && optimize,
       tags,
-      note: note.trim(),
       contentHash: analysis.contentHash,
       ...(kind !== null && isDocumentAssetKind(kind) && drawingNo.trim()
         ? { drawingNo: drawingNo.trim() }
@@ -207,7 +204,8 @@ function ImportForm({
     >
       <header className="border-border border-b px-5 py-4">
         <AlertDialogTitle>{t('asset-library:import.title')}</AlertDialogTitle>
-        <AlertDialogDescription className="mt-1">
+        {/* 설명은 두 줄이다 — 문구의 줄바꿈을 그대로 살린다. */}
+        <AlertDialogDescription className="mt-1 whitespace-pre-line">
           {t('asset-library:import.description')}
         </AlertDialogDescription>
       </header>
@@ -375,10 +373,7 @@ function ImportForm({
             </div>
           ) : null}
 
-          <FormRow
-            label={t('asset-library:field.tags')}
-            hint={t('asset-library:import.tagsHint')}
-          >
+          <FormRow label={t('asset-library:field.tags')}>
             {(id) => (
               <TagEditor
                 id={id}
@@ -398,20 +393,6 @@ function ImportForm({
                 value={description}
                 maxLength={ASSET_DESCRIPTION_MAX}
                 onChange={(event) => setDescription(event.target.value)}
-              />
-            )}
-          </FormRow>
-
-          <FormRow
-            label={t('asset-library:field.versionNote')}
-            hint={t('asset-library:import.noteHint')}
-          >
-            {(id) => (
-              <Input
-                id={id}
-                value={note}
-                maxLength={ASSET_NOTE_MAX}
-                onChange={(event) => setNote(event.target.value)}
               />
             )}
           </FormRow>

@@ -326,7 +326,6 @@ describe('createUserAssetRecord', () => {
         description: '',
         tags: ['philly'],
         file,
-        note: 'first',
         drawingNo: 'D-100',
         revision: 'A',
       },
@@ -343,7 +342,8 @@ describe('createUserAssetRecord', () => {
       version: 1,
       status: 'draft',
       revision: 'A',
-      note: 'first',
+      // 첫 버전은 변경 메모 없이 시작한다.
+      note: '',
     });
     expect(record.history).toEqual([
       expect.objectContaining({ action: 'created', version: 1 }),

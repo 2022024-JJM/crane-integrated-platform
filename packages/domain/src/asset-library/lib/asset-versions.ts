@@ -378,13 +378,15 @@ export interface CreateUserAssetInput {
   description: string;
   tags: string[];
   file: AssetFile;
-  note: string;
   revision?: string;
   drawingNo?: string;
   stats?: AssetStats;
 }
 
-/** 이 화면에서 등록한 자산 — 버전 1(draft)과 생성 이력으로 시작한다. */
+/**
+ * 이 화면에서 등록한 자산 — 버전 1(draft)과 생성 이력으로 시작한다. 첫 버전은
+ * 달라진 점이 없어 변경 메모가 비어 있다(버전 탭에서 나중에 적을 수 있다).
+ */
 export function createUserAssetRecord(
   input: CreateUserAssetInput,
   context: AssetChangeContext,
@@ -405,7 +407,7 @@ export function createUserAssetRecord(
         version: 1,
         status: 'draft',
         file: input.file,
-        note: input.note,
+        note: '',
         ...(input.revision ? { revision: input.revision } : {}),
         createdAt: context.at,
         createdBy: context.actor,

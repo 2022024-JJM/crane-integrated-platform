@@ -867,7 +867,16 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             </span>
 
             <div className="ml-auto flex items-center gap-2">
-
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t('asset-library:action.exportCsv')}
+                title={t('asset-library:action.exportCsv')}
+                disabled={results.length === 0}
+                onClick={exportCsv}
+              >
+                <Download />
+              </Button>
               <div
                 role="group"
                 aria-label={t('asset-library:browser.viewMode')}
@@ -897,16 +906,6 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                   </button>
                 ))}
               </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t('asset-library:action.exportCsv')}
-                title={t('asset-library:action.exportCsv')}
-                disabled={results.length === 0}
-                onClick={exportCsv}
-              >
-                <Download />
-              </Button>
             </div>
           </div>
 

@@ -190,16 +190,23 @@ export function parseTagInput(raw: string): string[] {
     .filter(Boolean);
 }
 
-/** 권할 태그 — 이미 붙은 것(대소문자 무시)을 뺀 나머지. 순서는 그대로다. */
+/**
+ * 권할 태그 — 이미 붙은 것(대소문자 무시)을 뺀 나머지. 순서는 그대로다.
+ * `filter` 는 입력란에 치고 있는 글자다 — 그 글자가 들어간 태그만 남긴다
+ * (대소문자 무시, 앞뒤 공백은 없는 것으로 본다). 비어 있으면 거르지 않는다.
+ */
 export function listTagSuggestions(
   suggestions: readonly string[],
   current: readonly string[],
+  filter = '',
 ): string[] {
   const taken = new Set(current.map((tag) => tag.toLowerCase()));
+  const needle = filter.trim().toLowerCase();
   const offered: string[] = [];
   for (const tag of suggestions) {
     const key = tag.toLowerCase();
     if (taken.has(key)) continue;
+    if (needle && !key.includes(needle)) continue;
     taken.add(key);
     offered.push(tag);
   }
