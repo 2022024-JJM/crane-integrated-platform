@@ -1,12 +1,6 @@
 # nginx 공식 이미지의 envsubst 가 컨테이너 시작 시 이 파일을 읽어
 # ${VAR} 들을 환경변수로 치환한 뒤 /etc/nginx/conf.d/default.conf 로 출력한다.
 # 따라서 운영 환경에서 IP/PORT 변경은 .env 만 수정 후 컨테이너 재시작이면 충분하다.
-#
-# 앱 접두어는 ${BASE_PATH} 하나로 따라간다 (끝 슬래시 포함, 예: /crane_rnd/ · /crane_rnd/dev/).
-# 값은 Dockerfile ARG → runner 의 ENV 로 이미지에 박히고, 끝 슬래시 없는 ${BASE_PATH_NOSLASH} 는
-# deploy/nginx/15-base-path.envsh 가 치환 직전에 만든다. location 은 nginx 변수를 못 받으므로
-# 경로는 반드시 이 템플릿 치환으로만 바꾼다. indoor 주소(VITE_INDOOR_BASE_URL)는 BASE_PATH 밖에
-# 놓일 수 있어(dev · stage) 맨 아래 catch-all 이 같은 index.html 을 낸다.
 
 # public/ 자산의 캐시 정책을 URL 의 `?v=` 유무로 가른다.
 #
@@ -75,9 +69,9 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
-    # 앞단이 rewrite 없이 그대로 ${BASE_PATH}api/* 로 전달한 경우에도 안전하게 처리
-    location ${BASE_PATH}api/ {
-        rewrite ^${BASE_PATH}api/(.*)$ /api/$1 break;
+    # 앞단이 rewrite 없이 그대로 /crane_rnd/api/* 로 전달한 경우에도 안전하게 처리
+    location /crane_rnd/api/ {
+        rewrite ^/crane_rnd/api/(.*)$ /api/$1 break;
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -95,9 +89,9 @@ server {
         proxy_read_timeout 86400s;
     }
 
-    # 앞단이 rewrite 없이 그대로 ${BASE_PATH}ws/* 로 전달한 경우에도 안전하게 처리
-    location ${BASE_PATH}ws/ {
-        rewrite ^${BASE_PATH}ws/(.*)$ /ws/$1 break;
+    # 앞단이 rewrite 없이 그대로 /crane_rnd/ws/* 로 전달한 경우에도 안전하게 처리
+    location /crane_rnd/ws/ {
+        rewrite ^/crane_rnd/ws/(.*)$ /ws/$1 break;
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -107,7 +101,7 @@ server {
     }
 
     # LiDAR WebSocket proxy → 별도 LiDAR 서버
-    # 프론트는 동일 origin 의 /lidar 또는 ${BASE_PATH}lidar 로 ws 연결한다.
+    # 프론트는 동일 origin 의 /lidar 또는 /crane_rnd/lidar 로 ws 연결한다.
     # LiDAR 서버는 루트(/)에서 ws 핸드셰이크를 받으므로 / 로만 프록시한다.
     # 슬래시 유무 모두 받아야 하므로 정확 매칭(=) 과 prefix 매칭을 모두 둔다.
     location = /lidar {
@@ -128,8 +122,8 @@ server {
         proxy_read_timeout 86400s;
     }
 
-    # 앞단이 그대로 ${BASE_PATH}lidar(/) 로 전달한 경우 호환
-    location = ${BASE_PATH_NOSLASH}/lidar {
+    # 앞단이 그대로 /crane_rnd/lidar(/) 로 전달한 경우 호환
+    location = /crane_rnd/lidar {
         proxy_pass http://${LIDAR_HOST}:${LIDAR_PORT}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -137,8 +131,8 @@ server {
         proxy_set_header Host $host;
         proxy_read_timeout 86400s;
     }
-    location ${BASE_PATH}lidar/ {
-        rewrite ^${BASE_PATH}lidar/(.*)$ /$1 break;
+    location /crane_rnd/lidar/ {
+        rewrite ^/crane_rnd/lidar/(.*)$ /$1 break;
         proxy_pass http://${LIDAR_HOST}:${LIDAR_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -148,7 +142,7 @@ server {
     }
 
     # Cabin Monitoring Foxglove bridge WebSocket proxy → 별도 브리지 서버
-    # 프론트는 동일 origin 의 /cabin-bridge 또는 ${BASE_PATH}cabin-bridge 로 ws 연결한다.
+    # 프론트는 동일 origin 의 /cabin-bridge 또는 /crane_rnd/cabin-bridge 로 ws 연결한다.
     # 브리지 서버는 루트(/)에서 ws 핸드셰이크를 받으므로 / 로만 프록시한다.
     location = /cabin-bridge {
         proxy_pass http://${CABIN_HOST}:${CABIN_PORT}/;
@@ -168,8 +162,8 @@ server {
         proxy_read_timeout 86400s;
     }
 
-    # 앞단이 그대로 ${BASE_PATH}cabin-bridge(/) 로 전달한 경우 호환
-    location = ${BASE_PATH_NOSLASH}/cabin-bridge {
+    # 앞단이 그대로 /crane_rnd/cabin-bridge(/) 로 전달한 경우 호환
+    location = /crane_rnd/cabin-bridge {
         proxy_pass http://${CABIN_HOST}:${CABIN_PORT}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -177,8 +171,8 @@ server {
         proxy_set_header Host $host;
         proxy_read_timeout 86400s;
     }
-    location ${BASE_PATH}cabin-bridge/ {
-        rewrite ^${BASE_PATH}cabin-bridge/(.*)$ /$1 break;
+    location /crane_rnd/cabin-bridge/ {
+        rewrite ^/crane_rnd/cabin-bridge/(.*)$ /$1 break;
         proxy_pass http://${CABIN_HOST}:${CABIN_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -189,11 +183,11 @@ server {
 
     # Root hit → redirect into the SPA base path
     location = / {
-        return 302 ${BASE_PATH};
+        return 302 /crane_rnd/;
     }
 
     # index.html — never cache
-    location = ${BASE_PATH}index.html {
+    location = /crane_rnd/index.html {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         expires 0;
@@ -203,7 +197,7 @@ server {
     # 빌드 산출물(dist/assets/)만 immutable. vite 가 내용 해시를 파일명에 넣으므로
     # 내용이 바뀌면 URL 도 바뀐다 → 영구 캐시가 안전하다.
     # (^~ 는 아래 정규식 location 보다 우선하므로 이 블록이 먼저 매칭된다.)
-    location ^~ ${BASE_PATH}assets/ {
+    location ^~ /crane_rnd/assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         access_log off;
@@ -227,7 +221,7 @@ server {
     # 휴리스틱 캐시가 임의 기간 옛 wasm 을 내주게 된다(js 트랜스코더와 버전
     # 불일치 → KTX2 디코드 실패). 경로에 three REVISION 이 들어가 갱신 시
     # URL 이 바뀌므로 ?v= 없이 no-cache 재검증이면 충분하다.
-    location ~* ^${BASE_PATH}.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json|exr|hdr|bin|ktx2|wasm)$ {
+    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json|exr|hdr|bin|ktx2|wasm)$ {
         # expires 는 Cache-Control 을 스스로 쓰므로 반드시 꺼야 한다.
         # 켜 두면 아래 add_header 와 함께 Cache-Control 이 두 번 나가고,
         # 브라우저는 둘 중 보수적인 쪽을 고르지 않는다(구현에 따라 다르다).
@@ -237,20 +231,13 @@ server {
         try_files $uri =404;
     }
 
-    # SPA entry: BASE_PATH 와 그 아래 클라이언트 라우트 → index.html
-    location ${BASE_PATH} {
-        try_files $uri $uri/ ${BASE_PATH}index.html;
+    # SPA entry: /crane_rnd and any deeper client-side route → serve index.html
+    location /crane_rnd/ {
+        try_files $uri $uri/ /crane_rnd/index.html;
     }
 
-    # BASE_PATH 에서 끝 슬래시를 뺀 주소 → 정식 형태
-    location = ${BASE_PATH_NOSLASH} {
-        return 302 ${BASE_PATH};
-    }
-
-    # indoor 주소(VITE_INDOOR_BASE_URL)는 BASE_PATH 밖일 수 있다 (/crane_rnd/indoor/dev/ vs /crane_rnd/dev/).
-    # 번들은 하나라 같은 index.html 을 내면 앱이 주소를 보고 범위를 정한다 (@crane/core resolveAppScope).
-    # 에셋은 indoor 화면에서도 BASE_PATH 접두어로 요청하므로 여기서는 HTML 폴백만 맡는다.
-    location / {
-        try_files $uri ${BASE_PATH}index.html;
+    # "/crane_rnd" (no trailing slash) → canonical form
+    location = /crane_rnd {
+        return 302 /crane_rnd/;
     }
 }

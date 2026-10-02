@@ -40,18 +40,18 @@ COPY tsconfig.json tsconfig.base.json turbo.json ./
 # Google Cloud Console 에서 HTTP referrer 제한을 반드시 적용한다.
 ARG VITE_GOOGLE_MAPS_API_KEY=""
 ARG VITE_GOOGLE_MAPS_MAP_ID=""
-# 환경별 경로 (prod · stage · dev). 기본값 = 지금 운영 값이라 인자 없이 빌드하면 지금과 같다.
-#   BASE_PATH   → crane 주소, Vite base   (예: /crane_rnd/dev/)
-#   INDOOR_PATH → indoor 주소             (예: /crane_rnd/indoor/dev/). 비우면 crane · indoor 를 나누지 않는다
-#   DEPLOY_ENV  → 헤더 환경 표시 (prod 는 표시 안 함)
-ARG BASE_PATH=/crane_rnd/
+# crane · indoor 주소 분리. INDOOR_PATH 가 비면 나누지 않는다(main 과 같음). 예) /crane_rnd/indoor/
 ARG INDOOR_PATH=""
-ARG DEPLOY_ENV=prod
+# [환경별(dev · stage · prod) 배포 — 지금은 주석] 켜려면 '# >' 를 지우고 아래 ENV 의 '# >' 두 줄도 함께 푼다.
+#   BASE_PATH  → crane 주소(Vite base, 예: /crane_rnd/dev/). 주석인 동안은 /crane_rnd/ 고정
+#   DEPLOY_ENV → 헤더 환경 표시. 주석인 동안은 prod(표시 없음)
+# > ARG BASE_PATH=/crane_rnd/
+# > ARG DEPLOY_ENV=prod
 ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY \
     VITE_GOOGLE_MAPS_MAP_ID=$VITE_GOOGLE_MAPS_MAP_ID \
-    VITE_BASE_URL=$BASE_PATH \
-    VITE_INDOOR_BASE_URL=$INDOOR_PATH \
-    VITE_APP_ENV=$DEPLOY_ENV
+    VITE_INDOOR_BASE_URL=$INDOOR_PATH
+# >     VITE_BASE_URL=$BASE_PATH \
+# >     VITE_APP_ENV=$DEPLOY_ENV
 
 RUN pnpm turbo run build --filter=@crane/shell...
 
@@ -59,22 +59,23 @@ RUN pnpm turbo run build --filter=@crane/shell...
 # Stage 2: runner
 # ============================================================
 FROM nginx:1.27-alpine AS runner
-ARG BASE_PATH=/crane_rnd/
-# nginx.conf.template 의 ${BASE_PATH} 치환용. 컨테이너 nginx 의 location 이 빌드와 같은 접두어를 따른다.
-ENV BASE_PATH=$BASE_PATH
+# [환경별 배포 — 지금은 주석] nginx.conf.template 을 ${BASE_PATH} 치환 버전으로 쓸 때만 필요.
+# > ARG BASE_PATH=/crane_rnd/
+# > ENV BASE_PATH=$BASE_PATH
 
 RUN rm -rf /usr/share/nginx/html/*
 
-# Vite 가 base=BASE_PATH 로 빌드하므로, 정적 파일도 동일 sub-path 아래에 배치한다.
-COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html${BASE_PATH}
+# Vite 가 base='/crane_rnd/' 로 빌드하므로, 정적 파일도 동일 sub-path 아래에 배치한다.
+COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html/crane_rnd
+# > COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html${BASE_PATH}
 
 # nginx 공식 이미지의 entrypoint 가 /etc/nginx/templates/*.template 을
 # envsubst 로 치환해 /etc/nginx/conf.d/ 로 출력한다.
 # 따라서 BACKEND_HOST/PORT, LIDAR_HOST/PORT 환경변수만 주입하면
 # 이미지 재빌드 없이 IP 변경이 가능하다.
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
-# 템플릿 치환(20-envsubst) 전에 source 되어 BASE_PATH 검사 · BASE_PATH_NOSLASH 파생. 실행 비트가 있어야 entrypoint 가 읽는다.
-COPY --chmod=755 deploy/nginx/15-base-path.envsh /docker-entrypoint.d/15-base-path.envsh
+# [환경별 배포 — 지금은 주석] ${BASE_PATH} 치환 템플릿을 쓸 때 BASE_PATH 검사 · BASE_PATH_NOSLASH 파생.
+# > COPY --chmod=755 deploy/nginx/15-base-path.envsh /docker-entrypoint.d/15-base-path.envsh
 
 EXPOSE 80
 

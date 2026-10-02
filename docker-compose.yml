@@ -10,10 +10,10 @@
 # 자동화: develop · main push → .github/workflows/deploy-199.yml 이 위 1~3 을 대신하고
 #   199 에서 deploy/deploy.sh <env> <tag> 를 불러 load · up · 응답 확인(deploy/smoke.sh) · 실패 시 직전 태그 복귀.
 #   환경별 값은 deploy/env/<env>.env, 이미지 태그는 <env>-<sha7>, 프로젝트 이름은 name: 이 DEPLOY_ENV 로 정한다(crane-shell-<env>).
-# compose 프로젝트 이름 = 환경. 네트워크 · 컨테이너가 이 이름 아래 묶여 환경끼리 섞이지 않는다.
-# env 파일 없이 치면 prod. 기존 운영 컨테이너 crane-shell 은 옛 프로젝트(디렉토리 이름)에 있으므로
-# 199 에서 이 파일로 올리기 전에 옛 것을 내리거나 §2.3 전환 때까지 옛 파일을 쓴다.
-name: crane-shell-${DEPLOY_ENV:-prod}
+# [환경별(dev · stage · prod) 배포 — 지금은 주석. 켜려면 아래 '# >' 줄의 '# >' 를 지운다]
+# 프로젝트 이름 = 환경(crane-shell-dev · -stage · -prod). 켜기 전에는 디렉토리 이름이 프로젝트가 되어 main 과 같다.
+# 기존 운영 컨테이너 crane-shell 은 옛 프로젝트 소속이라, 켜기 전에 옛 것을 내리거나 전환 때까지 이대로 둔다.
+# > name: crane-shell-${DEPLOY_ENV:-prod}
 
 services:
   shell:
@@ -28,13 +28,16 @@ services:
         # compose 가 읽어서 Dockerfile ARG 로 전달한다. 운영 서버에는 둘 필요 없음.
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
         VITE_GOOGLE_MAPS_MAP_ID: ${VITE_GOOGLE_MAPS_MAP_ID:-}
-        # 환경별 경로. 기본값 = 지금 운영 값 (deploy/env/<env>.env 에서 덮어씀)
-        BASE_PATH: ${BASE_PATH:-/crane_rnd/}
+        # crane · indoor 주소 분리. 비우면 나누지 않는다(main 과 같음). 예) INDOOR_PATH=/crane_rnd/indoor/ docker compose build
         INDOOR_PATH: ${INDOOR_PATH:-}
-        DEPLOY_ENV: ${DEPLOY_ENV:-prod}
-    # 환경별 이미지 태그 · 컨테이너 이름. 비우면 지금과 같은 crane-shell:latest / crane-shell
-    image: crane-shell:${IMAGE_TAG:-latest}
-    container_name: crane-shell${CONTAINER_SUFFIX:-}
+        # [환경별(dev · stage · prod) 배포 — 지금은 주석] 켜려면 '# >' 를 지운다. 주석인 동안은 /crane_rnd/ · prod 고정.
+        # > BASE_PATH: ${BASE_PATH:-/crane_rnd/}
+        # > DEPLOY_ENV: ${DEPLOY_ENV:-prod}
+    # [환경별(dev · stage · prod) 배포 — 지금은 주석] 환경별 태그 · 컨테이너 이름. 주석인 동안은 main 과 같은 latest / crane-shell.
+    # > image: crane-shell:${IMAGE_TAG:-latest}
+    # > container_name: crane-shell${CONTAINER_SUFFIX:-}
+    image: crane-shell:latest
+    container_name: crane-shell
     ports:
       - "${SHELL_PORT:-33600}:80"
     environment:
