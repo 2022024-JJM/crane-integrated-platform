@@ -551,6 +551,105 @@ describe('즐겨찾기', () => {
     window.localStorage.setItem(ASSET_FAVORITES_STORAGE_KEY, '{broken');
     expect(setup().store.getState().favorites).toEqual([]);
   });
+
+  it('같은 id 가 두 번 저장돼 있으면 한 번만 읽는다', () => {
+    window.localStorage.setItem(
+      ASSET_FAVORITES_STORAGE_KEY,
+      JSON.stringify(['okpo-ttc', 'b', 'okpo-ttc']),
+    );
+    expect(setup().store.getState().favorites).toEqual(['okpo-ttc', 'b']);
+  });
+});
+
+describe('즐겨찾기 — 없어진 자산', () => {
+  const stored = () =>
+    JSON.parse(window.localStorage.getItem(ASSET_FAVORITES_STORAGE_KEY) ?? 'null');
+
+  it('라이브러리를 읽으면 없는 자산의 id 를 걷어내고 저장소에도 남기지 않는다', async () => {
+    window.localStorage.setItem(
+      ASSET_FAVORITES_STORAGE_KEY,
+      JSON.stringify(['gone-a', 'okpo-ttc', 'gone-b']),
+    );
+    const { store } = setup();
+    // 읽기 전에는 저장된 그대로다 — 무엇이 있는지 아직 모른다.
+    expect(store.getState().favorites).toEqual(['gone-a', 'okpo-ttc', 'gone-b']);
+    await store.getState().load();
+    expect(store.getState().favorites).toEqual(['okpo-ttc']);
+    expect(stored()).toEqual(['okpo-ttc']);
+  });
+
+  it('전부 없는 자산이면 빈 목록이 된다', async () => {
+    window.localStorage.setItem(
+      ASSET_FAVORITES_STORAGE_KEY,
+      JSON.stringify(['gone']),
+    );
+    const { store } = setup();
+    await store.getState().load();
+    expect(store.getState().favorites).toEqual([]);
+    expect(stored()).toEqual([]);
+  });
+
+  it('걷어낼 것이 없으면 목록 참조를 유지하고 저장소에 다시 쓰지 않는다', async () => {
+    window.localStorage.setItem(
+      ASSET_FAVORITES_STORAGE_KEY,
+      JSON.stringify(['okpo-ttc']),
+    );
+    const { store } = setup();
+    const before = store.getState().favorites;
+    const write = vi.spyOn(Storage.prototype, 'setItem');
+    await store.getState().load();
+    expect(store.getState().favorites).toBe(before);
+    expect(write).not.toHaveBeenCalled();
+    write.mockRestore();
+  });
+
+  it('즐겨찾기가 없으면 아무것도 쓰지 않는다', async () => {
+    const { store } = setup();
+    const before = store.getState().favorites;
+    await store.getState().load();
+    expect(store.getState().favorites).toBe(before);
+    expect(stored()).toBeNull();
+  });
+
+  it('읽기에 실패하면 걷어내지 않는다 — 빈 목록으로 견줘 전부 지우지 않는다', async () => {
+    window.localStorage.setItem(
+      ASSET_FAVORITES_STORAGE_KEY,
+      JSON.stringify(['okpo-ttc', 'gone']),
+    );
+    const { store, repo } = setup();
+    vi.spyOn(repo.repository, 'load').mockRejectedValueOnce(new Error('offline'));
+    await store.getState().load();
+    expect(store.getState().status).toBe('error');
+    expect(store.getState().favorites).toEqual(['okpo-ttc', 'gone']);
+    expect(stored()).toEqual(['okpo-ttc', 'gone']);
+    // 다시 읽어 성공하면 그때 걷어낸다.
+    await store.getState().load();
+    expect(store.getState().favorites).toEqual(['okpo-ttc']);
+    expect(stored()).toEqual(['okpo-ttc']);
+  });
+
+  it('즐겨찾기해 둔 자산이 다시 읽었을 때 사라져 있으면 함께 걷힌다', async () => {
+    const { store } = setup();
+    await store.getState().load();
+    const record = await store.getState().importAsset(
+      {
+        file: glbFile(),
+        kind: 'model',
+        name: 'Mine',
+        description: '',
+        tags: [],
+        note: '',
+        contentHash: null,
+      },
+      'me',
+    );
+    store.getState().toggleFavorite(record!.id);
+    // 저장소의 문서에 그 자산이 없는 채(이 테스트의 저장소는 처음 문서를
+    // 돌려준다) 다시 읽으면 사라진 자산이다 — 즐겨찾기도 걷힌다.
+    await store.getState().load({ force: true });
+    expect(store.getState().assets.map((a) => a.id)).toEqual(['okpo-ttc']);
+    expect(store.getState().favorites).toEqual([]);
+  });
 });
 
 describe('loadUsage', () => {

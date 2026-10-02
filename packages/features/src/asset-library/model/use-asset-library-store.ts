@@ -215,9 +215,11 @@ const defaultDeps: AssetLibraryStoreDeps = {
 
 function readFavorites(): string[] {
   const stored = getStorageJson<unknown>(ASSET_FAVORITES_STORAGE_KEY);
-  return Array.isArray(stored)
-    ? stored.filter((id): id is string => typeof id === 'string')
-    : [];
+  if (!Array.isArray(stored)) return [];
+  // 같은 id 가 두 번 적혀 있으면 한 번만 — 개수가 보이는 자산보다 많아진다.
+  return [
+    ...new Set(stored.filter((id): id is string => typeof id === 'string')),
+  ];
 }
 
 export function createAssetLibraryStore(
@@ -381,6 +383,14 @@ export function createAssetLibraryStore(
               deps.getBuiltinSources(),
               document,
             );
+            // 없어진 자산을 가리키는 즐겨찾기는 걷어낸다(다른 곳에서 지워졌거나
+            // 배포가 바뀌어 사라진 자산). 남겨 두면 레일의 개수에는 세어지는데
+            // 눌러도 보이지 않는다. 읽기에 성공했을 때만 한다 — 실패한 상태의
+            // 빈 목록으로 견주면 전부 지워진다.
+            const liveIds = new Set(merged.assets.map((asset) => asset.id));
+            const current = get().favorites;
+            const favorites = current.filter((id) => liveIds.has(id));
+            const pruned = favorites.length !== current.length;
             set({
               status: 'ready',
               assets: merged.assets,
@@ -390,7 +400,9 @@ export function createAssetLibraryStore(
               canOptimize: repository.canOptimize,
               // 다시 읽었으니 저장 못 한 변경과 충돌은 여기서 끝난다.
               saveState: 'idle',
+              ...(pruned ? { favorites } : {}),
             });
+            if (pruned) setStorageJson(ASSET_FAVORITES_STORAGE_KEY, favorites);
           })
           .catch((error: unknown) => {
             console.error('[asset-library] Failed to load.', error);
