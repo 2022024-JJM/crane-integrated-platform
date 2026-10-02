@@ -19,7 +19,9 @@
         "VITE_WS_RECONNECT_INITIAL_MS",
         "VITE_WS_RECONNECT_MAX_MS",
         "VITE_WS_MAX_RECONNECT_ATTEMPTS",
-        "VITE_BASE_URL"
+        "VITE_BASE_URL",
+        "VITE_INDOOR_BASE_URL",
+        "VITE_APP_ENV"
       ]
     },
     "dev": {

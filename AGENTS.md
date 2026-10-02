@@ -17,7 +17,7 @@
 
 pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` 이며 npm 을 쓰지 않는다.
 
-- `pnpm dev` — 전체 dev (실질적으로 `apps/shell`), 또는 `pnpm dev:shell`
+- `pnpm dev` — shell dev 서버. `apps/shell/vite.config.ts` 의 `applyDeployEnv` 가 `deploy/env/prod.env` 를 읽어 운영과 같이 crane(`/crane_rnd/`) · indoor(`/crane_rnd/indoor/`) 로 나뉘고 `VITE_APP_ENV` 만 `local` 로 바꿔 헤더에 LOCAL 표시. 또는 `pnpm dev:shell`. 모드 파일(`.env.*`)로 주소를 바꾸지 않는다
 - `pnpm build` — turbo build (`apps/shell` 이 유일한 빌드 대상)
 - `pnpm lint` — ESLint flat config
 - `pnpm typecheck` — TypeScript check
@@ -47,7 +47,7 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 
 vitest 를 사용한다. 테스트 위치는 위 커버리지 표의 `pnpm test` 행이 전부이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
 
-- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/{philly-shipyard,indoorshop}` 와 `packages/{core,domain,features,widgets}` 뿐이고(`setupFiles` 는 `philly-shipyard`·`indoorshop`·`features`·`widgets` 에만 있다), `apps/mro2` 는 설정 없이 vitest 기본값으로 돈다. `apps/indoorshop` 은 이식 코드의 규약대로 확장자가 환경을 정한다(`*.test.ts` node, `*.test.tsx` jsdom).
+- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/{philly-shipyard,indoorshop}` 과 `packages/{core,domain,features,widgets}` 다(`setupFiles` 는 `philly-shipyard`·`indoorshop`·`features`·`widgets` 에만 있고 `core`·`domain` 에는 없다). `apps/indoorshop` 은 `*.test.ts` → node, `*.test.tsx` → jsdom 두 프로젝트로 나뉘고 dom 은 직렬 실행이다. `apps/mro2` 는 설정 없이 vitest 기본값으로 돈다.
 - 패키지 공통 규칙: 기본 환경은 node. DOM·localStorage·React 훅이 필요한 파일에만 `// @vitest-environment jsdom` 을 붙인다 (jsdom 전역 설정 금지). 훅 테스트는 `@testing-library/react` 의 `renderHook` 을 쓴다.
 - `packages/{features,widgets}` 의 `src/test-setup.ts` 는 jsdom 캔버스 스텁이다 — three/examples 모듈(lottie 등)이 로드 시점에 2D 컨텍스트를 요구해서 없으면 jsdom 테스트의 모듈 로드가 깨진다.
 - R3F `useFrame` 훅(리플레이 러너, 충돌 가드 시뮬레이션)은 `@react-three/fiber` 를 mock 해 콜백을 잡아 두고 delta 를 수동 주입해 결정론적으로 돌린다. 시뮬레이션의 Math.random 은 시드 고정 PRNG 로 대체한다.
@@ -158,7 +158,7 @@ apps/{site}/src/pages/{page}/
 - 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `virtual-tags`, `detection-settings`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision`, `cabin-monitoring` 을 더 가진다. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다.
 - `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를, `virtual-tags` 는 `@crane/widgets/virtual-tags` 의 가상 태그 관리 페이지를, `detection-settings` 는 `@crane/widgets/detection-settings` 의 감지 설정 페이지를 쓰며 세 화면이 공유한다. 가상 태그 목록과 감지 설정 값은 region 무관 전역이다.
 - `asset-library`, `asset-library/:assetId` 는 3D 자산 라이브러리(`@crane/widgets/asset-library`)다. 조선소·region 과 무관한 전사 공용 화면이라 region 하위가 아닌 최상위 경로다 — `docs/agents/asset-library.md`.
-- `BrowserRouter` 의 basename 은 `import.meta.env.BASE_URL` 에서 온다 (sub-path 배포 `/crane_rnd/`).
+- `BrowserRouter` 의 basename 은 `@crane/core/config/app-scope` 의 `resolveAppScope` 가 주소로 정한다. `VITE_INDOOR_BASE_URL` 이 있으면 crane 주소(`BASE_URL`)와 indoor 주소로 나뉘어 각자 자기 라우트(`craneRoutes` · `indoorRoutes`)와 계정(`SCOPE_ROLES`)만 받고, 없으면 한 주소가 전부 받는다. crane · indoor · stage · dev 를 최상위 라우트 이름으로 쓰지 않는다(주소 접두어와 겹침).
 
 ## FSD Import Rules
 
@@ -324,3 +324,4 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - `apps/indoorshop` 의 이식 코드(`src/dashboard/**`, `src/pages/inshop-*/**`)는 `react-hooks` 컴파일러 규칙과 `react-refresh/only-export-components` 가 warn 으로 완화돼 있다. 이식 전부터 있던 패턴이고 대부분 three.js 뷰어의 명령형 코드라 검증 없이 고치면 동작이 바뀐다. 자세한 배경과 종료 조건은 `eslint.config.js` 의 해당 블록 주석에 있다.
 - `VITE_*` 환경변수는 Vite 가 빌드 시점에 번들로 인라인한다. 운영 서버에서 `.env` 만 바꿔서는 반영되지 않고 재빌드가 필요하다. 반면 백엔드/LiDAR IP·PORT 는 런타임에 nginx envsubst 로 주입되므로 `.env` 수정만으로 바뀐다 (`Dockerfile`, `docker-compose.yml` 주석 참조).
 - 배포는 폐쇄망이다. `docker save` 로 만든 tar 를 운영 서버로 옮겨 `docker load` 하며, 운영 서버에는 인터넷이 없다. 도구·의존성을 추가하는 제안을 할 때 이 제약을 전제한다.
+- 배포 자동화는 `.github/workflows/deploy-199.yml`(검사는 GitHub 호스티드, 빌드·전송은 self-hosted 러너) → 운영 서버의 `deploy/deploy.sh` 다. 환경별 값은 `deploy/env/<env>.env`, 응답 확인은 `deploy/smoke.sh`. 컨테이너 nginx 의 경로는 `nginx.conf.template` 의 `${BASE_PATH}` 치환 하나로 따라가고 파생 변수는 `deploy/nginx/15-base-path.envsh` 가 만든다 — 템플릿에 `/crane_rnd/` 를 다시 하드코딩하지 않는다. 절차·시크릿 목록은 `docs/crane_rnd-호스팅-배포-전략.html`.

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Eye, EyeOff, X, ChevronRight, Check } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
+import type { ScopeDeniedNotice } from '../lib/use-login-form';
 
 interface LoginFormProps {
   id: string;
   password: string;
   showPassword: boolean;
   error: boolean;
+  scopeDenied: ScopeDeniedNotice | null;
   emptyId: boolean;
   emptyPassword: boolean;
   rememberId: boolean;
@@ -29,6 +31,7 @@ export function LoginForm({
   password,
   showPassword,
   error,
+  scopeDenied,
   emptyId,
   emptyPassword,
   rememberId,
@@ -178,6 +181,25 @@ export function LoginForm({
           {error && (
             <p role="alert" className="mt-3 text-[13px] font-medium text-orange-300">
               아이디 또는 비밀번호가 올바르지 않습니다.
+            </p>
+          )}
+
+          {/* 다른 주소(crane · indoor)의 계정 */}
+          {scopeDenied && (
+            <p role="alert" className="mt-3 text-[13px] font-medium text-orange-300">
+              {scopeDenied.message}
+              {scopeDenied.href && (
+                <>
+                  {' '}
+                  {/* basename 밖으로 나가므로 Link 가 아니라 a */}
+                  <a
+                    href={scopeDenied.href}
+                    className="underline underline-offset-2 hover:text-orange-200"
+                  >
+                    {scopeDenied.linkLabel}
+                  </a>
+                </>
+              )}
             </p>
           )}
 

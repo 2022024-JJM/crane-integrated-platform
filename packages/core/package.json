@@ -11,6 +11,7 @@
     "./ws": "./src/ws/index.ts",
     "./config/i18n": "./src/config/i18n.ts",
     "./config/network": "./src/config/network.ts",
+    "./config/app-scope": "./src/config/app-scope.ts",
     "./lib/utils": "./src/lib/utils.ts",
     "./lib/create-id": "./src/lib/create-id.ts",
     "./lib/status-colors": "./src/lib/status-colors.ts",

@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '../atoms/button';
+import { currentAppScope } from '@crane/core/config/app-scope';
 
 interface AppErrorBoundaryProps {
   children: ReactNode;
@@ -89,7 +90,8 @@ function AppErrorFallback({
           </Button>
           <Button
             onClick={() => {
-              window.location.href = '/';
+              // 도메인 루트가 아니라 지금 범위(crane · indoor · 환경)의 시작 주소로
+              window.location.href = `${currentAppScope().basename}/`;
             }}
           >
             {t('common:errorBoundary.goHome', {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import {
   BrowserRouter,
   Navigate,
@@ -8,10 +8,19 @@ import {
   useLocation,
   useParams,
 } from 'react-router-dom';
-import { AuthProvider, useAuth, AUTH_STORAGE_KEY } from '@crane/features/auth';
+import {
+  AuthProvider,
+  getSessionStore,
+  readStoredUser,
+  useAuth,
+} from '@crane/features/auth';
 import { AppLayout } from '@crane/widgets/layout';
 import { RouteErrorBoundary } from '@crane/core/lib/route-error-boundary';
-import { getStorageJson } from '@crane/core/lib/safe-storage';
+import {
+  currentAppScope,
+  currentScopeBaseUrl,
+  toScopeUrl,
+} from '@crane/core/config/app-scope';
 import { getRegionById } from '@crane/domain/region';
 import { LoginPage } from './pages/login/login-page';
 import { NotFoundPage } from './pages/not-found/not-found-page';
@@ -32,9 +41,37 @@ function RegionGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/*
+ * 주소 범위 — 앱이 뜰 때 한 번 정한다.
+ *
+ * `VITE_INDOOR_BASE_URL` 이 설정되면 crane 주소(BASE_URL)와 indoor 주소로 나뉘고,
+ * 각 주소는 자기 범위의 라우트 · 계정만 받는다. 설정이 없으면(split=false)
+ * 지금처럼 한 주소가 모든 라우트 · 계정을 받는다.
+ */
+const APP_SCOPE = currentAppScope();
+const AUTH_SCOPE = APP_SCOPE.split ? APP_SCOPE.scope : null;
+const SHOW_CRANE_ROUTES = !APP_SCOPE.split || APP_SCOPE.scope === 'crane';
+const SHOW_INDOOR_ROUTES = !APP_SCOPE.split || APP_SCOPE.scope === 'indoor';
+const INDOOR_ONLY = APP_SCOPE.split && APP_SCOPE.scope === 'indoor';
+const INDOOR_BASE_URL = currentScopeBaseUrl('indoor');
+
 function getStoredRole(): string | null {
-  const stored = getStorageJson<{ role?: string }>(AUTH_STORAGE_KEY, 'session');
-  return stored?.role ?? null;
+  return readStoredUser(getSessionStore(), AUTH_SCOPE)?.role ?? null;
+}
+
+/**
+ * crane 주소로 들어온 indoor 화면 경로(옛 북마크)를 indoor 주소로 다시 연다.
+ * basename 을 넘어가므로 navigate() 가 아니라 location.replace 다.
+ */
+function ScopeRedirect() {
+  const location = useLocation();
+  useEffect(() => {
+    if (!INDOOR_BASE_URL) return;
+    window.location.replace(
+      toScopeUrl(location.pathname, location.search + location.hash, INDOOR_BASE_URL),
+    );
+  }, [location]);
+  return null;
 }
 
 const MRO_ALLOWED_EXACT = new Set([
@@ -375,362 +412,389 @@ const InshopRoot = lazy(() =>
   import('@crane/indoorshop/shell').then((m) => ({ default: m.InshopRoot })),
 );
 
+/** crane 범위 라우트 — indoor 주소가 따로 있으면 crane 주소에서만 쓴다. */
+const craneRoutes = (
+  <>
+    {/* MRO2 — 헤더/사이드바는 기존 MRO와 동일한 AppLayout 공용 */}
+    <Route
+      path="mro2"
+      element={
+        <LazyRoute>
+          <Mro2Layout />
+        </LazyRoute>
+      }
+    >
+      <Route
+        index
+        element={
+          <LazyRoute>
+            <Mro2OverviewPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="assets"
+        element={
+          <LazyRoute>
+            <Mro2AssetsPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="assets/:craneId"
+        element={
+          <LazyRoute>
+            <Mro2AssetDetailPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="calendar"
+        element={
+          <LazyRoute>
+            <Mro2CalendarPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="service-plan"
+        element={
+          <LazyRoute>
+            <Mro2ServicePlanPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="service-requests"
+        element={
+          <LazyRoute>
+            <Mro2ServiceRequestsPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="service-requests/:kind/:id"
+        element={
+          <LazyRoute>
+            <Mro2ServiceRequestDetailPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="inventory"
+        element={
+          <LazyRoute>
+            <Mro2InventoryPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="spend"
+        element={
+          <LazyRoute>
+            <Mro2SpendPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="documents"
+        element={
+          <LazyRoute>
+            <Mro2DocumentsPage />
+          </LazyRoute>
+        }
+      />
+    </Route>
+    <Route
+      path="mro-dashboard"
+      element={
+        <LazyRoute>
+          <PhillyDashboardPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="hmi"
+      element={
+        <LazyRoute>
+          <HmiPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="hmi2"
+      element={
+        <LazyRoute>
+          <HmiPhillyPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      index
+      element={
+        <LazyRoute>
+          <DashboardPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="region-overview"
+      element={<Navigate to="/monitoring/dock-status" replace />}
+    />
+    <Route
+      path="region-overview/*"
+      element={<Navigate to="/monitoring/dock-status" replace />}
+    />
+    <Route
+      path="monitoring"
+      element={<Navigate to="/monitoring/dock-status" replace />}
+    />
+    <Route
+      path="monitoring/dock-status"
+      element={
+        <LazyRoute>
+          <DockStatusPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="monitoring/map"
+      element={
+        <LazyRoute>
+          <RegionMapPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="monitoring/cmms"
+      element={
+        <LazyRoute>
+          <RegionCmmsPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="outdoor-work/:regionId/*"
+      element={
+        <LazyRoute>
+          <RegionGuard>
+            <OutdoorWorkPage />
+          </RegionGuard>
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="indoor-work/:regionId/*"
+      element={
+        <LazyRoute>
+          <RegionGuard>
+            <IndoorWorkPage />
+          </RegionGuard>
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="goliath-work/:regionId/*"
+      element={
+        <LazyRoute>
+          <RegionGuard>
+            <GoliathWorkPage />
+          </RegionGuard>
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="crane-detail"
+      element={
+        <LazyRoute>
+          <CraneDetailListPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="crane-detail/:craneId/*"
+      element={
+        <LazyRoute>
+          <CraneDetailPage />
+        </LazyRoute>
+      }
+    />
+    {/* 3D 자산 라이브러리 — 전사 공용이라 region 하위가 아니다. */}
+    <Route
+      path="asset-library"
+      element={
+        <LazyRoute>
+          <AssetLibraryPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="asset-library/:assetId"
+      element={
+        <LazyRoute>
+          <AssetLibraryDetailPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="asset-management"
+      element={
+        <LazyRoute>
+          <AssetManagementPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="asset-management/:craneId"
+      element={
+        <LazyRoute>
+          <AssetDetailPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="inspection"
+      element={
+        <LazyRoute>
+          <InspectionPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="inspection/:inspectionId"
+      element={
+        <LazyRoute>
+          <InspectionDetailPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="maintenance"
+      element={
+        <LazyRoute>
+          <MaintenancePage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="maintenance/:repairId"
+      element={
+        <LazyRoute>
+          <MaintenanceDetailPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="inventory"
+      element={
+        <LazyRoute>
+          <InventoryPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="compliance"
+      element={
+        <LazyRoute>
+          <CompliancePage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="service-calendar"
+      element={
+        <LazyRoute>
+          <ServiceCalendarPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="history"
+      element={
+        <LazyRoute>
+          <HistoryPage />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="ticket/create"
+      element={
+        <LazyRoute>
+          <CreateTicketPage />
+        </LazyRoute>
+      }
+    />
+  </>
+);
+
+/** indoor 범위 라우트 — 내업 계정(IT · OT · Key-in) 화면. */
+const indoorRoutes = (
+  <>
+    {/*
+      데이터 게더링 (Indoorshop.IT 전용).
+
+      통합 대시보드(InshopRoot) 바깥의 형제 라우트다 — 다른 계정의
+      화면이고, 이식된 대시보드의 팔레트 래퍼·provider 를 거칠 이유가
+      없다.
+    */}
+    <Route
+      path="indoorshop/gathering"
+      element={
+        <LazyRoute>
+          <IndoorshopGatheringPage />
+        </LazyRoute>
+      }
+    />
+    {/*
+      내업 통합 대시보드 (ocean-inshop-process/web-dashboard 이식).
+
+      공정 화면 라우트는 여기 적지 않는다 — 원본과 같이 각 공정 모듈의
+      module.ts 선언을 레지스트리가 모으고, InshopRoot 가 useRoutes 로
+      조립한다. 원본에 공정이 늘어도 sync-inshop.py 한 번이면 끝난다.
+      (`/indoorshop/gathering` 은 IT 전용이라 위에서 먼저 잡힌다.)
+    */}
+    <Route
+      path="indoorshop/*"
+      element={
+        <LazyRoute>
+          <InshopRoot />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="keyin"
+      element={
+        <LazyRoute>
+          <IndoorshopKeyinPage />
+        </LazyRoute>
+      }
+    />
+  </>
+);
+
 export function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+    <AuthProvider scope={AUTH_SCOPE}>
+      <BrowserRouter basename={APP_SCOPE.basename}>
         <Routes>
           <Route path="login" element={<LoginGuard />} />
+          {/* crane 주소의 옛 indoor 경로 — 로그인 검사 전에 indoor 주소로 보낸다 */}
+          {APP_SCOPE.split && APP_SCOPE.scope === 'crane' && (
+            <>
+              <Route path="indoorshop/*" element={<ScopeRedirect />} />
+              <Route path="keyin/*" element={<ScopeRedirect />} />
+            </>
+          )}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              {/* MRO2 — 헤더/사이드바는 기존 MRO와 동일한 AppLayout 공용 */}
-              <Route
-                path="mro2"
-                element={
-                  <LazyRoute>
-                    <Mro2Layout />
-                  </LazyRoute>
-                }
-              >
+              {SHOW_CRANE_ROUTES && craneRoutes}
+              {SHOW_INDOOR_ROUTES && indoorRoutes}
+              {INDOOR_ONLY && (
                 <Route
                   index
-                  element={
-                    <LazyRoute>
-                      <Mro2OverviewPage />
-                    </LazyRoute>
-                  }
+                  element={<Navigate to={INDOORSHOP_OT_LANDING} replace />}
                 />
-                <Route
-                  path="assets"
-                  element={
-                    <LazyRoute>
-                      <Mro2AssetsPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="assets/:craneId"
-                  element={
-                    <LazyRoute>
-                      <Mro2AssetDetailPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="calendar"
-                  element={
-                    <LazyRoute>
-                      <Mro2CalendarPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="service-plan"
-                  element={
-                    <LazyRoute>
-                      <Mro2ServicePlanPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="service-requests"
-                  element={
-                    <LazyRoute>
-                      <Mro2ServiceRequestsPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="service-requests/:kind/:id"
-                  element={
-                    <LazyRoute>
-                      <Mro2ServiceRequestDetailPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="inventory"
-                  element={
-                    <LazyRoute>
-                      <Mro2InventoryPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="spend"
-                  element={
-                    <LazyRoute>
-                      <Mro2SpendPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="documents"
-                  element={
-                    <LazyRoute>
-                      <Mro2DocumentsPage />
-                    </LazyRoute>
-                  }
-                />
-              </Route>
-              <Route
-                path="mro-dashboard"
-                element={
-                  <LazyRoute>
-                    <PhillyDashboardPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="hmi"
-                element={
-                  <LazyRoute>
-                    <HmiPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="hmi2"
-                element={
-                  <LazyRoute>
-                    <HmiPhillyPage />
-                  </LazyRoute>
-                }
-              />
-              {/*
-                데이터 게더링 (Indoorshop.IT 전용).
-
-                통합 대시보드(InshopRoot) 바깥의 형제 라우트다 — 다른 계정의
-                화면이고, 이식된 대시보드의 팔레트 래퍼·provider 를 거칠 이유가
-                없다.
-              */}
-              <Route
-                path="indoorshop/gathering"
-                element={
-                  <LazyRoute>
-                    <IndoorshopGatheringPage />
-                  </LazyRoute>
-                }
-              />
-              {/*
-                내업 통합 대시보드 (ocean-inshop-process/web-dashboard 이식).
-
-                공정 화면 라우트는 여기 적지 않는다 — 원본과 같이 각 공정 모듈의
-                module.ts 선언을 레지스트리가 모으고, InshopRoot 가 useRoutes 로
-                조립한다. 원본에 공정이 늘어도 sync-inshop.py 한 번이면 끝난다.
-                (`/indoorshop/gathering` 은 IT 전용이라 위에서 먼저 잡힌다.)
-              */}
-              <Route
-                path="indoorshop/*"
-                element={
-                  <LazyRoute>
-                    <InshopRoot />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="keyin"
-                element={
-                  <LazyRoute>
-                    <IndoorshopKeyinPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                index
-                element={
-                  <LazyRoute>
-                    <DashboardPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="region-overview"
-                element={<Navigate to="/monitoring/dock-status" replace />}
-              />
-              <Route
-                path="region-overview/*"
-                element={<Navigate to="/monitoring/dock-status" replace />}
-              />
-              <Route
-                path="monitoring"
-                element={<Navigate to="/monitoring/dock-status" replace />}
-              />
-              <Route
-                path="monitoring/dock-status"
-                element={
-                  <LazyRoute>
-                    <DockStatusPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="monitoring/map"
-                element={
-                  <LazyRoute>
-                    <RegionMapPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="monitoring/cmms"
-                element={
-                  <LazyRoute>
-                    <RegionCmmsPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="outdoor-work/:regionId/*"
-                element={
-                  <LazyRoute>
-                    <RegionGuard>
-                      <OutdoorWorkPage />
-                    </RegionGuard>
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="indoor-work/:regionId/*"
-                element={
-                  <LazyRoute>
-                    <RegionGuard>
-                      <IndoorWorkPage />
-                    </RegionGuard>
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="goliath-work/:regionId/*"
-                element={
-                  <LazyRoute>
-                    <RegionGuard>
-                      <GoliathWorkPage />
-                    </RegionGuard>
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="crane-detail"
-                element={
-                  <LazyRoute>
-                    <CraneDetailListPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="crane-detail/:craneId/*"
-                element={
-                  <LazyRoute>
-                    <CraneDetailPage />
-                  </LazyRoute>
-                }
-              />
-              {/* 3D 자산 라이브러리 — 전사 공용이라 region 하위가 아니다. */}
-              <Route
-                path="asset-library"
-                element={
-                  <LazyRoute>
-                    <AssetLibraryPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="asset-library/:assetId"
-                element={
-                  <LazyRoute>
-                    <AssetLibraryDetailPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="asset-management"
-                element={
-                  <LazyRoute>
-                    <AssetManagementPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="asset-management/:craneId"
-                element={
-                  <LazyRoute>
-                    <AssetDetailPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="inspection"
-                element={
-                  <LazyRoute>
-                    <InspectionPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="inspection/:inspectionId"
-                element={
-                  <LazyRoute>
-                    <InspectionDetailPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="maintenance"
-                element={
-                  <LazyRoute>
-                    <MaintenancePage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="maintenance/:repairId"
-                element={
-                  <LazyRoute>
-                    <MaintenanceDetailPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="inventory"
-                element={
-                  <LazyRoute>
-                    <InventoryPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="compliance"
-                element={
-                  <LazyRoute>
-                    <CompliancePage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="service-calendar"
-                element={
-                  <LazyRoute>
-                    <ServiceCalendarPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="history"
-                element={
-                  <LazyRoute>
-                    <HistoryPage />
-                  </LazyRoute>
-                }
-              />
-              <Route
-                path="ticket/create"
-                element={
-                  <LazyRoute>
-                    <CreateTicketPage />
-                  </LazyRoute>
-                }
-              />
+              )}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>

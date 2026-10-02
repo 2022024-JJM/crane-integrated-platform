@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:dev": "vite --mode dev",
+    "dev:stage": "vite --mode stage",
+    "dev:prod": "vite --mode prod",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

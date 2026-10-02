@@ -144,6 +144,7 @@ export function LoginPage() {
             password={form.password}
             showPassword={form.showPassword}
             error={form.error}
+            scopeDenied={form.scopeDenied}
             emptyId={form.emptyId}
             emptyPassword={form.emptyPassword}
             rememberId={form.rememberId}

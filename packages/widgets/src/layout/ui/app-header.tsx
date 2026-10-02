@@ -9,6 +9,9 @@ import { SCENE_DOCK_RAIL_COLUMN_WIDTH } from '@crane/ui/organisms/scene-dock';
 import { HeaderAlarmButton } from '@crane/features/alarm';
 import { HeaderStatusStrip } from './header-status-strip';
 import { getHeaderBrandKeys } from '../lib/header-brand';
+import { getAppEnvBadge } from '../lib/app-env-badge';
+
+const APP_ENV_BADGE = getAppEnvBadge(import.meta.env.VITE_APP_ENV);
 
 export function AppHeader() {
   const { t } = useTranslation();
@@ -44,6 +47,11 @@ export function AppHeader() {
           <span className="text-[#f5a623]">{t(brand.accent)}</span>
         </span>
       </AppLink>
+      {APP_ENV_BADGE && (
+        <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] leading-none font-semibold tracking-wider text-amber-600 dark:text-amber-400">
+          {APP_ENV_BADGE}
+        </span>
+      )}
 
       <div className="min-w-0 flex-1">
         <HeaderStatusStrip />
