@@ -33,7 +33,9 @@ interface AssetBulkBarProps {
   /** 고른 자산들이 가진 카테고리(많은 순). 빼기 메뉴에 쓴다. */
   categories: readonly string[];
   transitions: readonly BulkTransition[];
-  /** 고른 것 중 지울 수 있는(이 화면에서 등록한) 자산 수. */
+  /** 지우기를 낼 것인가 — 파일을 다룰 수 있는 환경(dev)에서만. */
+  canRemove: boolean;
+  /** 고른 것 중 지울 수 있는(어디에서도 쓰이지 않는) 자산 수. */
   removableCount: number;
   onAddCategory: (category: string) => void;
   onRemoveCategory: (category: string) => void;
@@ -55,6 +57,7 @@ export function AssetBulkBar({
   collections,
   categories,
   transitions,
+  canRemove,
   removableCount,
   onAddCategory,
   onRemoveCategory,
@@ -185,16 +188,27 @@ export function AssetBulkBar({
         </PopoverPopup>
       </Popover>
 
-      {removableCount > 0 ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
+      {canRemove ? (
+        // 지울 수 있는 것이 없어도 버튼은 보인다 — 숨기면 지우는 기능이 없는
+        // 것으로 읽힌다. 꺼 두고 왜 못 지우는지를 적는다.
+        <span
+          title={
+            removableCount === 0
+              ? t('asset-library:bulk.removeNone')
+              : undefined
+          }
         >
-          <Trash2 />
-          {t('asset-library:bulk.remove', { count: removableCount })}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive"
+            disabled={removableCount === 0}
+            onClick={onRemove}
+          >
+            <Trash2 />
+            {t('asset-library:bulk.remove', { count: removableCount })}
+          </Button>
+        </span>
       ) : null}
 
       <Button

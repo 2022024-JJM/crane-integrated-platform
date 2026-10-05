@@ -41,7 +41,6 @@ import {
   DEFAULT_ASSET_QUERY,
   formatBytes,
   getAssetAttention,
-  getAssetRemoveBlock,
   getAssetScope,
   getCurrentAssetVersion,
   isDocumentAssetKind,
@@ -82,6 +81,7 @@ import {
 import { ASSET_CARD_GRID } from '../lib/asset-presentation';
 import { isAssetSaveFailed } from '../model/use-asset-save-report';
 import {
+  countBulkRemovable,
   listBulkCategories,
   listBulkTransitions,
   withoutCategory,
@@ -99,6 +99,7 @@ import { AssetKindIcon } from './asset-badges';
 import { AssetBreadcrumb } from './asset-breadcrumb';
 import { AssetBulkBar } from './asset-bulk-bar';
 import { AssetConfirmDialog } from './asset-confirm-dialog';
+import { AssetDeleteDialog } from './asset-delete-dialog';
 import { AssetFilterRail } from './asset-filter-rail';
 import { AssetGrid } from './asset-grid';
 import { AssetImportDialog } from './asset-import-dialog';
@@ -558,19 +559,22 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     () => listBulkCategories(selectedAssets),
     [selectedAssets],
   );
-  // 지울 수 있는 것 — 파일을 다룰 수 있는 환경이고, 어디에서도 쓰이지 않는
-  // 자산. 쓰이는 자산은 일괄 삭제에서 빠진다(스토어도 지우는 순간 다시 확인).
-  const removableCount = useMemo(() => {
-    if (!canManageFiles) return 0;
-    const usage = toAssetUsageState({
-      usageIndex,
-      usageStatus,
-      usageFailedScenes,
-    });
-    return selectedAssets.filter(
-      (asset) => getAssetRemoveBlock(asset, usage) === null,
-    ).length;
-  }, [canManageFiles, selectedAssets, usageFailedScenes, usageIndex, usageStatus]);
+  // 고른 것 가운데 지울 수 있는 수와 막힌 수 — 어디에서도 쓰이지 않는 자산만
+  // 지운다. 쓰이는 자산은 일괄 삭제에서 빠진다(스토어도 지우는 순간 다시 확인).
+  const bulkRemovable = useMemo(
+    () =>
+      countBulkRemovable(
+        selectedAssets,
+        toAssetUsageState({ usageIndex, usageStatus, usageFailedScenes }),
+      ),
+    [selectedAssets, usageFailedScenes, usageIndex, usageStatus],
+  );
+  // 하나씩 지우기(미리보기·카드 메뉴) — 지우려는 자산의 id.
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const deleteTarget = useMemo(
+    () => assets.find((asset) => asset.id === deleteTargetId) ?? null,
+    [assets, deleteTargetId],
+  );
   const [bulkConfirm, setBulkConfirm] = useState<
     { kind: 'status'; to: AssetVersionStatus } | { kind: 'remove' } | null
   >(null);
@@ -984,7 +988,8 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                   collections={collections}
                   categories={selectionCategories}
                   transitions={selectionTransitions}
-                  removableCount={removableCount}
+                  canRemove={canManageFiles}
+                  removableCount={bulkRemovable.removable}
                   onTransition={(to) =>
                     // 되돌리는 걸음(반려·철회)은 한 번 더 묻는다.
                     to === 'rejected' || to === 'withdrawn'
@@ -1145,6 +1150,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                       onToggleSelect={toggleSelect}
                       onToggleFavorite={toggleFavorite}
                       onCopyLink={copyLink}
+                      onDelete={canManageFiles ? setDeleteTargetId : undefined}
                     />
                   </section>
                 ))}
@@ -1193,6 +1199,11 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             onToggleFavorite={() => toggleFavorite(previewAsset.id)}
             onSelectScope={(target) => setQuery(withAssetScope(query, target))}
             onSelectCategory={(category) => setQuery({ ...query, categories: [category] })}
+            onDelete={
+              canManageFiles
+                ? () => setDeleteTargetId(previewAsset.id)
+                : undefined
+            }
           />
         ) : null}
       </div>
@@ -1216,7 +1227,9 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         destructive={bulkConfirm?.kind === 'remove'}
         title={
           bulkConfirm?.kind === 'remove'
-            ? t('asset-library:bulk.removeTitle', { count: removableCount })
+            ? t('asset-library:bulk.removeTitle', {
+                count: bulkRemovable.removable,
+              })
             : bulkConfirm
               ? t('asset-library:bulk.statusTitle', {
                   action: t(
@@ -1227,7 +1240,11 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         }
         description={
           bulkConfirm?.kind === 'remove'
-            ? t('asset-library:bulk.removeHint')
+            ? bulkRemovable.blocked > 0
+              ? t('asset-library:bulk.removeHintBlocked', {
+                  count: bulkRemovable.blocked,
+                })
+              : t('asset-library:bulk.removeHint')
             : bulkConfirm
               ? t(`asset-library:lifecycle.confirmHint.${bulkConfirm.to}`)
               : ''
@@ -1251,6 +1268,23 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
           }
         }}
         onClose={() => setBulkConfirm(null)}
+      />
+
+      <AssetDeleteDialog
+        asset={deleteTarget}
+        onOpenUsage={(target) => navigate(`${hrefFor(target.id)}?tab=usage`)}
+        onDeleted={(target) => {
+          // 미리보기에 올라와 있던 자산이면 주소에 남은 미리보기 표시를 지운다.
+          if (previewId === target.id) setPreview(null);
+          // 지운 자산이 고른 것에 남아 있으면 일괄 작업 줄의 수가 어긋난다.
+          setSelectedIds((current) => {
+            if (!current.has(target.id)) return current;
+            const next = new Set(current);
+            next.delete(target.id);
+            return next;
+          });
+        }}
+        onClose={() => setDeleteTargetId(null)}
       />
 
       <AssetImportDialog

@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -86,6 +87,11 @@ interface AssetPreviewPanelProps {
   onSelectScope: (scope: AssetScope) => void;
   /** 카테고리를 누름 — 그 카테고리를 가진 자산만 본다. */
   onSelectCategory: (category: string) => void;
+  /**
+   * 지우기를 연다. 파일을 다룰 수 있는 환경(dev)에서만 넘어온다 — 없으면
+   * 버튼을 내지 않는다.
+   */
+  onDelete?: () => void;
 }
 
 /** 묶음 하나 — 작은 제목 아래 값들이 세 칸 격자로 놓인다. */
@@ -153,6 +159,7 @@ export function AssetPreviewPanel({
   onToggleFavorite,
   onSelectScope,
   onSelectCategory,
+  onDelete,
 }: AssetPreviewPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = getFormatLocale(i18n.language);
@@ -578,6 +585,18 @@ export function AssetPreviewPanel({
             className={cn(favorite && 'fill-current text-(--hanwha-orange-100)')}
           />
         </Button>
+        {onDelete ? (
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-destructive"
+            aria-label={t('asset-library:preview.delete', { name: asset.name })}
+            title={t('asset-library:action.delete')}
+            onClick={onDelete}
+          >
+            <Trash2 />
+          </Button>
+        ) : null}
       </footer>
     </aside>
   );

@@ -28,7 +28,7 @@
 | 저장소 인터페이스·구현 | `lib/asset-library-storage.ts`(`AssetLibraryRepository`), 브라우저 바이너리 `lib/asset-blob-store.ts` |
 | 스토어(자동 저장) | `packages/features/src/asset-library/model/use-asset-library-store.ts` |
 | 뷰어 계산(통계·뷰 모드·LOD·프레이밍·카메라 맞물림) | `packages/features/src/asset-library/lib/{model-geometry-stats,viewer-display,viewer-framing,viewer-camera-sync}.ts` |
-| 화면 | `packages/widgets/src/asset-library/ui/`(`asset-library-page`, `asset-preview-panel`, `asset-detail-page`, `asset-compare-view`, `asset-lifecycle`, `asset-model-viewer`, `asset-environment-viewer`, `asset-drawing-viewer`, 뷰어 공용 조각 `asset-viewer-chrome`, 탭 6개) |
+| 화면 | `packages/widgets/src/asset-library/ui/`(`asset-library-page`, `asset-preview-panel`, `asset-detail-page`, `asset-compare-view`, `asset-lifecycle`, `asset-delete-dialog`, `asset-model-viewer`, `asset-environment-viewer`, `asset-drawing-viewer`, 뷰어 공용 조각 `asset-viewer-chrome`, 탭 6개) |
 | 탐색 상태 ↔ URL, 걸린 필터 칩 | `packages/widgets/src/asset-library/lib/{asset-library-url,active-filters}.ts` |
 | 결과 순서 위 이동(미리보기 이전/다음·범위 선택·상세 이전/다음) | `packages/widgets/src/asset-library/lib/result-navigation.ts` |
 | 버전 수치 비교 | `packages/widgets/src/asset-library/lib/version-compare.ts` |
@@ -180,7 +180,9 @@
 - 카드 보기는 종류별로 묶고(종류를 하나만 고르면 묶지 않는다), 카드는 Unity Asset Manager 의 구성을 따른다 — 옅은 판 안에 그림 판, 그 아래 종류 아이콘·이름 한 줄(게시 전·철회 같은 예외일 때만 상태 점과 글자가 붙는다)과 버전·형식·크기·"얼마 전" 한 줄. 카드는 무엇인지 알아보는 데까지만 말하고 수치는 미리보기와 목록 보기가 맡는다. 미리보기 중인 카드와 선택한 카드는 판의 색과 테두리로 구분한다. 선택·즐겨찾기·더 보기(⋯)는 카드 위에 떠 있고, 더 보기는 우클릭 메뉴를 같은 자리에서 연다. Shift 를 누른 채 고르면 직전 선택부터 범위로 고른다. 씬 배치 수는 목록 보기와 미리보기·상세의 사용처가 맡는다.
 - 목록 보기의 열은 보고 있는 종류를 따른다 — 3D 자산은 삼각형·치수·배치, 문서형 자산은 도면 번호·리비전, 배경은 공통 열만. 카테고리 열은 어느 종류에나 있고, 한 종류만 보는 위치에서는 종류 열을 뺀다.
 - 여러 개를 고르면 일괄 작업 줄이 나온다 — 상태 전환·카테고리 더하기/빼기·컬렉션·삭제. 메뉴는 고른 자산에 실제로 걸리는 것만 내고 걸리는 수를 적는다(`lib/bulk-selection.ts`). 위치나 필터가 바뀌면 선택을 비운다(보이지 않는 자산에 일괄 작업이 걸리지 않게).
-- 되돌리는 걸음(반려·철회)과 지우기는 한 번 더 묻는다(`asset-confirm-dialog.tsx`). 앞으로 가는 걸음은 묻지 않는다. 쓰이는 자산을 지우려 하면 묻는 대신 왜 지울 수 없는지와 사용처로 가는 길을 보인다. 쓰이는 버전은 철회 버튼이 꺼지고 그 자리에 이유가 적힌다.
+- 일괄 삭제 버튼은 지울 수 있는 것이 없어도 dev 에서는 보인다 — 꺼 두고 이유를 적는다(`countBulkRemovable`). 일부만 지울 수 있으면 확인 창이 남는 수를 적는다.
+- 되돌리는 걸음(반려·철회)과 지우기는 한 번 더 묻는다(`asset-confirm-dialog.tsx`). 앞으로 가는 걸음은 묻지 않는다. 쓰이는 버전은 철회 버튼이 꺼지고 그 자리에 이유가 적힌다.
+- 자산 하나를 지우는 길은 상세 머리말의 삭제 버튼, 미리보기 아래의 삭제 버튼, 카드 메뉴의 삭제 항목이고 전부 dev 에서만 나온다. 셋이 같은 창(`asset-delete-dialog.tsx`)을 연다 — 쓰이는 자산이면 묻는 대신 왜 지울 수 없는지와 사용처로 가는 길을 보인다.
 - 미리보기에 올린 자산이 필터에서 빠져도(검수 목록에서 승인) 패널은 닫히지 않는다. 그 자산이 있던 자리를 기억해 두었다가 이전/다음이 거기서 이어 간다(`stepFromRemembered`).
 - 레일의 처리할 일 개수와 상태 선택의 개수는 지금 위치에서 체크한 카테고리까지 건 안에서 센다 — 누르면 그 안에서 걸리기 때문이다.
 - 걸린 필터는 결과 위에 칩으로 늘어서고 하나씩 풀 수 있다(계층에서 체크한 카테고리도 칩이다). 계층 위의 위치와 정렬은 칩이 없고 "필터 초기화" 에도 남는다. 계층으로 나타낼 수 없는 상태(종류를 여럿 고른 링크 등)는 보이지 않는 필터가 되지 않게 칩으로 낸다(`active-filters.ts`).

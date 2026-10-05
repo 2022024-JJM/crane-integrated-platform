@@ -1,8 +1,10 @@
 import {
   ASSET_VERSION_STATUSES,
   getAllowedStatusTransitions,
+  getAssetRemoveBlock,
   getCurrentAssetVersion,
   type AssetRecord,
+  type AssetUsageState,
   type AssetVersionStatus,
 } from '@crane/domain/asset-library';
 
@@ -26,6 +28,22 @@ export function listBulkTransitions(
     to,
     count: counts.get(to) ?? 0,
   }));
+}
+
+/**
+ * 고른 자산 가운데 지울 수 있는 수와 막힌 수. 막히는 것은 씬이나 화면 코드가
+ * 쓰는 자산과, 사용처를 다 읽지 못해 안 쓰이는지 알 수 없는 자산이다
+ * (`getAssetRemoveBlock`). 일괄 삭제 버튼과 확인 창이 이 둘을 적는다.
+ */
+export function countBulkRemovable(
+  selected: readonly AssetRecord[],
+  usage: AssetUsageState,
+): { removable: number; blocked: number } {
+  let removable = 0;
+  for (const asset of selected) {
+    if (getAssetRemoveBlock(asset, usage) === null) removable += 1;
+  }
+  return { removable, blocked: selected.length - removable };
 }
 
 /** 고른 자산들이 가진 카테고리 — 많이 쓰인 순, 대소문자를 가리지 않고 묶는다. */

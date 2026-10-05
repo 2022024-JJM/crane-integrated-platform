@@ -129,6 +129,8 @@
     "remove": "Dele ({{count}})",
     "removeTitle": "{{count}} res delere?",
     "removeHint": "Fasciculi et historia simul delentur neque restitui possunt. Res in usu non delentur.",
+    "removeHintBlocked": "Fasciculi et historia simul delentur neque restitui possunt. Res in usu ({{count}}) non delentur et manent.",
+    "removeNone": "Omnes res electae in usu sunt aut usus earum inspici non potuit; nulla deleri potest.",
     "statusTitle": "Res electas: {{action}}?"
   },
   "form": {
@@ -394,10 +396,12 @@
     "favorite": "Dilectis adde",
     "unfavorite": "E dilectis tolle",
     "copyLink": "Nexum exscribe",
+    "delete": "Dele",
     "more": "Plura de {{name}}"
   },
   "preview": {
     "label": "Praevisio: {{name}}",
+    "delete": "{{name}} dele",
     "previous": "Res prior",
     "next": "Res sequens",
     "close": "Praevisionem claude",

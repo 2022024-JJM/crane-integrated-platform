@@ -129,6 +129,8 @@
     "remove": "Delete ({{count}})",
     "removeTitle": "Delete {{count}} assets?",
     "removeHint": "Files and history are deleted together and cannot be restored. Assets in use are not deleted.",
+    "removeHintBlocked": "Files and history are deleted together and cannot be restored. {{count}} asset(s) in use will be kept.",
+    "removeNone": "Every selected asset is in use, or its usage could not be checked, so none can be deleted.",
     "statusTitle": "{{action}} the selected assets?"
   },
   "form": {
@@ -394,10 +396,12 @@
     "favorite": "Add to favorites",
     "unfavorite": "Remove from favorites",
     "copyLink": "Copy link",
+    "delete": "Delete",
     "more": "More actions for {{name}}"
   },
   "preview": {
     "label": "Preview of {{name}}",
+    "delete": "Delete {{name}}",
     "previous": "Previous asset",
     "next": "Next asset",
     "close": "Close preview",
