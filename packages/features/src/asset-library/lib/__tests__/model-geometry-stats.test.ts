@@ -1,10 +1,19 @@
 import {
+  Bone,
   BoxGeometry,
+  Float32BufferAttribute,
   Group,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Quaternion,
+  Skeleton,
+  SkinnedMesh,
   Texture,
+  Uint16BufferAttribute,
+  Vector3,
+  type BufferGeometry,
   type Material,
 } from 'three';
 import { describe, expect, it } from 'vitest';
@@ -24,6 +33,70 @@ function texture(width: number, height: number) {
   const tex = new Texture();
   tex.image = { width, height };
   return tex;
+}
+
+/**
+ * 모든 정점을 뼈에 묶은 스킨 메쉬. `weights` 는 뼈 순서대로의 가중치다(최대 4).
+ * GLTFLoader 처럼 항등 바인드 행렬로 묶는다 — 바인드 역행렬은 처음
+ * `updateMatrixWorld` 가 돌 때까지 항등으로 남는다.
+ */
+function skinned(
+  geometry: BufferGeometry,
+  bones: Bone[],
+  boneInverses: Matrix4[],
+  weights: number[] = [1],
+) {
+  const count = geometry.getAttribute('position').count;
+  const skinIndex: number[] = [];
+  const skinWeight: number[] = [];
+  for (let i = 0; i < count; i += 1) {
+    for (let slot = 0; slot < 4; slot += 1) {
+      skinIndex.push(slot < weights.length ? slot : 0);
+      skinWeight.push(weights[slot] ?? 0);
+    }
+  }
+  geometry.setAttribute('skinIndex', new Uint16BufferAttribute(skinIndex, 4));
+  geometry.setAttribute(
+    'skinWeight',
+    new Float32BufferAttribute(skinWeight, 4),
+  );
+  const mesh = new SkinnedMesh(geometry, new MeshBasicMaterial());
+  mesh.bind(new Skeleton(bones, boneInverses), new Matrix4());
+  return mesh;
+}
+
+/**
+ * 사람 GLB 와 같은 짜임 — 축소 배율이 걸린 뼈대 루트 아래에 스킨 메쉬와 뼈가
+ * 형제로 놓이고, 정점은 ±1 로 양자화돼 복원 변환이 역바인드 행렬에 들어 있다.
+ * 그려지는 몸은 x ±0.25, y 0–1.8, z ±0.15 다.
+ */
+function quantizedPerson() {
+  const armature = new Group();
+  armature.scale.setScalar(0.01);
+  const bone = new Bone();
+  armature.add(bone);
+  armature.updateMatrixWorld(true);
+  const dequantize = new Matrix4().compose(
+    new Vector3(0, 0.9, 0),
+    new Quaternion(),
+    new Vector3(0.25, 0.9, 0.15),
+  );
+  const inverseBind = bone.matrixWorld.clone().invert().multiply(dequantize);
+  const mesh = skinned(new BoxGeometry(2, 2, 2), [bone], [inverseBind]);
+  armature.add(mesh);
+  return { armature, bone, mesh };
+}
+
+function expectBounds(
+  root: Group,
+  min: [number, number, number],
+  max: [number, number, number],
+) {
+  const bounds = computeRenderBounds(root);
+  for (let axis = 0; axis < 3; axis += 1) {
+    expect(bounds.min.getComponent(axis)).toBeCloseTo(min[axis], 5);
+    expect(bounds.max.getComponent(axis)).toBeCloseTo(max[axis], 5);
+  }
 }
 
 describe('computeObjectStats', () => {
@@ -157,6 +230,149 @@ describe('computeRenderBounds', () => {
     const bounds = computeRenderBounds(mesh);
     expect(bounds.min.y).toBeCloseTo(2.5);
     expect(bounds.max.y).toBeCloseTo(3.5);
+  });
+});
+
+describe('스킨 메쉬의 경계', () => {
+  it('메쉬 노드의 행렬이 아니라 뼈대가 놓은 자리로 잰다', () => {
+    const { armature } = quantizedPerson();
+    const size = computeObjectStats(armature).size!;
+    // position 속성에 노드 행렬만 곱하면 ±1 정육면체 × 축소 배율(0.02)이다.
+    expect(size[0]).toBeCloseTo(0.5, 5);
+    expect(size[1]).toBeCloseTo(1.8, 5);
+    expect(size[2]).toBeCloseTo(0.3, 5);
+  });
+
+  it('computeRenderBounds 도 같은 상자를 낸다', () => {
+    const { armature } = quantizedPerson();
+    expectBounds(armature, [-0.25, 0, -0.15], [0.25, 1.8, 0.15]);
+  });
+
+  it('한 번도 그리지 않아 바인드 역행렬이 낡은 메쉬를 맞춰 놓고 잰다', () => {
+    const { armature, mesh } = quantizedPerson();
+    expect(mesh.bindMatrixInverse.equals(new Matrix4())).toBe(true);
+    computeRenderBounds(armature);
+    expect(
+      mesh.bindMatrixInverse.equals(mesh.matrixWorld.clone().invert()),
+    ).toBe(true);
+  });
+
+  it('다시 재도 같은 상자다', () => {
+    const { armature } = quantizedPerson();
+    const first = computeRenderBounds(armature).clone();
+    const second = computeRenderBounds(armature);
+    expect(second.equals(first)).toBe(true);
+    expect(computeObjectStats(armature).size).toEqual(
+      computeObjectStats(armature).size,
+    );
+  });
+
+  it('스킨 메쉬 노드 자신의 위치·회전·배율은 결과를 바꾸지 않는다', () => {
+    const { armature, mesh } = quantizedPerson();
+    mesh.position.set(40, -7, 3);
+    mesh.rotation.set(0.4, 1.1, -0.6);
+    mesh.scale.setScalar(5);
+    expectBounds(armature, [-0.25, 0, -0.15], [0.25, 1.8, 0.15]);
+  });
+
+  it('뼈가 옮겨 간 자세를 따라간다', () => {
+    const { armature, bone } = quantizedPerson();
+    // 뼈의 로컬은 뼈대 루트(1/100 배율) 기준이다 — 300 은 월드 3.
+    bone.position.set(300, 0, 0);
+    expectBounds(armature, [2.75, 0, -0.15], [3.25, 1.8, 0.15]);
+  });
+
+  it('뼈가 돌면 상자도 돈다', () => {
+    const { armature, bone } = quantizedPerson();
+    bone.rotation.z = Math.PI / 2;
+    // 선 몸(y 0–1.8)이 -x 쪽으로 눕는다.
+    expectBounds(armature, [-1.8, -0.25, -0.15], [0, 0.25, 0.15]);
+  });
+
+  it('가중치가 나뉜 정점은 두 뼈가 놓은 자리의 가중 평균이다', () => {
+    const root = new Group();
+    const still = new Bone();
+    const moved = new Bone();
+    root.add(still, moved);
+    root.add(
+      skinned(
+        new BoxGeometry(1, 1, 1),
+        [still, moved],
+        [new Matrix4(), new Matrix4()],
+        [0.75, 0.25],
+      ),
+    );
+    moved.position.set(4, 0, 0);
+    // 0.75·x + 0.25·(x + 4) = x + 1
+    expectBounds(root, [0.5, -0.5, -0.5], [1.5, 0.5, 0.5]);
+  });
+
+  it('가중치 0 인 뼈는 움직여도 영향이 없다', () => {
+    const root = new Group();
+    const still = new Bone();
+    const moved = new Bone();
+    root.add(still, moved);
+    root.add(
+      skinned(
+        new BoxGeometry(1, 1, 1),
+        [still, moved],
+        [new Matrix4(), new Matrix4()],
+        [1, 0],
+      ),
+    );
+    moved.position.set(4, 0, 0);
+    expectBounds(root, [-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]);
+  });
+
+  it('일반 메쉬와 섞이면 둘을 합친 상자다', () => {
+    const { armature } = quantizedPerson();
+    const bike = new Mesh(
+      new BoxGeometry(1.6, 1, 0.6),
+      new MeshBasicMaterial(),
+    );
+    bike.position.set(0, 0.5, 0);
+    const root = new Group();
+    root.add(bike, armature);
+    const stats = computeObjectStats(root);
+    // x·z 는 자전거, y 는 사람이 정한다.
+    expect(stats.size![0]).toBeCloseTo(1.6, 5);
+    expect(stats.size![1]).toBeCloseTo(1.8, 5);
+    expect(stats.size![2]).toBeCloseTo(0.6, 5);
+    expect(stats.meshes).toBe(2);
+  });
+
+  it('LOD 사본 안의 스킨 메쉬는 상자에서 뺀다', () => {
+    const { armature } = quantizedPerson();
+    armature.userData = { lod: 1 };
+    const root = new Group();
+    root.add(armature, box());
+    expect(computeObjectStats(root).size).toEqual([1, 1, 1]);
+  });
+});
+
+describe('모프 타깃의 경계', () => {
+  /** x 로 3배 늘어나는 모프 타깃 하나가 달린 1×1×1 상자. */
+  function morphing() {
+    const geometry = new BoxGeometry(1, 1, 1);
+    const base = geometry.getAttribute('position');
+    const stretched = base.clone();
+    for (let i = 0; i < stretched.count; i += 1) {
+      stretched.setX(i, base.getX(i) * 3);
+    }
+    geometry.morphAttributes.position = [stretched];
+    return new Mesh(geometry, new MeshBasicMaterial());
+  }
+
+  it('영향값이 0 이면 원형 그대로 잰다', () => {
+    expect(computeObjectStats(morphing()).size![0]).toBeCloseTo(1, 5);
+  });
+
+  it('영향값만큼 변형된 정점으로 잰다', () => {
+    const mesh = morphing();
+    mesh.morphTargetInfluences = [1];
+    expect(computeObjectStats(mesh).size![0]).toBeCloseTo(3, 5);
+    mesh.morphTargetInfluences = [0.5];
+    expect(computeObjectStats(mesh).size![0]).toBeCloseTo(2, 5);
   });
 });
 

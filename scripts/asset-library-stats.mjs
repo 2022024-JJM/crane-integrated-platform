@@ -18,8 +18,9 @@
 // 측정 기준은 scripts/scene-perf-report.mjs 의 measureGlb 와 같다 — 드로우콜·
 // 삼각형은 노드 사용 기준이고 LOD 사본(extras lod>0)은 뺀다. 브라우저 쪽
 // 측정(packages/features/src/asset-library/lib/model-geometry-stats.ts)도 같은
-// 기준을 쓴다. 이 스크립트는 항상 측정만 하고 게이트가 아니다(--check 만
-// 불일치 시 exit 1).
+// 기준을 쓴다. 크기는 정점 단위 월드 경계이고 스킨 메쉬는 뼈대를 적용한 기본
+// 자세로 잰다(measureSceneBounds). 이 스크립트는 항상 측정만 하고 게이트가
+// 아니다(--check 만 불일치 시 exit 1).
 import { createHash } from 'node:crypto';
 import {
   existsSync,
@@ -33,7 +34,6 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { getBounds } from '@gltf-transform/functions';
 import { MeshoptDecoder } from 'meshoptimizer';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -88,6 +88,134 @@ function countPrimitiveIndices(prim) {
   return indices ? indices.getCount() : position ? position.getCount() : 0;
 }
 
+/** 열 우선 4×4 행렬의 곱 a·b. */
+function multiplyMat4(a, b) {
+  const out = new Array(16);
+  for (let column = 0; column < 4; column += 1) {
+    for (let row = 0; row < 4; row += 1) {
+      let sum = 0;
+      for (let k = 0; k < 4; k += 1) sum += a[k * 4 + row] * b[column * 4 + k];
+      out[column * 4 + row] = sum;
+    }
+  }
+  return out;
+}
+
+/** 점을 열 우선 4×4 아핀 행렬로 옮겨 out 에 쓴다. */
+function transformPoint(matrix, point, out) {
+  const [x, y, z] = point;
+  out[0] = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+  out[1] = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+  out[2] = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14];
+  return out;
+}
+
+/** 스킨의 관절 행렬(관절 월드 × 역바인드). 역바인드가 없으면 항등으로 본다. */
+function listJointMatrices(skin) {
+  const inverseBind = skin.getInverseBindMatrices();
+  const element = [];
+  return skin.listJoints().map((joint, index) => {
+    const world = joint.getWorldMatrix();
+    return inverseBind
+      ? multiplyMat4(world, inverseBind.getElement(index, element))
+      : world;
+  });
+}
+
+/**
+ * 씬의 월드 경계(정점 단위).
+ *
+ * 스킨 메쉬는 뼈대를 적용한 기본 자세로 잰다. 스킨 정점의 위치는 관절이
+ * 정하고 메쉬 노드의 행렬은 무시되므로(glTF 규격), 노드 행렬만 곱하는
+ * gltf-transform 의 getBounds 로는 사람 모델이 뼈대 없는 원시 좌표로 재진다 —
+ * 양자화한 파일은 복원 변환이 역바인드 행렬에 들어 있어 ±1 정육면체가 된다.
+ * 브라우저 쪽(three 의 getVertexPosition)과 같은 식이다. 가중치는 합으로
+ * 나누고 합이 0 이면 첫 관절에 묶인 것으로 본다 — three 의 GLTFLoader 가 스킨
+ * 가중치를 그렇게 정규화한다.
+ *
+ * 스킨이 없는 노드는 getBounds 와 같다 — 인덱스가 가리키는 정점을 노드 월드
+ * 행렬로 옮기고, 유한하지 않은 값이 낀 메쉬는 통째로 뺀다.
+ */
+function measureSceneBounds(scene) {
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  const jointMatricesBySkin = new Map();
+  const local = [0, 0, 0];
+  const world = [0, 0, 0];
+  const part = [0, 0, 0];
+  const joints = [0, 0, 0, 0];
+  const weights = [0, 0, 0, 0];
+
+  scene.traverse((node) => {
+    const mesh = node.getMesh();
+    if (!mesh) return;
+    const nodeMatrix = node.getWorldMatrix();
+    const skin = node.getSkin();
+    let jointMatrices = null;
+    if (skin) {
+      jointMatrices = jointMatricesBySkin.get(skin) ?? listJointMatrices(skin);
+      jointMatricesBySkin.set(skin, jointMatrices);
+    }
+
+    const meshMin = [Infinity, Infinity, Infinity];
+    const meshMax = [-Infinity, -Infinity, -Infinity];
+    for (const prim of mesh.listPrimitives()) {
+      const position = prim.getAttribute('POSITION');
+      if (!position) continue;
+      const jointAttribute = jointMatrices
+        ? prim.getAttribute('JOINTS_0')
+        : null;
+      const weightAttribute = jointMatrices
+        ? prim.getAttribute('WEIGHTS_0')
+        : null;
+      const skinned = Boolean(jointAttribute && weightAttribute);
+      const indices = prim.getIndices();
+      const count = indices ? indices.getCount() : position.getCount();
+
+      for (let i = 0; i < count; i += 1) {
+        const index = indices ? indices.getScalar(i) : i;
+        position.getElement(index, local);
+        if (skinned) {
+          jointAttribute.getElement(index, joints);
+          weightAttribute.getElement(index, weights);
+          const total = weights[0] + weights[1] + weights[2] + weights[3];
+          if (!(total > 0)) {
+            weights[0] = 1;
+            weights[1] = weights[2] = weights[3] = 0;
+          }
+          const scale = total > 0 ? 1 / total : 1;
+          world[0] = world[1] = world[2] = 0;
+          for (let k = 0; k < 4; k += 1) {
+            const matrix = jointMatrices[joints[k]];
+            if (weights[k] === 0 || !matrix) continue;
+            transformPoint(matrix, local, part);
+            const weight = weights[k] * scale;
+            world[0] += part[0] * weight;
+            world[1] += part[1] * weight;
+            world[2] += part[2] * weight;
+          }
+        } else {
+          transformPoint(nodeMatrix, local, world);
+        }
+        for (let axis = 0; axis < 3; axis += 1) {
+          meshMin[axis] = Math.min(meshMin[axis], world[axis]);
+          meshMax[axis] = Math.max(meshMax[axis], world[axis]);
+        }
+      }
+    }
+
+    if (!meshMin.every(Number.isFinite) || !meshMax.every(Number.isFinite)) {
+      return;
+    }
+    for (let axis = 0; axis < 3; axis += 1) {
+      min[axis] = Math.min(min[axis], meshMin[axis]);
+      max[axis] = Math.max(max[axis], meshMax[axis]);
+    }
+  });
+
+  return { min, max };
+}
+
 async function measureGlb(absolute) {
   const doc = await io.read(absolute);
   const root = doc.getRoot();
@@ -136,7 +264,7 @@ async function measureGlb(absolute) {
   const scene = root.getDefaultScene() ?? root.listScenes()[0];
   let size = null;
   if (scene) {
-    const { min, max } = getBounds(scene);
+    const { min, max } = measureSceneBounds(scene);
     const extent = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
     if (extent.every((n) => Number.isFinite(n) && n >= 0)) {
       size = extent.map((n) => Math.round(n * 1000) / 1000);
