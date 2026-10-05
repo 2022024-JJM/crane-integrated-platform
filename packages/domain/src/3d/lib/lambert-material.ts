@@ -6,7 +6,7 @@ import {
 
 /**
  * PBR(MeshStandardMaterial) → 저비용 Lambert 변환 — 관제와 무관한 주변
- * 지형(카탈로그 kind 'context')용.
+ * 지형(지도의 role 'context')용.
  *
  * 컨텍스트 지형은 화면의 큰 면적(수 km 도시)을 차지하는데 PBR 은 픽셀마다
  * GGX 스펙큘러·환경맵 radiance/irradiance 두 번 샘플링·다중 산란을 계산한다.

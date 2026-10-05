@@ -13,10 +13,10 @@ import { AssetKindIcon } from './asset-badges';
 interface AssetTreeProps {
   tree: AssetTreeData;
   scope: AssetScope;
-  /** 고른 태그가 하나라도 있는지 — 있으면 종류 줄은 "그 종류 전부" 가 아니다. */
-  hasTags: boolean;
+  /** 고른 카테고리가 하나라도 있는지 — 있으면 종류 줄은 "그 종류 전부" 가 아니다. */
+  hasCategories: boolean;
   onSelect: (scope: AssetScope) => void;
-  onToggleTag: (kind: AssetKind, tag: string) => void;
+  onToggleCategory: (kind: AssetKind, category: string) => void;
 }
 
 interface TreeRowProps {
@@ -106,19 +106,19 @@ function TreeRow({
   );
 }
 
-/** 종류 아래의 태그 한 줄 — 체크하면 그 태그를 가진 자산으로 좁힌다. */
-function TagRow({
-  tag,
+/** 종류 아래의 카테고리 한 줄 — 체크하면 그 카테고리를 가진 자산으로 좁힌다. */
+function CategoryRow({
+  category,
   count,
   checked,
   onToggle,
 }: {
-  tag: string;
+  category: string;
   count: number;
   checked: boolean;
   onToggle: () => void;
 }) {
-  // 더 걸면 남는 자산이 없는 태그는 고를 수 없다. 이미 고른 것은 풀 수 있어야
+  // 더 걸면 남는 자산이 없는 카테고리는 고를 수 없다. 이미 고른 것은 풀 수 있어야
   // 하므로 막지 않는다.
   const disabled = count === 0 && !checked;
   return (
@@ -139,7 +139,7 @@ function TagRow({
         onCheckedChange={onToggle}
         className="size-3.5 after:hidden"
       />
-      <span className="min-w-0 flex-1 truncate">{tag}</span>
+      <span className="min-w-0 flex-1 truncate">{category}</span>
       <span
         className={cn(
           'shrink-0 text-xs tabular-nums',
@@ -153,17 +153,17 @@ function TagRow({
 }
 
 /**
- * 탐색 계층 — 종류 › 태그. 종류 줄을 누르면 그 종류 전부를 보고, 그 아래의
- * 태그를 체크하면 그 종류 안에서 좁혀 간다. 보고 있는 종류는 늘 펼쳐져 있고,
+ * 탐색 계층 — 종류 › 카테고리. 종류 줄을 누르면 그 종류 전부를 보고, 그 아래의
+ * 카테고리를 체크하면 그 종류 안에서 좁혀 간다. 보고 있는 종류는 늘 펼쳐져 있고,
  * 나머지는 사용자가 여닫는다. 종류는 자산이 없어도 흐리게 보인다 — 그 자리에
  * 무엇을 둘 수 있는지 알린다.
  */
 export function AssetTree({
   tree,
   scope,
-  hasTags,
+  hasCategories,
   onSelect,
-  onToggleTag,
+  onToggleCategory,
 }: AssetTreeProps) {
   const { t } = useTranslation();
   // 사용자가 직접 여닫은 마디만 기억한다. 손대지 않은 마디는 지금 위치의
@@ -178,24 +178,24 @@ export function AssetTree({
         <TreeRow
           label={t('asset-library:tree.all')}
           count={tree.total}
-          active={scope.kind === null && !hasTags}
+          active={scope.kind === null && !hasCategories}
           onSelect={() => onSelect({ kind: null })}
         />
       </li>
       {tree.kinds.map((kindNode) => {
         const { kind } = kindNode;
-        // 길 위 — 보고 있는 종류이거나, 전체를 보는 중에 이 종류의 태그가
+        // 길 위 — 보고 있는 종류이거나, 전체를 보는 중에 이 종류의 카테고리가
         // 걸려 있다.
         const onPath =
-          scope.kind === kind || kindNode.tags.some((node) => node.checked);
-        const hasChildren = kindNode.tags.length > 0;
+          scope.kind === kind || kindNode.categories.some((node) => node.checked);
+        const hasChildren = kindNode.categories.length > 0;
         const open = hasChildren && (toggled[kind] ?? onPath);
         return (
           <li key={kind}>
             <TreeRow
               label={t(`asset-library:kind.${kind}`)}
               count={kindNode.count}
-              active={scope.kind === kind && !hasTags}
+              active={scope.kind === kind && !hasCategories}
               open={hasChildren ? open : undefined}
               leading={<AssetKindIcon kind={kind} />}
               onSelect={() => onSelect({ kind })}
@@ -210,21 +210,21 @@ export function AssetTree({
               }
             />
             {open ? (
-              // 펼친 종류 아래에 세로 안내선 — 어느 종류의 태그인지 눈으로
+              // 펼친 종류 아래에 세로 안내선 — 어느 종류의 카테고리인지 눈으로
               // 따라갈 수 있다.
               <ul
-                aria-label={t('asset-library:tree.tagsOf', {
+                aria-label={t('asset-library:tree.categoriesOf', {
                   name: t(`asset-library:kind.${kind}`),
                 })}
                 className="before:bg-border relative flex flex-col gap-px before:absolute before:top-1 before:bottom-1 before:left-[15px] before:w-px"
               >
-                {kindNode.tags.map((tagNode) => (
-                  <li key={tagNode.tag}>
-                    <TagRow
-                      tag={tagNode.tag}
-                      count={tagNode.count}
-                      checked={tagNode.checked}
-                      onToggle={() => onToggleTag(kind, tagNode.tag)}
+                {kindNode.categories.map((categoryNode) => (
+                  <li key={categoryNode.category}>
+                    <CategoryRow
+                      category={categoryNode.category}
+                      count={categoryNode.count}
+                      checked={categoryNode.checked}
+                      onToggle={() => onToggleCategory(kind, categoryNode.category)}
                     />
                   </li>
                 ))}

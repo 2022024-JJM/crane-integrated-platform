@@ -8,7 +8,7 @@ import {
   SceneRuler,
   SceneText,
   buildLabelReadings,
-  getSceneMapCatalogItemByPath,
+  isContextMap,
   getSceneMetersPerUnit,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
@@ -250,7 +250,7 @@ export function OutdoorWorkModelSimulation({
   );
   // 바다가 켜진 씬(resolveSeaVisible)에서만 모델·지도의 수면 아래를 잠김
   // 처리한다 — 바다가 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다.
-  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
+  const seaVisible = resolveSeaVisible(sceneInfo);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
   // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
@@ -444,7 +444,7 @@ export function OutdoorWorkModelSimulation({
       {/* GLB 로드 객체는 개별 경계로 감싼다 — 하나가 404여도 나머지 씬은
           그대로 보인다. 관제 화면에서 모델 하나 때문에 전체가 비면 안 된다. */}
       {maps.map((m) => {
-        // 컨텍스트 지형(카탈로그 kind === 'context', philly-terrain 등)은
+        // 컨텍스트 지형(role === 'context', philly-terrain 등)은
         // 그림자 시스템에서 뺀다 — shadow map 은 매 프레임 다시 그려지는데
         // 178만 삼각형 지형이 depth pass 의 대부분을 차지했고(실측: philly
         // 씬 shadow pass 의 ~78%), 작업 구역 밖 도시 건물 그림자는 관제
@@ -452,8 +452,7 @@ export function OutdoorWorkModelSimulation({
         // 작업 구역(ground 지도) 안이라 이 지형 위에 떨어질 그림자가 없는데
         // 화면 큰 면적에서 PCF 9탭 샘플링만 하게 된다. 에디터도 같은 규칙
         // (scene-objects-edit-canvas.tsx) — 저작 화면과 실제 화면이 같아야 한다.
-        const isContextMap =
-          getSceneMapCatalogItemByPath(m.path)?.kind === 'context';
+        const contextMap = isContextMap(m);
         return (
           // 지도도 BVH를 빌드한다(기본값) — 프리미티브 수십 개짜리 지형이라
           // 빌드는 유휴 시간에 싸게 끝나고, 없으면 포인터 이동마다 수십만
@@ -470,11 +469,11 @@ export function OutdoorWorkModelSimulation({
               showLabel={false}
               // ground 지도는 그림자를 드리운다(기본값) — GLB에 건물이 함께
               // 구워져 있어 끄면 건물 그림자가 통째로 사라진다.
-              castShadow={!isContextMap}
-              receiveShadow={!isContextMap}
+              castShadow={!contextMap}
+              receiveShadow={!contextMap}
               // 주변 지형은 PBR 대신 Lambert — 관제 대상이 아닌 수 km 도시의
               // 픽셀 비용을 뺀다(model-mesh.tsx ModelShading). 에디터도 같은 규칙.
-              shading={isContextMap ? 'lambert' : 'standard'}
+              shading={contextMap ? 'lambert' : 'standard'}
               // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 바다가 닿지
               // 않는 곳(드라이독)은 셰이더가 마스크로 거른다.
               seaSubmersion={seaVisible}

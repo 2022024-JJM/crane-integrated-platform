@@ -8,7 +8,6 @@ import {
   Loader2,
   Star,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,17 +23,18 @@ import {
   formatDimensions,
   getAssetAttention,
   getAssetPreviewMode,
+  getAssetRemoveBlock,
   getAssetVersion,
   getCurrentAssetVersion,
   resolveVersionSizeBytes,
   resolveVersionStats,
-  toMeterSize,
   withAssetScope,
   type AssetRecord,
   type AssetScope,
   type AssetStats,
 } from '@crane/domain/asset-library';
 import {
+  toAssetUsageState,
   useAssetFileUrl,
   useAssetLibraryStore,
 } from '@crane/features/asset-library';
@@ -50,9 +50,9 @@ import {
 } from '@crane/ui/molecules/alert-dialog';
 import {
   COMPARE_PARAM,
-  DETAIL_TABS,
+  listDetailTabs,
+  resolveDetailTab,
   writeAssetQuery,
-  parseDetailTab,
   parseVersionParam,
   PREVIEW_PARAM,
   type DetailTab,
@@ -71,8 +71,12 @@ import {
   pickDefaultCompareVersion,
   resolveCompareVersion,
 } from '../lib/version-compare';
-import { useAssetSaveReport } from '../model/use-asset-save-report';
+import {
+  isAssetSaveFailed,
+  useAssetSaveReport,
+} from '../model/use-asset-save-report';
 import { AssetActivityTab } from './asset-activity-tab';
+import { AssetPlacementTab } from './asset-placement-tab';
 import { AssetAttentionList } from './asset-attention';
 import { AssetKindIcon, AssetStatusBadge } from './asset-badges';
 import { AssetBreadcrumb } from './asset-breadcrumb';
@@ -191,6 +195,11 @@ function AssetDetailView({
   const statsTable = useAssetLibraryStore((state) => state.statsTable);
   const usageIndex = useAssetLibraryStore((state) => state.usageIndex);
   const usageStatus = useAssetLibraryStore((state) => state.usageStatus);
+  const usageFailedScenes = useAssetLibraryStore(
+    (state) => state.usageFailedScenes,
+  );
+  const loadUsage = useAssetLibraryStore((state) => state.loadUsage);
+  const canManageFiles = useAssetLibraryStore((state) => state.canManageFiles);
   const setCurrentVersion = useAssetLibraryStore(
     (state) => state.setCurrentVersion,
   );
@@ -211,7 +220,10 @@ function AssetDetailView({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const tab = parseDetailTab(searchParams.get('tab'));
+  // 배치 속성은 씬에 쓰는 종류(모델·지도·배경)에만 있다 — 다른 종류에서 그
+  // 탭을 가리키는 링크는 정보 탭으로 떨어진다.
+  const tabs = listDetailTabs(asset.kind);
+  const tab = resolveDetailTab(searchParams.get('tab'), asset.kind);
   const requested = parseVersionParam(searchParams.get('v'));
   // 없는 버전 번호가 URL 에 있으면 현재 버전을 본다.
   const version =
@@ -268,6 +280,16 @@ function AssetDetailView({
   const placementCount = useMemo(
     () => countAssetPlacements(asset, usageIndex),
     [asset, usageIndex],
+  );
+  // 쓰이고 있거나 사용처를 다 읽지 못했으면 지울 수 없다 — 대화 상자가 이유를
+  // 적는다. 지우는 순간 스토어가 사용처를 다시 읽어 한 번 더 확인한다.
+  const removeBlock = useMemo(
+    () =>
+      getAssetRemoveBlock(
+        asset,
+        toAssetUsageState({ usageIndex, usageStatus, usageFailedScenes }),
+      ),
+    [asset, usageFailedScenes, usageIndex, usageStatus],
   );
   const attention = useMemo(() => {
     const placements = new Map<string, number>();
@@ -428,10 +450,17 @@ function AssetDetailView({
     }
     setDeleting(false);
     setDeleteOpen(false);
-    toast.error(t('asset-library:toast.saveFailed'));
+    // 저장은 됐는데 지워지지 않았다면 그사이 어디선가 쓰이기 시작한 것이다.
+    toast.error(
+      t(
+        isAssetSaveFailed()
+          ? 'asset-library:toast.saveFailed'
+          : 'asset-library:protect.removeBlocked',
+      ),
+    );
   };
 
-  const meters = stats?.size ? toMeterSize(stats.size, asset.defaultScale) : null;
+  const meters = stats?.size ?? null;
   const titleBlock = (
     <dl className="border-border bg-background divide-border flex shrink-0 divide-x border-t">
       {/* 이름과 상태는 머리말·진행 단계가 말한다 — 표제란은 지금 뷰어에
@@ -594,7 +623,9 @@ function AssetDetailView({
               {t('asset-library:action.download')}
             </Button>
           ) : null}
-          {asset.origin === 'user' ? (
+          {/* 지우기는 파일을 다룰 수 있는 환경(dev)에서만 — 운영에는 배포된
+              자산뿐이고 그 파일은 지울 수 없다. */}
+          {canManageFiles ? (
             <Button
               variant="ghost"
               size="icon-sm"
@@ -638,7 +669,6 @@ function AssetDetailView({
           ) : previewMode === 'model' ? (
             <AssetModelViewer
               url={file.url}
-              defaultScale={asset.defaultScale}
               titleBlock={titleBlock}
               handleRef={viewerRef}
               onLoaded={handleLoaded}
@@ -710,7 +740,7 @@ function AssetDetailView({
             aria-label={t('asset-library:detail.tabs')}
             className="border-border flex shrink-0 border-b px-3"
           >
-            {DETAIL_TABS.map((item: DetailTab) => (
+            {tabs.map((item: DetailTab) => (
               <button
                 key={item}
                 type="button"
@@ -776,6 +806,8 @@ function AssetDetailView({
               />
             ) : tab === 'usage' ? (
               <AssetUsageTab asset={asset} />
+            ) : tab === 'placement' ? (
+              <AssetPlacementTab asset={asset} actor={actor} />
             ) : (
               <AssetActivityTab asset={asset} />
             )}
@@ -789,43 +821,77 @@ function AssetDetailView({
           if (!deleting) setDeleteOpen(next);
         }}
       >
-        <AlertDialogPopup>
-          <AlertDialogTitle>
-            {t('asset-library:detail.deleteTitle', { name: asset.name })}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('asset-library:detail.deleteDescription', {
-              count: asset.versions.length,
-            })}
-          </AlertDialogDescription>
-          {/* 씬은 자산을 파일 경로로 가리킨다 — 놓여 있는 자산을 지우면 그
-              씬에서 모델이 사라진다. 지우기 전에 알린다. */}
-          {placementCount > 0 ? (
-            <p
-              role="alert"
-              className="border-destructive/30 bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs leading-relaxed"
-            >
-              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-              {t('asset-library:detail.deletePlaced', { count: placementCount })}
-            </p>
-          ) : null}
-          <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose
-              render={<Button variant="outline" size="sm" disabled={deleting} />}
-            >
-              {t('asset-library:action.cancel')}
-            </AlertDialogClose>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={deleting}
-              onClick={() => void handleDelete()}
-            >
-              {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-              {t('asset-library:action.delete')}
-            </Button>
-          </div>
-        </AlertDialogPopup>
+        {removeBlock ? (
+          // 쓰이는 자산은 지우지 않는다 — 왜 못 지우는지와 다음에 할 일을 적는다.
+          <AlertDialogPopup>
+            <AlertDialogTitle>
+              {t('asset-library:protect.removeTitle', { name: asset.name })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(`asset-library:protect.remove.${removeBlock}`, {
+                count: placementCount,
+              })}
+            </AlertDialogDescription>
+            <div className="mt-4 flex justify-end gap-2">
+              {removeBlock === 'in-use' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDeleteOpen(false);
+                    setParam('tab', 'usage');
+                  }}
+                >
+                  {t('asset-library:protect.openUsage')}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={usageStatus === 'loading'}
+                  onClick={() => void loadUsage()}
+                >
+                  {usageStatus === 'loading' ? (
+                    <Loader2 className="animate-spin" />
+                  ) : null}
+                  {t('asset-library:action.retry')}
+                </Button>
+              )}
+              <AlertDialogClose render={<Button size="sm" />}>
+                {t('asset-library:action.close')}
+              </AlertDialogClose>
+            </div>
+          </AlertDialogPopup>
+        ) : (
+          <AlertDialogPopup>
+            <AlertDialogTitle>
+              {t('asset-library:detail.deleteTitle', { name: asset.name })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('asset-library:detail.deleteDescription', {
+                count: asset.versions.length,
+              })}
+            </AlertDialogDescription>
+            <div className="mt-4 flex justify-end gap-2">
+              <AlertDialogClose
+                render={
+                  <Button variant="outline" size="sm" disabled={deleting} />
+                }
+              >
+                {t('asset-library:action.cancel')}
+              </AlertDialogClose>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+              >
+                {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                {t('asset-library:action.delete')}
+              </Button>
+            </div>
+          </AlertDialogPopup>
+        )}
       </AlertDialog>
     </div>
   );

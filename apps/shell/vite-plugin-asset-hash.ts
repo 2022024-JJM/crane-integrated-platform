@@ -38,7 +38,6 @@ const HASHED_DIRS = [
   'images',
   'icons',
   'drawings',
-  'previews',
   'simulation',
   'textures',
   'asset-library',
@@ -47,8 +46,7 @@ const HASHED_DIRS = [
 /**
  * dev 저장 미들웨어가 직접 쓰는 산출물 디렉터리 (HASHED_DIRS 의 부분집합).
  * vite.config.ts 의 devSceneSavePlugin(scenes) · devVirtualTagsSavePlugin
- * (simulation) · devPreviewSavePlugin(previews) · devAssetLibraryPlugin
- * (asset-library) 이 여기에 파일을 쓴다.
+ * (simulation) · devAssetLibraryPlugin(asset-library) 이 여기에 파일을 쓴다.
  *
  * 이 디렉터리의 변경은 "앱이 방금 저장한 결과를 되읽는 것" 이라 전체
  * 리로드를 보내면 저장 직후 화면·토스트·편집 상태가 통째로 날아간다
@@ -64,7 +62,6 @@ const HASHED_DIRS = [
 const DEV_WRITTEN_DIRS = [
   'scenes',
   'simulation',
-  'previews',
   'asset-library',
 ];
 
@@ -109,7 +106,7 @@ async function collectFiles(
 
 /**
  * public/ 을 훑어 `{ '/models/x.glb': 'a3f91c2e' }` 형태의 표를 만든다.
- * 키는 씬 JSON·카탈로그가 쓰는 것과 같은 `/`로 시작하는 public 절대 경로다.
+ * 키는 씬 JSON·자산 라이브러리가 쓰는 것과 같은 `/`로 시작하는 public 절대 경로다.
  */
 export async function buildAssetHashManifest(
   publicDir: string,

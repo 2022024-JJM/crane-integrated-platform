@@ -151,8 +151,6 @@ export interface AssetViewerLoaded {
 
 interface AssetModelViewerProps {
   url: string;
-  /** 고유 단위 → m 환산 배율(자산의 기본 스케일). 치수 표기에 쓴다. */
-  defaultScale: Vector3Tuple;
   /** 뷰어 아래에 놓이는 표제란. */
   titleBlock?: ReactNode;
   handleRef?: Ref<AssetViewerHandle>;
@@ -414,13 +412,11 @@ function DimensionLabel({
 
 function ViewerHelpers({
   bounds,
-  defaultScale,
   showGrid,
   showDimensions,
   background,
 }: {
   bounds: Box3;
-  defaultScale: Vector3Tuple;
   showGrid: boolean;
   showDimensions: boolean;
   background: ViewerBackground;
@@ -470,13 +466,13 @@ function ViewerHelpers({
             className={tone.dimensionLabel}
             axis="W"
             position={[(min.x + max.x) / 2, min.y, max.z]}
-            meters={sizeX * defaultScale[0]}
+            meters={sizeX}
           />
           <DimensionLabel
             className={tone.dimensionLabel}
             axis="D"
             position={[max.x, min.y, (min.z + max.z) / 2]}
-            meters={sizeZ * defaultScale[2]}
+            meters={sizeZ}
           />
           <DimensionLabel
             className={tone.dimensionLabel}
@@ -485,7 +481,7 @@ function ViewerHelpers({
             // 둘에서 가장 먼 앞-왼쪽 세로 모서리에 둔다 — 납작하고 긴 물체에서
             // 오른쪽 모서리에 두면 깊이 꼬리표와 겹친다.
             position={[min.x, (min.y + max.y) / 2, max.z]}
-            meters={sizeY * defaultScale[1]}
+            meters={sizeY}
           />
         </>
       ) : null}
@@ -524,7 +520,6 @@ function ViewerEnvironment() {
 
 export function AssetModelViewer({
   url,
-  defaultScale,
   titleBlock,
   handleRef,
   onLoaded,
@@ -647,7 +642,6 @@ export function AssetModelViewer({
               {info ? (
                 <ViewerHelpers
                   bounds={info.bounds}
-                  defaultScale={defaultScale}
                   showGrid={showGrid}
                   showDimensions={showDimensions}
                   background={background}

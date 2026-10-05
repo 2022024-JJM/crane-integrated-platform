@@ -7,10 +7,10 @@
 // 그려지고, 에디터 회전 피벗도 원점으로 튄다 (2026-08-20 실제 발생).
 //
 // 사용법:
-//   node scripts/unbake-goliath-crane.mjs   # public 의 새 GLB 를 읽어
-//                                           # assets-src/ 원본으로 저장
-//   pnpm optimize:glb goliath_crane.glb     # 이어서 압축 배포
-//   → 출력된 "씬 배치값"을 goliath.json / philly-2dock.json 크레인 항목에 기입
+//   node scripts/unbake-goliath-crane.mjs <새 export.glb>   # 원점을 복원해
+//                                           # assets-src/models/ 에 저장
+//   이어서: 그 파일을 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)
+//   → 에디터에서 씬을 새 버전으로 갱신하고, 출력된 "씬 배치값" 으로 크레인을 놓는다
 //
 // 원점 정의: 다리(지면 접촉 정점 군집) 중심선이 로컬 +X 축에서 L1=+63.034 /
 // L2=-60.900 unit 에 오도록 — 기존 GLB·LEG_OFFSETS 실측 계약과 동일.

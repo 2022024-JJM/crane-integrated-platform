@@ -6,7 +6,11 @@ import {
   type Texture,
 } from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
-import { resolveEnvironmentFileUrl, type SavedMapInfo } from '@crane/domain/3d';
+import {
+  resolveEnvironmentFileUrl,
+  type SavedEnvironmentInfo,
+  type SavedMapInfo,
+} from '@crane/domain/3d';
 import { SCENE_ENVIRONMENT_INTENSITY } from '../lib/sky-lighting';
 import { SceneObjectBoundary } from './scene-object-boundary';
 import { SceneSeaReach } from './scene-sea-reach';
@@ -92,10 +96,9 @@ function EnvironmentBackground({ url }: { url: string }) {
 }
 
 /**
- * 배경은 씬의 `environmentId` 가 정하고, 지정이 없는 씬만 region 기본값으로
- * 떨어진다(resolveEnvironmentFileUrl 주석 참고). 바다는 호출자가
- * resolveSeaVisible 로 판정해 `seaVisible` 로 준다 — 여기서 environmentId 로
- * 바다를 유추하지 않는다.
+ * 배경은 씬의 `environment` 가 정한다(파일 경로를 씬이 들고 있다 —
+ * resolveEnvironmentFileUrl). 바다는 호출자가 resolveSeaVisible 로 판정해
+ * `seaVisible` 로 준다 — 여기서 배경으로 바다를 유추하지 않는다.
  *
  * 4K EXR 은 수 MB~십수 MB — 자체 Suspense 로 씬(맵·모델) 로드를 붙잡지 않고
  * 준비되는 대로 나중에 나타난다. url 을 key 로 준다 — 인스턴스를 갈아끼워
@@ -110,18 +113,16 @@ function EnvironmentBackground({ url }: { url: string }) {
  * 물이 리마운트되지 않는다.
  */
 export function SceneEnvironment({
-  regionId,
-  environmentId,
+  environment,
   seaVisible,
   maps,
 }: {
-  regionId: string;
-  environmentId?: string | null;
+  environment?: SavedEnvironmentInfo | null;
   seaVisible: boolean;
   /** 씬 지도 — 컨텍스트 지형을 바다 반사에서 빼고, 바다 도달 마스크를 만든다. */
   maps?: SavedMapInfo[];
 }) {
-  const url = resolveEnvironmentFileUrl(regionId, environmentId);
+  const url = resolveEnvironmentFileUrl(environment);
   if (!url && !seaVisible) return null;
   return (
     <>

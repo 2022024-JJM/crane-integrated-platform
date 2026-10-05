@@ -23,6 +23,36 @@ export interface SavedCameraInfo {
   target: Vector3Tuple;
 }
 
+/**
+ * 씬이 자산 라이브러리의 자산을 가리키는 방법 — 자산 id 와 **놓을 때의 버전**.
+ *
+ * 씬은 파일 경로(`path`)를 함께 들고 있어서 모니터링·3D 플레이는 라이브러리를
+ * 읽지 않는다. 이 참조는 에디터와 자산 화면이 "어느 자산의 어느 버전인가" 를
+ * 알기 위한 것이다(새 버전 알림과 갱신, 사용처). 라이브러리에서 현재 버전이
+ * 바뀌어도 씬은 따라가지 않는다 — 에디터에서 갱신하고 저장해야 바뀐다.
+ *
+ * 참조가 없는 객체는 라이브러리가 모르는 파일이다. 그대로 렌더되고 에디터가
+ * 그렇게 표시한다.
+ */
+export interface SceneAssetRef {
+  id: string;
+  version: number;
+}
+
+/** 씬 배경 — 파일 경로(public 절대 경로)와 그 파일이 속한 자산. */
+export interface SavedEnvironmentInfo {
+  path: string;
+  asset?: SceneAssetRef;
+}
+
+/**
+ * 지도의 역할. `ground` 는 바닥 — 드롭 raycast 가 닿는 면이다(resolveGroundMaps).
+ * `context` 는 주변 지형으로, 삼각형이 많아 그림자와 바다 반사에서 뺀다
+ * (isContextMap). 카메라 이동 범위는 역할이 아니라 `cameraBounds` 가 정한다.
+ */
+export const SCENE_MAP_ROLES = ['ground', 'context'] as const;
+export type SceneMapRole = (typeof SCENE_MAP_ROLES)[number];
+
 export interface SavedSceneInfo {
   maps: SavedMapInfo[];
   models: SavedModelInfo[];
@@ -62,22 +92,18 @@ export interface SavedSceneInfo {
    */
   mainViewByRegion?: Record<string, string>;
   /**
-   * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.
-   *
-   * - `undefined`: 씬이 배경을 지정하지 않음 → region 기본값으로 떨어진다
-   *   (scene-environment-registry). 기존 저장본이 하늘을 잃지 않게 하는 경로다.
-   * - `null`: 사용자가 "배경 없음"을 **명시적으로** 고름 → region 기본값도
-   *   적용하지 않는다. undefined와 구분되어야 배경을 끌 수 있다.
+   * 배경 파노라마(EXR). 에디터 배경 탭이 자산 라이브러리의 배경 자산에서 고른다.
+   * 없으면 배경 없음(단색 배경)이다.
    */
-  environmentId?: string | null;
+  environment?: SavedEnvironmentInfo;
   /**
    * 바다 표시. 판정은 resolveSeaVisible(lib/scene-sea.ts) 한 곳이다.
    *
-   * - `undefined`: 지정한 적 없는 씬 → 배경(EXR)이 resolve 되면 바다가 있다는
+   * - `undefined`: 지정한 적 없는 씬 → 배경(EXR)이 있으면 바다가 있다는
    *   레거시 규칙. 기존 저장본이 바다를 잃지 않게 하는 경로다.
    * - `true` / `false`: 사용자가 에디터에서 **명시**한 값. 배경 유무와 무관.
    *
-   * `environmentId`·`lighting` 과 같이 씬 **파일 단위**로 저장된다 — okpo.json
+   * `environment`·`lighting` 과 같이 씬 **파일 단위**로 저장된다 — okpo.json
    * 은 dock-1·dock-2 가 공유하므로 한쪽에서 끄면 둘 다 꺼진다.
    */
   sea?: boolean;
@@ -191,6 +217,11 @@ export interface SavedModelInfo {
   equipName: string;
   craneId?: string;
   path: string;
+  /**
+   * 이 파일이 속한 자산과 놓을 때의 버전(SceneAssetRef). 없으면 라이브러리가
+   * 모르는 파일이다 — 필드를 생략한다.
+   */
+  asset?: SceneAssetRef;
   opacity: number;
   position: Vector3Tuple;
   rotation: Vector3Tuple;
@@ -296,6 +327,14 @@ export interface SavedMeshOverride {
 export interface SavedMapInfo {
   id: string;
   path: string;
+  /** 이 파일이 속한 자산과 놓을 때의 버전. 모델과 같은 규칙이다. */
+  asset?: SceneAssetRef;
+  /**
+   * 지도의 역할(SceneMapRole). 팔레트로 추가할 때 자산의 배치 속성에서 복사해
+   * 온다 — 그 뒤로는 씬이 자기 값을 가진다. 필드가 없는 지도는 어느 쪽도
+   * 아니다: 바닥이 하나도 없는 씬은 첫 지도가 바닥을 맡는다(resolveGroundMaps).
+   */
+  role?: SceneMapRole;
   /**
    * 표시 이름 — 없으면 path에서 파생한 이름(humanizeModelPath)을 쓴다.
    * 기존 저장본은 필드가 없고, 목록에서 이름을 바꿀 때만 기록된다.
@@ -347,13 +386,22 @@ export interface ValueMapItem {
   offset?: number;
 }
 
-export interface SceneModelCatalogItem {
+/**
+ * 에디터 팔레트에서 씬에 놓을 수 있는 자산 한 종. 자산 라이브러리의 자산
+ * (게시된 현재 버전)에서 만든다 — 놓는 순간 `path` 와 `{ id, version }` 이
+ * 씬에 적힌다(SceneAssetRef).
+ */
+export interface ScenePlaceableAsset {
+  /** 자산 id. 드래그 데이터와 프리로드의 키다. */
   id: string;
+  /** 놓는 버전 — 자산의 현재 버전. */
+  version: number;
   label: string;
-  category: SceneModelCategory;
+  /** public 기준 절대 경로. BASE_URL은 로더가 붙인다(withBaseUrl). */
   path: string;
-  defaultScale: Vector3Tuple;
-  preview?: SceneModelPreviewPreset;
+}
+
+export interface ScenePlaceableModel extends ScenePlaceableAsset {
   /**
    * 떠 있는 모델 — **배치 전용** 플래그. origin이 흘수선(설계 수면)에 있다는
    * 뜻으로, 드롭 시 bbox 바닥을 지면에 맞추는 대신 origin을 수면(SEA_LEVEL_Y)에
@@ -363,9 +411,11 @@ export interface SceneModelCatalogItem {
   floating?: boolean;
 }
 
-export const SCENE_MODEL_CATEGORIES = ['indoor', 'outdoor', 'map'] as const;
-
-export type SceneModelCategory = (typeof SCENE_MODEL_CATEGORIES)[number];
+export interface ScenePlaceableMap extends ScenePlaceableAsset {
+  role: SceneMapRole;
+  /** 팔레트로 추가할 때의 초기 position. 없으면 원점. */
+  defaultPosition?: Vector3Tuple;
+}
 
 export interface SceneModelPreviewPreset {
   paddingScale?: number;

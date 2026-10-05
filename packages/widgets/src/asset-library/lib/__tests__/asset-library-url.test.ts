@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_ASSET_QUERY, type AssetQuery } from '@crane/domain/asset-library';
 import {
+  listDetailTabs,
   parseAssetQuery,
   parseDetailTab,
   parseVersionParam,
+  resolveDetailTab,
   writeAssetQuery,
 } from '../asset-library-url';
 
@@ -17,14 +19,14 @@ describe('parseAssetQuery', () => {
   it('필드를 읽는다', () => {
     expect(
       parse(
-        'q=crane&kind=model,map&status=draft&tag=a,b&collection=yard&fav=1&attn=review&sort=size',
+        'q=crane&kind=model,map&status=draft&category=a,b&collection=yard&fav=1&attn=review&sort=size',
       ),
     ).toEqual({
       attention: 'review',
       text: 'crane',
       kinds: ['model', 'map'],
       statuses: ['draft'],
-      tags: ['a', 'b'],
+      categories: ['a', 'b'],
       collectionId: 'yard',
       favoritesOnly: true,
       sort: 'size',
@@ -45,9 +47,9 @@ describe('parseAssetQuery', () => {
     expect(parse('status=published,draft').statuses).toEqual(['draft', 'published']);
   });
 
-  it('빈 태그 조각은 버린다', () => {
-    expect(parse('tag=,a,,b,').tags).toEqual(['a', 'b']);
-    expect(parse('tag=').tags).toEqual([]);
+  it('빈 카테고리 조각은 버린다', () => {
+    expect(parse('category=,a,,b,').categories).toEqual(['a', 'b']);
+    expect(parse('category=').categories).toEqual([]);
   });
 });
 
@@ -56,7 +58,7 @@ describe('writeAssetQuery', () => {
     text: ' crane ',
     kinds: ['model'],
     statuses: ['draft', 'published'],
-    tags: ['indoor', 'crane 10'],
+    categories: ['indoor', 'crane 10'],
     collectionId: 'yard',
     favoritesOnly: true,
     attention: 'over-budget',
@@ -91,10 +93,10 @@ describe('writeAssetQuery', () => {
 describe('없어진 필터(조선소 site · 분류 cat)의 옛 링크', () => {
   it('읽을 때 그 조건 없이 연다 — 나머지 필터는 그대로 읽는다', () => {
     expect(parse('site=okpo&cat=indoor')).toEqual(DEFAULT_ASSET_QUERY);
-    expect(parse('site=common&cat=crane&kind=model&tag=indoor')).toEqual({
+    expect(parse('site=common&cat=crane&kind=model&category=indoor')).toEqual({
       ...DEFAULT_ASSET_QUERY,
       kinds: ['model'],
-      tags: ['indoor'],
+      categories: ['indoor'],
     });
     expect(parse('site=okpo')).not.toHaveProperty('site');
     expect(parse('cat=indoor')).not.toHaveProperty('category');
@@ -113,21 +115,21 @@ describe('없어진 필터(조선소 site · 분류 cat)의 옛 링크', () => {
   });
 });
 
-describe('태그(tag)', () => {
+describe('카테고리(category)', () => {
   it('쉼표로 이어 쓰고 다시 읽으면 같은 순서다', () => {
     const params = writeAssetQuery(new URLSearchParams(), {
       ...DEFAULT_ASSET_QUERY,
       kinds: ['model'],
-      tags: ['indoor', 'crane'],
+      categories: ['indoor', 'crane'],
     });
-    expect(params.get('tag')).toBe('indoor,crane');
-    expect(parseAssetQuery(params).tags).toEqual(['indoor', 'crane']);
+    expect(params.get('category')).toBe('indoor,crane');
+    expect(parseAssetQuery(params).categories).toEqual(['indoor', 'crane']);
   });
 
-  it('태그가 없으면 파라미터를 쓰지 않는다', () => {
+  it('카테고리가 없으면 파라미터를 쓰지 않는다', () => {
     expect(
-      writeAssetQuery(new URLSearchParams('tag=a'), DEFAULT_ASSET_QUERY).has(
-        'tag',
+      writeAssetQuery(new URLSearchParams('category=a'), DEFAULT_ASSET_QUERY).has(
+        'category',
       ),
     ).toBe(false);
   });
@@ -146,5 +148,41 @@ describe('parseDetailTab / parseVersionParam', () => {
     for (const raw of ['0', '-1', '1.5', 'v2', '', '1e3', '9999999', null]) {
       expect(parseVersionParam(raw)).toBeNull();
     }
+  });
+});
+
+describe('listDetailTabs / resolveDetailTab', () => {
+  it('씬에 쓰는 종류(모델·지도·배경)에는 배치 속성 탭이 있다', () => {
+    for (const kind of ['model', 'map', 'environment'] as const) {
+      expect(listDetailTabs(kind)).toContain('placement');
+    }
+  });
+
+  it('도면·CAD 에는 배치 속성 탭이 없고 나머지 탭은 그대로다', () => {
+    for (const kind of ['drawing', 'cad'] as const) {
+      expect(listDetailTabs(kind)).toEqual([
+        'info',
+        'stats',
+        'versions',
+        'usage',
+        'activity',
+      ]);
+    }
+  });
+
+  it('그 종류에 있는 탭은 그대로 연다', () => {
+    expect(resolveDetailTab('placement', 'map')).toBe('placement');
+    expect(resolveDetailTab('versions', 'drawing')).toBe('versions');
+  });
+
+  it('그 종류에 없는 탭을 가리키면 정보 탭으로 떨어진다', () => {
+    expect(resolveDetailTab('placement', 'drawing')).toBe('info');
+    expect(resolveDetailTab('placement', 'cad')).toBe('info');
+  });
+
+  it('모르는 값·빈 값·null 은 정보 탭이다', () => {
+    expect(resolveDetailTab('hack', 'model')).toBe('info');
+    expect(resolveDetailTab('', 'model')).toBe('info');
+    expect(resolveDetailTab(null, 'model')).toBe('info');
   });
 });

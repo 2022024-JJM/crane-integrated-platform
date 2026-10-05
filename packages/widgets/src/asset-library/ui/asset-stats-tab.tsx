@@ -8,7 +8,6 @@ import {
   formatMeters,
   isDocumentAssetKind,
   isGeometryAssetKind,
-  toMeterSize,
   type AssetBudgetMetric,
   type AssetRecord,
   type AssetStats,
@@ -111,7 +110,7 @@ export function AssetStatsTab({ asset, stats, live }: AssetStatsTabProps) {
     );
   }
 
-  const meters = stats.size ? toMeterSize(stats.size, asset.defaultScale) : null;
+  const meters = stats.size ?? null;
   const hasWarning = evaluateAssetBudget(asset.kind, stats).length > 0;
 
   // 지도는 타일·LOD 로 나눠 노드와 드로우콜이 많은 것이 정상이라 텍스처

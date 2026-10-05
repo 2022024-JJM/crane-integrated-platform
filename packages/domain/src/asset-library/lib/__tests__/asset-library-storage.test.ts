@@ -144,13 +144,14 @@ describe('브라우저 저장소 — save·파일', () => {
       { assetId: 'a', version: 2, fileName: 'a.glb' },
       new Blob(['x']),
       // 브라우저에서는 최적화할 수 없다 — 요청해도 올린 그대로 저장한다.
-      { optimize: true },
+      { optimize: 'model' },
     );
     expect(repo.canOptimize).toBe(false);
     expect(stored).toEqual({
       ref: { storage: 'browser', key: 'files/a/v2/a.glb' },
       sizeBytes: 1,
       optimized: false,
+      report: [],
     });
     const { ref } = stored;
     expect(await repo.resolveUrl(ref)).toBe('blob:one');
@@ -238,6 +239,7 @@ describe('dev 저장소', () => {
       ref: { storage: 'public', path: '/asset-library/files/a/v3/a.glb' },
       sizeBytes: 1,
       optimized: false,
+      report: [],
     });
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
@@ -391,28 +393,166 @@ describe('다른 곳에서 바뀐 문서를 덮어쓰지 않는다', () => {
   });
 });
 
-describe('dev 저장소 — 최적화 요청', () => {
-  it('optimize 를 붙여 올리고, 서버가 알려 준 크기·결과를 돌려준다', async () => {
-    fetchMock.mockResolvedValue(respond({ bytes: 40, optimized: true }));
-    const stored = await createDevAssetLibraryRepository().putVersionFile(
-      { assetId: 'a', version: 1, fileName: 'a.glb' },
-      new Blob(['x'.repeat(100)]),
-      { optimize: true },
-    );
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      `${DEV_ASSET_LIBRARY_API_PATH}/file?key=files%2Fa%2Fv1%2Fa.glb&optimize=1`,
-    );
-    expect(stored).toMatchObject({ sizeBytes: 40, optimized: true });
+describe('파일을 다룰 수 있는 환경(canManageFiles)', () => {
+  it('dev 저장소는 올리고 지울 수 있고, 브라우저 저장소는 할 수 없다', () => {
+    expect(createDevAssetLibraryRepository().canManageFiles).toBe(true);
+    expect(
+      createBrowserAssetLibraryRepository(createMemoryBlobStore()).canManageFiles,
+    ).toBe(false);
+  });
+});
+
+describe('dev 저장소 — 자산 파일 삭제', () => {
+  const deleteUrl = () => {
+    const [url, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).method).toBe('DELETE');
+    return new URL(String(url), 'http://localhost');
+  };
+
+  it('자산 id 만으로 지운다 — 옛 경로가 없으면 path 를 붙이지 않는다', async () => {
+    fetchMock.mockResolvedValue(respond({ ok: true }));
+    await createDevAssetLibraryRepository().removeAssetFiles('a');
+    const url = deleteUrl();
+    expect(url.searchParams.get('assetId')).toBe('a');
+    expect(url.searchParams.getAll('path')).toEqual([]);
   });
 
-  it('서버가 최적화에 실패해 원본을 저장했으면 optimized 는 false 다', async () => {
-    fetchMock.mockResolvedValue(respond({ bytes: 100, optimized: false }));
+  it('옛 배포 경로의 파일을 path 로 함께 보낸다', async () => {
+    fetchMock.mockResolvedValue(respond({ ok: true }));
+    await createDevAssetLibraryRepository().removeAssetFiles('okpo-ttc', [
+      '/models/okpo_ttc.glb',
+      '/maps/okpo.glb',
+    ]);
+    expect(deleteUrl().searchParams.getAll('path')).toEqual([
+      '/models/okpo_ttc.glb',
+      '/maps/okpo.glb',
+    ]);
+  });
+
+  it('지워서는 안 되는 경로는 보내지 않는다(라이브러리 안 파일·씬 JSON·상위 탈출)', async () => {
+    fetchMock.mockResolvedValue(respond({ ok: true }));
+    await createDevAssetLibraryRepository().removeAssetFiles('a', [
+      '/asset-library/files/a/v2/a.glb',
+      '/scenes/okpo.json',
+      '/models/../scenes/okpo.json',
+      'models/a.glb',
+      '/models/a.glb',
+    ]);
+    expect(deleteUrl().searchParams.getAll('path')).toEqual(['/models/a.glb']);
+  });
+
+  it('삭제 실패(HTTP 에러)는 던진다', async () => {
+    fetchMock.mockResolvedValue(respond(null, 500));
+    await expect(
+      createDevAssetLibraryRepository().removeAssetFiles('a'),
+    ).rejects.toThrow('HTTP 500');
+  });
+});
+
+describe('dev 저장소 — 최적화 요청', () => {
+  it('종류(optimize=model)를 붙여 올리고, 서버가 알려 준 크기·결과·보고를 돌려준다', async () => {
+    fetchMock.mockResolvedValue(
+      respond({ bytes: 40, optimized: true, report: ['meshopt 적용'] }),
+    );
     const stored = await createDevAssetLibraryRepository().putVersionFile(
       { assetId: 'a', version: 1, fileName: 'a.glb' },
       new Blob(['x'.repeat(100)]),
-      { optimize: true },
+      { optimize: 'model' },
     );
-    expect(stored).toMatchObject({ sizeBytes: 100, optimized: false });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${DEV_ASSET_LIBRARY_API_PATH}/file?key=files%2Fa%2Fv1%2Fa.glb&optimize=model`,
+    );
+    expect(stored).toMatchObject({
+      sizeBytes: 40,
+      optimized: true,
+      report: ['meshopt 적용'],
+    });
+  });
+
+  it('지도는 지도 파이프라인(optimize=map)으로 올린다', async () => {
+    fetchMock.mockResolvedValue(respond({ bytes: 40, optimized: true }));
+    await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'm', version: 2, fileName: 'm.glb' },
+      new Blob(['x']),
+      { optimize: 'map' },
+    );
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${DEV_ASSET_LIBRARY_API_PATH}/file?key=files%2Fm%2Fv2%2Fm.glb&optimize=map`,
+    );
+  });
+
+  it('최적화를 요청하지 않으면 optimize 를 붙이지 않는다', async () => {
+    fetchMock.mockResolvedValue(respond({ bytes: 1 }));
+    await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'a', version: 1, fileName: 'a.glb' },
+      new Blob(['x']),
+    );
+    expect(fetchMock.mock.calls[0][0]).not.toContain('optimize');
+  });
+
+  it('서버가 최적화에 실패해 원본을 저장했으면 optimized 는 false 이고 이유가 보고에 온다', async () => {
+    fetchMock.mockResolvedValue(
+      respond({ bytes: 100, optimized: false, report: ['최적화 실패: boom'] }),
+    );
+    const stored = await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'a', version: 1, fileName: 'a.glb' },
+      new Blob(['x'.repeat(100)]),
+      { optimize: 'model' },
+    );
+    expect(stored).toMatchObject({
+      sizeBytes: 100,
+      optimized: false,
+      report: ['최적화 실패: boom'],
+    });
+  });
+
+  it('지도 파이프라인이 지운 루트 오프셋을 돌려준다', async () => {
+    fetchMock.mockResolvedValue(
+      respond({ bytes: 1, optimized: true, rootOffset: [515.305, 0, -814.879] }),
+    );
+    const stored = await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'm', version: 1, fileName: 'm.glb' },
+      new Blob(['x']),
+      { optimize: 'map' },
+    );
+    expect(stored.rootOffset).toEqual([515.305, 0, -814.879]);
+  });
+
+  it.each([
+    ['없음', undefined],
+    ['두 칸', [1, 2]],
+    ['문자열이 섞임', [1, '2', 3]],
+    ['NaN', [1, Number.NaN, 3]],
+    ['배열이 아님', '1,2,3'],
+  ])('루트 오프셋이 깨졌으면(%s) 필드를 싣지 않는다', async (_label, rootOffset) => {
+    fetchMock.mockResolvedValue(respond({ bytes: 1, rootOffset }));
+    const stored = await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'm', version: 1, fileName: 'm.glb' },
+      new Blob(['x']),
+    );
+    expect(stored).not.toHaveProperty('rootOffset');
+  });
+
+  it('보고가 배열이 아니거나 문자열이 아닌 줄이 섞이면 문자열만 남긴다', async () => {
+    const repo = createDevAssetLibraryRepository();
+    fetchMock.mockResolvedValue(respond({ bytes: 1, report: 'done' }));
+    expect(
+      (
+        await repo.putVersionFile(
+          { assetId: 'a', version: 1, fileName: 'a.glb' },
+          new Blob(['x']),
+        )
+      ).report,
+    ).toEqual([]);
+    fetchMock.mockResolvedValue(respond({ bytes: 1, report: ['a', 3, null, 'b'] }));
+    expect(
+      (
+        await repo.putVersionFile(
+          { assetId: 'a', version: 2, fileName: 'a.glb' },
+          new Blob(['x']),
+        )
+      ).report,
+    ).toEqual(['a', 'b']);
   });
 
   it('응답의 크기가 비정상이면 올린 크기로 본다', async () => {

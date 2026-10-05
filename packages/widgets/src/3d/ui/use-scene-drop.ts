@@ -13,7 +13,7 @@ import {
   getModelBottomOffset,
   modelObjectRegistry,
   numRound,
-  type SceneModelCatalogItem,
+  type ScenePlaceableModel,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
@@ -34,15 +34,15 @@ function hasSceneDragData(event: DragEvent<HTMLDivElement>) {
 }
 
 interface UseSceneDropParams {
-  catalogItems: SceneModelCatalogItem[];
-  draggingModelCatalogItem: SceneModelCatalogItem | null;
+  catalogItems: ScenePlaceableModel[];
+  draggingModelCatalogItem: ScenePlaceableModel | null;
   /** 바닥 지도들의 id (resolveGroundMaps). 드롭 raycast가 ground plane이 아닌
    *  지도 표면을 대상으로 동작하도록 한다 (지도 표면 높이가 y!=0일 수 있음).
    *  한 지도가 여러 장으로 나뉜 씬(필리조선소 Area 1/2)이 있어 전부 본다.
    *  렌더마다 새 배열을 넘기면 resolveDropPosition 이 매번 재생성된다. */
   mapObjectIds?: readonly string[];
   onAddModel: (
-    catalogItem: SceneModelCatalogItem,
+    catalogItem: ScenePlaceableModel,
     position: Vector3Tuple,
   ) => void;
 }
@@ -159,18 +159,15 @@ export function useSceneDrop({
           return;
         }
 
-        // 카탈로그 모델의 origin은 모델마다 다르다(중앙/바닥/상단). unscaled
-        // bottomOffset에 사용자 scale.y를 곱해 world offset으로 만들고,
-        // 드롭 위치 y에 더해 모델 바닥이 정확히 지면(y=0)에 닿도록 한다.
+        // 모델의 origin은 모델마다 다르다(중앙/바닥/상단). 바닥까지의
+        // offset 을 드롭 위치 y에 더해 모델 바닥이 정확히 지면(y=0)에 닿도록
+        // 한다(새 모델은 등배로 놓이므로 offset 을 그대로 쓴다).
         // 캐시는 캔버스 mount 시 prefetchModelBottomOffset / 첫 mount 시
         // fillModelBottomOffsetFromClone으로 채워진다.
-        const unscaledOffset =
-          getModelBottomOffset(droppedCatalogItem.path) ?? 0;
-        const scaledOffset =
-          unscaledOffset * droppedCatalogItem.defaultScale[1];
+        const bottomOffset = getModelBottomOffset(droppedCatalogItem.path) ?? 0;
         const adjustedPosition: Vector3Tuple = [
           nextPosition[0],
-          numRound(nextPosition[1] + scaledOffset),
+          numRound(nextPosition[1] + bottomOffset),
           nextPosition[2],
         ];
         onAddModel(droppedCatalogItem, adjustedPosition);

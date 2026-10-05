@@ -26,9 +26,17 @@ export const ASSET_KINDS = [
 ] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
-/** 형상이 있는 자산(GLB)인가 — 기하 통계·권장 상한·기본 스케일·씬 배치가 있다. */
+/** 형상이 있는 자산(GLB)인가 — 기하 통계·권장 상한·씬 배치가 있다. */
 export function isGeometryAssetKind(kind: AssetKind): boolean {
   return kind === 'model' || kind === 'map';
+}
+
+/**
+ * 3D 화면 편집에서 씬에 쓰는 자산인가(모델·지도·배경) — 편집 팔레트에 나오고
+ * 배치 속성을 가진다.
+ */
+export function isSceneAssetKind(kind: AssetKind): boolean {
+  return kind === 'model' || kind === 'map' || kind === 'environment';
 }
 
 /** 문서형 자산인가 — 씬에 배치하지 않고 기하 통계가 없으며 도면 번호·리비전을 가진다. */
@@ -50,12 +58,11 @@ export const ASSET_VERSION_STATUSES = [
 ] as const;
 export type AssetVersionStatus = (typeof ASSET_VERSION_STATUSES)[number];
 
-/** builtin = 코드 카탈로그·배포 파일에서 온 자산, user = 이 화면에서 등록한 자산. */
-export type AssetOrigin = 'builtin' | 'user';
-
 /**
  * 파일 위치. `public` 은 배포 정적 파일(절대 경로), `browser` 는 서버가 없는
- * 운영 환경에서 이 브라우저의 IndexedDB 에만 있는 파일(저장소 키)이다.
+ * 운영 환경에서 이 브라우저의 IndexedDB 에만 있는 파일(저장소 키)이다 —
+ * 운영에서는 자산을 등록할 수 없어 버전 파일은 전부 `public` 이고, `browser`
+ * 는 그 브라우저에서 찍은 썸네일에만 쓰인다.
  */
 export type AssetFileRef =
   | { storage: 'public'; path: string }
@@ -142,22 +149,49 @@ export interface AssetThumbnail {
   updatedAt: string;
 }
 
+/**
+ * 지도의 역할 — 씬 스키마의 SceneMapRole 과 같은 값이다(이 슬라이스는 씬
+ * 스키마를 import 하지 않아 따로 적는다). `ground` 는 바닥, `context` 는 주변
+ * 지형.
+ */
+export const ASSET_MAP_ROLES = ['ground', 'context'] as const;
+export type AssetMapRole = (typeof ASSET_MAP_ROLES)[number];
+
+/**
+ * 배치 속성 — 3D 화면 편집에서 이 자산을 씬에 놓을 때의 기본값. 놓는 순간
+ * 씬에 복사되고 그 뒤로는 씬이 자기 값을 가진다(이미 놓인 것은 바뀌지 않는다).
+ * 값이 없는 항목은 기본 동작이다.
+ */
+export interface AssetPlacement {
+  /**
+   * 모델·지도·배경 — 편집 팔레트에 내지 않는다. 화면 코드가 직접 불러 쓰는
+   * 부품처럼 씬에 놓을 일이 없는 자산용이다. true 만 저장한다.
+   */
+  paletteHidden?: boolean;
+  /** 지도 — 역할. 없으면 `ground`(바닥). */
+  mapRole?: AssetMapRole;
+  /** 지도 — 추가할 때의 초기 위치. 없으면 원점. */
+  defaultPosition?: Vector3Tuple;
+  /**
+   * 모델 — 떠 있는 모델(배). 드롭할 때 바닥을 지면에 맞추지 않고 원점을
+   * 수면에 놓는다. true 만 저장한다.
+   */
+  floating?: boolean;
+}
+
 export interface AssetRecord {
   id: string;
   kind: AssetKind;
-  origin: AssetOrigin;
   name: string;
   description: string;
   /**
    * 종류 안의 세부 분류(indoor·crane·okpo …). 탐색 계층의 체크박스가 이 값으로
    * 좁힌다.
    */
-  tags: string[];
+  categories: string[];
   owner: string;
-  /** 씬 편집기 카탈로그 id. 있으면 팔레트에서 배치할 수 있는 자산이다. */
-  catalogId?: string;
-  /** 씬에 놓을 때의 기본 스케일 — 고유 단위를 m 로 바꾸는 배율이기도 하다. */
-  defaultScale: Vector3Tuple;
+  /** 씬에 놓을 때의 기본값(모델·지도). 전부 기본 동작이면 필드가 없다. */
+  placement?: AssetPlacement;
   /** 도면 번호. */
   drawingNo?: string;
   /** 연결된 자산(도면 ↔ 모델). */
@@ -176,7 +210,15 @@ export interface AssetCollection {
   assetIds: string[];
 }
 
-export const ASSET_LIBRARY_SCHEMA_VERSION = 1;
+/**
+ * 문서의 스키마 버전. 필드 이름이 바뀌면 올린다 — 옛 코드가 새 문서를 읽으면
+ * 모르는 필드를 떨군 채 저장해 내용이 사라지므로, 옛 코드는 자기보다 새
+ * 문서를 읽기를 거부한다(`assertReadableAssetLibraryDocument`).
+ *
+ * 2: 자산의 카테고리 필드가 `categories` 다. 1 은 같은 값을 `tags` 로 적었고,
+ * 읽을 때 올린다(`sanitize-asset-library.ts`).
+ */
+export const ASSET_LIBRARY_SCHEMA_VERSION = 2;
 
 export interface AssetLibraryDocument {
   schemaVersion: typeof ASSET_LIBRARY_SCHEMA_VERSION;
@@ -193,24 +235,11 @@ export interface AssetStatsTableEntry {
 }
 export type AssetStatsTable = Record<string, AssetStatsTableEntry>;
 
-/** 코드 카탈로그·배포 파일에서 온 자산의 원천 정보. */
-export interface BuiltinAssetSource {
-  id: string;
-  kind: AssetKind;
-  name: string;
-  /** public 절대 경로. */
-  path: string;
-  catalogId?: string;
-  defaultScale?: Vector3Tuple;
-  tags?: string[];
-  description?: string;
-}
-
 export const ASSET_NAME_MAX = 80;
 export const ASSET_DESCRIPTION_MAX = 2000;
 export const ASSET_NOTE_MAX = 500;
-export const ASSET_TAG_MAX = 24;
-export const ASSET_TAGS_MAX = 20;
+export const ASSET_CATEGORY_MAX = 24;
+export const ASSET_CATEGORIES_MAX = 20;
 export const ASSET_OWNER_MAX = 60;
 export const ASSET_REVISION_MAX = 12;
 export const ASSET_DRAWING_NO_MAX = 60;

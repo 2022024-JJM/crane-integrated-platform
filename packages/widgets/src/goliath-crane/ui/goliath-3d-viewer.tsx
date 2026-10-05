@@ -8,7 +8,7 @@ import {
   CardTitle,
   CardAction,
 } from '@crane/ui/molecules/card';
-import { GltfModel } from '@crane/domain/3d';
+import { CODE_ASSETS, GltfModel } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 const CAMERA_PRESET = {
@@ -55,7 +55,7 @@ function SceneContent() {
       <Suspense fallback={null}>
         <GltfModel
           id="gc-04-model"
-          url="/models/gantry_crane.glb"
+          url={CODE_ASSETS.gantryCrane.path}
           equipName="GC-04"
           position={[0, 0, 0]}
           rotation={[0, 0, 0]}

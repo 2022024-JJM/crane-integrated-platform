@@ -1,7 +1,8 @@
 import { Check, Lock, LockOpen, Map } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedMapInfo, SceneMapCatalogItem } from '@crane/domain/3d';
+import type { SavedMapInfo, ScenePlaceableMap } from '@crane/domain/3d';
+import type { ScenePaletteMap } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Switch } from '@crane/ui/atoms/switch';
 import {
@@ -10,10 +11,12 @@ import {
 } from '../lib/map-palette-tiles';
 
 interface PaletteMapSectionProps {
-  /** 씬에 놓인 지도 전체. 배치·잠금 표시는 경로 매칭으로 한다. */
+  /** 팔레트 항목 — 자산 라이브러리의 지도(놓을 수 없는 것 포함). */
+  entries: ScenePaletteMap[];
+  /** 씬에 놓인 지도 전체. 배치·잠금 표시는 자산 id(없으면 경로)로 맞춘다. */
   maps: SavedMapInfo[];
-  /** 카탈로그 항목을 씬에 append(addSceneMap). */
-  onAddMap: (catalogItem: SceneMapCatalogItem) => void;
+  /** 지도 자산을 씬에 append(addSceneMap). */
+  onAddMap: (map: ScenePlaceableMap) => void;
   /** 놓인 지도 제거 — 계층 목록의 삭제와 같은 액션(deletePlacedMap). */
   onRemoveMap: (id: string) => void;
   /** 잠금 토글 — 계층 목록의 자물쇠 버튼과 같은 액션(setObjectLocked). */
@@ -36,6 +39,9 @@ interface PaletteMapSectionProps {
  * 안 놓인 타일 클릭 = 추가, 놓인(잠금 해제) 타일 클릭 = 제거. 배치·잠금
  * 상태 파생은 getMapPaletteTiles.
  *
+ * 목록은 자산 라이브러리의 지도다. 게시되지 않은 지도는 흐리게 보이고 상태가
+ * 적히며 추가할 수 없다 — 이미 놓인 것은 그대로 제거할 수 있다.
+ *
  * 타일 아래 바다 절은 배경 탭의 조명 절과 같은 마크업이다. 스위치는 유효값을
  * 보이고 누르면 그 반대를 명시 boolean 으로 씬에 저장한다 — 미지정 씬은 첫
  * 토글부터 레거시 규칙 → 명시 상태로 바뀌는 편집이라 dirty 가 선다(유효값을
@@ -52,6 +58,7 @@ interface PaletteMapSectionProps {
  * 배치). button 안의 button 은 유효하지 않은 HTML 이고 React 가 경고한다.
  */
 export const PaletteMapSection = memo(function PaletteMapSection({
+  entries,
   maps,
   onAddMap,
   onRemoveMap,
@@ -61,11 +68,11 @@ export const PaletteMapSection = memo(function PaletteMapSection({
   onSeaVisibleChange,
 }: PaletteMapSectionProps) {
   const { t } = useTranslation();
-  const tiles = getMapPaletteTiles(maps);
+  const tiles = getMapPaletteTiles(maps, entries);
 
-  const handleTileClick = ({ item, placed, locked }: MapPaletteTile) => {
+  const handleTileClick = ({ entry, placed, locked }: MapPaletteTile) => {
     if (!placed) {
-      onAddMap(item);
+      if (entry.blocked === null) onAddMap(entry.item);
       return;
     }
     if (locked) {
@@ -77,18 +84,30 @@ export const PaletteMapSection = memo(function PaletteMapSection({
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-2">
-        {tiles.map((tile) => (
+        {tiles.map((tile) => {
+          // 놓을 수 없는 이유는 안 놓인 타일에만 뜻이 있다 — 놓인 것은 뺄 수 있다.
+          const blocked = tile.placed ? null : tile.entry.blocked;
+          return (
           <MapTile
-            key={tile.item.id}
-            label={tile.item.label}
+            key={tile.entry.item.id}
+            label={tile.entry.item.label}
             placed={tile.placed !== null}
             locked={tile.locked}
+            blockedLabel={
+              blocked === null
+                ? null
+                : blocked === 'unpublished'
+                  ? t(`asset-library:status.${tile.entry.status}`)
+                  : t(`monitoring:palette.blocked.${blocked}`)
+            }
             title={
-              !tile.placed
-                ? t('monitoring:editor.mapAdd')
-                : tile.locked
-                  ? t('monitoring:editor.mapLockedHint')
-                  : t('monitoring:editor.mapRemove')
+              blocked
+                ? t(`monitoring:palette.blockedHint.${blocked}`)
+                : !tile.placed
+                  ? t('monitoring:editor.mapAdd')
+                  : tile.locked
+                    ? t('monitoring:editor.mapLockedHint')
+                    : t('monitoring:editor.mapRemove')
             }
             lockLabel={
               tile.locked
@@ -102,7 +121,8 @@ export const PaletteMapSection = memo(function PaletteMapSection({
                 : undefined
             }
           />
-        ))}
+          );
+        })}
       </div>
 
       {/* 바다 — 씬 설정 스위치(배경 탭의 조명 절과 같은 마크업) */}
@@ -136,6 +156,7 @@ function MapTile({
   label,
   placed,
   locked,
+  blockedLabel,
   title,
   lockLabel,
   onClick,
@@ -144,6 +165,8 @@ function MapTile({
   label: string;
   placed: boolean;
   locked: boolean;
+  /** 추가할 수 없는 이유(자산 상태). 추가할 수 있거나 이미 놓였으면 null. */
+  blockedLabel: string | null;
   title: string;
   lockLabel: string;
   onClick: () => void;
@@ -155,12 +178,16 @@ function MapTile({
       <button
         type="button"
         aria-pressed={placed}
-        aria-disabled={locked || undefined}
+        aria-disabled={locked || blockedLabel !== null || undefined}
         title={title}
         onClick={onClick}
         className={cn(
           'group relative flex w-full flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
-          locked ? 'cursor-default' : 'cursor-pointer',
+          blockedLabel !== null
+            ? 'cursor-not-allowed opacity-55'
+            : locked
+              ? 'cursor-default'
+              : 'cursor-pointer',
           placed
             ? 'border-primary/50 bg-primary/10'
             : 'border-border bg-card hover:border-border hover:bg-muted/60',
@@ -180,6 +207,11 @@ function MapTile({
         >
           {label}
         </span>
+        {blockedLabel !== null ? (
+          <span className="text-muted-foreground/80 w-full truncate text-center text-[9px] leading-none">
+            {blockedLabel}
+          </span>
+        ) : null}
       </button>
       {onToggleLock ? (
         // 계층 목록의 자물쇠 버튼과 같은 규칙 — 아이콘·색은 현재 상태를,

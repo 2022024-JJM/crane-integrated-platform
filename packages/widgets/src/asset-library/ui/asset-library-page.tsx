@@ -41,6 +41,7 @@ import {
   DEFAULT_ASSET_QUERY,
   formatBytes,
   getAssetAttention,
+  getAssetRemoveBlock,
   getAssetScope,
   getCurrentAssetVersion,
   isDocumentAssetKind,
@@ -55,6 +56,7 @@ import {
   withAssetScope,
 } from '@crane/domain/asset-library';
 import {
+  toAssetUsageState,
   useAssetLibraryStore,
   type ImportAssetInput,
 } from '@crane/features/asset-library';
@@ -80,12 +82,13 @@ import {
 import { ASSET_CARD_GRID } from '../lib/asset-presentation';
 import { isAssetSaveFailed } from '../model/use-asset-save-report';
 import {
-  listBulkTags,
+  listBulkCategories,
   listBulkTransitions,
-  withoutTag,
-  withTag,
+  withoutCategory,
+  withCategory,
 } from '../lib/bulk-selection';
 import { copyText } from '../lib/copy-text';
+import { summarizeFileReport } from '../lib/file-report';
 import {
   findNeighbors,
   rangeBetween,
@@ -194,6 +197,10 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   const statsTable = useAssetLibraryStore((state) => state.statsTable);
   const usageIndex = useAssetLibraryStore((state) => state.usageIndex);
   const usageStatus = useAssetLibraryStore((state) => state.usageStatus);
+  const usageFailedScenes = useAssetLibraryStore(
+    (state) => state.usageFailedScenes,
+  );
+  const canManageFiles = useAssetLibraryStore((state) => state.canManageFiles);
   const favoriteIds = useAssetLibraryStore((state) => state.favorites);
   const saveState = useAssetLibraryStore((state) => state.saveState);
   const localOnly = useAssetLibraryStore((state) => state.localOnly);
@@ -268,8 +275,8 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   const favorites = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const scope = getAssetScope(query);
   const tree = useMemo(
-    () => buildAssetTree(assets, { kind: scope.kind, tags: query.tags }),
-    [assets, query.tags, scope.kind],
+    () => buildAssetTree(assets, { kind: scope.kind, categories: query.categories }),
+    [assets, query.categories, scope.kind],
   );
   const placements = useMemo(() => {
     const map = new Map<string, number>();
@@ -287,7 +294,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     () => ({ statsTable, placements, usageKnown }),
     [placements, statsTable, usageKnown],
   );
-  // 지금 위치에서 고른 태그까지 건 자산(나머지 필터 전). 레일의 처리할 일
+  // 지금 위치에서 고른 카테고리까지 건 자산(나머지 필터 전). 레일의 처리할 일
   // 개수와 상태 선택의 개수는 이 범위로 센다 — 누르면 이 안에서 걸리므로, 전체
   // 기준으로 세면 "5" 를 눌렀는데 1개가 나온다.
   const scopedAssets = useMemo(
@@ -296,11 +303,11 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         assets,
         {
           ...withAssetScope(DEFAULT_ASSET_QUERY, { kind: scope.kind }),
-          tags: query.tags,
+          categories: query.categories,
         },
         { collections: [], favorites: new Set<string>(), statsTable: {} },
       ),
-    [assets, query.tags, scope.kind],
+    [assets, query.categories, scope.kind],
   );
   const scopedFacets = useMemo(
     () => countAssetFacets(scopedAssets),
@@ -547,18 +554,23 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     () => listBulkTransitions(selectedAssets),
     [selectedAssets],
   );
-  const selectionTags = useMemo(
-    () => listBulkTags(selectedAssets),
+  const selectionCategories = useMemo(
+    () => listBulkCategories(selectedAssets),
     [selectedAssets],
   );
-  const removableAssets = selectedAssets.filter(
-    (asset) => asset.origin === 'user',
-  );
-  const removableCount = removableAssets.length;
-  const removablePlaced = removableAssets.reduce(
-    (sum, asset) => sum + (placements.get(asset.id) ?? 0),
-    0,
-  );
+  // 지울 수 있는 것 — 파일을 다룰 수 있는 환경이고, 어디에서도 쓰이지 않는
+  // 자산. 쓰이는 자산은 일괄 삭제에서 빠진다(스토어도 지우는 순간 다시 확인).
+  const removableCount = useMemo(() => {
+    if (!canManageFiles) return 0;
+    const usage = toAssetUsageState({
+      usageIndex,
+      usageStatus,
+      usageFailedScenes,
+    });
+    return selectedAssets.filter(
+      (asset) => getAssetRemoveBlock(asset, usage) === null,
+    ).length;
+  }, [canManageFiles, selectedAssets, usageFailedScenes, usageIndex, usageStatus]);
   const [bulkConfirm, setBulkConfirm] = useState<
     { kind: 'status'; to: AssetVersionStatus } | { kind: 'remove' } | null
   >(null);
@@ -591,16 +603,21 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
       toast.error(t('asset-library:toast.saveFailed'));
     } else {
       const stored = record.versions[0].file;
+      const summary = summarizeFileReport(
+        useAssetLibraryStore.getState().fileReport,
+      );
       toast.success(t('asset-library:toast.imported', { name: record.name }), {
-        description:
-          stored.originalSizeBytes !== undefined
-            ? t('asset-library:optimize.result', {
-                before: formatBytes(stored.originalSizeBytes),
-                after: formatBytes(stored.sizeBytes),
-              })
-            : input.optimize
-              ? t('asset-library:optimize.skipped')
-              : undefined,
+        description: summary
+          ? [
+              stored.originalSizeBytes !== undefined
+                ? t('asset-library:optimize.result', {
+                    before: formatBytes(stored.originalSizeBytes),
+                    after: formatBytes(stored.sizeBytes),
+                  })
+                : t(`asset-library:optimize.${summary.outcome}`),
+              ...summary.lines,
+            ].join(' · ')
+          : undefined,
       });
     }
     navigate(hrefFor(record.id));
@@ -620,7 +637,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
       t('asset-library:field.sizeBytes'),
       t('asset-library:field.triangles'),
       t('asset-library:browser.placed'),
-      t('asset-library:field.tags'),
+      t('asset-library:field.categories'),
       t('asset-library:field.updated'),
     ];
     const rows = results.map((asset) => {
@@ -637,7 +654,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         resolveVersionSizeBytes(current, statsTable) ?? '',
         resolveVersionStats(current, statsTable)?.triangles ?? '',
         placements.get(asset.id) ?? 0,
-        asset.tags.join(' '),
+        asset.categories.join(' '),
         asset.updatedAt,
       ];
     });
@@ -661,7 +678,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         return t(`asset-library:kind.${filter.value}`);
       case 'status':
         return t(`asset-library:status.${filter.value}`);
-      case 'tag':
+      case 'category':
         return `#${filter.value}`;
       case 'collection':
         return filter.name;
@@ -674,7 +691,8 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     <div
       className="relative flex h-full min-h-0 flex-col"
       onDragEnter={(event) => {
-        if (!isFileDrag(event) || importOpen) return;
+        // 파일을 올릴 수 없는 환경(운영)에서는 끌어다 놓기를 받지 않는다.
+        if (!isFileDrag(event) || importOpen || !canManageFiles) return;
         dragDepthRef.current += 1;
         setDragging(true);
       }}
@@ -691,7 +709,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
       onDrop={(event) => {
         if (!isFileDrag(event)) return;
         event.preventDefault();
-        if (importOpen) return;
+        if (importOpen || !canManageFiles) return;
         dragDepthRef.current = 0;
         setDragging(false);
         const file = event.dataTransfer.files[0];
@@ -738,9 +756,15 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             {t('asset-library:save.saving')}
           </span>
         ) : null}
+        {/* 등록은 파일을 올릴 수 있는 환경(dev)에서만 한다. */}
         <Button
           size="sm"
-          disabled={status !== 'ready'}
+          disabled={status !== 'ready' || !canManageFiles}
+          title={
+            canManageFiles
+              ? undefined
+              : t('asset-library:import.unavailable')
+          }
           onClick={() => {
             setDroppedFile(null);
             setImportOpen(true);
@@ -958,7 +982,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                 <AssetBulkBar
                   count={selectedIds.size}
                   collections={collections}
-                  tags={selectionTags}
+                  categories={selectionCategories}
                   transitions={selectionTransitions}
                   removableCount={removableCount}
                   onTransition={(to) =>
@@ -967,25 +991,25 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                       ? setBulkConfirm({ kind: 'status', to })
                       : void runBulk(transitionManyStatus(selection, to, actor))
                   }
-                  onAddTag={(tag) =>
+                  onAddCategory={(category) =>
                     void runBulk(
                       updateManyMetadata(
                         selection,
                         (asset) => {
-                          const tags = withTag(asset.tags, tag);
-                          return tags ? { tags } : null;
+                          const categories = withCategory(asset.categories, category);
+                          return categories ? { categories } : null;
                         },
                         actor,
                       ),
                     )
                   }
-                  onRemoveTag={(tag) =>
+                  onRemoveCategory={(category) =>
                     void runBulk(
                       updateManyMetadata(
                         selection,
                         (asset) => {
-                          const tags = withoutTag(asset.tags, tag);
-                          return tags ? { tags } : null;
+                          const categories = withoutCategory(asset.categories, category);
+                          return categories ? { categories } : null;
                         },
                         actor,
                       ),
@@ -1070,7 +1094,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={status !== 'ready'}
+                    disabled={status !== 'ready' || !canManageFiles}
                     onClick={() => {
                       setDroppedFile(null);
                       setImportOpen(true);
@@ -1168,7 +1192,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             onClose={() => setPreview(null)}
             onToggleFavorite={() => toggleFavorite(previewAsset.id)}
             onSelectScope={(target) => setQuery(withAssetScope(query, target))}
-            onSelectTag={(tag) => setQuery({ ...query, tags: [tag] })}
+            onSelectCategory={(category) => setQuery({ ...query, categories: [category] })}
           />
         ) : null}
       </div>
@@ -1218,24 +1242,16 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         onConfirm={() => {
           if (!bulkConfirm) return;
           if (bulkConfirm.kind === 'remove') {
-            void runBulk(
-              removeManyAssets(removableAssets.map((asset) => asset.id)),
-            ).then(() => setSelectedIds(new Set()));
+            // 쓰이는 자산은 스토어가 걸러 낸다 — 고른 것을 그대로 넘긴다.
+            void runBulk(removeManyAssets(selection)).then(() =>
+              setSelectedIds(new Set()),
+            );
           } else {
             void runBulk(transitionManyStatus(selection, bulkConfirm.to, actor));
           }
         }}
         onClose={() => setBulkConfirm(null)}
-      >
-        {bulkConfirm?.kind === 'remove' && removablePlaced > 0 ? (
-          <p
-            role="alert"
-            className="border-destructive/30 bg-destructive/10 text-destructive mt-3 rounded-md border px-3 py-2 text-xs leading-relaxed"
-          >
-            {t('asset-library:detail.deletePlaced', { count: removablePlaced })}
-          </p>
-        ) : null}
-      </AssetConfirmDialog>
+      />
 
       <AssetImportDialog
         open={importOpen}
@@ -1243,7 +1259,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         assets={assets}
         statsTable={statsTable}
         defaultKind={scope.kind}
-        defaultTags={query.tags}
+        defaultCategories={query.categories}
         localOnly={localOnly}
         canOptimize={canOptimize}
         onClose={() => {

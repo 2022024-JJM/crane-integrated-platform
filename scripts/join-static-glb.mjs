@@ -1,8 +1,8 @@
 // 정적 장식 모델의 프리미티브 병합 (드로우콜 감소).
 //
 // 사용법:
-//   node scripts/join-static-glb.mjs <파일명.glb>   # assets-src/models/ 의 백업본을 병합
-//   이어서 반드시: pnpm optimize:glb <파일명.glb>   # 병합본을 public 으로 압축 배포
+//   node scripts/join-static-glb.mjs <파일명.glb>   # assets-src/models/ 의 원본을 병합
+//   이어서: 그 파일을 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)
 //
 // 왜 별도 스크립트인가:
 //   optimize-glb.mjs 는 join/prune 을 의도적으로 쓰지 않는다 — meshOverrides 의
@@ -26,17 +26,17 @@
 //      사고를 막기 위해서다(과거 "옛 백업이 새 파일을 되돌린" 사고와 동형).
 //      join(dedup→flatten→join→prune)은 멱등이라 — 이미 병합된 파일을 다시
 //      병합해도 같은 결과 — 현재본을 읽어도 재실행이 안전하다.
-//   2. 병합 전 현재본을 <파일>.orig 로 보존한다(이미 있으면 건너뜀 — .glb 로
-//      끝나지 않아 optimize:glb 대상에 잡히지 않는다). 계층이 다시 필요해지면
+//   2. 병합 전 현재본을 <파일>.orig 로 보존한다(이미 있으면 건너뜀). 계층이
+//      다시 필요해지면
 //      (예: 나중에 리깅) .orig 를 assets-src 로 되돌린다.
 //      **자산을 새 버전으로 교체할 때는 옛 .orig 를 함께 지워야** 새 버전의
 //      계층 원본이 보존된다 — 안 지우면 .orig 는 옛 버전의 계층으로 남는다.
 //   3. dedup → flatten → join → prune 순으로 병합한다. flatten 이 노드
 //      transform 을 정점에 구워 월드 결과는 동일하고, prune 이 고아 노드·
 //      accessor 를 제거한다(제거 없인 정점 버퍼가 파일에 남는다).
-//   4. 결과를 assets-src/models/<파일> 에 덮어쓴다 — optimize-glb.mjs 가
-//      백업본을 원본으로 취급하므로, 이어서 pnpm optimize:glb 를 돌리면
-//      병합본이 meshopt 압축되어 public 으로 나간다.
+//   4. 결과를 assets-src/models/<파일> 에 덮어쓴다. 그 파일을 자산
+//      라이브러리에서 새 버전으로 올리면 등록 화면의 최적화가 meshopt 로
+//      압축해 배포 경로에 둔다.
 import { copyFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,13 +57,13 @@ if (!file || !file.endsWith('.glb')) {
 const backupPath = join(BACKUP_DIR, file);
 if (!existsSync(backupPath)) {
   console.error(
-    `원본 백업본이 없습니다: ${backupPath}\n` +
-      '신규 모델이면 먼저 pnpm optimize:glb 로 반입해 백업본을 만든 뒤 실행하세요.',
+    `원본이 없습니다: ${backupPath}\n` +
+      '가공할 원본 GLB 를 assets-src/models/ 에 놓고 실행하세요.',
   );
   process.exit(1);
 }
 
-// 병합 전 계층 원본 보존 — .glb 로 끝나지 않아 optimize:glb 가 무시한다.
+// 병합 전 계층 원본 보존.
 const origPath = `${backupPath}.orig`;
 if (!existsSync(origPath)) {
   copyFileSync(backupPath, origPath);
@@ -120,4 +120,4 @@ console.log(
     `tris ${before.tris.toLocaleString()} → ${after.tris.toLocaleString()}, ` +
     `materials ${before.materials} → ${after.materials}`,
 );
-console.log(`다음 단계: pnpm optimize:glb ${file}`);
+console.log('다음 단계: 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)');

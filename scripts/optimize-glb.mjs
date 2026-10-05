@@ -1,22 +1,20 @@
-// GLB 최적화 파이프라인 (텍스처 + 지오메트리).
+// 모델 GLB 최적화 파이프라인 (텍스처 + 지오메트리).
 //
 // 사용법:
-//   pnpm optimize:glb           # 전체 모델
-//   pnpm optimize:glb car.glb   # 특정 파일만
-//   node scripts/optimize-glb.mjs --single <입력.glb> <출력.glb>
-//                               # 파일 하나에 같은 파이프라인만 돌린다(백업·models/
-//                               # 탐색 없음). 자산 라이브러리의 등록 시 최적화가
-//                               # 쓴다(apps/shell/vite.config.ts devAssetLibraryPlugin).
+//   node scripts/optimize-glb.mjs --single <입력.glb> <출력.glb> [--report <json>]
 //
-// 동작:
-//   1. apps/shell/public/models/*.glb 원본을 assets-src/models/ 에 백업한다
-//      (이미 백업이 있으면 건너뜀 — 백업본이 항상 "진짜 원본").
-//   2. 백업본을 입력으로 아래 4단계를 돌려 public 쪽을 덮어쓴다.
-//      항상 원본에서 다시 최적화하므로 몇 번을 재실행해도 이중 압축이 없다.
+// 파일 하나를 받아 하나를 낸다. 입력은 건드리지 않는다. 자산 라이브러리의 등록·
+// 새 버전 올리기가 "최적화" 를 켰을 때 dev 미들웨어가 이 명령을 돌린다
+// (apps/shell/vite.config.ts devAssetLibraryPlugin). 올린 원본은 미들웨어가
+// assets-src/asset-library/ 에 남긴다.
 //
-// ⚠️ 기존 모델을 새 버전으로 교체할 때: public 에 덮어쓰면 안 된다 — 백업이
-//    있으면 백업본이 원본으로 취급되어 옛 파일이 새 파일을 도로 덮어쓴다.
-//    새 원본을 assets-src/models/<파일> 에 넣은 뒤 이 스크립트를 실행할 것.
+// 배포 파일을 제자리에서 덮어쓰는 모드는 없다 — 모델을 바꾸면 항상 자산
+// 라이브러리의 새 버전이 되고, 씬은 에디터에서 갱신해야 그 버전을 쓴다.
+// 덮어쓰면 씬이 모르는 사이 모델이 바뀐다.
+//
+// 올리기 전에 원본에 손이 가야 하는 경우(Blender 가 구운 월드 좌표 복원,
+// 거리별 LOD, 정적 모델 병합)는 그 스크립트로 파일을 먼저 가공한 뒤 올린다
+// (unbake-root-transform · add-model-lod · join-static-glb).
 //
 // 파이프라인 (순서가 중요하다 — STAGES 주석 참고):
 //   ① resize   텍스처 최대 2048px
@@ -30,10 +28,9 @@
 //   - `optimize` 만능 커맨드는 절대 쓰지 않는다. join/prune 이 노드 계층을
 //     병합하는데, 이 프로젝트는 meshOverrides 의 [index]name 메쉬 경로와
 //     valueMapper 노드 바인딩이 계층에 의존하므로 씬이 조용히 깨진다.
-//   - maps/ (지형) 은 이 스크립트 대상이 아니다 — 전용 파이프라인
-//     scripts/optimize-map.mjs (`pnpm optimize:map`) 를 쓴다. 지도는 텍스처
-//     상한/손실 정책이 다르고 transmission 제거·데시메이션 스테이지가 있다.
-//   - 신규 모델 반입 시 1회 실행하면 된다 (빌드 파이프라인 아님).
+//   - 지도는 이 스크립트 대상이 아니다 — 전용 파이프라인
+//     scripts/optimize-map.mjs 를 쓴다. 지도는 텍스처 상한/손실 정책이 다르고
+//     transmission 제거·데시메이션·타일 스테이지가 있다.
 //
 // 디코더: drei useGLTF 는 meshopt 디코더를 기본 등록한다. 수동 GLTFLoader
 // 2곳(model-bottom-offset-cache.ts, preview-gltf-cache.ts)도 배선되어 있다.
@@ -41,12 +38,10 @@
 import { execFileSync } from 'node:child_process';
 import {
   copyFileSync,
-  existsSync,
-  mkdirSync,
   mkdtempSync,
-  readdirSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -55,8 +50,6 @@ import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const MODELS_DIR = join(repoRoot, 'apps/shell/public/models');
-const BACKUP_DIR = join(repoRoot, 'assets-src/models');
 // .bin 셸 심(확장자 없음)은 Windows execFileSync 에서 ENOENT — JS 엔트리를 node 로 직접 실행한다.
 const CLI = join(repoRoot, 'node_modules/@gltf-transform/cli/bin/cli.js');
 
@@ -103,6 +96,9 @@ const TRANSMISSION_EXT = 'KHR_materials_transmission';
  * 일반 알파 블렌딩 반투명으로 바꾼다. 확장이 없는 파일은 그대로 복사한다.
  * meshopt 앞에서 돌아야 한다 — NodeIO 재기록이 meshopt 인코딩을 해제한다.
  */
+/** 파이프라인이 한 일 — --report 로 화면에 전해진다. */
+const reportLines = [];
+
 async function stripTransmission(inputPath, outputPath) {
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
   const doc = await io.read(inputPath);
@@ -127,6 +123,7 @@ async function stripTransmission(inputPath, outputPath) {
   }
   await io.write(outputPath, doc);
   console.log(`      transmission 제거: 머티리얼 ${count}개`);
+  reportLines.push(`굴절 유리 머티리얼 ${count}개를 반투명으로 바꿈`);
 }
 
 /** 한 파일에 STAGES 를 차례로 돌린다. 중간 산출물은 workDir 에 둔다. */
@@ -144,100 +141,46 @@ async function runPipeline(inputPath, outputPath, workDir, stem) {
   }
 }
 
-// --single: 파일 하나만. 원본은 건드리지 않고 출력만 쓴다. 실패하면 exit 1.
-if (process.argv[2] === '--single') {
-  const [, , , inputPath, outputPath] = process.argv;
-  if (!inputPath || !outputPath) {
-    console.error('사용법: optimize-glb.mjs --single <입력.glb> <출력.glb>');
-    process.exit(1);
-  }
-  const singleWorkDir = mkdtempSync(join(tmpdir(), 'glb-optimize-'));
-  try {
-    await runPipeline(resolve(inputPath), resolve(outputPath), singleWorkDir, 'single');
-  } catch (error) {
-    console.error(error.stderr?.toString().trim() ?? error.message);
-    process.exit(1);
-  } finally {
-    rmSync(singleWorkDir, { recursive: true, force: true });
-  }
-  process.exit(0);
+const USAGE =
+  '사용법: node scripts/optimize-glb.mjs --single <입력.glb> <출력.glb> [--report <json>]';
+
+const argv = process.argv.slice(2);
+if (argv[0] !== '--single') {
+  console.error(USAGE);
+  console.error(
+    '배포 파일을 제자리에서 덮어쓰는 모드는 없다 — 모델은 자산 라이브러리에서 ' +
+      '새 버전으로 올린다(최적화를 켜면 이 스크립트가 돈다).',
+  );
+  process.exit(1);
 }
-
-const only = process.argv.slice(2); // 파일명 인자로 부분 실행 가능
-
-/** models/ 를 재귀 탐색한다(하위 디렉토리 포함). MODELS_DIR 기준 상대 경로 반환. */
-function listGlbFiles(dir, prefix = '') {
-  const out = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) {
-      out.push(...listGlbFiles(join(dir, entry.name), rel));
-    } else if (entry.name.endsWith('.glb')) {
-      out.push(rel);
-    }
-  }
-  return out;
-}
-
-const files = listGlbFiles(MODELS_DIR)
-  .filter((f) => only.length === 0 || only.some((o) => f === o || f.endsWith(`/${o}`)))
-  .sort();
-
-if (files.length === 0) {
-  console.error('대상 .glb 파일이 없습니다:', only.join(', '));
+const [, inputArg, outputArg, ...rest] = argv;
+const reportFlag = rest.indexOf('--report');
+const reportPath = reportFlag >= 0 ? rest[reportFlag + 1] : null;
+if (!inputArg || !outputArg || (reportFlag >= 0 && !reportPath)) {
+  console.error(USAGE);
   process.exit(1);
 }
 
-mkdirSync(BACKUP_DIR, { recursive: true });
+/** 화면이 읽는 보고 — `{ lines }`. 실패해도 이유를 남긴다. */
+function writeReport(lines) {
+  if (reportPath) writeFileSync(resolve(reportPath), JSON.stringify({ lines }));
+}
+
+const fmtMB = (bytes) => `${(bytes / 1024 / 1024).toFixed(2)}MB`;
 const workDir = mkdtempSync(join(tmpdir(), 'glb-optimize-'));
-
-const fmtMB = (bytes) => (bytes / 1024 / 1024).toFixed(2).padStart(7);
-let totalBefore = 0;
-let totalAfter = 0;
-const failures = [];
-
 try {
-  for (const file of files) {
-    const publicPath = join(MODELS_DIR, file);
-    const backupPath = join(BACKUP_DIR, file);
-    mkdirSync(dirname(backupPath), { recursive: true });
-
-    // 백업이 없을 때만 백업한다. 있으면 그 백업본이 원본이다.
-    if (!existsSync(backupPath)) {
-      copyFileSync(publicPath, backupPath);
-    }
-
-    const before = statSync(backupPath).size;
-    const stem = file.replace(/[/\\]/g, '_');
-
-    try {
-      await runPipeline(backupPath, publicPath, workDir, stem);
-    } catch (error) {
-      failures.push(file);
-      console.error(`FAIL  ${file}: ${error.stderr?.toString().trim() ?? error.message}`);
-      // 실패 시 public 쪽을 원본으로 복원해 깨진 파일이 남지 않게 한다.
-      copyFileSync(backupPath, publicPath);
-      continue;
-    }
-
-    const after = statSync(publicPath).size;
-    totalBefore += before;
-    totalAfter += after;
-    const ratio = ((1 - after / before) * 100).toFixed(1).padStart(5);
-    console.log(`OK    ${fmtMB(before)}MB -> ${fmtMB(after)}MB  (-${ratio}%)  ${file}`);
-  }
+  const inputPath = resolve(inputArg);
+  const outputPath = resolve(outputArg);
+  await runPipeline(inputPath, outputPath, workDir, 'single');
+  writeReport(reportLines);
+  console.log(
+    `OK    ${fmtMB(statSync(inputPath).size)} -> ${fmtMB(statSync(outputPath).size)}`,
+  );
+} catch (error) {
+  const message = error.stderr?.toString().trim() || error.message;
+  writeReport([`최적화 실패: ${message.split('\n').pop()}`]);
+  console.error(`FAIL  ${message}`);
+  process.exitCode = 1;
 } finally {
   rmSync(workDir, { recursive: true, force: true });
-}
-
-console.log('---');
-if (totalBefore > 0) {
-  const pct = ((1 - totalAfter / totalBefore) * 100).toFixed(1);
-  console.log(
-    `합계  ${fmtMB(totalBefore)}MB -> ${fmtMB(totalAfter)}MB  (-${pct}%)  성공 ${files.length - failures.length}/${files.length}`,
-  );
-}
-if (failures.length > 0) {
-  console.error('실패(원본 유지됨):', failures.join(', '));
-  process.exit(1);
 }

@@ -56,11 +56,7 @@ export function AssetActivityTab({ asset }: AssetActivityTabProps) {
   if (asset.history.length === 0) {
     return (
       <p className="text-muted-foreground px-5 py-6 text-[13px] leading-relaxed">
-        {t(
-          asset.origin === 'builtin'
-            ? 'asset-library:activity.emptyBuiltin'
-            : 'asset-library:activity.empty',
-        )}
+        {t('asset-library:activity.empty')}
       </p>
     );
   }

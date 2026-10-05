@@ -27,7 +27,7 @@ import {
   collectCameraBoundsBox,
   extendGltfLoaderWithKtx2,
   getMeshPath,
-  getSceneMapCatalogItemByPath,
+  isContextMap,
   getSceneMetersPerUnit,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
@@ -42,7 +42,7 @@ import {
   type RulerPlacement,
   type SavedCameraInfo,
   type SavedSceneInfo,
-  type SceneModelCatalogItem,
+  type ScenePlaceableModel,
 } from '@crane/domain/3d';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -217,11 +217,11 @@ export interface SceneEditorCameraActions {
 
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
-  /** 배경 파노라마 fallback 해석에 쓴다 (씬이 배경을 지정하지 않은 경우). */
+  /** 씬 unit 스케일과 solar 모드 조명(현장 위치·시간대)의 키. */
   regionId: string;
-  catalogItems: SceneModelCatalogItem[];
+  catalogItems: ScenePlaceableModel[];
   transformMode: SceneTransformMode;
-  draggingModelCatalogItem: SceneModelCatalogItem | null;
+  draggingModelCatalogItem: ScenePlaceableModel | null;
   rootRef?: RefObject<HTMLDivElement | null>;
   cameraStateRef?: RefObject<SavedCameraInfo | null>;
   /** 로드·저장 시점에 카메라를 놓을 구도 — 참조가 바뀔 때 한 번 적용한다. */
@@ -236,7 +236,7 @@ interface SceneObjectsEditCanvasProps {
     value: Vector3Tuple,
   ) => void;
   onAddModel: (
-    catalogItem: SceneModelCatalogItem,
+    catalogItem: ScenePlaceableModel,
     position: Vector3Tuple,
   ) => void;
   onTransformCommit?: (
@@ -330,14 +330,14 @@ export function SceneObjectsEditCanvas({
   // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 켜진 씬
   // (resolveSeaVisible — 맵 탭 스위치가 고치는 `sea` 필드)의 모델·지도에만
   // 수면 아래 잠김 처리.
-  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
+  const seaVisible = resolveSeaVisible(sceneInfo);
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
   // 의존성에 넣지 않고 여기서 최신값을 따라간다.
   const sceneInfoRef = useRef(sceneInfo);
   sceneInfoRef.current = sceneInfo;
 
-  // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
+  // 팔레트에서 놓을 수 있는 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
   // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
   // 모델 바닥이 정확히 지면(y=0)에 닿도록 한다. 사용자 scale은 드롭 시점에 곱한다.
   useEffect(() => {
@@ -347,7 +347,7 @@ export function SceneObjectsEditCanvas({
     let idleHandle: number | null = null;
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
-    const preloadItem = (item: SceneModelCatalogItem) => {
+    const preloadItem = (item: ScenePlaceableModel) => {
       // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(ktx2-loader.ts).
       useGLTF.preload(
         withBaseUrl(item.path),
@@ -397,7 +397,7 @@ export function SceneObjectsEditCanvas({
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }
-      // 에디터를 떠나면 프리로드한 카탈로그(40개, 약 97MB)를 비운다.
+      // 에디터를 떠나면 프리로드한 팔레트 모델(수십 개, 약 97MB)을 비운다.
       // 단 **현재 씬이 실제로 쓰는 모델은 남긴다** — 에디터에서 나가면 보통
       // 같은 지역의 모니터링 화면으로 가는데, 거기서 곧바로 다시 필요한
       // 것들이라 지웠다가 다시 받으면 수십 MB를 헛되이 왕복한다.
@@ -470,7 +470,7 @@ export function SceneObjectsEditCanvas({
       ]),
     [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.rulers, sceneInfo?.texts],
   );
-  // 드롭 raycast 바닥면 — 카탈로그 kind 가 ground 인 지도 전부.
+  // 드롭 raycast 바닥면 — 역할(role)이 ground 인 지도 전부.
   const groundMapIds = useMemo(
     () => resolveGroundMaps(sceneInfo?.maps).map((m) => m.id),
     [sceneInfo?.maps],
@@ -1068,8 +1068,7 @@ export function SceneObjectsEditCanvas({
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>
           <SceneEnvironment
-            regionId={regionId}
-            environmentId={sceneInfo?.environmentId}
+            environment={sceneInfo?.environment}
             seaVisible={seaVisible}
             maps={sceneInfo?.maps}
           />
@@ -1150,8 +1149,7 @@ export function SceneObjectsEditCanvas({
           // 컨텍스트 지형은 그림자 시스템에서 뺀다 — 뷰어(outdoor-work-model-
           // simulation)와 같은 규칙·같은 이유(178만 삼각형 shadow depth pass).
           // 저작 화면과 실제 화면이 같아야 하므로 한쪽만 손대지 말 것.
-          const isContextMap =
-            getSceneMapCatalogItemByPath(m.path)?.kind === 'context';
+          const contextMap = isContextMap(m);
           return (
             <SceneObjectBoundary
               key={m.id}
@@ -1172,10 +1170,10 @@ export function SceneObjectsEditCanvas({
                 // 마운트 시 bbox 순회를 건너뛴다.
                 showLabel={false}
                 // ground 지도는 그림자를 드리운다(기본값) — GLB에 건물 포함.
-                castShadow={!isContextMap}
-                receiveShadow={!isContextMap}
+                castShadow={!contextMap}
+                receiveShadow={!contextMap}
                 // 주변 지형 Lambert — 모니터링과 같은 규칙(저작 화면 = 실제 화면).
-                shading={isContextMap ? 'lambert' : 'standard'}
+                shading={contextMap ? 'lambert' : 'standard'}
                 // 수면 아래 지형 잠김 — 모니터링과 같은 규칙.
                 seaSubmersion={seaVisible}
                 onSelect={

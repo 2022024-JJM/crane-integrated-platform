@@ -2,9 +2,10 @@ import {
   humanizeModelPath,
   type RulerPlacement,
   type SavedCameraInfo,
+  type SavedEnvironmentInfo,
   type SavedLightingInfo,
-  type SceneMapCatalogItem,
-  type SceneModelCatalogItem,
+  type ScenePlaceableMap,
+  type ScenePlaceableModel,
   type SceneSiteLocation,
 } from '@crane/domain/3d';
 import {
@@ -106,7 +107,7 @@ interface UseSceneEditorSessionResult {
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
   addModel: (
-    catalogItem: SceneModelCatalogItem,
+    model: ScenePlaceableModel,
     position: [number, number, number],
   ) => void;
   addText: (position: [number, number, number]) => void;
@@ -123,9 +124,12 @@ interface UseSceneEditorSessionResult {
   deletePlacedText: (id: string) => void;
   deletePlacedRuler: (id: string) => void;
   deletePlacedMap: (id: string) => void;
-  addSceneMap: (catalogItem: SceneMapCatalogItem) => void;
+  addSceneMap: (map: ScenePlaceableMap) => void;
+  /** 씬에 놓인 자산을 다른 버전으로 갱신한다(같은 자산 전부, 히스토리 1회). */
+  updateSceneAsset: (assetId: string, version: number, path: string) => void;
   selectPlacedMap: (id: string) => void;
-  setEnvironmentId: (environmentId: string | null) => void;
+  /** 배경 선택 — null 이면 배경 없음. */
+  setEnvironment: (environment: SavedEnvironmentInfo | null) => void;
   setSeaVisible: (visible: boolean) => void;
   setTrueNorth: (degrees: number) => void;
   setSiteLocation: (location: SceneSiteLocation) => void;
@@ -376,8 +380,9 @@ export function useSceneEditorSession({
     deletePlacedRuler: manipulation.deletePlacedRuler,
     deletePlacedMap: manipulation.deletePlacedMap,
     addSceneMap: manipulation.addSceneMap,
+    updateSceneAsset: manipulation.updateSceneAsset,
     selectPlacedMap: manipulation.selectPlacedMap,
-    setEnvironmentId: manipulation.setEnvironmentId,
+    setEnvironment: manipulation.setEnvironment,
     setSeaVisible: manipulation.setSeaVisible,
     setTrueNorth: manipulation.setTrueNorth,
     setSiteLocation: manipulation.setSiteLocation,

@@ -4,6 +4,11 @@
       "id": "8d3d484d-103b-435b-b5a2-2254c67274cd",
       "path": "/maps/philly-terrain.glb",
       "locked": true,
+      "asset": {
+        "id": "map-philly-terrain",
+        "version": 1
+      },
+      "role": "context",
       "position": [
         858.135,
         3.482,
@@ -25,6 +30,11 @@
       "id": "9ddc366c-ffa8-4386-a96b-a2541b3bb7ac",
       "path": "/maps/philly-area-1.glb",
       "locked": true,
+      "asset": {
+        "id": "map-philly-area-1",
+        "version": 1
+      },
+      "role": "ground",
       "cameraBounds": true,
       "position": [
         0,
@@ -47,6 +57,11 @@
       "id": "9546994b-ffc3-4ef5-b18e-f4a7dd6a827b",
       "path": "/maps/philly-area-2.glb",
       "locked": true,
+      "asset": {
+        "id": "map-philly-area-2",
+        "version": 1
+      },
+      "role": "ground",
       "cameraBounds": true,
       "position": [
         0,
@@ -71,6 +86,10 @@
       "id": "id-mt0rhrsw-icvq0ukr",
       "equipName": "GC-04",
       "path": "/models/goliath_crane.glb",
+      "asset": {
+        "id": "goliath-crane",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         -643.707,
@@ -124,6 +143,10 @@
       "id": "id-mt0riz7x-bxncy0uk",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
+      "asset": {
+        "id": "llc-002",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         -636.774,
@@ -184,6 +207,10 @@
       "id": "id-mt0rka4j-lfz5p217",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
+      "asset": {
+        "id": "llc-002",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         -696.002,
@@ -236,6 +263,10 @@
       "id": "beccf605-d547-4854-88e3-fc152f999a34",
       "equipName": "Block-001",
       "path": "/models/Block_001.glb",
+      "asset": {
+        "id": "block-001",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         -665.612,
@@ -259,6 +290,10 @@
       "id": "94c0e51c-40fb-4859-8818-efdd24f6ac77",
       "equipName": "Block-002",
       "path": "/models/Block_002.glb",
+      "asset": {
+        "id": "block-002",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         -606.772,
@@ -282,6 +317,10 @@
       "id": "id-mtmb9z6j-83ld4mwc",
       "equipName": "LNGC 174K",
       "path": "/models/hanwha-ocean-lngc-174k.glb",
+      "asset": {
+        "id": "hanwha-ocean-lngc-174k",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         -800.318,
@@ -390,7 +429,13 @@
       ]
     }
   ],
-  "environmentId": "blue-open-water",
+  "environment": {
+    "path": "/scenes/sky-blue-open-water-web.exr",
+    "asset": {
+      "id": "blue-open-water",
+      "version": 1
+    }
+  },
   "sea": true,
   "trueNorth": 5.6,
   "lighting": {

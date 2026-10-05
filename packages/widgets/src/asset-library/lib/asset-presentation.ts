@@ -1,5 +1,3 @@
-import { getAssetContentHash } from '@crane/core/lib/asset-url';
-import { getModelPreviewAssetPath } from '@crane/domain/3d';
 import {
   getAssetPreviewMode,
   getCurrentAssetVersion,
@@ -16,16 +14,12 @@ import {
 export type AssetThumbnailSource =
   /** 저장된 썸네일 파일. `stamp` 은 같은 경로에 덮어쓴 썸네일의 캐시를 깬다. */
   | { kind: 'file'; ref: AssetFileRef; stamp: string }
-  /** 배포된 정적 썸네일(`/previews/{id}.png`). */
-  | { kind: 'static'; path: string }
   /** 그림 도면은 파일 자체가 썸네일이다. */
   | { kind: 'image'; ref: AssetFileRef }
   | { kind: 'none' };
 
 /**
- * 썸네일 원천. 순서는 저장된 썸네일 → 배포된 정적 썸네일 → (그림 도면이면)
- * 파일 자체 → 없음. 정적 썸네일의 존재는 자산 해시 매니페스트로 판정한다 —
- * 없는 파일을 요청해 404 를 내지 않는다.
+ * 썸네일 원천. 순서는 저장된 썸네일 → (그림 도면이면) 파일 자체 → 없음.
  */
 export function resolveThumbnailSource(asset: AssetRecord): AssetThumbnailSource {
   if (asset.thumbnail) {
@@ -34,10 +28,6 @@ export function resolveThumbnailSource(asset: AssetRecord): AssetThumbnailSource
       ref: asset.thumbnail.ref,
       stamp: asset.thumbnail.updatedAt,
     };
-  }
-  if (asset.kind === 'model' && asset.catalogId) {
-    const path = getModelPreviewAssetPath(asset.catalogId);
-    if (getAssetContentHash(path) !== null) return { kind: 'static', path };
   }
   const current = getCurrentAssetVersion(asset);
   if (getAssetPreviewMode(current.file.format) === 'image') {
@@ -182,33 +172,33 @@ export function shortenContentHash(hash: string | null): string {
   return algorithm ? `${algorithm}:${head}…` : `${head}…`;
 }
 
-/** 쉼표·줄바꿈으로 구분해 입력한 태그 문자열을 목록으로. */
-export function parseTagInput(raw: string): string[] {
+/** 쉼표·줄바꿈으로 구분해 입력한 카테고리 문자열을 목록으로. */
+export function parseCategoryInput(raw: string): string[] {
   return raw
     .split(/[,\n]/)
-    .map((tag) => tag.trim())
+    .map((category) => category.trim())
     .filter(Boolean);
 }
 
 /**
- * 권할 태그 — 이미 붙은 것(대소문자 무시)을 뺀 나머지. 순서는 그대로다.
- * `filter` 는 입력란에 치고 있는 글자다 — 그 글자가 들어간 태그만 남긴다
+ * 권할 카테고리 — 이미 붙은 것(대소문자 무시)을 뺀 나머지. 순서는 그대로다.
+ * `filter` 는 입력란에 치고 있는 글자다 — 그 글자가 들어간 카테고리만 남긴다
  * (대소문자 무시, 앞뒤 공백은 없는 것으로 본다). 비어 있으면 거르지 않는다.
  */
-export function listTagSuggestions(
+export function listCategorySuggestions(
   suggestions: readonly string[],
   current: readonly string[],
   filter = '',
 ): string[] {
-  const taken = new Set(current.map((tag) => tag.toLowerCase()));
+  const taken = new Set(current.map((category) => category.toLowerCase()));
   const needle = filter.trim().toLowerCase();
   const offered: string[] = [];
-  for (const tag of suggestions) {
-    const key = tag.toLowerCase();
+  for (const category of suggestions) {
+    const key = category.toLowerCase();
     if (taken.has(key)) continue;
     if (needle && !key.includes(needle)) continue;
     taken.add(key);
-    offered.push(tag);
+    offered.push(category);
   }
   return offered;
 }

@@ -134,6 +134,37 @@ export function toAssetLibraryPublicPath(key: string): string {
   return `/${ASSET_LIBRARY_DIR}/${key}`;
 }
 
+/** 자산 썸네일의 public 절대 경로(`/asset-library/thumbnails/<id>.png`). */
+export function getAssetThumbnailPath(assetId: string): string {
+  return toAssetLibraryPublicPath(buildAssetThumbnailKey(assetId));
+}
+
+/**
+ * 라이브러리 디렉터리가 생기기 전부터 배포돼 있던 자산 파일이 놓인 곳. 그
+ * 파일들은 `/models/x.glb` 같은 옛 경로에 그대로 있다(버전 1). 새 버전은
+ * 항상 라이브러리 디렉터리(`files/<id>/v<N>/`)로 들어간다.
+ */
+export const LEGACY_ASSET_DIRS = ['models', 'maps', 'scenes', 'drawings'];
+
+/**
+ * 자산을 지울 때 함께 지워도 되는 옛 배포 경로인가. 정해진 디렉터리 아래의,
+ * 자산으로 받는 확장자의 파일만이다 — 같은 디렉터리의 씬 JSON 같은 다른
+ * 파일을 지우는 길이 되지 않게 한다. 미들웨어가 이 판정으로 요청을 거른다.
+ */
+export function isRemovableLegacyAssetPath(path: string): boolean {
+  if (!path.startsWith('/')) return false;
+  const parts = path.slice(1).split('/');
+  if (parts.length < 2) return false;
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
+    return false;
+  }
+  if (path.includes('\\')) return false;
+  if (!LEGACY_ASSET_DIRS.includes(parts[0])) return false;
+  return ASSET_UPLOAD_EXTENSIONS.includes(
+    getFileExtension(parts[parts.length - 1]),
+  );
+}
+
 export type AssetLibraryFileKey =
   | { kind: 'version'; assetId: string; version: number; fileName: string }
   | { kind: 'thumbnail'; assetId: string };

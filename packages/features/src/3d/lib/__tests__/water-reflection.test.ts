@@ -7,29 +7,39 @@ import {
   restoreAfterReflection,
 } from '../water-reflection';
 
-function map(id: string, path: string): SavedMapInfo {
-  return { id, path };
+function map(
+  id: string,
+  path: string,
+  role?: SavedMapInfo['role'],
+): SavedMapInfo {
+  return role ? { id, path, role } : { id, path };
 }
 
 describe('resolveReflectionExcludedMapIds', () => {
-  it('카탈로그 kind 가 context 인 지도의 id 만 고른다', () => {
+  it('역할이 context 인 지도의 id 만 고른다', () => {
     const maps = [
-      map('a', '/maps/okpo.glb'),
-      map('b', '/maps/okpo-terrain.glb'),
-      map('c', '/maps/okpo-tree.glb'),
-      map('d', '/maps/philly-area-1.glb'),
-      map('e', '/maps/philly-terrain.glb'),
+      map('a', '/maps/okpo.glb', 'ground'),
+      map('b', '/maps/okpo-terrain.glb', 'context'),
+      map('c', '/maps/okpo-tree.glb', 'context'),
+      map('d', '/maps/philly-area-1.glb', 'ground'),
+      map('e', '/maps/philly-terrain.glb', 'context'),
     ];
     expect(resolveReflectionExcludedMapIds(maps)).toEqual(['b', 'c', 'e']);
   });
 
-  it('ground·미등록 경로·빈 경로는 제외한다', () => {
+  it('ground·역할이 없는 지도·빈 경로는 제외한다', () => {
     const maps = [
-      map('ground', '/maps/plane.glb'),
-      map('unknown', '/maps/not-in-catalog.glb'),
+      map('ground', '/maps/plane.glb', 'ground'),
+      map('unknown', '/maps/no-role.glb'),
       map('empty', ''),
     ];
     expect(resolveReflectionExcludedMapIds(maps)).toEqual([]);
+  });
+
+  it('판정은 경로가 아니라 role 이다 — 지형 파일이어도 역할이 없으면 반사에 그린다', () => {
+    expect(
+      resolveReflectionExcludedMapIds([map('t', '/maps/okpo-terrain.glb')]),
+    ).toEqual([]);
   });
 
   it('undefined·빈 배열 → 빈 배열', () => {
@@ -39,16 +49,16 @@ describe('resolveReflectionExcludedMapIds', () => {
 
   it('배열 순서를 보존하고 같은 경로가 두 번이면 두 id 모두 남긴다', () => {
     const maps = [
-      map('z', '/maps/philly-terrain.glb'),
-      map('y', '/maps/okpo.glb'),
-      map('x', '/maps/okpo-terrain.glb'),
-      map('w', '/maps/philly-terrain.glb'),
+      map('z', '/maps/philly-terrain.glb', 'context'),
+      map('y', '/maps/okpo.glb', 'ground'),
+      map('x', '/maps/okpo-terrain.glb', 'context'),
+      map('w', '/maps/philly-terrain.glb', 'context'),
     ];
     expect(resolveReflectionExcludedMapIds(maps)).toEqual(['z', 'x', 'w']);
   });
 
   it('입력 배열을 바꾸지 않고 매번 새 배열을 돌려준다', () => {
-    const maps = [map('b', '/maps/okpo-terrain.glb')];
+    const maps = [map('b', '/maps/okpo-terrain.glb', 'context')];
     const first = resolveReflectionExcludedMapIds(maps);
     const second = resolveReflectionExcludedMapIds(maps);
     expect(first).toEqual(second);

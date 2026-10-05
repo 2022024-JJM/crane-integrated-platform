@@ -54,17 +54,109 @@ describe('isSceneInfoEqual — 기본', () => {
   });
 });
 
-describe('isSceneInfoEqual — environmentId 3-상태', () => {
-  it('undefined(미지정)와 null(배경 없음)은 다른 상태다', () => {
-    expect(isSceneInfoEqual(scene(), scene({ environmentId: null }))).toBe(
-      false,
-    );
+describe('isSceneInfoEqual — 배경(environment)', () => {
+  const sky = { path: '/scenes/sky.exr', asset: { id: 'sky', version: 1 } };
+
+  it('배경 없음과 있음은 다르다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ environment: sky }))).toBe(false);
+    expect(isSceneInfoEqual(scene({ environment: sky }), scene())).toBe(false);
+  });
+
+  it('경로와 자산 참조가 같으면 같다(다른 객체여도)', () => {
     expect(
       isSceneInfoEqual(
-        scene({ environmentId: 'sky' }),
-        scene({ environmentId: 'sky' }),
+        scene({ environment: sky }),
+        scene({ environment: { ...sky, asset: { ...sky.asset } } }),
       ),
     ).toBe(true);
+  });
+
+  it('버전만 달라도 dirty 다 — 새 버전으로 갱신한 것이 저장돼야 한다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ environment: sky }),
+        scene({ environment: { ...sky, asset: { id: 'sky', version: 2 } } }),
+      ),
+    ).toBe(false);
+  });
+
+  it('경로만 달라도 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ environment: sky }),
+        scene({ environment: { ...sky, path: '/scenes/other.exr' } }),
+      ),
+    ).toBe(false);
+  });
+
+  it('자산 참조 유무가 다르면 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ environment: sky }),
+        scene({ environment: { path: sky.path } }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('isSceneInfoEqual — 자산 참조(asset)와 지도 역할(role)', () => {
+  it('모델의 자산 버전이 달라지면 dirty 다', () => {
+    const v1 = model({ asset: { id: 'ttc', version: 1 } });
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [v1] }),
+        scene({ models: [{ ...v1, asset: { id: 'ttc', version: 2 } }] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('참조가 같으면(다른 객체여도) 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ asset: { id: 'ttc', version: 1 } })] }),
+        scene({ models: [model({ asset: { id: 'ttc', version: 1 } })] }),
+      ),
+    ).toBe(true);
+  });
+
+  it('참조가 생기거나 사라지면 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ asset: { id: 'ttc', version: 1 } })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('지도의 자산 참조·역할이 달라지면 dirty 다', () => {
+    const map = {
+      id: 'map',
+      path: '/maps/a.glb',
+      asset: { id: 'map-a', version: 1 },
+      role: 'ground' as const,
+    };
+    expect(
+      isSceneInfoEqual(scene({ maps: [map] }), scene({ maps: [{ ...map }] })),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ maps: [map] }),
+        scene({ maps: [{ ...map, asset: { id: 'map-a', version: 2 } }] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ maps: [map] }),
+        scene({ maps: [{ ...map, role: 'context' }] }),
+      ),
+    ).toBe(false);
+    // 역할이 없는 것과 있는 것은 다르다.
+    expect(
+      isSceneInfoEqual(
+        scene({ maps: [map] }),
+        scene({ maps: [{ id: map.id, path: map.path, asset: map.asset }] }),
+      ),
+    ).toBe(false);
   });
 });
 

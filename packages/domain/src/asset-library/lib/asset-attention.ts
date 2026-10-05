@@ -28,14 +28,14 @@ export const ASSET_ATTENTION_KINDS = [
   'newer',
   /** 현재 버전이 권장 상한을 넘는다. */
   'over-budget',
-  /** 어느 씬에도 놓이지 않았다. */
+  /** 어느 씬에도 놓이지 않았고 화면 코드도 쓰지 않는다. */
   'unused',
 ] as const;
 export type AssetAttentionKind = (typeof ASSET_ATTENTION_KINDS)[number];
 
 export interface AssetAttentionContext {
   statsTable: AssetStatsTable;
-  /** 자산 id → 씬에 놓인 개수. */
+  /** 자산 id → 쓰인 횟수(씬에 놓인 개수 + 화면 코드가 직접 쓰는 것). */
   placements: ReadonlyMap<string, number>;
   /**
    * 사용처를 읽었는지. 읽기 전에는 "미사용" 을 판정하지 않는다 — 씬을 아직
@@ -45,20 +45,12 @@ export interface AssetAttentionContext {
 }
 
 /**
- * 화면 코드가 직접 불러 쓰는 런타임 자산인가 — 배포 자산인데 편집 팔레트의
- * 카탈로그에는 없는 것(`builtin-extra-assets.ts`). 태그로 묻지 않는다 — 태그는
- * 사용자가 고칠 수 있다.
- */
-function isRuntimeAsset(asset: AssetRecord): boolean {
-  return asset.origin === 'builtin' && !asset.catalogId;
-}
-
-/**
- * 씬에 배치하는 것이 정상인 자산. 도면·CAD·배경과 런타임 자산은 놓인 곳이
- * 없어도 "미사용" 이 아니다.
+ * 씬에 배치하는 것이 정상인 자산. 도면·CAD·배경은 놓인 곳이 없어도 "미사용" 이
+ * 아니다. 화면 코드가 직접 불러 쓰는 모델은 그 사용이 `placements` 에 세어져
+ * 있어 미사용으로 잡히지 않는다 — 카테고리로 묻지 않는다(카테고리는 사용자가 고친다).
  */
 function isPlacedByDesign(asset: AssetRecord): boolean {
-  return isGeometryAssetKind(asset.kind) && !isRuntimeAsset(asset);
+  return isGeometryAssetKind(asset.kind);
 }
 
 export function getAssetAttention(

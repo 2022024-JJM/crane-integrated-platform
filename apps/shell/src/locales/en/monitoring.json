@@ -226,7 +226,9 @@
       "local-file": "The file exists only in this browser, so it cannot be placed in a scene."
     },
     "blockedSummary": "{{count}} unpublished assets cannot be placed.",
-    "openLibrary": "Open in the asset library"
+    "openLibrary": "Open in the asset library",
+    "libraryFailed": "The asset library could not be read, so the palette is empty. What is already placed can still be edited.",
+    "libraryRetry": "Read again"
   },
   "editor": {
     "exportJson": "Export JSON",
@@ -309,12 +311,15 @@
       "rightDrag": "Right drag",
       "pan": "Pan"
     },
-    "categoryAssetCount": "{{count}} assets",
-    "noModelsInCategory": "No models in this category yet.",
-    "modelCategories": {
-      "indoor": "Indoor",
-      "outdoor": "Outdoor",
-      "none": "Uncategorized"
+    "noModels": "No models registered yet.",
+    "noModelsMatch": "No models match.",
+    "categoryFilter": {
+      "all": "All",
+      "open": "Find categories",
+      "searchPlaceholder": "Category name",
+      "empty": "No categories registered yet.",
+      "noMatch": "No matching categories.",
+      "remove": "Remove category {{category}}"
     },
     "paletteTabs": {
       "models": "Models",
@@ -323,7 +328,6 @@
       "view": "Views"
     },
     "environmentNone": "No background",
-    "environmentUnset": "This scene has no background set, so the region default is applied. Choosing one below saves it to the scene.",
     "lightingSection": "Lighting",
     "lightingShadows": "Shadows",
     "lightingSunPosition": "Sun position",
@@ -371,7 +375,8 @@
       "remove": "Delete",
       "pin": "Pin to top right",
       "unpin": "Unpin"
-    }
+    },
+    "environmentUnmanaged": "This scene's background is a file that is not in the asset library. It is drawn as is until you choose another background below."
   },
   "detectionSettings": {
     "title": "Settings",
@@ -674,5 +679,17 @@
       "hold": "Hold",
       "offline": "Offline"
     }
+  },
+  "assetUpdates": {
+    "title": "{{count}} assets have a new version",
+    "openAsset": "Show versions in the asset library",
+    "count": {
+      "model": "{{count}} in this scene",
+      "map": "{{count}} maps",
+      "environment": "Background"
+    },
+    "update": "Update",
+    "hint": "Updating switches every placement of that asset in this scene to the new version. Placement and tag mappings stay as they are, so check the result on screen; save to apply it to monitoring.",
+    "unmanaged": "{{count}} objects are placed from files that are not in the asset library. New versions cannot be reported for them."
   }
 }

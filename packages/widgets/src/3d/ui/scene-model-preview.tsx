@@ -9,7 +9,6 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SceneModelPreviewPreset } from '@crane/domain/3d';
-import { getModelPreviewAssetPath, withBaseUrl } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
 import { useOffscreenPreview } from '../lib/use-offscreen-preview';
 
@@ -18,13 +17,8 @@ interface SceneModelPreviewProps {
   label: string;
   preview?: SceneModelPreviewPreset;
   /**
-   * 카탈로그 id. 있으면 배포된 정적 썸네일(`/previews/{id}.png`)을 먼저
-   * 시도하고, 없을 때만(로드 실패 시) 런타임 offscreen 렌더로 폴백한다.
-   */
-  previewAssetId?: string;
-  /**
-   * 이미 있는 썸네일의 URL(자산 라이브러리에 저장된 것). 있으면 정적 썸네일
-   * 보다 먼저 쓴다. 못 읽으면 `previewAssetId` → offscreen 렌더 순으로 내려간다.
+   * 이미 있는 썸네일의 URL(자산 라이브러리에 저장된 것). 없거나 못 읽으면
+   * 런타임 offscreen 렌더로 폴백한다.
    */
   previewUrl?: string;
   overlayLabel?: string | null;
@@ -108,7 +102,6 @@ export const SceneModelPreview = memo(function SceneModelPreview({
   path,
   label,
   preview,
-  previewAssetId,
   previewUrl,
   overlayLabel,
   overlayHint,
@@ -138,7 +131,6 @@ export const SceneModelPreview = memo(function SceneModelPreview({
         path={path}
         label={label}
         preview={preview}
-        previewAssetId={previewAssetId}
         previewUrl={previewUrl}
         overlayLabel={overlayLabel}
         overlayHint={overlayHint}
@@ -153,7 +145,6 @@ function SceneModelPreviewInner({
   path,
   label,
   preview,
-  previewAssetId,
   previewUrl,
   overlayLabel,
   overlayHint,
@@ -163,29 +154,15 @@ function SceneModelPreviewInner({
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // 정적 썸네일 로드 실패 상태. previewAssetId 가 바뀌면 재시도해야 하므로
+  // 저장된 썸네일 로드 실패 상태. previewUrl 이 바뀌면 재시도해야 하므로
   // render 중 prop 변화를 감지해 리셋한다 (React 공식 "adjusting state" 패턴).
-  const [prevAssetId, setPrevAssetId] = useState(previewAssetId);
-  const [staticFailed, setStaticFailed] = useState(false);
-  if (prevAssetId !== previewAssetId) {
-    setPrevAssetId(previewAssetId);
-    setStaticFailed(false);
-  }
-
-  // 저장된 썸네일(previewUrl)도 같은 방식으로 다룬다 — 바뀌면 다시 시도한다.
   const [prevPreviewUrl, setPrevPreviewUrl] = useState(previewUrl);
   const [previewUrlFailed, setPreviewUrlFailed] = useState(false);
   if (prevPreviewUrl !== previewUrl) {
     setPrevPreviewUrl(previewUrl);
     setPreviewUrlFailed(false);
   }
-  const savedUrl = previewUrl && !previewUrlFailed ? previewUrl : null;
-
-  const staticUrl =
-    savedUrl ??
-    (previewAssetId && !staticFailed
-      ? withBaseUrl(getModelPreviewAssetPath(previewAssetId))
-      : null);
+  const staticUrl = previewUrl && !previewUrlFailed ? previewUrl : null;
 
   const { imageUrl, status } = useOffscreenPreview(
     path,
@@ -217,10 +194,7 @@ function SceneModelPreviewInner({
           alt={label}
           className="absolute inset-0 h-full w-full object-contain"
           draggable={false}
-          onError={() => {
-            if (savedUrl) setPreviewUrlFailed(true);
-            else setStaticFailed(true);
-          }}
+          onError={() => setPreviewUrlFailed(true)}
         />
       ) : (
         <>

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   humanizeModelPath,
   withBaseUrl,
-  type SceneModelCatalogItem,
+  type ScenePlaceableModel,
 } from '@crane/domain/3d';
 import type { ScenePaletteModel } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
@@ -25,10 +25,10 @@ function toThumbnailUrl(thumbnail: ScenePaletteModel['thumbnail']) {
 }
 
 interface PaletteAssetGridProps {
-  /** 팔레트 항목 — 자산 라이브러리와 합친 목록(놓을 수 없는 것 포함). */
+  /** 팔레트 항목 — 자산 라이브러리의 모델(놓을 수 없는 것 포함). */
   items: ScenePaletteModel[];
   draggingItemId: string | null;
-  onDragStart: (item: SceneModelCatalogItem) => void;
+  onDragStart: (item: ScenePlaceableModel) => void;
   onDragEnd: () => void;
   emptyMessage?: string;
   assetSearch?: string;
@@ -188,9 +188,6 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                     <SceneModelPreview
                       path={item.path}
                       label={item.label}
-                      preview={item.preview}
-                      // 카탈로그 자산만 배포된 정적 썸네일이 있다.
-                      previewAssetId={model.fromCatalog ? item.id : undefined}
                       previewUrl={toThumbnailUrl(model.thumbnail)}
                       overlayLabel={item.label}
                       overlayHint={t('monitoring:palette.dragToPlace')}
@@ -226,7 +223,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
         ) : (
           <div className="flex h-full min-h-28 items-center justify-center px-3 pb-3 text-center">
             <p className="text-muted-foreground text-xs">
-              {emptyMessage ?? t('monitoring:editor.noModelsInCategory')}
+              {emptyMessage ?? t('monitoring:editor.noModelsMatch')}
             </p>
           </div>
         )}

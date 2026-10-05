@@ -1,5 +1,6 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { CraneType } from '../../asset/model/types';
+import { CODE_ASSETS } from './code-asset-refs';
 
 export interface CraneModelCameraPreset {
   defaultPosition: Vector3Tuple;
@@ -9,7 +10,7 @@ export interface CraneModelCameraPreset {
 }
 
 export interface CraneModelConfig {
-  /** GLB 경로 (apps/shell/public/models/ 기준) */
+  /** GLB 경로(public 절대 경로) — 코드 자산 표(code-asset-refs.ts)에서 온다. */
   url: string;
   scale: Vector3Tuple;
   cameraPreset: CraneModelCameraPreset;
@@ -17,7 +18,7 @@ export interface CraneModelConfig {
 
 // 660T 골리앗 — 실측 미터 스케일 모델(스팬 ~130m)이라 뷰어 그리드에 맞춰 축소
 const GOLIATH: CraneModelConfig = {
-  url: '/models/goliath_crane.glb',
+  url: CODE_ASSETS.goliathCrane.path,
   scale: [0.1, 0.1, 0.1],
   cameraPreset: {
     defaultPosition: [15, 12, 20],
@@ -29,7 +30,7 @@ const GOLIATH: CraneModelConfig = {
 
 // 50T LLC 러핑 — 실측 미터 스케일 모델(높이 ~53m)이라 뷰어 그리드에 맞춰 축소
 const LLC: CraneModelConfig = {
-  url: '/models/LLC_002.glb',
+  url: CODE_ASSETS.llc002.path,
   scale: [0.15, 0.15, 0.15],
   cameraPreset: {
     defaultPosition: [14, 11, 18],
@@ -41,7 +42,7 @@ const LLC: CraneModelConfig = {
 
 // 갠트리 계열 — Goliath3dViewer 프리셋 재사용
 const GANTRY: CraneModelConfig = {
-  url: '/models/gantry_crane.glb',
+  url: CODE_ASSETS.gantryCrane.path,
   scale: [1.2, 1.2, 1.2],
   cameraPreset: {
     defaultPosition: [15, 12, 20],
@@ -52,7 +53,7 @@ const GANTRY: CraneModelConfig = {
 };
 
 const TTC: CraneModelConfig = {
-  url: '/models/TTC-27.glb',
+  url: CODE_ASSETS.ttc27.path,
   scale: [0.1, 0.1, 0.1],
   cameraPreset: {
     defaultPosition: [18, 14, 22],
@@ -64,7 +65,7 @@ const TTC: CraneModelConfig = {
 
 // 전용 모델이 없는 타입의 폴백 — 범용 크레인
 const GENERIC: CraneModelConfig = {
-  url: '/models/crane.glb',
+  url: CODE_ASSETS.crane.path,
   scale: [0.8, 0.8, 0.8],
   cameraPreset: {
     defaultPosition: [14, 11, 18],

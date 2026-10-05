@@ -86,8 +86,8 @@ export interface DashboardEquipmentRow {
   equipName: string;
   regionTitleKey: string;
   /**
-   * 정적 썸네일(`/previews/{id}.png`)용 카탈로그 id — 모델 path 를 카탈로그와
-   * 대조해 얻는다. 카탈로그에 없는 모델이면 null(아이콘 폴백).
+   * 썸네일을 찾을 자산 id — 씬이 모델에 적어 둔 자산 참조에서 온다. 참조가
+   * 없는 모델(라이브러리가 모르는 파일)이면 null(아이콘 폴백).
    */
   previewAssetId: string | null;
   tags: DashboardEquipmentTag[];

@@ -56,7 +56,7 @@ interface ModelMeshProps {
    * (philly-terrain 178만 삼각형): shadow map 은 매 프레임 다시 그려지는데
    * 이 지형이 depth pass 의 대부분을 차지했고, 작업 구역 밖 도시 건물
    * 그림자는 관제 줌에서 보이지 않아 끈다 — 호출부(outdoor-work-model-
-   * simulation·에디터)가 카탈로그 kind==='context' 로 판정한다. 플래그는
+   * simulation·에디터)가 지도의 role==='context'(isContextMap)로 판정한다. 플래그는
    * Canvas `shadows`가 꺼져 있으면 무비용이라 항상 설정해 두고, On/Off
    * 토글은 renderer 레벨(Canvas shadows + 조명 castShadow)이 담당한다 —
    * scene-render-preset.tsx.
@@ -142,7 +142,7 @@ export interface ClonedModel {
 /**
  * 머티리얼 셰이딩 등급. 'standard' = GLTF 의 PBR 그대로(기본, 야드 지도·
  * 크레인). 'lambert' = clone 시점에 PBR 을 Lambert 로 바꾼다(lib/
- * lambert-material.ts) — 관제와 무관한 컨텍스트 지형(카탈로그 kind
+ * lambert-material.ts) — 관제와 무관한 컨텍스트 지형(지도의 role
  * 'context')용. 조명·낮/밤에는 똑같이 반응하고 스펙큘러·환경맵 radiance
  * 샘플링만 없어 수 km 지형의 픽셀 비용이 준다. 호출부(outdoor-work-model-
  * simulation·에디터)가 kind 로 판정한다 — 두 화면이 같아야 한다.
@@ -231,7 +231,7 @@ export function useClonedModel(
             console.warn(
               `[3d] transmission 머티리얼 감지: ${url} / ${mat.name} — ` +
                 'three.js가 매 프레임 씬 전체를 한 번 더 렌더링합니다. ' +
-                '지도라면 pnpm optimize:map 을 돌려 제거하세요.',
+                '지도라면 자산 라이브러리에서 최적화를 켜고 새 버전으로 올려 제거하세요.',
             );
           }
         }

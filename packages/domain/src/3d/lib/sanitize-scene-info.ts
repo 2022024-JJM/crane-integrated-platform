@@ -19,15 +19,21 @@ import type {
   SavedSceneInfo,
 } from '../model/types';
 import {
+  SCENE_MAP_ROLES,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
   SCENE_TRUE_NORTH_DEFAULT,
+  type SceneMapRole,
 } from '../model/types';
 import { normalizeDegrees } from './math-utils';
 import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
 import { sanitizeModelZones } from './sanitize-model-zones';
 import { sanitizeRulerFields } from './sanitize-rulers';
+import {
+  sanitizeSceneAssetRef,
+  sanitizeSceneEnvironment,
+} from './scene-asset-ref';
 import { sanitizeModelStatusTags } from './sanitize-status-tags';
 import { resolveModelTagMappings } from './sanitize-tag-mappings';
 import {
@@ -115,6 +121,13 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
       locked: m.locked !== false,
     };
+    // 자산 참조·역할은 유효할 때만 싣는다 — 참조가 없으면 라이브러리가 모르는
+    // 파일이고, 역할이 없으면 어느 쪽도 아니다(resolveGroundMaps 가 폴백한다).
+    const asset = sanitizeSceneAssetRef(m.asset);
+    if (asset) safeMap.asset = asset;
+    if (SCENE_MAP_ROLES.includes(m.role as SceneMapRole)) {
+      safeMap.role = m.role;
+    }
     // 카메라 영역 제한은 옵트인 — true 만 남긴다(모델 locked 과 같은 규칙).
     if (m.cameraBounds === true) safeMap.cameraBounds = true;
     if (isVector3Tuple(m.position)) safeMap.position = m.position;
@@ -171,6 +184,8 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
           {
             ...rest,
             id: nextId,
+            // `...rest` 가 원본을 실어 오므로 덮어쓴다 — 무효면 필드가 빠진다.
+            asset: sanitizeSceneAssetRef(model.asset),
             opacity: clampOpacity(model.opacity),
             meshOverrides: sanitizeMeshOverrides(model.meshOverrides),
             // true가 아닌 값(과거 버전이 남긴 문자열 등)은 잠기지 않은
@@ -296,14 +311,14 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     sanitized.mainViewByRegion = safeMainView;
   }
 
-  // environmentId는 3-상태다(문자열=선택 / null=배경 없음 / 없음=region 기본).
-  // 셋을 구분해 실어야 하므로 값이 있을 때만 넣는다 — 미지정 씬에 null을
-  // 채워 넣으면 region 기본 배경이 꺼져버린다.
-  const rawEnvironmentId = (sceneInfo as SavedSceneInfo).environmentId;
-  if (typeof rawEnvironmentId === 'string' && rawEnvironmentId.length > 0) {
-    sanitized.environmentId = rawEnvironmentId;
-  } else if (rawEnvironmentId === null) {
-    sanitized.environmentId = null;
+  // 배경은 경로가 있을 때만 싣는다 — 없으면 필드가 빠져 "배경 없음" 이다.
+  // 옛 `environmentId`(카탈로그 id)는 경로를 알 수 없어 읽지 않는다. 그런 씬
+  // 파일은 scripts/migrate-scene-asset-refs.mjs 로 옮긴다.
+  const safeEnvironment = sanitizeSceneEnvironment(
+    (sceneInfo as SavedSceneInfo).environment,
+  );
+  if (safeEnvironment) {
+    sanitized.environment = safeEnvironment;
   }
 
   // 바다 표시도 3-상태다(true/false=명시 / 없음=레거시 규칙: 배경이 있으면

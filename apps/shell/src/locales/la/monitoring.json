@@ -226,7 +226,9 @@
       "local-file": "Fasciculus in hoc navigatro tantum est; in scaena poni non potest."
     },
     "blockedSummary": "{{count}} res nondum editae poni non possunt.",
-    "openLibrary": "In bibliotheca rerum aperi"
+    "openLibrary": "In bibliotheca rerum aperi",
+    "libraryFailed": "Bibliotheca rerum legi non potuit, itaque tabula vacua est. Quae iam posita sunt adhuc mutari possunt.",
+    "libraryRetry": "Iterum lege"
   },
   "editor": {
     "exportJson": "JSON Exporta",
@@ -309,12 +311,15 @@
       "rightDrag": "Trahe dextro",
       "pan": "Prospectum move"
     },
-    "categoryAssetCount": "{{count}} exemplaria",
-    "noModelsInCategory": "Nulla exemplaria in hac categoria adhuc sunt.",
-    "modelCategories": {
-      "indoor": "Interior",
-      "outdoor": "Exterior",
-      "none": "Sine classe"
+    "noModels": "Nulla exemplaria adhuc inscripta sunt.",
+    "noModelsMatch": "Nulla exemplaria congruunt.",
+    "categoryFilter": {
+      "all": "Omnia",
+      "open": "Categorias quaere",
+      "searchPlaceholder": "Nomen categoriae",
+      "empty": "Nullae categoriae adhuc inscriptae sunt.",
+      "noMatch": "Nullae categoriae congruunt.",
+      "remove": "Categoriam {{category}} tolle"
     },
     "paletteTabs": {
       "models": "Exempla",
@@ -323,7 +328,6 @@
       "view": "Prospectus"
     },
     "environmentNone": "Sine fundo",
-    "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
     "lightingSection": "Lumina",
     "lightingShadows": "Umbrae",
     "lightingSunPosition": "Solis positio",
@@ -371,7 +375,8 @@
       "remove": "Dele",
       "pin": "Dextrorsum supra fige",
       "unpin": "Solve"
-    }
+    },
+    "environmentUnmanaged": "Fundus huius scaenae fasciculus est qui in bibliotheca rerum non exstat. Sic pingitur donec alium fundum infra eligas."
   },
   "detectionSettings": {
     "title": "Optiones",
@@ -674,5 +679,17 @@
       "hold": "Sistentia",
       "offline": "Disiunctum"
     }
+  },
+  "assetUpdates": {
+    "title": "{{count}} res novam versionem habent",
+    "openAsset": "Versiones in bibliotheca rerum ostende",
+    "count": {
+      "model": "{{count}} in hac scaena",
+      "map": "{{count}} tabulae",
+      "environment": "Fundus"
+    },
+    "update": "Renova",
+    "hint": "Renovando omnia quae ex ea re in hac scaena posita sunt ad novam versionem transeunt. Collocatio et notarum nexus manent; in scaena inspice et serva ut in monitorio valeat.",
+    "unmanaged": "{{count}} res ex fasciculis positae sunt qui in bibliotheca rerum non exstant. Novae versiones nuntiari non possunt."
   }
 }

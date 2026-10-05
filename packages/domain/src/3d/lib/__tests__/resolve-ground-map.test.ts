@@ -1,19 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { resolveGroundMaps } from '../resolve-ground-map';
+import { isContextMap, resolveGroundMaps } from '../resolve-ground-map';
 import type { SavedMapInfo } from '../../model/types';
 
 const area1 = (id: string): SavedMapInfo => ({
   id,
   path: '/maps/philly-area-1.glb',
+  role: 'ground',
 });
 const area2 = (id: string): SavedMapInfo => ({
   id,
   path: '/maps/philly-area-2.glb',
+  role: 'ground',
 });
 const context = (id: string): SavedMapInfo => ({
   id,
   path: '/maps/philly-terrain.glb',
+  role: 'context',
 });
+/** 역할이 없는 지도 — 라이브러리가 모르는 파일이거나 옛 저장본. */
 const unknown = (id: string): SavedMapInfo => ({ id, path: '/maps/none.glb' });
 
 describe('resolveGroundMaps', () => {
@@ -57,7 +61,7 @@ describe('resolveGroundMaps', () => {
     expect(result.map((m) => m.id)).toEqual(['a', 'b']);
   });
 
-  it('카탈로그에 없는 경로는 ground 가 있으면 빠진다', () => {
+  it('역할이 없는 지도는 ground 가 있으면 빠진다', () => {
     const g = area1('g');
     const result = resolveGroundMaps([unknown('u'), g, unknown('v')]);
     expect(result).toHaveLength(1);
@@ -71,17 +75,27 @@ describe('resolveGroundMaps', () => {
     expect(result[0]).toBe(c);
   });
 
-  it('전부 카탈로그에 없는 경로면 maps[0] 한 장', () => {
+  it('전부 역할이 없는 지도면 maps[0] 한 장', () => {
     const u = unknown('u');
     const result = resolveGroundMaps([u, unknown('v')]);
     expect(result).toHaveLength(1);
     expect(result[0]).toBe(u);
   });
 
-  it('은퇴한 옛 조선소 경로(phillyshipyard.glb)는 더 이상 ground 가 아니다', () => {
-    const old: SavedMapInfo = { id: 'old', path: '/maps/phillyshipyard.glb' };
+  it('판정은 경로가 아니라 role 이다 — 같은 경로라도 role 이 없으면 바닥이 아니다', () => {
+    const noRole: SavedMapInfo = { id: 'n', path: '/maps/philly-area-1.glb' };
     const a = area1('a');
-    expect(resolveGroundMaps([old, a]).map((m) => m.id)).toEqual(['a']);
+    expect(resolveGroundMaps([noRole, a]).map((m) => m.id)).toEqual(['a']);
+  });
+
+  it('모르는 role 값은 바닥으로 세지 않는다', () => {
+    const odd = {
+      id: 'odd',
+      path: '/maps/x.glb',
+      role: 'floor',
+    } as unknown as SavedMapInfo;
+    const a = area1('a');
+    expect(resolveGroundMaps([odd, a]).map((m) => m.id)).toEqual(['a']);
   });
 
   it('입력 배열을 변경하지 않는다', () => {
@@ -90,5 +104,16 @@ describe('resolveGroundMaps', () => {
     resolveGroundMaps(input);
     expect(input).toEqual(snapshot);
     expect(input[0]).toBe(snapshot[0]);
+  });
+});
+
+describe('isContextMap', () => {
+  it('role 이 context 인 지도만 주변 지형이다', () => {
+    expect(isContextMap(context('c'))).toBe(true);
+    expect(isContextMap(area1('a'))).toBe(false);
+  });
+
+  it('역할이 없는 지도는 주변 지형이 아니다', () => {
+    expect(isContextMap(unknown('u'))).toBe(false);
   });
 });

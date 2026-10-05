@@ -39,7 +39,7 @@ const file = (path: string, extra = {}) => ({
 const okpoCrane = asset({
   id: 'okpo-crane',
   name: 'Okpo Crane 10',
-  tags: ['crane', 'outdoor'],
+  categories: ['crane', 'outdoor'],
   updatedAt: '2026-03-01T00:00:00.000Z',
   versions: [version({ file: file('/models/okpo.glb') })],
 });
@@ -47,14 +47,14 @@ const phillyMap = asset({
   id: 'philly-map',
   kind: 'map',
   name: 'Philly Area',
-  tags: ['ground'],
+  categories: ['ground'],
   updatedAt: '2026-01-01T00:00:00.000Z',
   versions: [version({ status: 'draft', file: file('/maps/philly.glb') })],
 });
 const shared = asset({
   id: 'shared-worker',
   name: 'Okpo Crane 2',
-  tags: ['Crane'],
+  categories: ['Crane'],
   description: 'collision guard worker',
   updatedAt: '',
   versions: [version({ file: file('/models/man.glb') })],
@@ -91,7 +91,7 @@ describe('queryAssets', () => {
     expect(assets).toEqual(before);
   });
 
-  it('검색은 이름·id·설명·태그·파일명을 대소문자 무시로 본다', () => {
+  it('검색은 이름·id·설명·카테고리·파일명을 대소문자 무시로 본다', () => {
     expect(ids({ text: 'PHILLY' })).toEqual(['philly-map']);
     expect(ids({ text: 'collision' })).toEqual(['shared-worker']);
     expect(ids({ text: 'man.glb' })).toEqual(['shared-worker']);
@@ -106,14 +106,14 @@ describe('queryAssets', () => {
     expect(ids({ kinds: ['drawing'] })).toEqual([]);
   });
 
-  it('태그는 고른 것을 모두 가진 자산만(대소문자 무시)', () => {
-    expect(ids({ tags: ['crane'] })).toEqual(['shared-worker', 'okpo-crane']);
-    expect(ids({ tags: ['crane', 'outdoor'] })).toEqual(['okpo-crane']);
-    // 가진 자산이 없는 태그가 하나라도 끼면 아무것도 남지 않는다.
-    expect(ids({ tags: ['crane', 'nope'] })).toEqual([]);
+  it('카테고리는 고른 것을 모두 가진 자산만(대소문자 무시)', () => {
+    expect(ids({ categories: ['crane'] })).toEqual(['shared-worker', 'okpo-crane']);
+    expect(ids({ categories: ['crane', 'outdoor'] })).toEqual(['okpo-crane']);
+    // 가진 자산이 없는 카테고리가 하나라도 끼면 아무것도 남지 않는다.
+    expect(ids({ categories: ['crane', 'nope'] })).toEqual([]);
     // 종류와 함께 걸면 그 종류 안에서 좁힌다.
-    expect(ids({ kinds: ['map'], tags: ['crane'] })).toEqual([]);
-    expect(ids({ kinds: ['map'], tags: ['ground'] })).toEqual(['philly-map']);
+    expect(ids({ kinds: ['map'], categories: ['crane'] })).toEqual([]);
+    expect(ids({ kinds: ['map'], categories: ['ground'] })).toEqual(['philly-map']);
   });
 
   it('컬렉션·즐겨찾기 필터', () => {
@@ -202,12 +202,12 @@ describe('countAssetFacets', () => {
     expect(facets.statuses.draft).toBe(1);
   });
 
-  it('태그는 대소문자를 묶어 세고, 많이 쓰인 순·같으면 이름순으로 낸다', () => {
-    expect(countAssetFacets(assets).tags).toEqual([
-      // 'crane' 과 'Crane' 은 한 태그 — 표기는 먼저 나온 것.
-      { tag: 'crane', count: 2 },
-      { tag: 'ground', count: 1 },
-      { tag: 'outdoor', count: 1 },
+  it('카테고리는 대소문자를 묶어 세고, 많이 쓰인 순·같으면 이름순으로 낸다', () => {
+    expect(countAssetFacets(assets).categories).toEqual([
+      // 'crane' 과 'Crane' 은 한 카테고리 — 표기는 먼저 나온 것.
+      { category: 'crane', count: 2 },
+      { category: 'ground', count: 1 },
+      { category: 'outdoor', count: 1 },
     ]);
   });
 
@@ -218,7 +218,7 @@ describe('countAssetFacets', () => {
     expect(Object.values(facets.statuses).every((count) => count === 0)).toBe(
       true,
     );
-    expect(facets.tags).toEqual([]);
+    expect(facets.categories).toEqual([]);
   });
 });
 

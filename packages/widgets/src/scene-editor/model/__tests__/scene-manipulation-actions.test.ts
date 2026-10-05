@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type {
   SavedSceneInfo,
-  SceneMapCatalogItem,
-  SceneModelCatalogItem,
+  ScenePlaceableMap,
+  ScenePlaceableModel,
 } from '@crane/domain/3d';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
@@ -11,28 +11,32 @@ import {
 } from '@crane/domain/3d';
 import { createSceneManipulationActions } from '../scene-manipulation-actions';
 
-const catalogModel: SceneModelCatalogItem = {
+/** 팔레트 항목 — 자산 라이브러리의 자산(현재 버전)에서 온 것. */
+const catalogModel: ScenePlaceableModel = {
   id: 'cat-crane',
+  version: 2,
   label: 'Crane',
-  category: 'outdoor',
   path: '/models/crane.glb',
-  defaultScale: [1, 2, 1],
 };
 
-const catalogMap: SceneMapCatalogItem = {
+const catalogMap: ScenePlaceableMap = {
   id: 'map-okpo',
+  version: 1,
   label: 'Okpo',
   path: '/maps/okpo.glb',
-  kind: 'ground',
+  role: 'ground',
 };
 
-const catalogContextMap: SceneMapCatalogItem = {
+const catalogContextMap: ScenePlaceableMap = {
   id: 'map-terrain',
+  version: 3,
   label: 'Terrain',
   path: '/maps/terrain.glb',
-  kind: 'context',
+  role: 'context',
   defaultPosition: [10, 2, -5],
 };
+
+const SKY = { path: '/scenes/sky.exr', asset: { id: 'sky', version: 1 } };
 
 function scene(overrides: Partial<SavedSceneInfo> = {}): SavedSceneInfo {
   return { maps: [], models: [], texts: [], camera: null, ...overrides };
@@ -98,8 +102,10 @@ describe('addModel / addText', () => {
     expect(added).toMatchObject({
       equipName: 'Crane',
       path: '/models/crane.glb',
+      // 놓는 순간의 자산·버전을 씬에 적는다.
+      asset: { id: 'cat-crane', version: 2 },
       position: [3, 0, 5],
-      scale: [1, 2, 1],
+      scale: [1, 1, 1],
       opacity: 1,
     });
     expect(h.deps.selectModel).toHaveBeenCalledWith(added.id);
@@ -307,7 +313,24 @@ describe('addSceneMap', () => {
     expect(h.deps.selectMap).toHaveBeenCalledWith(h.scene?.maps[0].id);
   });
 
-  it('카탈로그 defaultPosition 이 있으면 그 값으로 놓인다', () => {
+  it('자산 참조와 역할을 자산에서 복사해 씬에 적는다', () => {
+    const h = createHarness();
+    h.actions.addSceneMap(catalogContextMap);
+    expect(h.scene?.maps[0]).toMatchObject({
+      asset: { id: 'map-terrain', version: 3 },
+      role: 'context',
+    });
+  });
+
+  it('바닥 지도는 카메라 영역 제한에 체크된 채, 주변 지형은 체크 없이 들어간다', () => {
+    const h = createHarness();
+    h.actions.addSceneMap(catalogMap);
+    h.actions.addSceneMap(catalogContextMap);
+    expect(h.scene?.maps[0].cameraBounds).toBe(true);
+    expect(h.scene?.maps[1]).not.toHaveProperty('cameraBounds');
+  });
+
+  it('자산의 기본 위치가 있으면 그 값으로 놓인다', () => {
     const h = createHarness();
     h.actions.addSceneMap(catalogContextMap);
     expect(h.scene?.maps[0].position).toEqual([10, 2, -5]);
@@ -323,6 +346,23 @@ describe('addSceneMap', () => {
     expect(h.scene?.maps[0]).toBe(ground);
     expect(h.scene?.maps[0].locked).toBeUndefined();
     expect(h.scene?.maps[1].path).toBe('/maps/terrain.glb');
+  });
+
+  it('같은 자산이 이미 있으면 버전·경로가 달라도 no-op', () => {
+    // 씬에는 v1 이 놓여 있고 팔레트의 현재 버전은 v2 다 — 같은 자산이다.
+    const before = scene({
+      maps: [
+        {
+          id: 'm',
+          path: '/maps/terrain-old.glb',
+          asset: { id: 'map-terrain', version: 1 },
+        },
+      ],
+    });
+    const h = createHarness(before);
+    h.actions.addSceneMap(catalogContextMap);
+    expect(h.deps.updateScene).not.toHaveBeenCalled();
+    expect(h.scene).toBe(before);
   });
 
   it('같은 path 가 이미 있으면(잠겨 있어도) no-op', () => {
@@ -360,21 +400,112 @@ describe('addSceneMap', () => {
   });
 });
 
-describe('setEnvironmentId', () => {
+describe('setEnvironment', () => {
   it('배경을 바꾸고, 같은 값이면 참조를 유지한다', () => {
     const h = createHarness();
-    h.actions.setEnvironmentId('sky-1');
-    expect(h.scene?.environmentId).toBe('sky-1');
+    h.actions.setEnvironment(SKY);
+    expect(h.scene?.environment).toEqual(SKY);
 
     const before = h.scene;
-    h.actions.setEnvironmentId('sky-1');
+    // 내용이 같은 다른 객체여도 같은 배경이다.
+    h.actions.setEnvironment({ ...SKY, asset: { ...SKY.asset } });
     expect(h.scene).toBe(before);
   });
 
-  it('null(배경 없음)을 명시적으로 저장한다', () => {
+  it('버전만 달라도 다른 배경이다', () => {
+    const h = createHarness(scene({ environment: SKY }));
+    const before = h.scene;
+    h.actions.setEnvironment({
+      path: '/asset-library/files/sky/v2/sky.exr',
+      asset: { id: 'sky', version: 2 },
+    });
+    expect(h.scene).not.toBe(before);
+    expect(h.scene?.environment?.asset?.version).toBe(2);
+  });
+
+  it('null 은 배경 없음 — 필드를 지운다', () => {
+    const h = createHarness(scene({ environment: SKY, sea: true }));
+    h.actions.setEnvironment(null);
+    expect(h.scene).not.toHaveProperty('environment');
+    // 다른 필드는 그대로다.
+    expect(h.scene?.sea).toBe(true);
+  });
+
+  it('배경이 없는 씬에 null 을 넣으면 참조를 유지한다', () => {
     const h = createHarness();
-    h.actions.setEnvironmentId(null);
-    expect(h.scene?.environmentId).toBeNull();
+    const before = h.scene;
+    h.actions.setEnvironment(null);
+    expect(h.scene).toBe(before);
+    expect(h.scene).not.toHaveProperty('environment');
+  });
+
+  it('씬이 없으면(로드 전) no-op', () => {
+    const h = createHarness(null);
+    h.actions.setEnvironment(SKY);
+    expect(h.scene).toBeNull();
+  });
+});
+
+describe('updateSceneAsset', () => {
+  const placed = (id: string, version: number) => ({
+    id,
+    equipName: id,
+    path: '/models/ttc.glb',
+    asset: { id: 'ttc', version },
+    opacity: 1,
+    position: [0, 0, 0] as [number, number, number],
+    rotation: [0, 0, 0] as [number, number, number],
+    scale: [1, 1, 1] as [number, number, number],
+  });
+  const V2 = '/asset-library/files/ttc/v2/ttc.glb';
+
+  it('그 자산을 가리키는 객체를 전부 새 버전으로 옮긴다', () => {
+    const h = createHarness(
+      scene({ models: [placed('a', 1), placed('b', 1)] }),
+    );
+    h.actions.updateSceneAsset('ttc', 2, V2);
+    expect(h.scene?.models.map((m) => [m.path, m.asset])).toEqual([
+      [V2, { id: 'ttc', version: 2 }],
+      [V2, { id: 'ttc', version: 2 }],
+    ]);
+  });
+
+  it('한 번의 updateScene 으로 끝난다 — 되돌리기 한 번에 전부 돌아간다', () => {
+    const h = createHarness(
+      scene({ models: [placed('a', 1), placed('b', 1), placed('c', 1)] }),
+    );
+    h.actions.updateSceneAsset('ttc', 2, V2);
+    expect(h.deps.updateScene).toHaveBeenCalledTimes(1);
+    // 옵션 없이 부른다(히스토리 기본 기록).
+    expect(h.updateOptions).toEqual([undefined]);
+  });
+
+  it('이미 그 버전이면 참조를 유지한다', () => {
+    const before = scene({ models: [placed('a', 2)] });
+    before.models[0].path = V2;
+    const h = createHarness(before);
+    h.actions.updateSceneAsset('ttc', 2, V2);
+    expect(h.scene).toBe(before);
+  });
+
+  it('씬에 없는 자산은 참조를 유지한다', () => {
+    const before = scene({ models: [placed('a', 1)] });
+    const h = createHarness(before);
+    h.actions.updateSceneAsset('nobody', 2, '/x.glb');
+    expect(h.scene).toBe(before);
+  });
+
+  it('선택은 건드리지 않는다', () => {
+    const h = createHarness(scene({ models: [placed('a', 1)] }));
+    h.actions.updateSceneAsset('ttc', 2, V2);
+    expect(h.deps.selectModel).not.toHaveBeenCalled();
+    expect(h.deps.clearSelectedModel).not.toHaveBeenCalled();
+  });
+
+  it('씬이 없으면(로드 전) no-op', () => {
+    const h = createHarness(null);
+    h.actions.updateSceneAsset('ttc', 2, V2);
+    expect(h.scene).toBeNull();
   });
 });
 
@@ -525,11 +656,11 @@ describe('setTrueNorth', () => {
   });
 
   it('다른 필드는 건드리지 않는다', () => {
-    const h = createHarness(scene({ sea: true, environmentId: 'sky' }));
+    const h = createHarness(scene({ sea: true, environment: SKY }));
     h.actions.setTrueNorth(5.6);
     expect(h.scene).toMatchObject({
       sea: true,
-      environmentId: 'sky',
+      environment: SKY,
       trueNorth: 5.6,
     });
   });
@@ -681,14 +812,14 @@ describe('duplicateSelectedObject', () => {
 
 describe('transform 인터랙션 히스토리', () => {
   it('start에서 base를 잡고 end에서 그 base로 1회 커밋한다', () => {
-    const base = scene({ environmentId: 'base' });
+    const base = scene({ environment: { path: '/scenes/base.exr' } });
     const h = createHarness(base);
 
     h.actions.startTransformInteraction();
     expect(h.deps.transformHistoryBaseRef.current).toBe(base);
 
     // 드래그로 씬이 바뀐 뒤 종료
-    h.actions.setEnvironmentId('after-drag');
+    h.actions.setEnvironment({ path: '/scenes/after-drag.exr' });
     h.actions.endTransformInteraction();
 
     expect(h.deps.commitHistoryFrom).toHaveBeenCalledWith(base);

@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ASSET_CATEGORIES_MAX,
   ASSET_HISTORY_MAX,
-  ASSET_TAGS_MAX,
+  ASSET_LIBRARY_SCHEMA_VERSION,
 } from '../../model/types';
 import {
   createEmptyAssetLibraryDocument,
   sanitizeAssetLibraryDocument,
+  sanitizeAssetPlacement,
   sanitizeAssetRecord,
   sanitizeAssetStats,
   sanitizeAssetStatsTable,
-  sanitizeAssetTags,
+  sanitizeAssetCategories,
   assertReadableAssetLibraryDocument,
   collectUnreadableAssetRecords,
 } from '../sanitize-asset-library';
@@ -47,7 +49,7 @@ describe('sanitizeAssetLibraryDocument', () => {
 
   it('컬렉션은 id·이름이 있어야 하고 자산 id 는 형식이 맞는 것만 남는다', () => {
     const result = sanitizeAssetLibraryDocument({
-      assets: [],
+      assets: [asset({ id: 'a' }), asset({ id: 'b' })],
       collections: [
         { id: 'yard', name: ' Yard ', assetIds: ['a', 'a', 'Bad Id', 3, 'b'] },
         { id: 'yard', name: 'Duplicate' },
@@ -59,6 +61,30 @@ describe('sanitizeAssetLibraryDocument', () => {
     expect(result.collections).toEqual([
       { id: 'yard', name: 'Yard', assetIds: ['a', 'b'] },
     ]);
+  });
+
+  it('없어진 자산을 가리키는 컬렉션 항목과 연결을 걷어낸다', () => {
+    const result = sanitizeAssetLibraryDocument({
+      assets: [
+        asset({ id: 'a', relatedAssetIds: ['b', 'gone'] }),
+        asset({ id: 'b' }),
+      ],
+      collections: [{ id: 'yard', name: 'Yard', assetIds: ['a', 'gone', 'b'] }],
+    });
+    expect(result.assets[0].relatedAssetIds).toEqual(['b']);
+    expect(result.collections[0].assetIds).toEqual(['a', 'b']);
+  });
+
+  it('방어에서 떨어진 자산을 가리키던 연결도 걷어낸다', () => {
+    const result = sanitizeAssetLibraryDocument({
+      assets: [
+        asset({ id: 'a', relatedAssetIds: ['broken'] }),
+        { ...asset({ id: 'broken' }), versions: [] },
+      ],
+      collections: [],
+    });
+    expect(result.assets.map((item) => item.id)).toEqual(['a']);
+    expect(result.assets[0].relatedAssetIds).toEqual([]);
   });
 });
 
@@ -74,36 +100,145 @@ describe('sanitizeAssetRecord', () => {
     const result = sanitizeAssetRecord({
       id: 'a',
       kind: 'model',
-      origin: 'whatever',
       name: 42,
       description: null,
-      tags: { a: 1 },
+      categories: { a: 1 },
       owner: [],
-      defaultScale: [1, 'x', 1],
+      placement: 'floating',
       relatedAssetIds: 'none',
       versions: [version()],
       currentVersion: 'one',
       history: 'none',
     });
     expect(result).toMatchObject({
-      origin: 'user',
       // 이름이 비면 id 로 대신한다.
       name: 'a',
       description: '',
-      tags: [],
+      categories: [],
       owner: '',
-      defaultScale: [1, 1, 1],
       relatedAssetIds: [],
       currentVersion: 1,
       history: [],
     });
+    expect(result).not.toHaveProperty('placement');
   });
 
-  it('0·음수·NaN 스케일은 [1,1,1] 로 돌린다', () => {
-    for (const scale of [[0, 1, 1], [1, -1, 1], [1, Number.NaN, 1], [1, 1]]) {
-      expect(sanitizeAssetRecord({ ...asset(), defaultScale: scale })?.defaultScale).toEqual([1, 1, 1]);
+  it('옛 문서의 origin·catalogId·defaultScale 은 읽지 않는다', () => {
+    const result = sanitizeAssetRecord({
+      ...asset(),
+      origin: 'builtin',
+      catalogId: 'okpo-ttc',
+      defaultScale: [0.1, 0.1, 0.1],
+    });
+    expect(result).not.toBeNull();
+    expect(result).not.toHaveProperty('origin');
+    expect(result).not.toHaveProperty('catalogId');
+    expect(result).not.toHaveProperty('defaultScale');
+  });
+});
+
+describe('sanitizeAssetPlacement', () => {
+  it('지도 — 역할과 기본 위치를 남긴다', () => {
+    expect(
+      sanitizeAssetPlacement(
+        { mapRole: 'context', defaultPosition: [1, -2, 3.5] },
+        'map',
+      ),
+    ).toEqual({ mapRole: 'context', defaultPosition: [1, -2, 3.5] });
+  });
+
+  it('기본 동작인 값은 싣지 않는다 — ground · 원점 · false', () => {
+    expect(
+      sanitizeAssetPlacement(
+        { mapRole: 'ground', defaultPosition: [0, 0, 0], paletteHidden: false },
+        'map',
+      ),
+    ).toBeUndefined();
+    expect(sanitizeAssetPlacement({ floating: false }, 'model')).toBeUndefined();
+  });
+
+  it('한 축만 0 이 아니어도 기본 위치를 남긴다(경계)', () => {
+    expect(
+      sanitizeAssetPlacement({ defaultPosition: [0, -40.35, 0] }, 'map'),
+    ).toEqual({ defaultPosition: [0, -40.35, 0] });
+  });
+
+  it('모델 — 수면에 놓기는 true 만 남긴다', () => {
+    expect(sanitizeAssetPlacement({ floating: true }, 'model')).toEqual({
+      floating: true,
+    });
+    for (const floating of ['yes', 1, null, undefined]) {
+      expect(sanitizeAssetPlacement({ floating }, 'model')).toBeUndefined();
     }
-    expect(sanitizeAssetRecord(asset({ defaultScale: [0.1, 0.1, 0.1] }))?.defaultScale).toEqual([0.1, 0.1, 0.1]);
+  });
+
+  it('팔레트 숨김은 씬에 쓰는 종류(모델·지도·배경)에 남는다', () => {
+    for (const kind of ['model', 'map', 'environment'] as const) {
+      expect(sanitizeAssetPlacement({ paletteHidden: true }, kind)).toEqual({
+        paletteHidden: true,
+      });
+    }
+  });
+
+  it('씬에 쓰지 않는 종류(도면·CAD)에는 배치 속성이 없다', () => {
+    const full = {
+      paletteHidden: true,
+      mapRole: 'context',
+      defaultPosition: [1, 2, 3],
+      floating: true,
+    };
+    expect(sanitizeAssetPlacement(full, 'drawing')).toBeUndefined();
+    expect(sanitizeAssetPlacement(full, 'cad')).toBeUndefined();
+  });
+
+  it('종류에 맞지 않는 항목은 떨어진다', () => {
+    const full = {
+      mapRole: 'context',
+      defaultPosition: [1, 2, 3],
+      floating: true,
+    };
+    expect(sanitizeAssetPlacement(full, 'model')).toEqual({ floating: true });
+    expect(sanitizeAssetPlacement(full, 'map')).toEqual({
+      mapRole: 'context',
+      defaultPosition: [1, 2, 3],
+    });
+    expect(sanitizeAssetPlacement(full, 'environment')).toBeUndefined();
+  });
+
+  it.each([
+    ['모르는 역할', { mapRole: 'floor' }],
+    ['역할이 숫자', { mapRole: 1 }],
+    ['위치가 두 칸', { defaultPosition: [1, 2] }],
+    ['위치에 NaN', { defaultPosition: [1, Number.NaN, 3] }],
+    ['위치에 Infinity', { defaultPosition: [1, Number.POSITIVE_INFINITY, 3] }],
+    ['위치에 문자열', { defaultPosition: [1, '2', 3] }],
+    ['위치가 문자열', { defaultPosition: '1,2,3' }],
+  ])('오염된 값(%s)은 버린다', (_label, value) => {
+    expect(sanitizeAssetPlacement(value, 'map')).toBeUndefined();
+  });
+
+  it.each([undefined, null, 'floating', 3, [], true])(
+    '객체가 아닌 입력 %j 은 undefined',
+    (value) => {
+      expect(sanitizeAssetPlacement(value, 'model')).toBeUndefined();
+    },
+  );
+
+  it('위치는 새 배열로 돌려준다(입력을 들고 있지 않는다)', () => {
+    const position = [1, 2, 3];
+    const result = sanitizeAssetPlacement({ defaultPosition: position }, 'map');
+    expect(result?.defaultPosition).toEqual([1, 2, 3]);
+    expect(result?.defaultPosition).not.toBe(position);
+  });
+});
+
+describe('sanitizeAssetRecord — 버전·포인터', () => {
+  it('배치 속성을 종류에 맞게 거른다', () => {
+    const result = sanitizeAssetRecord({
+      ...asset({ kind: 'map' }),
+      placement: { mapRole: 'context', floating: true },
+    });
+    expect(result?.placement).toEqual({ mapRole: 'context' });
   });
 
   it('현재 버전 포인터가 없는 버전을 가리키면 마지막 버전으로 맞춘다', () => {
@@ -218,33 +353,33 @@ describe('sanitizeAssetRecord', () => {
   });
 });
 
-describe('sanitizeAssetTags', () => {
+describe('sanitizeAssetCategories', () => {
   it('공백을 다듬고 대소문자만 다른 중복을 버린다', () => {
-    expect(sanitizeAssetTags([' crane ', 'Crane', '', 3, 'ship'])).toEqual([
+    expect(sanitizeAssetCategories([' crane ', 'Crane', '', 3, 'ship'])).toEqual([
       'crane',
       'ship',
     ]);
   });
 
   it('상한 개수에서 자른다', () => {
-    const tags = Array.from({ length: ASSET_TAGS_MAX + 1 }, (_, i) => `t${i}`);
-    expect(sanitizeAssetTags(tags)).toHaveLength(ASSET_TAGS_MAX);
-    expect(sanitizeAssetTags(tags.slice(0, ASSET_TAGS_MAX))).toHaveLength(ASSET_TAGS_MAX);
+    const categories = Array.from({ length: ASSET_CATEGORIES_MAX + 1 }, (_, i) => `t${i}`);
+    expect(sanitizeAssetCategories(categories)).toHaveLength(ASSET_CATEGORIES_MAX);
+    expect(sanitizeAssetCategories(categories.slice(0, ASSET_CATEGORIES_MAX))).toHaveLength(ASSET_CATEGORIES_MAX);
   });
 });
 
 describe('sanitizeAssetRecord — 구버전 필드', () => {
   it('조선소·분류 필드가 남은 옛 레코드도 읽고, 그 키는 버린다', () => {
     const result = sanitizeAssetRecord({
-      ...asset({ tags: ['crane'] }),
+      ...asset({ categories: ['crane'] }),
       sites: ['okpo'],
       category: 'indoor',
     });
     expect(result).not.toBeNull();
     expect(result).not.toHaveProperty('sites');
     expect(result).not.toHaveProperty('category');
-    // 옛 값은 태그로 옮겨 오지 않는다 — 배포 문서는 이미 옮겨져 있다.
-    expect(result?.tags).toEqual(['crane']);
+    // 옛 값은 카테고리로 옮겨 오지 않는다 — 배포 문서는 이미 옮겨져 있다.
+    expect(result?.categories).toEqual(['crane']);
   });
 
   it('옛 필드가 오염돼 있어도 레코드를 버리지 않는다', () => {
@@ -255,6 +390,100 @@ describe('sanitizeAssetRecord — 구버전 필드', () => {
     ]) {
       expect(sanitizeAssetRecord({ ...asset(), ...legacy })).toEqual(asset());
     }
+  });
+});
+
+describe('스키마 1 의 문서 — 카테고리를 `tags` 로 적던 판', () => {
+  /** 스키마 1 의 레코드 모양 — `categories` 대신 `tags`. */
+  const legacy = (tags: unknown, extra: Record<string, unknown> = {}) => {
+    const record: Record<string, unknown> = { ...asset(), tags, ...extra };
+    if (!('categories' in extra)) delete record.categories;
+    return record;
+  };
+
+  it('`tags` 를 카테고리로 읽고, 옛 키는 남기지 않는다', () => {
+    const result = sanitizeAssetRecord(legacy(['indoor', 'crane']));
+    expect(result?.categories).toEqual(['indoor', 'crane']);
+    expect(result).not.toHaveProperty('tags');
+  });
+
+  it('옛 필드의 값도 같은 방어를 거친다 — 공백·중복·상한', () => {
+    const many = Array.from(
+      { length: ASSET_CATEGORIES_MAX + 3 },
+      (_, i) => `c${i}`,
+    );
+    expect(sanitizeAssetRecord(legacy([' crane ', 'Crane', '', 3]))?.categories).toEqual([
+      'crane',
+    ]);
+    expect(sanitizeAssetRecord(legacy(many))?.categories).toHaveLength(
+      ASSET_CATEGORIES_MAX,
+    );
+  });
+
+  it('두 필드가 다 있으면 새 필드가 이긴다 — 비어 있어도', () => {
+    expect(
+      sanitizeAssetRecord(legacy(['old'], { categories: ['new'] }))?.categories,
+    ).toEqual(['new']);
+    expect(
+      sanitizeAssetRecord(legacy(['old'], { categories: [] }))?.categories,
+    ).toEqual([]);
+  });
+
+  it('새 필드가 배열이 아니면 옛 필드를 읽는다', () => {
+    for (const broken of ['crane', null, { a: 1 }, 3]) {
+      expect(
+        sanitizeAssetRecord(legacy(['old'], { categories: broken }))?.categories,
+      ).toEqual(['old']);
+    }
+  });
+
+  it('옛 필드가 오염돼 있거나 둘 다 없어도 레코드를 버리지 않는다', () => {
+    for (const broken of ['crane', null, { a: 1 }, 3, undefined]) {
+      expect(sanitizeAssetRecord(legacy(broken))?.categories).toEqual([]);
+    }
+  });
+
+  it('이력이 적은 옛 필드 이름을 새 이름으로 읽는다 — 다른 이름은 그대로', () => {
+    const result = sanitizeAssetRecord({
+      ...asset(),
+      history: [
+        { id: 'h1', action: 'metadata', fields: ['tags', 'name'] },
+        { id: 'h2', action: 'metadata', fields: ['sites'] },
+      ],
+    });
+    expect(result?.history.map((entry) => entry.fields)).toEqual([
+      ['categories', 'name'],
+      ['sites'],
+    ]);
+  });
+
+  it('옛 이름과 새 이름이 한 이력에 함께 있으면 한 번만 남는다', () => {
+    const result = sanitizeAssetRecord({
+      ...asset(),
+      history: [
+        { id: 'h1', action: 'metadata', fields: ['tags', 'categories', 'tags'] },
+      ],
+    });
+    expect(result?.history[0].fields).toEqual(['categories']);
+  });
+
+  it('문서를 읽으면 이 앱의 스키마 판이 된다', () => {
+    const result = sanitizeAssetLibraryDocument({
+      schemaVersion: 1,
+      assets: [legacy(['crane'])],
+      collections: [],
+    });
+    expect(result.schemaVersion).toBe(ASSET_LIBRARY_SCHEMA_VERSION);
+    expect(result.assets[0].categories).toEqual(['crane']);
+  });
+
+  it('읽지 못한 레코드로 치지 않는다 — 저장할 때 도로 붙지 않는다', () => {
+    expect(
+      collectUnreadableAssetRecords({
+        schemaVersion: 1,
+        assets: [legacy(['crane'])],
+      }),
+    ).toEqual([]);
   });
 });
 
@@ -325,12 +554,21 @@ describe('assertReadableAssetLibraryDocument', () => {
     }
   });
 
-  it('이 앱보다 새 스키마는 던진다 — 정확히 같은 판은 통과', () => {
+  it('이 앱보다 새 스키마는 던진다 — 정확히 같은 판과 옛 판은 통과', () => {
+    expect(() =>
+      assertReadableAssetLibraryDocument({
+        schemaVersion: ASSET_LIBRARY_SCHEMA_VERSION,
+        assets: [],
+      }),
+    ).not.toThrow();
     expect(() =>
       assertReadableAssetLibraryDocument({ schemaVersion: 1, assets: [] }),
     ).not.toThrow();
     expect(() =>
-      assertReadableAssetLibraryDocument({ schemaVersion: 2, assets: [] }),
+      assertReadableAssetLibraryDocument({
+        schemaVersion: ASSET_LIBRARY_SCHEMA_VERSION + 1,
+        assets: [],
+      }),
     ).toThrow();
   });
 });

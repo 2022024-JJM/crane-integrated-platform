@@ -392,18 +392,135 @@ describe('sanitizeSceneInfo — cameraByRegion (공유 씬)', () => {
   });
 });
 
-describe('sanitizeSceneInfo — environmentId (3-상태)', () => {
-  it('문자열은 유지, null(배경 없음)도 유지, 미지정/빈 문자열은 필드 생략', () => {
-    expect(
-      sanitizeSceneInfo(scene({ environmentId: 'sky-1' })).environmentId,
-    ).toBe('sky-1');
-    expect(
-      sanitizeSceneInfo(scene({ environmentId: null })).environmentId,
-    ).toBe(null);
-    expect(sanitizeSceneInfo(scene())).not.toHaveProperty('environmentId');
-    expect(sanitizeSceneInfo(scene({ environmentId: '' }))).not.toHaveProperty(
-      'environmentId',
+describe('sanitizeSceneInfo — environment (배경)', () => {
+  it('경로와 자산 참조를 유지한다', () => {
+    const environment = {
+      path: '/scenes/sky.exr',
+      asset: { id: 'sky', version: 2 },
+    };
+    expect(sanitizeSceneInfo(scene({ environment })).environment).toEqual(
+      environment,
     );
+  });
+
+  it('자산 참조가 없는 배경은 경로만 남긴다', () => {
+    expect(
+      sanitizeSceneInfo(scene({ environment: { path: '/scenes/sky.exr' } }))
+        .environment,
+    ).toEqual({ path: '/scenes/sky.exr' });
+  });
+
+  it('미지정·null·경로 없는 값·객체가 아닌 값은 필드를 생략한다', () => {
+    for (const environment of [
+      undefined,
+      null,
+      {},
+      { path: '' },
+      { path: 42 },
+      'sky',
+      7,
+    ]) {
+      expect(sanitizeSceneInfo(scene({ environment }))).not.toHaveProperty(
+        'environment',
+      );
+    }
+  });
+
+  it('깨진 자산 참조는 버리고 배경은 살린다', () => {
+    expect(
+      sanitizeSceneInfo(
+        scene({ environment: { path: '/scenes/sky.exr', asset: { id: '' } } }),
+      ).environment,
+    ).toEqual({ path: '/scenes/sky.exr' });
+  });
+
+  it('옛 environmentId(카탈로그 id)는 읽지 않는다 — 출력에 남지 않는다', () => {
+    const result = sanitizeSceneInfo(scene({ environmentId: 'sky-1' }));
+    expect(result).not.toHaveProperty('environmentId');
+    expect(result).not.toHaveProperty('environment');
+  });
+});
+
+describe('sanitizeSceneInfo — 자산 참조(asset)와 지도 역할(role)', () => {
+  it('모델의 자산 참조를 유지한다', () => {
+    const result = sanitizeSceneInfo(
+      scene({ models: [model({ asset: { id: 'okpo-ttc', version: 3 } })] }),
+    );
+    expect(result.models[0].asset).toEqual({ id: 'okpo-ttc', version: 3 });
+  });
+
+  it('참조에 딸려 온 다른 필드는 떼고 id·version 만 남긴다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        models: [model({ asset: { id: 'a', version: 1, path: '/x.glb' } })],
+      }),
+    );
+    expect(result.models[0].asset).toEqual({ id: 'a', version: 1 });
+  });
+
+  it.each([
+    ['id 가 빈 문자열', { id: '', version: 1 }],
+    ['id 가 문자열이 아님', { id: 7, version: 1 }],
+    ['version 이 0', { id: 'a', version: 0 }],
+    ['version 이 음수', { id: 'a', version: -1 }],
+    ['version 이 소수', { id: 'a', version: 1.5 }],
+    ['version 이 문자열', { id: 'a', version: '1' }],
+    ['version 이 NaN', { id: 'a', version: Number.NaN }],
+    ['version 이 Infinity', { id: 'a', version: Number.POSITIVE_INFINITY }],
+    ['version 없음', { id: 'a' }],
+    ['null', null],
+    ['문자열', 'a@1'],
+  ])('깨진 참조(%s)는 필드를 버리고 모델은 살린다', (_label, asset) => {
+    const result = sanitizeSceneInfo(scene({ models: [model({ asset })] }));
+    expect(result.models).toHaveLength(1);
+    expect(result.models[0].asset).toBeUndefined();
+    // undefined 는 직렬화에서 빠진다 — 참조 없는 씬과 diff 가 없다.
+    expect(JSON.parse(JSON.stringify(result.models[0]))).not.toHaveProperty(
+      'asset',
+    );
+  });
+
+  it('version 1 은 통과한다(경계)', () => {
+    const result = sanitizeSceneInfo(
+      scene({ models: [model({ asset: { id: 'a', version: 1 } })] }),
+    );
+    expect(result.models[0].asset).toEqual({ id: 'a', version: 1 });
+  });
+
+  it('지도의 자산 참조와 역할을 유지한다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        maps: [
+          {
+            id: 'm1',
+            path: '/maps/a.glb',
+            asset: { id: 'map-a', version: 2 },
+            role: 'ground',
+          },
+          { id: 'm2', path: '/maps/b.glb', role: 'context' },
+        ],
+      }),
+    );
+    expect(result.maps[0].asset).toEqual({ id: 'map-a', version: 2 });
+    expect(result.maps[0].role).toBe('ground');
+    expect(result.maps[1].role).toBe('context');
+    expect(result.maps[1]).not.toHaveProperty('asset');
+  });
+
+  it('모르는 역할·오염된 역할은 필드를 생략한다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        maps: [
+          { id: 'm1', path: '/maps/a.glb', role: 'floor' },
+          { id: 'm2', path: '/maps/b.glb', role: 1 },
+          { id: 'm3', path: '/maps/c.glb', role: null },
+          { id: 'm4', path: '/maps/d.glb' },
+        ],
+      }),
+    );
+    for (const map of result.maps) {
+      expect(map).not.toHaveProperty('role');
+    }
   });
 });
 

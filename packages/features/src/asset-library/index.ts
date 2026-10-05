@@ -1,5 +1,6 @@
 export type {
   AddVersionInput,
+  AssetFileReport,
   AssetLibrarySaveState,
   AssetLibraryState,
   AssetLibraryStatus,
@@ -9,12 +10,14 @@ export type {
 export {
   ASSET_FAVORITES_STORAGE_KEY,
   createAssetLibraryStore,
+  toAssetUsageState,
   useAssetLibraryStore,
 } from './model/use-asset-library-store';
 export type { AssetFileUrlState } from './model/use-asset-file-url';
 export { useAssetFileUrl } from './model/use-asset-file-url';
-export { collectBuiltinAssetSources } from './lib/builtin-asset-sources';
+export { collectCodeAssetSources } from './lib/code-asset-sources';
 export {
+  collectSceneAssetRefs,
   groupRegionsBySceneFile,
   loadSceneAssetSources,
 } from './lib/scene-asset-sources';
@@ -55,12 +58,32 @@ export {
 } from './lib/viewer-camera-sync';
 export type {
   ScenePaletteBlockReason,
-  ScenePaletteGroup,
+  ScenePaletteEntry,
+  ScenePaletteEnvironment,
+  ScenePaletteMap,
   ScenePaletteModel,
+  ScenePaletteCategory,
 } from './lib/scene-palette';
 export {
+  buildScenePaletteEnvironments,
+  buildScenePaletteMaps,
   buildScenePaletteModels,
-  listScenePaletteGroups,
-  selectPlaceableCatalog,
+  filterScenePaletteModels,
+  listScenePaletteCategories,
+  pruneScenePaletteCategories,
+  searchScenePaletteCategories,
+  selectPlaceableModels,
+  toggleScenePaletteCategory,
 } from './lib/scene-palette';
-export { useScenePaletteModels } from './model/use-scene-palette-models';
+export type { ScenePalette } from './model/use-scene-palette';
+export { useScenePalette } from './model/use-scene-palette';
+export type {
+  SceneAssetIssues,
+  SceneAssetUpdate,
+  SceneAssetUpdateKind,
+} from './lib/scene-asset-updates';
+export {
+  countSceneAssetIssues,
+  listSceneAssetUpdates,
+} from './lib/scene-asset-updates';
+export { useSceneAssetUpdates } from './model/use-scene-asset-updates';

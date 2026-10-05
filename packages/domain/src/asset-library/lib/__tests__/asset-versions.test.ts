@@ -8,7 +8,7 @@ import {
   addAssetVersion,
   canRemoveAssetVersion,
   canTransitionStatus,
-  createUserAssetRecord,
+  createAssetRecord,
   diffAssetStats,
   getAllowedStatusTransitions,
   getCurrentAssetVersion,
@@ -210,10 +210,10 @@ describe('setAssetVersionStats', () => {
 
 describe('updateAssetMetadata', () => {
   it('달라진 필드만 반영하고 이력에 필드 이름을 남긴다', () => {
-    const before = asset({ name: 'A', tags: ['x'] });
+    const before = asset({ name: 'A', categories: ['x'] });
     const after = updateAssetMetadata(
       before,
-      { name: 'B', tags: ['x'], owner: 'kim' },
+      { name: 'B', categories: ['x'], owner: 'kim' },
       ctx(),
     );
     expect(after).toMatchObject({ name: 'B', owner: 'kim' });
@@ -224,9 +224,9 @@ describe('updateAssetMetadata', () => {
   });
 
   it('달라진 것이 없으면 같은 참조를 돌려준다', () => {
-    const before = asset({ name: 'A', tags: ['x', 'okpo'] });
+    const before = asset({ name: 'A', categories: ['x', 'okpo'] });
     expect(
-      updateAssetMetadata(before, { name: 'A', tags: ['x', 'okpo'] }, ctx()),
+      updateAssetMetadata(before, { name: 'A', categories: ['x', 'okpo'] }, ctx()),
     ).toBe(before);
     expect(updateAssetMetadata(before, {}, ctx())).toBe(before);
     // 없는 도면 번호를 빈 값으로 "고치는" 것도 변화가 아니다.
@@ -239,15 +239,107 @@ describe('updateAssetMetadata', () => {
     expect('drawingNo' in after).toBe(false);
   });
 
-  it('builtin 자산의 종류·기본 스케일 변경은 무시한다', () => {
-    const builtin = asset({ origin: 'builtin' });
-    expect(
-      updateAssetMetadata(builtin, { kind: 'map', defaultScale: [2, 2, 2] }, ctx()),
-    ).toBe(builtin);
-    const user = asset({ origin: 'user' });
-    expect(
-      updateAssetMetadata(user, { kind: 'map', defaultScale: [2, 2, 2] }, ctx()),
-    ).toMatchObject({ kind: 'map', defaultScale: [2, 2, 2] });
+  it('종류는 어느 자산이든 고칠 수 있다', () => {
+    expect(updateAssetMetadata(asset(), { kind: 'map' }, ctx())).toMatchObject({
+      kind: 'map',
+    });
+  });
+
+  describe('배치 속성(placement)', () => {
+    const map = asset({ kind: 'map' });
+
+    it('지도의 역할과 기본 위치를 적는다', () => {
+      const after = updateAssetMetadata(
+        map,
+        { placement: { mapRole: 'context', defaultPosition: [1, 2, 3] } },
+        ctx(),
+      );
+      expect(after.placement).toEqual({
+        mapRole: 'context',
+        defaultPosition: [1, 2, 3],
+      });
+      expect(after.history.at(-1)).toMatchObject({
+        action: 'metadata',
+        fields: ['placement'],
+      });
+    });
+
+    it('기본 동작인 값(ground·원점·false)은 저장하지 않는다 — 필드가 생기지 않는다', () => {
+      const after = updateAssetMetadata(
+        map,
+        {
+          placement: {
+            mapRole: 'ground',
+            defaultPosition: [0, 0, 0],
+            paletteHidden: false,
+          },
+        },
+        ctx(),
+      );
+      // 없던 것을 기본값으로 "고치는" 것은 변화가 아니다.
+      expect(after).toBe(map);
+      expect('placement' in after).toBe(false);
+    });
+
+    it('기본값으로 되돌리면 필드를 지운다', () => {
+      const before = asset({ kind: 'map', placement: { mapRole: 'context' } });
+      const after = updateAssetMetadata(
+        before,
+        { placement: { mapRole: 'ground' } },
+        ctx(),
+      );
+      expect('placement' in after).toBe(false);
+      expect(after.history.at(-1)?.fields).toEqual(['placement']);
+    });
+
+    it('같은 값이면 입력 참조를 그대로 돌려준다', () => {
+      const before = asset({
+        kind: 'map',
+        placement: { mapRole: 'context', defaultPosition: [1, 2, 3] },
+      });
+      expect(
+        updateAssetMetadata(
+          before,
+          { placement: { mapRole: 'context', defaultPosition: [1, 2, 3] } },
+          ctx(),
+        ),
+      ).toBe(before);
+    });
+
+    it('종류에 맞지 않는 항목은 떨어진다 — 모델에 지도의 역할을 적을 수 없다', () => {
+      const model = asset({ kind: 'model' });
+      expect(
+        updateAssetMetadata(
+          model,
+          { placement: { mapRole: 'context', defaultPosition: [1, 2, 3] } },
+          ctx(),
+        ),
+      ).toBe(model);
+      expect(
+        updateAssetMetadata(model, { placement: { floating: true } }, ctx())
+          .placement,
+      ).toEqual({ floating: true });
+    });
+
+    it('종류를 바꾸면 그 종류에 맞지 않는 배치 속성이 떨어진다', () => {
+      const before = asset({
+        kind: 'map',
+        placement: { mapRole: 'context', paletteHidden: true },
+      });
+      const after = updateAssetMetadata(before, { kind: 'model' }, ctx());
+      // 팔레트 숨김은 모델에도 있는 항목이라 남고, 지도의 역할은 떨어진다.
+      expect(after.placement).toEqual({ paletteHidden: true });
+      expect(after.history.at(-1)?.fields).toEqual(['placement', 'kind']);
+    });
+
+    it('씬에 쓰지 않는 종류(도면)로 바꾸면 배치 속성 전체가 사라진다', () => {
+      const before = asset({
+        kind: 'model',
+        placement: { paletteHidden: true, floating: true },
+      });
+      const after = updateAssetMetadata(before, { kind: 'drawing' }, ctx());
+      expect('placement' in after).toBe(false);
+    });
   });
 
   it('같은 사람이 병합 창 안에 이어 고치면 이력 한 줄로 묶는다', () => {
@@ -316,15 +408,15 @@ describe('setAssetThumbnail', () => {
   });
 });
 
-describe('createUserAssetRecord', () => {
+describe('createAssetRecord', () => {
   it('버전 1(draft)과 생성 이력으로 시작하고 등록자가 담당자가 된다', () => {
-    const record = createUserAssetRecord(
+    const record = createAssetRecord(
       {
         id: 'new-asset',
         kind: 'drawing',
         name: 'New',
         description: '',
-        tags: ['philly'],
+        categories: ['philly'],
         file,
         drawingNo: 'D-100',
         revision: 'A',
@@ -332,7 +424,6 @@ describe('createUserAssetRecord', () => {
       ctx('2026-03-01T00:00:00.000Z', 'crane.ocean'),
     );
     expect(record).toMatchObject({
-      origin: 'user',
       owner: 'crane.ocean',
       currentVersion: 1,
       drawingNo: 'D-100',
@@ -348,6 +439,36 @@ describe('createUserAssetRecord', () => {
     expect(record.history).toEqual([
       expect.objectContaining({ action: 'created', version: 1 }),
     ]);
+  });
+
+  it('배치 속성의 첫 값을 종류에 맞게 걸러 싣는다', () => {
+    const base = {
+      id: 'm',
+      name: 'M',
+      description: '',
+      categories: [],
+      file,
+    };
+    expect(
+      createAssetRecord(
+        { ...base, kind: 'map', placement: { defaultPosition: [1, 2, 3] } },
+        ctx(),
+      ).placement,
+    ).toEqual({ defaultPosition: [1, 2, 3] });
+    // 원점은 기본 동작이라 필드가 생기지 않는다.
+    expect(
+      createAssetRecord(
+        { ...base, kind: 'map', placement: { defaultPosition: [0, 0, 0] } },
+        ctx(),
+      ),
+    ).not.toHaveProperty('placement');
+    // 모델에는 지도의 기본 위치가 없다.
+    expect(
+      createAssetRecord(
+        { ...base, kind: 'model', placement: { defaultPosition: [1, 2, 3] } },
+        ctx(),
+      ),
+    ).not.toHaveProperty('placement');
   });
 });
 

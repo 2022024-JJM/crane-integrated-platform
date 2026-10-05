@@ -12,15 +12,17 @@ import {
   ASSET_HISTORY_MAX,
   ASSET_KINDS,
   ASSET_LIBRARY_SCHEMA_VERSION,
+  ASSET_MAP_ROLES,
   ASSET_NAME_MAX,
   ASSET_NOTE_MAX,
   ASSET_OWNER_MAX,
   ASSET_RELATED_MAX,
   ASSET_REVISION_MAX,
-  ASSET_TAG_MAX,
-  ASSET_TAGS_MAX,
+  ASSET_CATEGORY_MAX,
+  ASSET_CATEGORIES_MAX,
   ASSET_VERSION_STATUSES,
   ASSET_VERSIONS_MAX,
+  isSceneAssetKind,
   type AssetCollection,
   type AssetFile,
   type AssetFileRef,
@@ -28,6 +30,8 @@ import {
   type AssetHistoryEntry,
   type AssetKind,
   type AssetLibraryDocument,
+  type AssetMapRole,
+  type AssetPlacement,
   type AssetRecord,
   type AssetStats,
   type AssetStatsTable,
@@ -74,19 +78,22 @@ function toVector3(value: unknown): Vector3Tuple | null {
   return [value[0], value[1], value[2]];
 }
 
-export function sanitizeAssetTags(value: unknown): string[] {
+/** 스키마 1 의 문서가 카테고리를 적던 필드 이름. 읽을 때 `categories` 로 올린다. */
+const LEGACY_CATEGORIES_FIELD = 'tags';
+
+export function sanitizeAssetCategories(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
-  const tags: string[] = [];
+  const categories: string[] = [];
   for (const item of value) {
-    const tag = toText(item, ASSET_TAG_MAX);
-    const key = tag.toLowerCase();
-    if (!tag || seen.has(key)) continue;
+    const category = toText(item, ASSET_CATEGORY_MAX);
+    const key = category.toLowerCase();
+    if (!category || seen.has(key)) continue;
     seen.add(key);
-    tags.push(tag);
-    if (tags.length >= ASSET_TAGS_MAX) break;
+    categories.push(category);
+    if (categories.length >= ASSET_CATEGORIES_MAX) break;
   }
-  return tags;
+  return categories;
 }
 
 /**
@@ -205,10 +212,15 @@ function sanitizeHistory(value: unknown): AssetHistoryEntry[] {
     seen.add(id);
     const from = toText(item.from, 40);
     const to = toText(item.to, 40);
+    // 스키마 1 의 이력은 카테고리 변경을 옛 필드 이름으로 적었다.
     const fields = Array.isArray(item.fields)
-      ? item.fields
-          .filter((f): f is string => typeof f === 'string' && f !== '')
-          .slice(0, 20)
+      ? [
+          ...new Set(
+            item.fields
+              .filter((f): f is string => typeof f === 'string' && f !== '')
+              .map((f) => (f === LEGACY_CATEGORIES_FIELD ? 'categories' : f)),
+          ),
+        ].slice(0, 20)
       : [];
     entries.push({
       id,
@@ -248,6 +260,37 @@ function sanitizeIdList(value: unknown, max: number): string[] {
   return ids;
 }
 
+/**
+ * 배치 속성 — 종류에 맞는 항목만, 기본 동작이 아닌 값만 남긴다. 지도의 역할
+ * `ground`·원점 위치·false 인 스위치는 "값 없음" 과 같은 동작이라 싣지 않는다
+ * (같은 상태가 두 모양으로 저장되면 수정 이력이 헛돈다). 씬에 쓰지 않는 종류
+ * (도면·CAD)이거나 남는 것이 없으면 undefined 다.
+ */
+export function sanitizeAssetPlacement(
+  value: unknown,
+  kind: AssetKind,
+): AssetPlacement | undefined {
+  if (!isObject(value) || !isSceneAssetKind(kind)) return undefined;
+  const placement: AssetPlacement = {};
+  if (value.paletteHidden === true) placement.paletteHidden = true;
+  if (kind === 'map') {
+    if (
+      ASSET_MAP_ROLES.includes(value.mapRole as AssetMapRole) &&
+      value.mapRole !== 'ground'
+    ) {
+      placement.mapRole = value.mapRole as AssetMapRole;
+    }
+    const position = toVector3(value.defaultPosition);
+    if (position && position.some((n) => n !== 0)) {
+      placement.defaultPosition = position;
+    }
+  }
+  if (kind === 'model' && value.floating === true) {
+    placement.floating = true;
+  }
+  return Object.keys(placement).length > 0 ? placement : undefined;
+}
+
 export function sanitizeAssetRecord(value: unknown): AssetRecord | null {
   if (!isObject(value)) return null;
   const id = typeof value.id === 'string' ? value.id : '';
@@ -258,25 +301,26 @@ export function sanitizeAssetRecord(value: unknown): AssetRecord | null {
   if (versions.length === 0) return null;
 
   const hasCurrent = versions.some((v) => v.version === value.currentVersion);
-  const defaultScale = toVector3(value.defaultScale);
+  const kind = value.kind as AssetKind;
   const thumbnail = sanitizeThumbnail(value.thumbnail);
-  const catalogId = toText(value.catalogId, 80);
+  const placement = sanitizeAssetPlacement(value.placement, kind);
   const drawingNo = toText(value.drawingNo, ASSET_DRAWING_NO_MAX);
 
+  // 옛 문서의 `origin`·`catalogId`·`defaultScale` 은 읽지 않는다 — 코드
+  // 카탈로그가 없어져 뜻이 없고, 다음 저장에서 사라진다.
   return {
     id,
-    kind: value.kind as AssetKind,
-    origin: value.origin === 'builtin' ? 'builtin' : 'user',
+    kind,
     name: toText(value.name, ASSET_NAME_MAX) || id,
     description: toText(value.description, ASSET_DESCRIPTION_MAX),
-    tags: sanitizeAssetTags(value.tags),
+    // 스키마 1 의 문서는 같은 값을 옛 필드에 적었다. 둘 다 있으면 새 필드다.
+    categories: sanitizeAssetCategories(
+      Array.isArray(value.categories)
+        ? value.categories
+        : value[LEGACY_CATEGORIES_FIELD],
+    ),
     owner: toText(value.owner, ASSET_OWNER_MAX),
-    ...(catalogId ? { catalogId } : {}),
-    // 0 이나 음수 스케일은 크기 환산을 깨뜨린다 — 기본값으로 돌린다.
-    defaultScale:
-      defaultScale && defaultScale.every((n) => n > 0)
-        ? defaultScale
-        : [1, 1, 1],
+    ...(placement ? { placement } : {}),
     ...(drawingNo ? { drawingNo } : {}),
     relatedAssetIds: sanitizeIdList(value.relatedAssetIds, ASSET_RELATED_MAX)
       .filter((related) => related !== id),
@@ -304,8 +348,8 @@ function sanitizeCollections(value: unknown): AssetCollection[] {
     collections.push({
       id,
       name,
-      // 문서 안에 없는 자산 id 는 여기서 지우지 않는다 — builtin 자산은 문서에
-      // 없을 수 있다. 존재 여부 정리는 병합(merge) 단계가 맡는다.
+      // 없는 자산을 가리키는 id 는 문서 단위 정리가 걷어낸다
+      // (sanitizeAssetLibraryDocument).
       assetIds: sanitizeIdList(item.assetIds, 5000),
     });
     if (collections.length >= ASSET_COLLECTIONS_MAX) break;
@@ -372,10 +416,22 @@ export function sanitizeAssetLibraryDocument(
     seen.add(record.id);
     assets.push(record);
   }
+  // 없어진 자산을 가리키는 연결·컬렉션 항목을 걷어낸다 — 문서가 자산의 유일한
+  // 원천이라 문서에 없는 id 는 어디에도 없다. 달라진 것이 없으면 레코드
+  // 참조를 그대로 둔다.
+  const prune = (ids: string[]) => ids.filter((id) => seen.has(id));
   return {
     schemaVersion: ASSET_LIBRARY_SCHEMA_VERSION,
-    assets,
-    collections: sanitizeCollections(value.collections),
+    assets: assets.map((asset) => {
+      const related = prune(asset.relatedAssetIds);
+      return related.length === asset.relatedAssetIds.length
+        ? asset
+        : { ...asset, relatedAssetIds: related };
+    }),
+    collections: sanitizeCollections(value.collections).map((collection) => ({
+      ...collection,
+      assetIds: prune(collection.assetIds),
+    })),
   };
 }
 

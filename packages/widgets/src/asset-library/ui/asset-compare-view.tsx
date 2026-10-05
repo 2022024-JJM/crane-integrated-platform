@@ -27,7 +27,6 @@ import { AssetEnvironmentViewer } from './asset-environment-viewer';
 import { AssetModelViewer } from './asset-model-viewer';
 
 interface ComparePaneProps {
-  asset: AssetRecord;
   version: AssetVersion;
   /** 기준 쪽인가. 기준 쪽이 조작 도구를 들고 양쪽 표시를 함께 바꾼다. */
   base: boolean;
@@ -38,7 +37,6 @@ interface ComparePaneProps {
 }
 
 function ComparePane({
-  asset,
   version,
   base,
   display,
@@ -81,7 +79,6 @@ function ComparePane({
       ) : mode === 'model' ? (
         <AssetModelViewer
           url={file.url}
-          defaultScale={asset.defaultScale}
           toolbar={base ? 'full' : 'none'}
           display={display}
           onDisplayChange={onDisplayChange}
@@ -199,7 +196,6 @@ export function AssetCompareView({
       </div>
       <div className="divide-border flex min-h-0 flex-1 flex-col divide-y md:flex-row md:divide-x md:divide-y-0">
         <ComparePane
-          asset={asset}
           version={base}
           base
           display={display}
@@ -208,7 +204,6 @@ export function AssetCompareView({
           onMeasured={onMeasured}
         />
         <ComparePane
-          asset={asset}
           version={target}
           base={false}
           display={followerDisplay}

@@ -21,7 +21,6 @@ import {
   isGeometryAssetKind,
   resolveVersionSizeBytes,
   resolveVersionStats,
-  toMeterSize,
   type AssetAttentionKind,
   type AssetBudgetMetric,
   type AssetRecord,
@@ -85,8 +84,8 @@ interface AssetPreviewPanelProps {
   onToggleFavorite: () => void;
   /** 경로의 마디를 누름 — 목록을 그 위치로 옮긴다. */
   onSelectScope: (scope: AssetScope) => void;
-  /** 태그를 누름 — 그 태그를 가진 자산만 본다. */
-  onSelectTag: (tag: string) => void;
+  /** 카테고리를 누름 — 그 카테고리를 가진 자산만 본다. */
+  onSelectCategory: (category: string) => void;
 }
 
 /** 묶음 하나 — 작은 제목 아래 값들이 세 칸 격자로 놓인다. */
@@ -153,7 +152,7 @@ export function AssetPreviewPanel({
   onClose,
   onToggleFavorite,
   onSelectScope,
-  onSelectTag,
+  onSelectCategory,
 }: AssetPreviewPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = getFormatLocale(i18n.language);
@@ -194,7 +193,7 @@ export function AssetPreviewPanel({
   const mode = getAssetPreviewMode(version.file.format);
   const sizeBytes = resolveVersionSizeBytes(version, statsTable);
   const stats = resolveVersionStats(version, statsTable);
-  const meters = stats?.size ? toMeterSize(stats.size, asset.defaultScale) : null;
+  const meters = stats?.size ?? null;
   const document = isDocumentAssetKind(asset.kind);
   const overBudget = new Set<AssetBudgetMetric>(
     stats ? evaluateAssetBudget(asset.kind, stats).map((w) => w.metric) : [],
@@ -311,7 +310,6 @@ export function AssetPreviewPanel({
               <AssetModelViewer
                 key={`${asset.id}@${version.version}`}
                 url={file.url}
-                defaultScale={asset.defaultScale}
                 toolbar="compact"
               />
             )
@@ -515,31 +513,31 @@ export function AssetPreviewPanel({
           </FactGroup>
         ) : null}
 
-        {asset.tags.length > 0 || asset.description ? (
+        {asset.categories.length > 0 || asset.description ? (
           <section className="px-4 py-4">
             {asset.description ? (
               <p className="text-foreground/85 text-[13px] leading-relaxed">
                 {asset.description}
               </p>
             ) : null}
-            {asset.tags.length > 0 ? (
+            {asset.categories.length > 0 ? (
               <ul
                 className={cn(
                   'flex flex-wrap gap-1.5',
                   asset.description && 'mt-3',
                 )}
               >
-                {asset.tags.map((tag) => (
-                  <li key={tag}>
+                {asset.categories.map((category) => (
+                  <li key={category}>
                     <button
                       type="button"
-                      aria-label={t('asset-library:preview.filterByTag', {
-                        tag,
+                      aria-label={t('asset-library:preview.filterByCategory', {
+                        category,
                       })}
-                      onClick={() => onSelectTag(tag)}
+                      onClick={() => onSelectCategory(category)}
                       className="border-border text-foreground/80 hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-full border px-2.5 py-1 text-xs leading-none outline-none focus-visible:ring-2"
                     >
-                      {tag}
+                      {category}
                     </button>
                   </li>
                 ))}

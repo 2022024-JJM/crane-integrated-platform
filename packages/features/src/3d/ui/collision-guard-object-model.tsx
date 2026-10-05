@@ -12,7 +12,11 @@ import {
   type Material,
   type MeshStandardMaterial,
 } from 'three';
-import { extendGltfLoaderWithKtx2, withBaseUrl } from '@crane/domain/3d';
+import {
+  CODE_ASSETS,
+  extendGltfLoaderWithKtx2,
+  withBaseUrl,
+} from '@crane/domain/3d';
 import type { DetectedObjectType } from '../model/use-collision-guard-store';
 
 /**
@@ -47,7 +51,7 @@ interface ObjectModelSource {
 const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource[]> = {
   person: [
     {
-      path: '/models/man.glb',
+      path: CODE_ASSETS.man.path,
       targetSize: 1.75,
       sizeAxis: 'height',
       rotationY: Math.PI / 2,
@@ -55,7 +59,7 @@ const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource[]> = {
   ],
   car: [
     {
-      path: '/models/car.glb',
+      path: CODE_ASSETS.car.path,
       targetSize: 4.5,
       sizeAxis: 'length',
       rotationY: Math.PI / 2,
@@ -63,7 +67,7 @@ const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource[]> = {
   ],
   forklift: [
     {
-      path: '/models/fork_lift.glb',
+      path: CODE_ASSETS.forkLift.path,
       targetSize: 2.9,
       sizeAxis: 'length',
       rotationY: Math.PI / 2,

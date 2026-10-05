@@ -28,36 +28,36 @@ export function listBulkTransitions(
   }));
 }
 
-/** 고른 자산들이 가진 태그 — 많이 쓰인 순, 대소문자를 가리지 않고 묶는다. */
-export function listBulkTags(selected: readonly AssetRecord[]): string[] {
-  const counts = new Map<string, { tag: string; count: number }>();
+/** 고른 자산들이 가진 카테고리 — 많이 쓰인 순, 대소문자를 가리지 않고 묶는다. */
+export function listBulkCategories(selected: readonly AssetRecord[]): string[] {
+  const counts = new Map<string, { category: string; count: number }>();
   for (const asset of selected) {
-    for (const tag of asset.tags) {
-      const key = tag.toLowerCase();
+    for (const category of asset.categories) {
+      const key = category.toLowerCase();
       const entry = counts.get(key);
       if (entry) entry.count += 1;
-      else counts.set(key, { tag, count: 1 });
+      else counts.set(key, { category, count: 1 });
     }
   }
   return [...counts.values()]
-    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
-    .map((entry) => entry.tag);
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
+    .map((entry) => entry.category);
 }
 
-/** 태그 하나를 뺀 목록. 없으면 null(바꿀 것이 없다). */
-export function withoutTag(
-  tags: readonly string[],
-  tag: string,
+/** 카테고리 하나를 뺀 목록. 없으면 null(바꿀 것이 없다). */
+export function withoutCategory(
+  categories: readonly string[],
+  category: string,
 ): string[] | null {
-  const key = tag.toLowerCase();
-  const next = tags.filter((item) => item.toLowerCase() !== key);
-  return next.length === tags.length ? null : next;
+  const key = category.toLowerCase();
+  const next = categories.filter((item) => item.toLowerCase() !== key);
+  return next.length === categories.length ? null : next;
 }
 
-/** 태그 하나를 더한 목록. 이미 있으면 null. */
-export function withTag(tags: readonly string[], tag: string): string[] | null {
-  const key = tag.toLowerCase();
-  return tags.some((item) => item.toLowerCase() === key)
+/** 카테고리 하나를 더한 목록. 이미 있으면 null. */
+export function withCategory(categories: readonly string[], category: string): string[] | null {
+  const key = category.toLowerCase();
+  return categories.some((item) => item.toLowerCase() === key)
     ? null
-    : [...tags, tag];
+    : [...categories, category];
 }

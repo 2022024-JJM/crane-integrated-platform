@@ -79,7 +79,7 @@ export const RIG_CONSTRAINT_TYPES = [
 export interface RigDefinition {
   id: string;
   name: string;
-  /** 이 리그가 전제하는 GLB 경로(카탈로그 path). 노드 경로가 이 파일 기준이다. */
+  /** 이 리그가 전제하는 GLB 경로(씬 모델의 path). 노드 경로가 이 파일 기준이다. */
   modelPath: string;
   joints: RigJoint[];
   constraints: RigConstraint[];

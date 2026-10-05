@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AssetRecord } from '@crane/domain/asset-library';
 import {
   analyzeAssetFile,
+  getAssetFileProblemMessage,
   LARGE_ASSET_FILE_BYTES,
 } from '../analyze-asset-file';
 
@@ -16,6 +17,28 @@ function glb(totalBytes = 64, patch: (view: DataView) => void = () => {}) {
   return bytes;
 }
 
+/** 크기(dataWindow)만 가진 최소 EXR 헤더. `magic` 을 바꾸면 EXR 이 아니다. */
+function exr(width: number, height: number, magic = 0x01312f76) {
+  const bytes: number[] = [];
+  const int = (value: number) => {
+    const view = new DataView(new ArrayBuffer(4));
+    view.setInt32(0, value, true);
+    bytes.push(...new Uint8Array(view.buffer));
+  };
+  const text = (value: string) => {
+    for (const char of value) bytes.push(char.charCodeAt(0));
+    bytes.push(0);
+  };
+  int(magic);
+  int(2);
+  text('dataWindow');
+  text('box2i');
+  int(16);
+  for (const value of [0, 0, width - 1, height - 1]) int(value);
+  bytes.push(0);
+  return new Uint8Array(bytes);
+}
+
 const file = (bytes: Uint8Array | string, name: string) =>
   new File([bytes as BlobPart], name);
 
@@ -23,12 +46,10 @@ function uploaded(contentHash: string): AssetRecord {
   return {
     id: 'existing',
     kind: 'model',
-    origin: 'user',
     name: 'Existing',
     description: '',
-    tags: [],
+    categories: [],
     owner: '',
-    defaultScale: [1, 1, 1],
     relatedAssetIds: [],
     versions: [
       {
@@ -105,6 +126,40 @@ describe('analyzeAssetFile', () => {
     ).toEqual({ code: 'glb', reason: 'bad-version' });
   });
 
+  it('배경(EXR)은 해상도를 읽어 통과시킨다', async () => {
+    const result = await analyzeAssetFile(file(exr(4096, 2048), 'sky.exr'), []);
+    expect(result).toMatchObject({
+      format: 'exr',
+      allowedKinds: ['environment'],
+      problem: null,
+    });
+    expect(result.contentHash).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
+  it('GPU 상한을 넘는 EXR 은 막는다 — 8192 는 통과, 8193 은 거부', async () => {
+    expect(
+      (await analyzeAssetFile(file(exr(8192, 4096), 'sky.exr'), [])).problem,
+    ).toBeNull();
+    const tooLarge = await analyzeAssetFile(file(exr(8193, 4096), 'sky.exr'), []);
+    expect(tooLarge.problem).toEqual({ code: 'exr', reason: 'too-large' });
+    // 막힌 파일은 해시하지 않는다.
+    expect(tooLarge.contentHash).toBeNull();
+  });
+
+  it('확장자만 exr 인 파일과 크기를 읽을 수 없는 EXR 을 구분해 막는다', async () => {
+    expect(
+      (await analyzeAssetFile(file('not an exr file', 'sky.exr'), [])).problem,
+    ).toEqual({ code: 'exr', reason: 'bad-magic' });
+    expect(
+      (
+        await analyzeAssetFile(
+          file(exr(4096, 2048).subarray(0, 20), 'sky.exr'),
+          [],
+        )
+      ).problem,
+    ).toEqual({ code: 'exr', reason: 'no-size' });
+  });
+
   it('도면은 GLB 검사를 거치지 않는다', async () => {
     const result = await analyzeAssetFile(file('%PDF-1.7', 'plan.pdf'), []);
     expect(result).toMatchObject({ allowedKinds: ['drawing'], problem: null });
@@ -164,5 +219,34 @@ describe('analyzeAssetFile', () => {
     // 크기를 속였으므로 GLB 길이 검사에는 걸리지만, 큰 파일 판정은 그와 무관하다.
     expect((await analyzeAssetFile(sized(LARGE_ASSET_FILE_BYTES), [])).large).toBe(false);
     expect((await analyzeAssetFile(sized(LARGE_ASSET_FILE_BYTES + 1), [])).large).toBe(true);
+  });
+});
+
+describe('getAssetFileProblemMessage', () => {
+  it('문제마다 번역 키와 끼워 넣을 값을 준다', () => {
+    expect(getAssetFileProblemMessage({ code: 'empty' })).toEqual({
+      key: 'asset-library:import.problem.empty',
+    });
+    expect(
+      getAssetFileProblemMessage({ code: 'glb', reason: 'bad-magic' }),
+    ).toEqual({ key: 'asset-library:import.problem.glb.bad-magic' });
+    expect(
+      getAssetFileProblemMessage({ code: 'exr', reason: 'too-large' }),
+    ).toEqual({
+      key: 'asset-library:import.problem.exr.too-large',
+      values: { max: 8192 },
+    });
+  });
+
+  it('형식을 알 수 없으면 ? 로 적는다', () => {
+    expect(
+      getAssetFileProblemMessage({ code: 'unsupported', format: 'fbx' }),
+    ).toEqual({
+      key: 'asset-library:import.problem.unsupported',
+      values: { format: 'fbx' },
+    });
+    expect(
+      getAssetFileProblemMessage({ code: 'unsupported', format: '' }).values,
+    ).toEqual({ format: '?' });
   });
 });

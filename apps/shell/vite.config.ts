@@ -21,6 +21,7 @@ import {
   parseAssetLibraryFileKey,
   ASSET_LIBRARY_REVISION_HEADER,
   hashAssetLibraryText,
+  isRemovableLegacyAssetPath,
   ASSET_LIBRARY_ORIGINALS_DIR,
 } from '../../packages/domain/src/asset-library/model/asset-library-paths';
 
@@ -210,10 +211,8 @@ function devVirtualTagsSavePlugin(): Plugin {
 
 const execFileAsync = promisify(execFile);
 
-const DEV_PREVIEW_API_PATH = '/__dev/preview-thumbnail';
-
-// PNG 시그니처(매직 넘버). 잘못된 바디가 public/previews/ 를 오염시키지 않게
-// 최소한 "PNG 파일처럼 생겼는가"는 확인한다 (씬 저장의 isSceneInfoShaped 선례).
+// PNG 시그니처(매직 넘버). 잘못된 바디가 썸네일 자리를 오염시키지 않게 최소한
+// "PNG 파일처럼 생겼는가"는 확인한다 (씬 저장의 isSceneInfoShaped 선례).
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 async function readRequestBodyBuffer(req: NodeJS.ReadableStream) {
@@ -229,104 +228,169 @@ async function readRequestBodyBuffer(req: NodeJS.ReadableStream) {
 }
 
 /**
- * 모델 미리보기 썸네일 저장 미들웨어 (dev 전용).
- *
- * 씬 편집 페이지 모델 탭의 썸네일 생성 패널(PreviewThumbnailGeneratorPanel)이
- * offscreen 렌더러로 만든 PNG 를 여기로 POST 하면 public/previews/<id>.png
- * 로 저장된다. 생성물은 커밋해서 배포하고,
- * 런타임(SceneModelPreview)은 이 파일을 먼저 시도한 뒤 없으면 offscreen
- * 렌더로 폴백한다.
+ * 최적화가 이보다 오래 걸리면 포기하고 원본을 쓴다. 지도는 수백 MB 원본을
+ * 데시메이션·타일링까지 하므로 훨씬 길게 잡는다.
  */
-function devPreviewSavePlugin(): Plugin {
-  return {
-    name: 'dev-preview-save-plugin',
-    configureServer(server) {
-      server.middlewares.use(DEV_PREVIEW_API_PATH, async (req, res, next) => {
-        if (req.method !== 'POST' || !req.url) {
-          next();
-          return;
-        }
+const OPTIMIZE_TIMEOUT_MS = {
+  model: 5 * 60 * 1000,
+  map: 30 * 60 * 1000,
+} as const;
 
-        const requestUrl = new URL(req.url, 'http://localhost');
-        const id = requestUrl.searchParams.get('id');
+/** 종류마다 다른 파이프라인 — 둘 다 `--single <입력> <출력> --report <json>`. */
+const OPTIMIZE_SCRIPT = {
+  model: 'optimize-glb.mjs',
+  map: 'optimize-map.mjs',
+} as const;
 
-        // id 가 곧 파일명이므로 경로 탈출('../', '/')이 불가능한 문자만 허용한다.
-        if (!id || !/^[a-z0-9-]+$/.test(id)) {
-          jsonResponse(res, 400, {
-            message: `Invalid preview id: "${id ?? ''}". Expected /^[a-z0-9-]+$/.`,
-          });
-          return;
-        }
+type OptimizeKind = keyof typeof OPTIMIZE_SCRIPT;
 
-        try {
-          const body = await readRequestBodyBuffer(req);
-
-          if (
-            body.length < PNG_MAGIC.length ||
-            !body.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)
-          ) {
-            jsonResponse(res, 400, {
-              message: 'Invalid payload: expected a PNG binary body.',
-            });
-            return;
-          }
-
-          const previewDir = path.resolve(
-            server.config.root,
-            'public',
-            'previews',
-          );
-          await fs.mkdir(previewDir, { recursive: true });
-          await fs.writeFile(path.join(previewDir, `${id}.png`), body);
-
-          jsonResponse(res, 200, { id, bytes: body.length });
-        } catch (error) {
-          console.error('Failed to save preview thumbnail.', error);
-          jsonResponse(res, 500, {
-            message: 'Failed to save preview thumbnail.',
-          });
-        }
-      });
-    },
-  };
+function isOptimizeKind(value: string | null): value is OptimizeKind {
+  return value === 'model' || value === 'map';
 }
 
-/** 최적화가 이보다 오래 걸리면 포기하고 원본을 쓴다. */
-const GLB_OPTIMIZE_TIMEOUT_MS = 5 * 60 * 1000;
+/** GitHub 이 받지 않는 크기 — 이보다 큰 원본은 커밋하지 않는다(.gitignore). */
+const GIT_FILE_LIMIT_BYTES = 100 * 1024 * 1024;
+
+type Vector3 = [number, number, number];
+
+interface OptimizeReport {
+  /** 파이프라인이 한 일(또는 원본을 쓰는 이유) — 화면이 그대로 알린다. */
+  lines: string[];
+  /**
+   * 지도 파이프라인이 지운 루트 오프셋. 새 지도는 이 값이 기본 위치가 되어
+   * 원래 자리에 놓인다.
+   */
+  rootOffset?: Vector3;
+}
+
+interface OptimizeResult {
+  /** 최적화한 파일. 실패했거나 원본보다 작지 않으면 null(호출부가 원본을 쓴다). */
+  output: Buffer | null;
+  report: OptimizeReport;
+}
+
+function isVector3(value: unknown): value is Vector3 {
+  return (
+    Array.isArray(value) &&
+    value.length === 3 &&
+    value.every((item) => typeof item === 'number' && Number.isFinite(item))
+  );
+}
 
 /**
- * GLB 를 최적화 파이프라인(`scripts/optimize-glb.mjs --single`)에 통과시킨다.
- * 스크립트를 그대로 자식 프로세스로 돌린다 — 파이프라인의 순서·정책이 한 곳에만
- * 있어야 `pnpm optimize:glb` 와 결과가 같다. 실패하면 null(호출부가 원본을 쓴다).
+ * 스크립트가 적어 둔 보고(`{ "lines": [...], "rootOffset"?: [x,y,z] }`)를 읽는다.
+ * 없거나 깨졌으면 빈 보고.
+ */
+async function readOptimizeReport(reportPath: string): Promise<OptimizeReport> {
+  try {
+    const parsed: unknown = JSON.parse(await fs.readFile(reportPath, 'utf8'));
+    if (typeof parsed !== 'object' || parsed === null) return { lines: [] };
+    const { lines, rootOffset } = parsed as Record<string, unknown>;
+    return {
+      lines: Array.isArray(lines)
+        ? lines.filter((line): line is string => typeof line === 'string')
+        : [],
+      ...(isVector3(rootOffset) ? { rootOffset } : {}),
+    };
+  } catch {
+    return { lines: [] };
+  }
+}
+
+/**
+ * GLB 를 그 종류의 최적화 파이프라인(`scripts/optimize-glb.mjs`·
+ * `optimize-map.mjs` 의 `--single`)에 통과시킨다. 스크립트를 그대로 자식
+ * 프로세스로 돌린다 — 파이프라인의 순서·정책이 한 곳에만 있어야 한다. 사람이
+ * 고를 옵션은 없다: 지도의 타일·LOD·압축 여부는 스크립트가 파일을 재서 정하고
+ * 무엇을 골랐는지를 보고에 적는다. 실패하면 output 이 null 이고 이유가 보고에
+ * 담긴다(호출부가 원본을 쓴다).
  */
 async function optimizeGlbBuffer(
   repoRoot: string,
   input: Buffer,
-): Promise<Buffer | null> {
+  kind: OptimizeKind,
+): Promise<OptimizeResult> {
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'asset-optimize-'));
   const inputPath = path.join(workDir, 'input.glb');
   const outputPath = path.join(workDir, 'output.glb');
+  const reportPath = path.join(workDir, 'report.json');
   try {
     await fs.writeFile(inputPath, input);
     await execFileAsync(
       process.execPath,
       [
-        path.join(repoRoot, 'scripts', 'optimize-glb.mjs'),
+        path.join(repoRoot, 'scripts', OPTIMIZE_SCRIPT[kind]),
         '--single',
         inputPath,
         outputPath,
+        '--report',
+        reportPath,
       ],
-      { timeout: GLB_OPTIMIZE_TIMEOUT_MS },
+      // 지도 파이프라인은 로그가 길다 — 기본 버퍼(1MB)를 넘겨 죽지 않게 한다.
+      { timeout: OPTIMIZE_TIMEOUT_MS[kind], maxBuffer: 64 * 1024 * 1024 },
     );
+    const report = await readOptimizeReport(reportPath);
     const output = await fs.readFile(outputPath);
     // 이미 최적화된 파일은 더 커질 수 있다 — 그때는 원본이 낫다.
-    return output.length > 0 && output.length < input.length ? output : null;
+    if (output.length === 0 || output.length >= input.length) {
+      // 원본을 그대로 쓰므로 스크립트가 지운 루트 오프셋은 싣지 않는다.
+      return {
+        output: null,
+        report: {
+          lines: [...report.lines, '결과가 원본보다 작지 않아 원본을 저장'],
+        },
+      };
+    }
+    return { output, report };
   } catch (error) {
     console.warn('Failed to optimize GLB. Storing the original.', error);
-    return null;
+    // 스크립트가 실패 이유를 보고에 적었으면 그것을, 아니면 stderr 의 끝줄을 쓴다.
+    const report = await readOptimizeReport(reportPath);
+    const stderr = (error as { stderr?: unknown }).stderr;
+    const lastLine =
+      typeof stderr === 'string'
+        ? stderr.trim().split(/\r?\n/).pop()?.trim()
+        : undefined;
+    return {
+      output: null,
+      report: {
+        lines:
+          report.lines.length > 0
+            ? report.lines
+            : [lastLine ? `최적화 실패: ${lastLine}` : '최적화 실패'],
+      },
+    };
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });
   }
+}
+
+/**
+ * 올린 원본을 assets-src 에 남긴다(파이프라인을 고친 뒤 다시 최적화할 때의
+ * 입력). 100MB 를 넘으면 GitHub 이 받지 않으므로 .gitignore 에 그 파일을
+ * 올린다 — 지도 원본의 기존 관례(assets-src/README.md)와 같고, 그런 원본은
+ * 컨플루언스에 따로 보관한다. 덧붙인 보고 줄을 돌려준다.
+ */
+async function keepOriginal(
+  repoRoot: string,
+  relativePath: string,
+  body: Buffer,
+): Promise<string[]> {
+  const originalPath = path.join(repoRoot, relativePath);
+  await fs.mkdir(path.dirname(originalPath), { recursive: true });
+  await fs.writeFile(originalPath, body);
+  if (body.length <= GIT_FILE_LIMIT_BYTES) return [];
+  const ignorePath = path.join(repoRoot, '.gitignore');
+  const entry = relativePath.split(path.sep).join('/');
+  const current = await fs.readFile(ignorePath, 'utf8').catch(() => '');
+  if (!current.split(/\r?\n/).includes(entry)) {
+    await fs.writeFile(
+      ignorePath,
+      `${current}${current === '' || current.endsWith('\n') ? '' : '\n'}${entry}\n`,
+      'utf8',
+    );
+  }
+  return ['원본이 100MB 를 넘어 커밋하지 않는다(.gitignore) — 따로 보관할 것'];
 }
 
 /** 라이브러리 문서의 최소 형태 — 객체이고 assets 가 배열. 정규화는 브라우저가 한다. */
@@ -345,7 +409,11 @@ function isAssetLibraryShaped(value: unknown): boolean {
  *   public/asset-library/ 아래에. 키는 `files/<id>/v<N>/<name>` 또는
  *   `thumbnails/<id>.png` 뿐이고 규칙은 도메인과 공유한다(asset-library-paths).
  *   버전 파일은 **불변**이라 이미 있는 경로에는 쓰지 않는다(409).
+ *   `optimize=model|map` 이면 그 종류의 파이프라인을 거쳐 저장한다.
  * - `DELETE /__dev/asset-library/file?assetId=…` — 그 자산의 파일 전부.
+ *   `path=…`(여러 번 가능)는 라이브러리 디렉터리 밖의 옛 배포 경로
+ *   (`/models/x.glb`)에 있는 그 자산의 버전 파일이다 — 정해진 디렉터리·
+ *   확장자만 받는다(isRemovableLegacyAssetPath).
  *
  * 생성물은 커밋해서 배포한다. 운영에는 이 미들웨어가 없어 브라우저 저장소로
  * 떨어진다(asset-library-storage.ts).
@@ -447,30 +515,43 @@ function devAssetLibraryPlugin(): Plugin {
                 });
                 return;
               }
-              // 최적화 요청 — GLB 버전 파일을 scripts/optimize-glb.mjs 의
-              // 파이프라인에 통과시켜 저장한다. 올린 원본은 assets-src 에 남긴다
-              // (파이프라인을 고친 뒤 다시 최적화할 때의 입력). 실패하면 원본
-              // 그대로 저장하고 그렇게 알린다 — 등록 자체를 막지 않는다.
-              let payload = body;
+              // 최적화 요청 — GLB 버전 파일을 그 종류의 파이프라인(모델·지도)에
+              // 통과시켜 저장한다. 올린 원본은 assets-src 에 남긴다(파이프라인을
+              // 고친 뒤 다시 최적화할 때의 입력). 실패하면 원본 그대로 저장하고
+              // 그렇게 알린다 — 등록 자체를 막지 않는다.
+              let payload: Buffer = body;
               let optimized = false;
+              let report: string[] = [];
+              let rootOffset: Vector3 | undefined;
+              const optimizeKind = requestUrl.searchParams.get('optimize');
               if (
                 parsed.kind === 'version' &&
-                requestUrl.searchParams.get('optimize') === '1' &&
+                isOptimizeKind(optimizeKind) &&
                 parsed.fileName.toLowerCase().endsWith('.glb')
               ) {
-                const result = await optimizeGlbBuffer(repoRoot, body);
-                if (result) {
-                  payload = result;
+                const result = await optimizeGlbBuffer(
+                  repoRoot,
+                  body,
+                  optimizeKind,
+                );
+                report = result.report.lines;
+                if (result.output) {
+                  payload = result.output;
                   optimized = true;
-                  const originalPath = path.join(
-                    repoRoot,
-                    ASSET_LIBRARY_ORIGINALS_DIR,
-                    parsed.assetId,
-                    `v${parsed.version}`,
-                    parsed.fileName,
-                  );
-                  await fs.mkdir(path.dirname(originalPath), { recursive: true });
-                  await fs.writeFile(originalPath, body);
+                  rootOffset = result.report.rootOffset;
+                  report = [
+                    ...report,
+                    ...(await keepOriginal(
+                      repoRoot,
+                      path.join(
+                        ASSET_LIBRARY_ORIGINALS_DIR,
+                        parsed.assetId,
+                        `v${parsed.version}`,
+                        parsed.fileName,
+                      ),
+                      body,
+                    )),
+                  ];
                 }
               }
               await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -493,6 +574,8 @@ function devAssetLibraryPlugin(): Plugin {
                 key,
                 bytes: payload.length,
                 optimized,
+                report,
+                ...(rootOffset ? { rootOffset } : {}),
               });
               return;
             }
@@ -543,6 +626,17 @@ function devAssetLibraryPlugin(): Plugin {
                 path.join(libraryDir, 'thumbnails', `${assetId}.png`),
                 { force: true },
               );
+              // 옛 배포 경로에 있는 버전 파일 — 정해진 디렉터리·확장자만 지운다.
+              // 판정에 걸리는 경로가 하나라도 있으면 아무것도 지우지 않은
+              // 것으로 끝내지 않고(위는 이미 지웠다) 그 경로만 건너뛴다.
+              const publicDir = path.resolve(server.config.root, 'public');
+              for (const legacyPath of requestUrl.searchParams.getAll('path')) {
+                if (!isRemovableLegacyAssetPath(legacyPath)) continue;
+                await fs.rm(
+                  path.join(publicDir, ...legacyPath.slice(1).split('/')),
+                  { force: true },
+                );
+              }
               jsonResponse(res, 200, { ok: true });
               return;
             }
@@ -692,9 +786,8 @@ export default defineConfig(({ mode, command }) => {
       devIndoorFallbackPlugin(baseUrl, env.VITE_INDOOR_BASE_URL),
       devSceneSavePlugin(),
       devVirtualTagsSavePlugin(),
-      devPreviewSavePlugin(),
       devAssetLibraryPlugin(),
-      // 위 저장 미들웨어들이 쓰는 public/ 디렉토리(scenes·simulation·previews·
+      // 위 저장 미들웨어들이 쓰는 public/ 디렉토리(scenes·simulation·
       // asset-library)는
       // 이 플러그인의 DEV_WRITTEN_DIRS 에 등록돼 있어 저장 시 전체 리로드를
       // 보내지 않는다. 새 저장 미들웨어를 추가하면 그 목록도 함께 갱신한다.

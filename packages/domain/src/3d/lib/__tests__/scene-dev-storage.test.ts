@@ -38,14 +38,15 @@ function sharedScene(): SavedSceneInfo {
   };
 }
 
-function scene(environmentId?: string): SavedSceneInfo {
+/** `tag` 는 저장본을 구별하는 표식 — 배경 경로에 실어 둔다. */
+function scene(tag?: string): SavedSceneInfo {
   const base: SavedSceneInfo = {
     maps: [],
     models: [],
     texts: [],
     camera: null,
   };
-  return environmentId ? { ...base, environmentId } : base;
+  return tag ? { ...base, environment: { path: tag } } : base;
 }
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -140,7 +141,7 @@ describe('dev 환경 (파일 저장 경유)', () => {
     fetchOk(scene('deployed'));
 
     const result = await loadSceneInfoByRegionId(REGION);
-    expect(result.environmentId).toBe('deployed');
+    expect(result.environment?.path).toBe('deployed');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -171,7 +172,7 @@ describe('운영 환경 (localStorage)', () => {
     await saveSceneInfoByRegionId(REGION, scene('mine'));
 
     const loaded = await loadSceneInfoByRegionId(REGION);
-    expect(loaded.environmentId).toBe('mine');
+    expect(loaded.environment?.path).toBe('mine');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -193,7 +194,7 @@ describe('운영 환경 (localStorage)', () => {
     fetchOk(scene('deployed'));
 
     const loaded = await loadSceneInfoByRegionId(REGION);
-    expect(loaded.environmentId).toBe('deployed');
+    expect(loaded.environment?.path).toBe('deployed');
     expect(window.localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
   });
 
@@ -204,7 +205,7 @@ describe('운영 환경 (localStorage)', () => {
     fetchOk(scene('deployed'));
 
     const loaded = await loadSceneInfoByRegionId(REGION);
-    expect(loaded.environmentId).toBe('deployed');
+    expect(loaded.environment?.path).toBe('deployed');
     // 배포본 로드 성공 후에만 로컬 저장본이 삭제된다.
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
@@ -214,7 +215,7 @@ describe('운영 환경 (localStorage)', () => {
     fetchOk(scene('deployed'));
 
     const loaded = await loadSceneInfoByRegionId(REGION);
-    expect(loaded.environmentId).toBe('deployed');
+    expect(loaded.environment?.path).toBe('deployed');
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -238,7 +239,7 @@ describe('운영 환경 (localStorage)', () => {
     fetchMock.mockRejectedValue(new Error('network down'));
 
     const loaded = await loadSceneInfoByRegionId(REGION);
-    expect(loaded.environmentId).toBe('mine');
+    expect(loaded.environment?.path).toBe('mine');
     expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
     warnSpy.mockRestore();
   });
@@ -254,7 +255,7 @@ describe('운영 환경 (localStorage)', () => {
     fetchOk(scene('deployed'));
 
     const loaded = await loadSceneInfoByRegionId(REGION);
-    expect(loaded.environmentId).toBe('deployed');
+    expect(loaded.environment?.path).toBe('deployed');
     warnSpy.mockRestore();
   });
 });

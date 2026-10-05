@@ -4,6 +4,7 @@ import {
   ASSET_SORT_KEYS,
   ASSET_VERSION_STATUSES,
   DEFAULT_ASSET_QUERY,
+  isSceneAssetKind,
   type AssetAttentionKind,
   type AssetKind,
   type AssetQuery,
@@ -44,9 +45,9 @@ export function parseAssetQuery(params: URLSearchParams): AssetQuery {
       params.get('status'),
       ASSET_VERSION_STATUSES,
     ),
-    tags: (params.get('tag') ?? '')
+    categories: (params.get('category') ?? '')
       .split(LIST_SEPARATOR)
-      .map((tag) => tag.trim())
+      .map((category) => category.trim())
       .filter(Boolean),
     collectionId: params.get('collection') || null,
     favoritesOnly: params.get('fav') === '1',
@@ -81,7 +82,7 @@ export function writeAssetQuery(
   put('q', query.text.trim());
   put('kind', query.kinds.join(LIST_SEPARATOR));
   put('status', query.statuses.join(LIST_SEPARATOR));
-  put('tag', query.tags.join(LIST_SEPARATOR));
+  put('category', query.categories.join(LIST_SEPARATOR));
   put('collection', query.collectionId ?? '');
   put('fav', query.favoritesOnly ? '1' : '');
   put('attn', query.attention ?? '');
@@ -95,6 +96,7 @@ export const DETAIL_TABS = [
   'stats',
   'versions',
   'usage',
+  'placement',
   'activity',
 ] as const;
 export type DetailTab = (typeof DETAIL_TABS)[number];
@@ -103,6 +105,28 @@ export function parseDetailTab(raw: string | null): DetailTab {
   return (DETAIL_TABS as readonly string[]).includes(raw ?? '')
     ? (raw as DetailTab)
     : 'info';
+}
+
+/**
+ * 그 종류의 자산에 있는 탭. 배치 속성은 씬에 쓰는 종류(모델·지도·배경)에만
+ * 있다 — 도면·CAD 에는 그 탭이 없다.
+ */
+export function listDetailTabs(kind: AssetKind): DetailTab[] {
+  return DETAIL_TABS.filter(
+    (tab) => tab !== 'placement' || isSceneAssetKind(kind),
+  );
+}
+
+/**
+ * URL 의 탭을 그 자산에서 열 수 있는 탭으로 맞춘다. 모르는 값이거나 그 종류에
+ * 없는 탭이면 정보 탭이다(도면에 `?tab=placement` 로 들어온 링크).
+ */
+export function resolveDetailTab(
+  raw: string | null,
+  kind: AssetKind,
+): DetailTab {
+  const tab = parseDetailTab(raw);
+  return listDetailTabs(kind).includes(tab) ? tab : 'info';
 }
 
 /** 상세 화면에서 나란히 비교할 기준 버전 번호(`?compare=`). */

@@ -1,25 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import type { AssetRecord, AssetVersionStatus } from '@crane/domain/asset-library';
 import {
-  listBulkTags,
+  listBulkCategories,
   listBulkTransitions,
-  withoutTag,
-  withTag,
+  withoutCategory,
+  withCategory,
 } from '../bulk-selection';
 
 const asset = (
   id: string,
   status: AssetVersionStatus,
-  tags: string[] = [],
+  categories: string[] = [],
 ): AssetRecord => ({
   id,
   kind: 'model',
-  origin: 'user',
   name: id,
   description: '',
-  tags,
+  categories,
   owner: '',
-  defaultScale: [1, 1, 1],
   relatedAssetIds: [],
   versions: [
     {
@@ -65,10 +63,10 @@ describe('listBulkTransitions', () => {
   });
 });
 
-describe('listBulkTags', () => {
+describe('listBulkCategories', () => {
   it('많이 쓰인 순, 대소문자를 가리지 않고 묶는다', () => {
     expect(
-      listBulkTags([
+      listBulkCategories([
         asset('a', 'draft', ['Crane', 'yard']),
         asset('b', 'draft', ['crane']),
         asset('c', 'draft', ['dock']),
@@ -76,17 +74,17 @@ describe('listBulkTags', () => {
     ).toEqual(['Crane', 'dock', 'yard']);
   });
 
-  it('태그가 없으면 빈 목록', () => {
-    expect(listBulkTags([asset('a', 'draft')])).toEqual([]);
+  it('카테고리가 없으면 빈 목록', () => {
+    expect(listBulkCategories([asset('a', 'draft')])).toEqual([]);
   });
 });
 
-describe('withTag / withoutTag', () => {
-  it('없는 태그만 더하고, 있는 태그만 뺀다(대소문자 무시)', () => {
-    expect(withTag(['a'], 'b')).toEqual(['a', 'b']);
-    expect(withTag(['Crane'], 'crane')).toBeNull();
-    expect(withoutTag(['Crane', 'b'], 'crane')).toEqual(['b']);
-    expect(withoutTag(['a'], 'zzz')).toBeNull();
-    expect(withoutTag([], 'a')).toBeNull();
+describe('withCategory / withoutCategory', () => {
+  it('없는 카테고리만 더하고, 있는 카테고리만 뺀다(대소문자 무시)', () => {
+    expect(withCategory(['a'], 'b')).toEqual(['a', 'b']);
+    expect(withCategory(['Crane'], 'crane')).toBeNull();
+    expect(withoutCategory(['Crane', 'b'], 'crane')).toEqual(['b']);
+    expect(withoutCategory(['a'], 'zzz')).toBeNull();
+    expect(withoutCategory([], 'a')).toBeNull();
   });
 });

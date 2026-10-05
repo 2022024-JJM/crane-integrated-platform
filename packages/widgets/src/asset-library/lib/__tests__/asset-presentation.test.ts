@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { registerAssetHashManifest } from '@crane/core/lib/asset-url';
+import { describe, expect, it } from 'vitest';
 import {
   ASSET_VERSION_STATUSES,
   type AssetRecord,
@@ -8,8 +7,8 @@ import {
   ASSET_STATUS_TONE,
   formatAssetDate,
   formatAssetDateTime,
-  listTagSuggestions,
-  parseTagInput,
+  listCategorySuggestions,
+  parseCategoryInput,
   resolveThumbnailSource,
   shortenContentHash,
   withCacheStamp,
@@ -20,12 +19,10 @@ function asset(overrides: Partial<AssetRecord> = {}): AssetRecord {
   return {
     id: 'a',
     kind: 'model',
-    origin: 'builtin',
     name: 'A',
     description: '',
-    tags: [],
+    categories: [],
     owner: '',
-    defaultScale: [1, 1, 1],
     relatedAssetIds: [],
     versions: [
       {
@@ -51,35 +48,19 @@ function asset(overrides: Partial<AssetRecord> = {}): AssetRecord {
   };
 }
 
-afterEach(() => registerAssetHashManifest({}));
-
 describe('resolveThumbnailSource', () => {
   it('저장된 썸네일이 가장 먼저다', () => {
-    registerAssetHashManifest({ '/previews/a.png': 'h' });
     const ref = { storage: 'public' as const, path: '/asset-library/thumbnails/a.png' };
     expect(
-      resolveThumbnailSource(
-        asset({ catalogId: 'a', thumbnail: { ref, updatedAt: 't1' } }),
-      ),
+      resolveThumbnailSource(asset({ thumbnail: { ref, updatedAt: 't1' } })),
     ).toEqual({ kind: 'file', ref, stamp: 't1' });
   });
 
-  it('정적 썸네일은 배포돼 있을 때만(매니페스트에 있을 때만) 쓴다', () => {
-    const model = asset({ catalogId: 'a' });
-    expect(resolveThumbnailSource(model)).toEqual({ kind: 'none' });
-    registerAssetHashManifest({ '/previews/a.png': 'h' });
-    expect(resolveThumbnailSource(model)).toEqual({
-      kind: 'static',
-      path: '/previews/a.png',
-    });
-  });
-
-  it('지도와 카탈로그 id 없는 모델은 정적 썸네일을 찾지 않는다', () => {
-    registerAssetHashManifest({ '/previews/a.png': 'h' });
-    expect(resolveThumbnailSource(asset({ kind: 'map', catalogId: 'a' }))).toEqual({
+  it('저장된 썸네일이 없는 모델·지도는 없음이다 — 다른 곳에서 그림을 찾지 않는다', () => {
+    expect(resolveThumbnailSource(asset())).toEqual({ kind: 'none' });
+    expect(resolveThumbnailSource(asset({ kind: 'map' }))).toEqual({
       kind: 'none',
     });
-    expect(resolveThumbnailSource(asset())).toEqual({ kind: 'none' });
   });
 
   it('그림 도면은 파일 자체, 그림이 아닌 도면은 없음', () => {
@@ -158,14 +139,14 @@ describe('shortenContentHash', () => {
   });
 });
 
-describe('parseTagInput', () => {
+describe('parseCategoryInput', () => {
   it('쉼표·줄바꿈으로 나누고 빈 조각을 버린다', () => {
-    expect(parseTagInput(' crane, , ship\nyard ,')).toEqual([
+    expect(parseCategoryInput(' crane, , ship\nyard ,')).toEqual([
       'crane',
       'ship',
       'yard',
     ]);
-    expect(parseTagInput('  ')).toEqual([]);
+    expect(parseCategoryInput('  ')).toEqual([]);
   });
 });
 
@@ -206,85 +187,85 @@ describe('formatRelativeTime', () => {
   });
 });
 
-describe('listTagSuggestions', () => {
-  it('이미 붙은 태그를 빼고 순서를 지킨다', () => {
+describe('listCategorySuggestions', () => {
+  it('이미 붙은 카테고리를 빼고 순서를 지킨다', () => {
     expect(
-      listTagSuggestions(['crane', 'indoor', 'bay', 'okpo'], ['indoor']),
+      listCategorySuggestions(['crane', 'indoor', 'bay', 'okpo'], ['indoor']),
     ).toEqual(['crane', 'bay', 'okpo']);
   });
 
   it('대소문자만 다른 것은 이미 붙은 것으로 본다', () => {
-    expect(listTagSuggestions(['Crane', 'bay'], ['crane'])).toEqual(['bay']);
-    expect(listTagSuggestions(['crane'], ['CRANE'])).toEqual([]);
+    expect(listCategorySuggestions(['Crane', 'bay'], ['crane'])).toEqual(['bay']);
+    expect(listCategorySuggestions(['crane'], ['CRANE'])).toEqual([]);
   });
 
   it('권할 목록 안의 중복은 먼저 나온 것 하나만 남긴다', () => {
-    expect(listTagSuggestions(['crane', 'Crane', 'bay'], [])).toEqual([
+    expect(listCategorySuggestions(['crane', 'Crane', 'bay'], [])).toEqual([
       'crane',
       'bay',
     ]);
   });
 
   it('빈 목록·전부 붙은 경우는 빈 배열', () => {
-    expect(listTagSuggestions([], ['a'])).toEqual([]);
-    expect(listTagSuggestions(['a', 'b'], ['b', 'a'])).toEqual([]);
-    expect(listTagSuggestions([], [])).toEqual([]);
+    expect(listCategorySuggestions([], ['a'])).toEqual([]);
+    expect(listCategorySuggestions(['a', 'b'], ['b', 'a'])).toEqual([]);
+    expect(listCategorySuggestions([], [])).toEqual([]);
   });
 
   it('입력 배열을 바꾸지 않는다', () => {
     const suggestions = ['crane', 'bay'];
     const current = ['crane'];
-    listTagSuggestions(suggestions, current);
+    listCategorySuggestions(suggestions, current);
     expect(suggestions).toEqual(['crane', 'bay']);
     expect(current).toEqual(['crane']);
   });
 });
 
-describe('listTagSuggestions — 치는 글자로 거르기', () => {
-  const tags = ['crane', 'indoor', 'outdoor', 'Okpo', '크레인', '옥포 크레인'];
+describe('listCategorySuggestions — 치는 글자로 거르기', () => {
+  const categories = ['crane', 'indoor', 'outdoor', 'Okpo', '크레인', '옥포 크레인'];
 
-  it('그 글자가 들어간 태그만 남기고 순서를 지킨다', () => {
-    expect(listTagSuggestions(tags, [], 'door')).toEqual(['indoor', 'outdoor']);
-    expect(listTagSuggestions(tags, [], 'c')).toEqual(['crane']);
+  it('그 글자가 들어간 카테고리만 남기고 순서를 지킨다', () => {
+    expect(listCategorySuggestions(categories, [], 'door')).toEqual(['indoor', 'outdoor']);
+    expect(listCategorySuggestions(categories, [], 'c')).toEqual(['crane']);
   });
 
   it('대소문자를 가리지 않는다', () => {
-    expect(listTagSuggestions(tags, [], 'OKPO')).toEqual(['Okpo']);
-    expect(listTagSuggestions(tags, [], 'Crane')).toEqual(['crane']);
+    expect(listCategorySuggestions(categories, [], 'OKPO')).toEqual(['Okpo']);
+    expect(listCategorySuggestions(categories, [], 'Crane')).toEqual(['crane']);
   });
 
   it('한글도 들어간 글자로 거른다', () => {
-    expect(listTagSuggestions(tags, [], '크레')).toEqual([
+    expect(listCategorySuggestions(categories, [], '크레')).toEqual([
       '크레인',
       '옥포 크레인',
     ]);
     // 조합 중인 낱자(초성만)는 완성된 글자와 맞지 않는다 — 다 치면 맞는다.
-    expect(listTagSuggestions(tags, [], 'ㅋ')).toEqual([]);
+    expect(listCategorySuggestions(categories, [], 'ㅋ')).toEqual([]);
   });
 
   it('빈 글자·공백뿐인 글자는 거르지 않고, 앞뒤 공백은 없는 것으로 본다', () => {
-    expect(listTagSuggestions(tags, [], '')).toEqual(tags);
-    expect(listTagSuggestions(tags, [], '   ')).toEqual(tags);
-    expect(listTagSuggestions(tags, [], '  door ')).toEqual([
+    expect(listCategorySuggestions(categories, [], '')).toEqual(categories);
+    expect(listCategorySuggestions(categories, [], '   ')).toEqual(categories);
+    expect(listCategorySuggestions(categories, [], '  door ')).toEqual([
       'indoor',
       'outdoor',
     ]);
     // 가운데 공백은 글자다.
-    expect(listTagSuggestions(tags, [], '옥포 크')).toEqual(['옥포 크레인']);
+    expect(listCategorySuggestions(categories, [], '옥포 크')).toEqual(['옥포 크레인']);
   });
 
   it('맞는 것이 없으면 빈 배열', () => {
-    expect(listTagSuggestions(tags, [], 'zzz')).toEqual([]);
-    expect(listTagSuggestions([], [], 'a')).toEqual([]);
+    expect(listCategorySuggestions(categories, [], 'zzz')).toEqual([]);
+    expect(listCategorySuggestions([], [], 'a')).toEqual([]);
   });
 
-  it('이미 붙은 태그는 글자가 맞아도 권하지 않는다', () => {
-    expect(listTagSuggestions(tags, ['INDOOR'], 'door')).toEqual(['outdoor']);
+  it('이미 붙은 카테고리는 글자가 맞아도 권하지 않는다', () => {
+    expect(listCategorySuggestions(categories, ['INDOOR'], 'door')).toEqual(['outdoor']);
   });
 
   it('정규식 글자는 그대로 글자로 본다', () => {
-    expect(listTagSuggestions(['a.b', 'axb', 'c(1)'], [], '.')).toEqual(['a.b']);
-    expect(listTagSuggestions(['a.b', 'axb', 'c(1)'], [], '(')).toEqual([
+    expect(listCategorySuggestions(['a.b', 'axb', 'c(1)'], [], '.')).toEqual(['a.b']);
+    expect(listCategorySuggestions(['a.b', 'axb', 'c(1)'], [], '(')).toEqual([
       'c(1)',
     ]);
   });

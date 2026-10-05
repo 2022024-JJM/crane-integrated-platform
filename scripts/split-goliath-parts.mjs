@@ -11,12 +11,11 @@
 //
 // 사용법:
 //   node scripts/split-goliath-parts.mjs        # assets-src 원본 → 파트 2개
-//   pnpm optimize:glb goliath_crane_body.glb goliath_crane_trolley.glb
+//   이어서: 두 파트를 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)
 //
 // 입력은 assets-src/models/goliath_crane.glb (언베이크된 "진짜 원본"),
-// 출력도 assets-src/models/ 다 — optimize:glb 가 백업본을 원본으로 취급하므로
-// public 에 직접 쓰면 다음 최적화 때 옛 백업이 도로 덮어쓴다
-// (optimize-glb.mjs 상단 경고 참고).
+// 출력도 assets-src/models/ 다 — 배포 경로에는 직접 쓰지 않는다(배포 파일은
+// 자산 라이브러리의 버전으로만 바뀐다).
 //
 // 분리 기준은 원본의 노드 이름이다. 종전처럼 지오메트리 연결 요소로 자르지
 // 않는다 — 원본이 이미 트롤리를 별도 노드로 갖고 있어 이름만 보면 되고,
@@ -161,4 +160,6 @@ if (sumTris !== srcStats.tris || !bboxOk) {
   console.error('\n분리 결과가 원본과 다릅니다 — 파트 파일을 배포하지 마세요.');
   process.exit(1);
 }
-console.log('\n이어서: pnpm optimize:glb goliath_crane_body.glb goliath_crane_trolley.glb');
+console.log(
+  '\n이어서: 두 파트를 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)',
+);

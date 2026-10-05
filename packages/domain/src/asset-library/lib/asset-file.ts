@@ -10,7 +10,7 @@ import type { AssetKind } from '../model/types';
 
 /**
  * 등록할 파일의 판정 — 어떤 종류의 자산이 될 수 있는지, 화면에서 어떻게
- * 미리 볼 수 있는지, GLB 로서 온전한지.
+ * 미리 볼 수 있는지, GLB 로서 온전한지, 배경으로 쓸 수 있는 EXR 인지.
  */
 
 export type AssetPreviewMode =
@@ -67,6 +67,82 @@ export function validateGlbHeader(
   if (view.getUint32(4, true) !== 2) return 'bad-version';
   if (view.getUint32(8, true) !== fileSize) return 'bad-length';
   return null;
+}
+
+export type ExrHeaderError =
+  /** OpenEXR 파일이 아니다(확장자만 .exr). */
+  | 'bad-magic'
+  /** 헤더를 끝까지 읽지 못했다 — 잘렸거나 해상도 정보가 없다. */
+  | 'no-size'
+  /** 한 변이 `ASSET_ENVIRONMENT_MAX_SIZE` 를 넘는다. */
+  | 'too-large';
+
+const EXR_MAGIC = 0x01312f76; // 76 2f 31 01 little-endian
+const EXR_HEADER_START = 8; // 매직 4바이트 + 버전 4바이트
+
+/**
+ * 배경 EXR 한 변의 상한(px). 이보다 큰 텍스처는 MAX_TEXTURE_SIZE 가 8192 인
+ * GPU 에서 업로드가 실패해 배경이 검게 나온다. 파일 이름의 "4K" 나 파일 크기
+ * (DWAA 는 9K 이미지도 수 MB 다)로는 알 수 없어 헤더를 읽는다.
+ */
+export const ASSET_ENVIRONMENT_MAX_SIZE = 8192;
+
+/** `start` 부터 0 바이트 앞까지의 글자. 0 을 못 만나면 null. */
+function readExrText(bytes: Uint8Array, start: number): string | null {
+  let end = start;
+  while (end < bytes.byteLength && bytes[end] !== 0) end += 1;
+  if (end >= bytes.byteLength) return null;
+  let text = '';
+  for (let i = start; i < end; i += 1) text += String.fromCharCode(bytes[i]);
+  return text;
+}
+
+/**
+ * EXR 헤더에서 이미지 크기(dataWindow)를 읽는다. 헤더는 `이름\0 형식\0
+ * 크기(int32) 값` 이 이어지다가 빈 이름으로 끝난다. EXR 이 아니거나 크기를
+ * 찾지 못하면 null.
+ */
+export function readExrSize(
+  bytes: Uint8Array,
+): { width: number; height: number } | null {
+  if (bytes.byteLength < EXR_HEADER_START) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(0, true) !== EXR_MAGIC) return null;
+  let offset = EXR_HEADER_START;
+  for (;;) {
+    const name = readExrText(bytes, offset);
+    if (name === null || name === '') return null;
+    offset += name.length + 1;
+    const type = readExrText(bytes, offset);
+    if (type === null) return null;
+    offset += type.length + 1;
+    if (offset + 4 > bytes.byteLength) return null;
+    const size = view.getInt32(offset, true);
+    offset += 4;
+    if (size < 0 || offset + size > bytes.byteLength) return null;
+    if (name === 'dataWindow' && type === 'box2i' && size === 16) {
+      const width = view.getInt32(offset + 8, true) - view.getInt32(offset, true) + 1;
+      const height =
+        view.getInt32(offset + 12, true) - view.getInt32(offset + 4, true) + 1;
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+    offset += size;
+  }
+}
+
+/**
+ * 배경으로 쓸 수 있는 EXR 인지 — OpenEXR 파일이고, 크기를 읽을 수 있고, 한
+ * 변이 상한을 넘지 않는지. 문제 없으면 null.
+ */
+export function validateExrHeader(bytes: Uint8Array): ExrHeaderError | null {
+  if (bytes.byteLength < EXR_HEADER_START) return 'bad-magic';
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(0, true) !== EXR_MAGIC) return 'bad-magic';
+  const size = readExrSize(bytes);
+  if (!size) return 'no-size';
+  return Math.max(size.width, size.height) > ASSET_ENVIRONMENT_MAX_SIZE
+    ? 'too-large'
+    : null;
 }
 
 /** 파일명에서 사람이 읽을 이름을 만든다 — 확장자를 떼고 구분자를 공백으로. */

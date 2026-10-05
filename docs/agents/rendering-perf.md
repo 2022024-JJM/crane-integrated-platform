@@ -49,13 +49,13 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 야드 지도(kind `'ground'`)와 크레인은 그대로 두고 주변에서 줄인다.
 
 - DPR 상한은 `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값 두 곳이 같은 값(1.5)이어야 한다 — 함께 바꾼다.
-- 컨텍스트 지형(kind `'context'`)은 `GltfModel shading='lambert'` 로 PBR 대신 Lambert 다(`lambert-material.ts`, 원본 머티리얼당 변환본 캐시). 조명·낮/밤엔 똑같이 반응하고 스펙큘러·radiance 샘플링만 없다. 모니터링·에디터 같은 규칙.
+- 컨텍스트 지형(씬 지도의 `role: 'context'` — `isContextMap`)은 `GltfModel shading='lambert'` 로 PBR 대신 Lambert 다(`lambert-material.ts`, 원본 머티리얼당 변환본 캐시). 조명·낮/밤엔 똑같이 반응하고 스펙큘러·radiance 샘플링만 없다. 모니터링·에디터 같은 규칙.
 - 타일 LOD 임계는 `TERRAIN_LOD_THRESHOLD_PX`(device px). 컨텍스트 지형과 LOD 체인이 붙은 모델에만 LOD 가 있다(생성 절차는 `docs/agents/assets-glb.md`).
 - 바다 미러 패스는 컨텍스트 지형 루트·밤하늘 틴트 돔·태양/달 스프라이트를 빼고 그린다(`OceanWater` 의 `excludedObjects` — `resolveReflectionExcludedMapIds` + `excludeFromReflection`). 지형 루트 하나를 숨기면 three 가 서브트리를 통째로 건너뛰어 LOD 타일 전부가 빠진다. 반사 RT 크기는 `scene-water.tsx` 의 `WATER_REFLECTION_SIZE`, 비친 하늘의 밝기는 `WATER_REFLECTION_INTENSITY`(포크 유니폼 `reflectionIntensity`, 예제엔 없다 — 예제는 렌더러 노출 0.1 로 HDR 하늘을 숨기지만 이 씬은 조명 전체가 노출 1 기준이라 물에서만 누그러뜨린다), 태양 확산 회색항의 배율은 `WATER_SUN_DIFFUSE_INTENSITY`(포크 유니폼 `sunDiffuseIntensity`, 예제 원값이면 낮에 산란색을 덮어 물이 회색이 된다) 하나씩.
 
 ### 바다는 미러 반사 + 불투명 패스 뒤 스텐실
 
-바다는 `ui/scene-water.tsx` 의 `SceneWater` 가 만드는 `OceanWater`(`lib/ocean-water.ts`, three r183 `Water.js` 포크) 원판 하나다. 켜짐 여부는 `resolveSeaVisible(regionId, sceneInfo)`(`scene-sea.ts`) 한 곳이 정하고, 세 캔버스가 그 값을 `SceneEnvironment`·`SceneFrameGovernor`·`SceneSurfaceCamera`·모델과 지도의 `seaSubmersion` 에 넘긴다. `SceneEnvironment` 는 EXR 배경(`EnvironmentBackground`)과 `SceneWater` 를 한 `Suspense` 경계 안에 두어 둘이 같이 나타나고 배경 교체에 물이 리마운트되지 않는다. 씬별 켜고 끄기는 `docs/agents/3d-editor.md`.
+바다는 `ui/scene-water.tsx` 의 `SceneWater` 가 만드는 `OceanWater`(`lib/ocean-water.ts`, three r183 `Water.js` 포크) 원판 하나다. 켜짐 여부는 `resolveSeaVisible(sceneInfo)`(`scene-sea.ts`) 한 곳이 정하고, 세 캔버스가 그 값을 `SceneEnvironment`·`SceneFrameGovernor`·`SceneSurfaceCamera`·모델과 지도의 `seaSubmersion` 에 넘긴다. `SceneEnvironment` 는 EXR 배경(`EnvironmentBackground`)과 `SceneWater` 를 한 `Suspense` 경계 안에 두어 둘이 같이 나타나고 배경 교체에 물이 리마운트되지 않는다. 씬별 켜고 끄기는 `docs/agents/3d-editor.md`.
 
 - **미러 패스** — `OceanWater.onBeforeRender` 가 메인 카메라를 수면에 반사한 미러 카메라로 씬을 스텐실 딸린 8bit RT 에 한 번 더 그린다(중첩 render — HalfFloat 이 아닌 이유: EXR 하늘의 수평선 띠는 백색의 몇 배라 그대로 비추면 얕은 각도의 바다가 흰색이 된다. 8bit 가 1.0 에서 잘라 EXR 이 달라도 반사 상한이 같다). 그동안 물 자신과 제외 객체(`excludedObjects` 게터 — `excludeFromReflection` 으로 등록된 틴트 돔·태양/달 스프라이트, `resolveReflectionExcludedMapIds` 가 고른 컨텍스트 지형 id 를 `modelObjectRegistry` 에서 매 패스 조회)는 `visible=false` 로 빠지고, shadow map 은 다시 그리지 않는다(`shadowMap.autoUpdate` 저장/복원). 직교 카메라면 미러 패스만 건너뛰고 `eye` 를 시선 반대쪽 먼 점(`ORTHO_EYE_DISTANCE`)으로 둔다 — 미니맵 캡처는 물을 `reflectionIntensity` 0 으로 보이는 채 그린다(`docs/agents/monitoring-ui.md`). 숨김·플래그·렌더 타깃 복원은 try/finally. RT 에도 스텐실이 있어 실루엣 마스크·헐이 반사에서 뭉개지지 않는다. 미러 패스는 `renderer.info` 를 리셋하지 않아(`info.autoReset` 을 패스 동안 끔) HUD 값은 메인 + 미러 합이다.
 - **메인 패스** — 물은 `SEA_RENDER_ORDER` 로 불투명 패스 뒤에 그려진다. 모든 GLTF 인스턴스 메시 머티리얼이 `markSceneOpaqueStencil`(`useClonedModel` 이 원본에 켬, clone 이 물려받음)로 "불투명 씬이 그려졌다" 비트를 ZPass 에 찍고, 물 머티리얼은 depthTest/depthWrite 없이 그 비트(`SCENE_OPAQUE_STENCIL_BIT`)가 없는 픽셀에서만 그려진다(Equal 스텐실, writeMask 0). 지도·드라이독·잠긴 선체가 깊이 순서와 무관하게 바다 위에 남으면서, 가려진 픽셀은 early stencil 로 셰이더 앞에서 탈락한다. 실루엣 마스크·헐은 자기 비트만 writeMask/funcMask 로 본다(비트 값은 `scene-stencil.ts`).
@@ -138,7 +138,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **바다 반사에서 빼야 하는 객체(대형 객체, 메인 패스에서 이미 물 픽셀을 덮는 것)는 `OceanWater` 의 `excludedObjects`/`excludeFromReflection` 으로 뺀다.** 미러 카메라 `layers` 는 쓰지 않는다.
 - **직교 카메라로 씬 전체를 RT 에 그리는 새 경로는 반사 제외 객체를 숨기고, `OceanWater` 는 `applyCanonicalWaterUniforms` 로 반사 0 을 준 채 보이게 두며, 시각과 무관해야 하면 `applyCanonicalCaptureLighting` 으로 조명을 수동 모드 기준값으로 바꾼다(renderer `shadowMap` 플래그도 함께 끈다).** 직교 투영에선 미러 패스가 돌지 않아 반사 RT 에 낡은 원근 프레임이 남고, equirect 배경도 보이지 않으며(바다 영역은 물 원판이 덮는다), 틴트 돔은 카메라를 감싸 전체를 틴트한다. RT 는 Float 로 두고 readback 에 three 와 동일한 ACES(`acesFilmicToneMap`)를 건다(미니맵 캡처가 선례 — `docs/agents/monitoring-ui.md`).
 - **`sceneLightingInfo.sun*` 은 `SceneLighting` 만 쓴다(`publishSunLight`).** 다른 곳에서 쓰면 프레임마다 서로 되돌린다.
-- **바다 유무는 `resolveSeaVisible(regionId, sceneInfo)` 하나로 판정한다.** `environmentId`·EXR URL 로 바다를 유추하는 코드를 만들지 않는다.
+- **바다 유무는 `resolveSeaVisible(sceneInfo)` 하나로 판정한다.** 씬의 배경(`environment`)·EXR URL 로 바다를 유추하는 코드를 만들지 않는다.
+- **지도가 주변 지형인지는 씬 지도의 `role` 로 본다(`isContextMap`).** 그림자 제외·Lambert·바다 반사 제외가 전부 이 판정 하나를 쓴다. 파일 이름이나 자산 라이브러리로 묻지 않는다 — 런타임은 라이브러리를 읽지 않는다.
 - **바다가 켜진 캔버스에서 지도·모델을 그리는 경로는 `seaSubmersion` 을 켜고, 그 캔버스는 `SceneEnvironment`(→ `SceneSeaReach`)를 마운트한다.** 마스크가 없으면 안개가 전혀 끼지 않는다.
 - **안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않는다.** 기준은 위치(바다 도달 마스크) 하나다. 잠김 안개의 물 색·밀도도 `sea-submersion.ts` 상수 하나라, 모델과 지도 중 한쪽만 다르게 보이게 하는 분기를 넣지 않는다.
 - **바다 도달 마스크의 유니폼은 객체를 바꾸지 않고 값만 바꾼다(`publishSeaReachMask`·`resetSeaReachMask`).** 머티리얼이 유니폼 객체를 참조로 들고 있어 객체를 갈면 이미 컴파일된 머티리얼이 옛 값을 본다.

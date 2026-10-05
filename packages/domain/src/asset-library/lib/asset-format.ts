@@ -62,21 +62,6 @@ export function formatDimensions(meters: Vector3Tuple): string {
 }
 
 /**
- * 고유 단위 크기를 m 로 바꾼다 — 기본 스케일이 곧 단위 환산 배율이다
- * (스케일 0.1 로 놓는 모델은 고유 단위가 0.1 m).
- */
-export function toMeterSize(
-  size: Vector3Tuple,
-  defaultScale: Vector3Tuple,
-): Vector3Tuple {
-  return [
-    size[0] * defaultScale[0],
-    size[1] * defaultScale[1],
-    size[2] * defaultScale[2],
-  ];
-}
-
-/**
  * 바닥 격자 한 칸의 길이. 가장 긴 변이 10~25칸에 걸치도록 1·2·5 × 10ⁿ 에서
  * 고른다 — 칸 수를 세면 크기를 어림할 수 있는 간격이다.
  */
