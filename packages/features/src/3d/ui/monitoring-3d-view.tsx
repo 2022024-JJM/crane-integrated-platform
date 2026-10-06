@@ -37,6 +37,7 @@ import type { SavedSceneInfo, SavedSceneView } from '@crane/domain/3d';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { usePlay3dStore } from '../model/use-play3d-store';
 import { usePlay3dTransport } from '../model/play3d-transport';
+import { useSceneCanvasDpr } from '../model/use-scene-canvas-dpr';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import type { MonitoringViewMode } from '../model/types';
@@ -151,7 +152,8 @@ interface Monitoring3dViewProps {
   /**
    * 렌더 해상도(DPR) 오버라이드 — 성능 거버닝용. r3f Canvas는 리렌더마다
    * 자신의 dpr prop을 재적용하므로, 내부에서 setDpr로 바꾸는 대신 이 prop을
-   * 상태에 따라 바꿔야 안정적으로 반영된다. undefined면 기기 기본값.
+   * 상태에 따라 바꿔야 안정적으로 반영된다. undefined면 기본 범위에 이 PC 의
+   * 해상도 배율(설정 페이지, useSceneCanvasDpr)을 얹은 값.
    */
   canvasDpr?: number | [number, number];
   /**
@@ -193,6 +195,8 @@ export function Monitoring3dView({
   const isDock = toolbarLayout === 'dock';
   const play3dSource = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
+  // 캔버스 해상도 — 기본 범위 × 이 PC 의 해상도 배율(설정 페이지).
+  const sceneDpr = useSceneCanvasDpr();
   const isPlay3d = mode === 'play3d';
   const isReplaySource = isPlay3d && play3dSource === 'replay';
   // 시뮬레이션 조작·표시(독 ▶·시계 팝업·배지·테두리)는 시뮬레이션 값이 화면을
@@ -491,7 +495,7 @@ export function Monitoring3dView({
           cameraPreset={cameraPreset}
           cameraClip={SCENE_CAMERA_CLIP}
           canvasProps={{
-            dpr: canvasDpr,
+            dpr: canvasDpr ?? sceneDpr,
             frameloop: 'demand',
             gl: SCENE_GL_OPTIONS,
             // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.

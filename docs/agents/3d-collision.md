@@ -26,7 +26,7 @@
 
 ### 감지 설정(충돌·영역 공통)
 
-- 설정 UI 는 감지 설정 페이지 하나다. 스위치 다섯 개: 충돌 감지, 충돌 시 정지, 영역 감지, 영역 이름 표시, 침범 시 정지. 페이지는 스위치만 가지고 기록·침범 목록 같은 런타임 상태는 없다.
+- 설정 UI 는 감지 설정 페이지 하나다. 스위치 다섯 개: 충돌 감지, 충돌 시 정지, 영역 감지, 영역 이름 표시, 침범 시 정지. 페이지는 스위치만 가지고 기록·침범 목록 같은 런타임 상태는 없다. 같은 페이지의 그래픽 카드(해상도 배율)는 감지와 무관한 별도 저장소다 — `docs/agents/rendering-perf.md`.
 - 값은 localStorage `crane:detection-settings` 봉투 하나에 영속된다. region·씬과 무관한 브라우저 전역 설정이다.
 - 기본값(`DETECTION_SETTINGS_DEFAULTS`): 감지 둘·이름 표시는 **ON**, 정지 둘(`pauseOnCollision`·`stopOnIntrusion`)은 **OFF**. 기본으로 재생을 멈추면 시뮬레이션·3D 플레이가 첫 사건에서 서 버리기 때문이다.
 - 충돌 스토어와 영역 스토어(`use-scene-zone-store.ts`)가 초기값을 `readDetectionSettings` 로 읽고 setter 마다 `writeDetectionSettings` 한다. `write` 는 read → merge → write 라 두 스토어가 서로의 필드를 덮지 않는다. 봉투는 `sanitizeDetectionSettings` 가 필드별 boolean 만 받아 방어한다.

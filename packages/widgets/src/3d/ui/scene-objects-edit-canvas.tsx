@@ -54,7 +54,6 @@ import {
   type SceneTransformPivot,
   type SceneTransformSpace,
   SCENE_CAMERA_CLIP,
-  SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   SCENE_RAYCASTER_OPTIONS,
   MIN_SURFACE_DISTANCE,
@@ -62,6 +61,7 @@ import {
   SceneFrameGovernor,
   SceneLighting,
   sceneCanvasShadows,
+  useSceneCanvasDpr,
   SceneObjectBoundary,
   SceneSurfaceCamera,
   RigDriver,
@@ -101,9 +101,6 @@ import { EditorGroundGrid } from './editor-ground-grid';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
-// R3F Canvas의 Dpr 타입이 mutable 튜플이라 프리셋(readonly)을 복사해 쓴다.
-// 모듈 레벨 상수라 렌더마다 참조가 바뀌지 않는다.
-const EDITOR_DPR: [number, number] = [...SCENE_DEFAULT_DPR];
 const INITIAL_PRELOAD_COUNT = 6;
 /** F 포커스 시 바운딩 스피어 주변 여유 비율. */
 const FOCUS_PADDING = 1.15;
@@ -318,6 +315,8 @@ export function SceneObjectsEditCanvas({
   compassRef,
   axisGizmoTopOffset = 0,
 }: SceneObjectsEditCanvasProps) {
+  // 캔버스 해상도 — 뷰어와 같은 훅(기본 범위 × 이 PC 의 해상도 배율).
+  const canvasDpr = useSceneCanvasDpr();
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
   useEffect(() => {
@@ -1004,7 +1003,7 @@ export function SceneObjectsEditCanvas({
         // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
         raycaster={SCENE_RAYCASTER_OPTIONS}
         shadows={sceneCanvasShadows(sceneInfo?.lighting)}
-        dpr={EDITOR_DPR}
+        dpr={canvasDpr}
         // 모니터링과 같은 demand 루프(2026-09-12) — 프레임은 조작(궤도·휠·
         // 기즈모, 각자 invalidate)·React 커밋(리컨실러가 invalidate)·아래
         // SceneFrameGovernor(재생·드래그 중 30fps, 바다 씬 상시, solar 태양

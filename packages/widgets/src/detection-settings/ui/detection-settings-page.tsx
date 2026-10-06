@@ -1,7 +1,14 @@
 import { useTranslation } from 'react-i18next';
-import { useSceneCollisionStore, useSceneZoneStore } from '@crane/features/3d';
+import {
+  RENDER_SCALE_OPTIONS,
+  renderScalePercent,
+  useSceneCollisionStore,
+  useSceneGraphicsStore,
+  useSceneZoneStore,
+} from '@crane/features/3d';
 import { Switch } from '@crane/ui/atoms/switch';
 import { Card, CardContent } from '@crane/ui/molecules/card';
+import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 
 /**
  * 감지 설정 페이지 — 충돌 감지·영역 침범 감지의 설정 다섯 개를 한 곳에서
@@ -11,6 +18,10 @@ import { Card, CardContent } from '@crane/ui/molecules/card';
  * 그린다 — 기록·침범 목록 같은 런타임 상태는 각 화면(경보 비네트·알람
  * 목록·실행 리포트)이 보여 준다. 가상 태그 페이지와 같이 내용은 전역이고
  * 경로만 region 하위다.
+ *
+ * 그래픽 카드의 해상도 배율은 감지와 무관한 이 PC 의 화면 설정이다 —
+ * features/3d 의 use-scene-graphics-store 가 들고 `crane:graphics-settings`
+ * 에 영속되며, 3D 캔버스가 다음에 그릴 때부터 적용된다.
  */
 export function DetectionSettingsPage() {
   const { t } = useTranslation();
@@ -26,6 +37,8 @@ export function DetectionSettingsPage() {
   const setLabelsVisible = useSceneZoneStore((s) => s.setLabelsVisible);
   const stopOnIntrusion = useSceneZoneStore((s) => s.stopOnIntrusion);
   const setStopOnIntrusion = useSceneZoneStore((s) => s.setStopOnIntrusion);
+  const renderScale = useSceneGraphicsStore((s) => s.renderScale);
+  const setRenderScale = useSceneGraphicsStore((s) => s.setRenderScale);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4">
@@ -74,6 +87,42 @@ export function DetectionSettingsPage() {
             checked={stopOnIntrusion}
             onChange={setStopOnIntrusion}
           />
+        </SettingsCard>
+
+        <SettingsCard
+          title={t('monitoring:detectionSettings.graphics.title')}
+          hint={t('monitoring:detectionSettings.graphics.renderScaleHint')}
+        >
+          <div className="bg-muted/60 border-border/70 flex items-center justify-between gap-3 rounded-md border px-3 py-2.5">
+            <span className="text-[12px] font-medium">
+              {t('monitoring:detectionSettings.graphics.renderScale')}
+            </span>
+            <ToggleGroup
+              value={[String(renderScale)]}
+              onValueChange={(next) => {
+                // 켜진 항목을 다시 누르면 빈 배열이 온다 — 선택을 비우지 않는다.
+                const choice = RENDER_SCALE_OPTIONS.find(
+                  (option) => String(option) === next[0],
+                );
+                if (choice !== undefined) setRenderScale(choice);
+              }}
+              variant="outline"
+              size="sm"
+              aria-label={t(
+                'monitoring:detectionSettings.graphics.renderScale',
+              )}
+            >
+              {RENDER_SCALE_OPTIONS.map((option) => (
+                <ToggleGroupItem
+                  key={option}
+                  value={String(option)}
+                  className="h-6 px-2 text-[11px] tabular-nums"
+                >
+                  {renderScalePercent(option)}%
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
         </SettingsCard>
       </div>
     </div>

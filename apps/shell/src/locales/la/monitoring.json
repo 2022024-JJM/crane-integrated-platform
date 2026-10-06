@@ -382,7 +382,7 @@
   },
   "detectionSettings": {
     "title": "Optiones",
-    "subtitle": "Collisionis et invasionis regionum detectionem uno loco constitue. Ad observationem temporis realis, lusum et scaenae editionem pertinet.",
+    "subtitle": "Collisionis et invasionis regionum detectionem ac imaginis 3D qualitatem uno loco constitue. Ad observationem temporis realis, lusum et scaenae editionem pertinet.",
     "collision": {
       "title": "Collisionis detectio",
       "enable": "Collisionis detectio",
@@ -395,6 +395,11 @@
       "labels": "Nomina regionum ostende",
       "stopOnIntrusion": "Siste in invasione regionis 'Sistere'",
       "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem et lusum sistit. Post resumptionem, ea invasio non iterum sistet donec exeat.\nObservatio temporis realis numquam sistit."
+    },
+    "graphics": {
+      "title": "Imago",
+      "renderScale": "Resolutionis ratio",
+      "renderScaleHint": "Quo minor ratio, eo paucioribus punctis scaena 3D pingitur — celerius, sed minus acute. Tituli et tabulae integri manent.\nIn hoc navigatro tantum servatur."
     }
   },
   "craneList": {

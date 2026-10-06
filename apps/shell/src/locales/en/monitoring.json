@@ -382,7 +382,7 @@
   },
   "detectionSettings": {
     "title": "Settings",
-    "subtitle": "Configure collision detection and zone intrusion detection in one place. Applies to realtime monitoring, 3D Play and scene editing.",
+    "subtitle": "Configure collision detection, zone intrusion detection and 3D graphics in one place. Applies to realtime monitoring, 3D Play and scene editing.",
     "collision": {
       "title": "Collision detection",
       "enable": "Collision detection",
@@ -395,6 +395,11 @@
       "labels": "Show zone labels",
       "stopOnIntrusion": "Pause on stop-zone intrusion",
       "stopHint": "Entering a zone with level 'Stop' pauses simulation and 3D Play. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
+    },
+    "graphics": {
+      "title": "Graphics",
+      "renderScale": "Render scale",
+      "renderScaleHint": "Lower values draw the 3D view with fewer pixels — faster, but blurrier. Model labels and panel text stay sharp.\nSaved in this browser only."
     }
   },
   "craneList": {
