@@ -307,7 +307,8 @@ export function AssetPreviewPanel({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="border-border relative aspect-[16/10] w-full border-b">
           {show3d ? (
-            // 자산마다 새로 마운트한다 — 앞 자산의 표시 상태·카메라가 남지 않게.
+            // 자산마다 새로 마운트한다 — 앞 자산의 카메라가 남지 않게.
+            // 표시 상태는 탭이 기억해 둔 값으로 다시 시작한다.
             mode === 'environment' ? (
               <AssetEnvironmentViewer
                 key={`${asset.id}@${version.version}`}

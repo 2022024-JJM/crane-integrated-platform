@@ -39,13 +39,11 @@ export class ViewerErrorBoundary extends Component<
 export function ViewerIconButton({
   label,
   pressed,
-  side = 'bottom',
   onClick,
   children,
 }: {
   label: string;
   pressed?: boolean;
-  side?: 'top' | 'bottom';
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -69,7 +67,7 @@ export function ViewerIconButton({
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent side={side}>{label}</TooltipContent>
+      <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
   );
 }

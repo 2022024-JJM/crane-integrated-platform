@@ -4,7 +4,6 @@ import {
   Box as BoxIcon,
   Camera,
   Grid3x3,
-  Maximize,
   Rotate3d,
   Ruler,
   SunMoon,
@@ -43,6 +42,7 @@ import {
 import { VIEWER_GLASS_BAR } from '../lib/asset-presentation';
 import { renderThumbnail } from '../lib/thumbnail-crop';
 import {
+  DEFAULT_VIEW_MODE,
   nextViewerBackground,
   type ViewerBackground,
   type ViewerDisplay,
@@ -161,7 +161,7 @@ interface AssetModelViewerProps {
   onSaveThumbnail?: () => void;
   /**
    * 조작 도구. `full` 은 전부, `compact` 는 좁은 자리(목록의 미리보기)에 맞는
-   * 표시 토글과 맞추기만, `none` 은 없음(나란히 보기의 오른쪽).
+   * 표시 토글만, `none` 은 없음(나란히 보기의 오른쪽).
    */
   toolbar?: 'full' | 'compact' | 'none';
   /** 표시 상태를 바깥이 들 때(나란히 보기). 없으면 뷰어가 직접 든다. */
@@ -429,6 +429,13 @@ function ViewerHelpers({
   const radius = 0.5 * Math.hypot(sizeX, sizeY, sizeZ) || 1;
   const tone = BACKGROUND_STYLE[background];
   const dimensionBox = useMemo(() => bounds.clone(), [bounds]);
+  const invalidate = useThree((state) => state.invalidate);
+
+  // R3F 는 객체를 붙일 때만 프레임을 요청하고 뗄 때는 요청하지 않는다 — 다시
+  // 그리라고 알리지 않으면 꺼진 격자·경계 상자가 카메라를 움직일 때까지 남는다.
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, showDimensions, showGrid]);
 
   return (
     <group name={HELPERS_GROUP_NAME}>
@@ -534,17 +541,17 @@ export function AssetModelViewer({
   const { t } = useTranslation();
   const rigRef = useRef<ViewerRigHandle | null>(null);
 
-  // 좁은 자리에서는 치수 꼬리표가 서로 겹친다 — 꺼 둔 채 시작한다.
-  const own = useViewerDisplay(
-    toolbar === 'compact' ? { showDimensions: false } : undefined,
-  );
+  const own = useViewerDisplay();
   // 캔버스가 놓이는 자리. R3F 는 만들어진 뒤 비동기로 이벤트를 이 요소에 건다 —
   // 요소를 직접 넘겨 두면, 그 사이 뷰어가 사라져도(목록을 빠르게 넘길 때)
   // 없는 요소에 걸다 던지지 않는다.
   const [surface, setSurface] = useState<HTMLDivElement | null>(null);
   const display = controlledDisplay ?? own.display;
   const setDisplay = onDisplayChange ?? own.setDisplay;
-  const { viewMode, background, showGrid, showDimensions, turntable } = display;
+  const { background, showGrid, showDimensions, turntable } = display;
+  // 좁은 자리에는 표시 방식 버튼이 없다 — 다른 화면에서 고른 방식을 여기서
+  // 되돌릴 길이 없으므로 기본 방식으로만 보인다.
+  const viewMode = toolbar === 'compact' ? DEFAULT_VIEW_MODE : display.viewMode;
   const [lodLevel, setLodLevel] = useState(0);
   // 로드 결과는 URL 에 묶어 둔다 — 다른 파일로 바뀌면 옛 결과가 한 프레임도
   // 보이지 않는다.
@@ -785,36 +792,26 @@ export function AssetModelViewer({
               </div>
             </div>
 
-            <div className="pointer-events-none absolute right-3 bottom-3 z-10 flex justify-end">
-              <div
-                role="group"
-                aria-label={t('asset-library:viewer.camera')}
-                className={cn(VIEWER_GLASS_BAR, 'pointer-events-auto')}
-              >
-                {toolbar === 'full' ? (
-                  <>
-                    {VIEW_PRESETS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => rigRef.current?.frame(preset)}
-                        className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-white/75 transition-colors outline-none hover:bg-white/15 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
-                      >
-                        {t(`asset-library:viewer.preset.${preset}`)}
-                      </button>
-                    ))}
-                    <span aria-hidden className="mx-0.5 h-4 w-px bg-white/20" />
-                  </>
-                ) : null}
-                <ViewerIconButton
-                  label={t('asset-library:viewer.fit')}
-                  side="top"
-                  onClick={() => rigRef.current?.frame('iso')}
+            {toolbar === 'full' ? (
+              <div className="pointer-events-none absolute right-3 bottom-3 z-10 flex justify-end">
+                <div
+                  role="group"
+                  aria-label={t('asset-library:viewer.camera')}
+                  className={cn(VIEWER_GLASS_BAR, 'pointer-events-auto')}
                 >
-                  <Maximize />
-                </ViewerIconButton>
+                  {VIEW_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => rigRef.current?.frame(preset)}
+                      className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-white/75 transition-colors outline-none hover:bg-white/15 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+                    >
+                      {t(`asset-library:viewer.preset.${preset}`)}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
           </TooltipProvider>
         )}
       </div>
