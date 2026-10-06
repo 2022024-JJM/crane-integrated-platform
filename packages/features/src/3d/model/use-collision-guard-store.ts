@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 
-export type DetectedObjectType = 'person' | 'car' | 'forklift';
+export type DetectedObjectType = 'person' | 'worker' | 'car' | 'forklift';
+
+/** 걸어서 움직이는 타입인가 — 걷기 애니메이션의 배속과 보브가 이 판정을 쓴다. */
+export function isPedestrianType(type: DetectedObjectType): boolean {
+  return type === 'person' || type === 'worker';
+}
 
 /**
  * 충돌 감지 영역 설정. 씬 좌표(world unit) 기준. 존은 center 중심의

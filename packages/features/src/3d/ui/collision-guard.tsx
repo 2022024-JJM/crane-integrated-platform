@@ -14,6 +14,7 @@ import {
 import type { SavedMapInfo } from '@crane/domain/3d';
 import {
   distanceFromZone,
+  isPedestrianType,
   nearestZone,
   trackSeverity,
   useCollisionGuardStore,
@@ -35,6 +36,7 @@ import {
   markGuardLayer,
   type MaterializeUniforms,
 } from '../lib/materialize-material';
+import { applyGuardFade } from '../lib/guard-object-material';
 import { TrackLabel, type TrackLabelRefs } from './collision-guard-label';
 import { CollisionGuardFocusDim } from './collision-guard-focus-dim';
 import {
@@ -120,8 +122,8 @@ const COLOR_WARNING = new Color(COLLISION_GUARD_COLORS.warning);
 const COLOR_DANGER = new Color(COLLISION_GUARD_COLORS.danger);
 /**
  * 커버 영역 무대 색 — 감지 링 안쪽을 어두운 네이비로 깔아 FSD의 "어두운
- * 도로"를 만든다. 흰 객체·고스트·발광 화살표·위험 면은 전부 이 어두운
- * 무대 위에서 대비를 얻는다 (흰 객체 + 밝은 지면은 구조적으로 대비가
+ * 도로"를 만든다. 감지 객체·고스트·발광 화살표·위험 면은 전부 이 어두운
+ * 무대 위에서 대비를 얻는다 (밝은 객체 + 밝은 지면은 구조적으로 대비가
  * 안 나온다는 운영 피드백). 전역 디밍과 달리 필요한 곳만 어두워져
  * 지도 맥락은 보존된다.
  */
@@ -198,11 +200,12 @@ function arrowLengthFor(speed: number): number {
  */
 const ARROW_NOSE_OFFSET: Record<DetectedObjectType, number> = {
   person: 0.35,
+  worker: 0.35,
   car: 1.6,
   forklift: 1.1,
 };
 /**
- * 림 글로우 강도 — 몸체는 무채색을 유지하고 림이 세버리티 색(주의 amber,
+ * 림 글로우 강도 — 몸체는 자산의 색 그대로이고 림이 세버리티 색(주의 amber,
  * 위험 red)을 입힌다. 감지된 트랙은 정의상 최소 warning이므로 "idle 림"은
  * 없다 — 커버 안의 모든 객체가 자기 레벨 색으로 읽혀야 한다.
  */
@@ -230,8 +233,9 @@ const DANGER_PULSE_DEPTH = 0.45;
 /** 머티리얼라이즈 컷 기준 객체 높이 (로컬 미터, 라벨 부착에도 사용) */
 const OBJECT_HEIGHT: Record<DetectedObjectType, number> = {
   person: 1.8,
-  car: 1.6,
-  forklift: 2.2,
+  worker: 1.9,
+  car: 1.5,
+  forklift: 1.6,
 };
 const LABEL_HEIGHT_OFFSET = 0.45;
 /**
@@ -266,8 +270,9 @@ const CONTACT_SHADOW_FOOTPRINT: Record<
   [long: number, cross: number]
 > = {
   person: [0.9, 0.9],
+  worker: [0.9, 0.9],
   car: [3.4, 1.7],
-  forklift: [2.4, 1.5],
+  forklift: [2.2, 1.2],
 };
 /** 접지 앵커 최대 불투명도 — 객체 페이드에 이 배율을 곱해 함께 여려진다 */
 const CONTACT_SHADOW_OPACITY = 0.55;
@@ -275,7 +280,7 @@ const CONTACT_SHADOW_OPACITY = 0.55;
  * 접지 앵커가 유지하는 최소 어둡기 비율.
  *
  * 앵커를 객체 불투명도에 그대로 비례시키면, 감지 경계 밴드에 갓 들어온
- * 고스트(불투명도 30%)는 앵커도 30%가 되어 자기 그늘을 잃는다. 흰 객체가
+ * 고스트(불투명도 30%)는 앵커도 30%가 되어 자기 그늘을 잃는다. 밝은 객체가
  * 밝은 도크 위에 있으면 대비가 2:1까지 떨어지는데 — 하필 "처음 감지된
  * 순간"이 가장 안 보이는 상태가 된다.
  *
@@ -547,7 +552,7 @@ function DetectionZoneRing({
       rotation={[0, frame.rotationY, 0]}
     >
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        {/* 커버 영역 다크 스테이지 — 경계 안쪽을 어둡게 깔아 흰 객체가
+        {/* 커버 영역 다크 스테이지 — 경계 안쪽을 어둡게 깔아 감지 객체가
             도드라지는 배경을 만든다 (FSD의 어두운 도로에 해당) */}
         <mesh renderOrder={1}>
           <circleGeometry args={[zone.radius, 128]} />
@@ -913,14 +918,14 @@ function DetectedObjectMesh({
     // --- 불투명도: 스윕보다 빠르게 램프(반투명 내부면 비침 최소화)하되,
     // 경계 신뢰도의 고스트 배율을 곱한다 — 경계 근처의 트랙은 실체화가
     // 진행돼도 반투명으로 남고, 깊이 들어와야 완전한 실체가 된다.
-    // reduced-motion이면 컷 없이 거리 비례 페이드만.
+    // reduced-motion이면 컷 없이 거리 비례 페이드만. 재질에는 원래 값에
+    // 곱해 넣는다(lib/guard-object-material.ts) — 유리는 유리로 남는다.
     const solidity = EDGE_MIN_SOLIDITY + (1 - EDGE_MIN_SOLIDITY) * presence;
     const opacity = reducedMotion
       ? smooth.fade * presence
       : Math.min(1, Math.max(0, smooth.sweep) * 2.5) * solidity;
     for (const material of fadeMaterialsRef.current) {
-      material.opacity = opacity;
-      material.depthWrite = opacity >= 0.99;
+      applyGuardFade(material, opacity);
     }
 
     // 접지 앵커 — 객체보다 먼저 짙어진다. 등장/이탈 페이드(fade)에는
@@ -1104,7 +1109,7 @@ function DetectedObjectMesh({
           // 걷기 클립(기준 보행 ≈1.4m/s)을 실제 이동 속도에 동기화 —
           // 트랙 속도는 스폰 시 고정이므로 mount 시점 값이면 충분하다.
           animationTimeScale={
-            track.type === 'person' ? track.target.speed / 1.4 : 1
+            isPedestrianType(track.type) ? track.target.speed / 1.4 : 1
           }
         />
       </Suspense>
@@ -1121,7 +1126,12 @@ function DetectedObjectMesh({
   );
 }
 
-const WARMUP_TYPES: DetectedObjectType[] = ['person', 'car', 'forklift'];
+const WARMUP_TYPES: DetectedObjectType[] = [
+  'person',
+  'worker',
+  'car',
+  'forklift',
+];
 /** 워밍업이 기다려야 하는 모델 수 — 전 타입의 전 배리언트 */
 const WARMUP_MODEL_COUNT = WARMUP_TYPES.reduce(
   (count, type) => count + MODEL_VARIANT_COUNTS[type],
@@ -1129,11 +1139,14 @@ const WARMUP_MODEL_COUNT = WARMUP_TYPES.reduce(
 );
 
 /**
- * 스폰 히치 워밍업 — 감지 객체는 각 타입의 "첫 등장" 프레임에 geometry
- * GPU 업로드 + 머티리얼라이즈 셰이더 컴파일(스킨드/비스킨드 2종) +
- * 바운딩박스 계산이 몰려 수십 ms 프레임 스파이크가 난다(등장 연출이
- * 버벅이는 주범). 씬 로드 직후 세 타입을 화면 밖에서 몇 프레임 그려
- * 이 비용을 미리 치른다.
+ * 스폰 히치 워밍업 — 감지 객체는 각 타입의 "첫 등장" 프레임에 geometry·
+ * 텍스처 GPU 업로드 + 머티리얼라이즈 셰이더 컴파일(재질 구성마다 1종) +
+ * 바운딩박스 계산이 몰려 프레임 스파이크가 난다(등장 연출이 버벅이는
+ * 주범). 전 타입을 화면 밖에서 몇 프레임 그려 이 비용을 미리 치른다.
+ *
+ * 가드를 처음 켤 때 마운트한다(CollisionGuard). 모델 내려받기와 텍스처
+ * 메모리가 커서 가드를 켜지 않는 화면 진입에 물리지 않는다 — 켠 뒤 첫
+ * 객체가 감지 링에 들어오기까지 몇 초가 있어 그 사이에 끝난다.
  *
  * 워밍업 후 언마운트하지 않고 visible=false로 계속 붙들어 두는 이유:
  * three의 셰이더 프로그램은 참조하는 마지막 material이 dispose되면 함께
@@ -1166,6 +1179,12 @@ function CollisionGuardWarmup() {
     if (group.children.length > mountedCountRef.current) {
       mountedCountRef.current = group.children.length;
       warmFramesRef.current = 0;
+      // 카메라가 어디를 보든 그려지게 한다 — 켜는 순간 카메라는 에고 포즈로
+      // 날아가는 중이라 지면 아래의 이 그룹이 시야에 든다는 보장이 없고,
+      // 컬링되면 한 번도 그려지지 않아 워밍업이 무효가 된다.
+      group.traverse((object) => {
+        object.frustumCulled = false;
+      });
     }
     if (group.children.length < WARMUP_MODEL_COUNT) return;
     warmFramesRef.current += 1;
@@ -1222,13 +1241,18 @@ export function CollisionGuard({
 
   const enabled = useCollisionGuardStore((s) => s.enabled);
   const tracks = useCollisionGuardStore((s) => s.tracks);
+  // 한 번이라도 켰는가 — 워밍업은 그때 시작하고, 꺼도 내리지 않는다(컴파일된
+  // 셰이더가 재질과 함께 지워진다).
+  const [warmupStarted, setWarmupStarted] = useState(enabled);
+  if (enabled && !warmupStarted) {
+    setWarmupStarted(true);
+  }
 
   return (
     <>
       {/* 디밍은 enabled 여부와 무관하게 마운트 — OFF 전환 시에도 부드럽게 복원 */}
       <CollisionGuardFocusDim />
-      {/* 워밍업도 enabled와 무관 — 가드를 켜기 전에 비용을 다 치러 둔다 */}
-      <CollisionGuardWarmup />
+      {warmupStarted ? <CollisionGuardWarmup /> : null}
       {enabled && zones.length > 0 ? (
         <>
           {zones.map((zone) => (

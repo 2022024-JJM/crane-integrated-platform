@@ -67,22 +67,28 @@ export const CODE_ASSETS = {
     path: '/models/goliath_crane_trolley.glb',
     usedBy: 'crane-zone-config',
   },
-  man: {
-    id: 'rt-man',
+  person: {
+    id: 'person',
     version: 1,
-    path: '/models/man.glb',
+    path: '/asset-library/files/person/v1/Person.glb',
+    usedBy: 'collision-guard',
+  },
+  worker: {
+    id: 'worker',
+    version: 1,
+    path: '/asset-library/files/worker/v1/Worker.glb',
     usedBy: 'collision-guard',
   },
   car: {
-    id: 'rt-car',
+    id: 'car',
     version: 1,
-    path: '/models/car.glb',
+    path: '/asset-library/files/car/v1/Car.glb',
     usedBy: 'collision-guard',
   },
   forkLift: {
-    id: 'rt-fork-lift',
+    id: 'fork-lift',
     version: 1,
-    path: '/models/fork_lift.glb',
+    path: '/asset-library/files/fork-lift/v1/Fork-Lift.glb',
     usedBy: 'collision-guard',
   },
 } as const satisfies Record<string, CodeAssetRef>;

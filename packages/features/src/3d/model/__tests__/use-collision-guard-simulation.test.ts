@@ -101,7 +101,7 @@ describe('useCollisionGuardSimulation', () => {
     expect(dist).toBeLessThanOrEqual(RADIUS);
     expect(dist).toBeGreaterThan(RADIUS - 2.5);
     expect(first.phase).toBe('active');
-    expect(['person', 'car', 'forklift']).toContain(first.type);
+    expect(['person', 'worker', 'car', 'forklift']).toContain(first.type);
   });
 
   it('이탈(목표 도달·반경+히스테리시스 밖)하면 phase가 leaving으로 전이한다', () => {

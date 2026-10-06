@@ -31,6 +31,7 @@
       "title": "감지된 객체 목록",
       "kind": {
         "person": "사람",
+        "worker": "작업자",
         "car": "차량",
         "forklift": "지게차"
       },

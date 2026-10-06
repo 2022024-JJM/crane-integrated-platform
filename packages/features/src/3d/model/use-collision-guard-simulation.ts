@@ -86,6 +86,7 @@ const GOAL_REACH_M = 5;
 /** 통로를 비스듬히 가로지르는 목표점 드리프트 (m) */
 const GOAL_DRIFT_M: Record<DetectedObjectType, number> = {
   person: 16,
+  worker: 16,
   car: 3.5,
   forklift: 6,
 };
@@ -96,12 +97,14 @@ const GOAL_DRIFT_M: Record<DetectedObjectType, number> = {
  */
 const SPEED_RANGE: Record<DetectedObjectType, [number, number]> = {
   person: [0.9, 1.6],
+  worker: [0.9, 1.6],
   car: [5.0, 8.5],
   forklift: [2.2, 4.2],
 };
 /** 사행 진폭 — 차는 차선을 지키고 사람은 흔들리며 걷는다 */
 const WANDER_AMPLITUDE: Record<DetectedObjectType, number> = {
   person: 0.3,
+  worker: 0.3,
   car: 0.05,
   forklift: 0.1,
 };
@@ -115,6 +118,7 @@ const AVOID_STEER_START = 1.6;
  */
 const RADIAL_SPAWN_CHANCE: Record<DetectedObjectType, number> = {
   person: 0.8,
+  worker: 0.8,
   car: 0,
   forklift: 0.5,
 };
@@ -131,6 +135,7 @@ const RADIAL_EXIT_JITTER = 0.9;
  */
 const AGENT_RADIUS_M: Record<DetectedObjectType, number> = {
   person: 0.6,
+  worker: 0.6,
   car: 2.4,
   forklift: 1.6,
 };
@@ -180,8 +185,15 @@ function travelAxis(zone: CollisionGuardZone): [number, number] {
 
 function spawnAgent(zone: CollisionGuardZone, id: string): SimAgent {
   const roll = Math.random();
+  // 걷는 쪽 45%(작업자 30 · 사람 15), 차량 30%, 지게차 25%.
   const type: DetectedObjectType =
-    roll < 0.45 ? 'person' : roll < 0.75 ? 'car' : 'forklift';
+    roll < 0.3
+      ? 'worker'
+      : roll < 0.45
+        ? 'person'
+        : roll < 0.75
+          ? 'car'
+          : 'forklift';
   const [cx, cz] = zone.center;
   const [tx, tz] = travelAxis(zone);
   // 주행축의 왼쪽 수직 벡터 — 차선 횡방향.

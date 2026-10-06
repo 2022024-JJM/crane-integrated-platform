@@ -1,4 +1,10 @@
-import { Car, Forklift, PersonStanding, ShieldCheck } from 'lucide-react';
+import {
+  Car,
+  Forklift,
+  HardHat,
+  PersonStanding,
+  ShieldCheck,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   useCollisionGuardHudSnapshot,
@@ -21,6 +27,7 @@ import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
 const TRACK_ICONS = {
   person: PersonStanding,
+  worker: HardHat,
   car: Car,
   forklift: Forklift,
 } as const;

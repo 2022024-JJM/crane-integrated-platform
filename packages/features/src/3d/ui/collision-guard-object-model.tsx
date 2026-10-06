@@ -5,8 +5,8 @@ import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import {
   AnimationMixer,
   Box3,
-  Color,
   Mesh,
+  SkinnedMesh,
   Vector3,
   type Group,
   type Material,
@@ -17,7 +17,15 @@ import {
   extendGltfLoaderWithKtx2,
   withBaseUrl,
 } from '@crane/domain/3d';
-import type { DetectedObjectType } from '../model/use-collision-guard-store';
+import {
+  isPedestrianType,
+  type DetectedObjectType,
+} from '../model/use-collision-guard-store';
+import {
+  GUARD_BLENDED_RENDER_ORDER,
+  isGuardBlendedMaterial,
+  prepareGuardObjectMaterial,
+} from '../lib/guard-object-material';
 
 /**
  * 감지 객체의 GLB 모델 비주얼.
@@ -27,10 +35,11 @@ import type { DetectedObjectType } from '../model/use-collision-guard-store';
  * 회전 보정. 이후는 기존 파이프라인 그대로 — 그룹 스케일(과장 배율)과
  * heading 회전이 씌워진다.
  *
- * material은 인스턴스별로 clone해 다크 스테이지용 자체발광을 입히고,
- * register 콜백으로 부모(DetectedObjectMesh)에 넘긴다 — 부모가 페이드
- * opacity와 머티리얼라이즈 셰이더(applyMaterialize)를 일괄 구동한다.
- * 애니메이션 클립이 있으면(사람 걷기 등) 첫 클립을 루프 재생한다.
+ * 재질은 자산이 가진 색·텍스처 그대로다. 인스턴스별로 clone해 페이드
+ * 기준값만 잡아 두고(lib/guard-object-material.ts) register 콜백으로
+ * 부모(DetectedObjectMesh)에 넘긴다 — 부모가 페이드와 머티리얼라이즈
+ * 셰이더(applyMaterialize)를 일괄 구동한다. 세버리티는 그 셰이더의 림
+ * 글로우가 입힌다. 애니메이션 클립이 있으면(사람 걷기) 루프 재생한다.
  */
 
 interface ObjectModelSource {
@@ -41,6 +50,11 @@ interface ObjectModelSource {
   sizeAxis: 'height' | 'length';
   /** 모델 원본 전방 → 우리 전방(+X) 보정 회전 (rad) */
   rotationY: number;
+  /**
+   * 루프 재생할 클립 이름. 자산에 정지 포즈 클립이 섞여 있을 수 있어 순서로
+   * 고르지 않는다. 그 이름의 클립이 없으면 첫 클립이다.
+   */
+  clip?: string;
 }
 
 /**
@@ -51,24 +65,34 @@ interface ObjectModelSource {
 const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource[]> = {
   person: [
     {
-      path: CODE_ASSETS.man.path,
-      targetSize: 1.75,
+      path: CODE_ASSETS.person.path,
+      targetSize: 1.78,
       sizeAxis: 'height',
       rotationY: Math.PI / 2,
+      clip: 'Walk',
+    },
+  ],
+  worker: [
+    {
+      path: CODE_ASSETS.worker.path,
+      targetSize: 1.85,
+      sizeAxis: 'height',
+      rotationY: Math.PI / 2,
+      clip: 'Action',
     },
   ],
   car: [
     {
       path: CODE_ASSETS.car.path,
-      targetSize: 4.5,
+      targetSize: 4.8,
       sizeAxis: 'length',
-      rotationY: Math.PI / 2,
+      rotationY: Math.PI,
     },
   ],
   forklift: [
     {
       path: CODE_ASSETS.forkLift.path,
-      targetSize: 2.9,
+      targetSize: 2.7,
       sizeAxis: 'length',
       rotationY: Math.PI / 2,
     },
@@ -83,47 +107,6 @@ export const MODEL_VARIANT_COUNTS: Record<DetectedObjectType, number> =
       sources.length,
     ]),
   ) as Record<DetectedObjectType, number>;
-
-for (const sources of Object.values(MODEL_SOURCES)) {
-  for (const source of sources) {
-    // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(ktx2-loader.ts).
-    useGLTF.preload(withBaseUrl(source.path), true, true, extendGltfLoaderWithKtx2);
-  }
-}
-
-/**
- * 테슬라식 무채색 객체 색 — 세버리티 색 언어(sky/amber/red)와 경쟁하는
- * 색을 화면에서 배제하고, 종류 식별은 실루엣이 담당한다.
- *
- * FSD 렌더처럼 밝은 흰색 차체를 쓴다. 밝은 무대 위에서의 분리는 색이
- * 아니라 접지 앵커(아래 소프트 셰도우)와 세버리티 림 글로우(amber/red
- * 윤곽선)가 담당한다 — 흰 몸체는 림 색이 가장 순수하게 얹히는 캔버스다.
- */
-const OBJECT_WHITE = new Color('#f1f5f9');
-
-/**
- * 원본 텍스처/색을 버리고 통일된 흰색 + 자체발광으로 교체한다.
- * 포커스 디밍으로 조명이 낮아져도 자체발광이 흰 몸체의 밝기를 지키고,
- * 세버리티는 머티리얼라이즈 셰이더의 림 글로우가 입힌다.
- */
-function prepareMaterial(material: Material): MeshStandardMaterial {
-  const cloned = material.clone() as MeshStandardMaterial;
-  if (cloned.isMeshStandardMaterial) {
-    cloned.map = null;
-    cloned.emissiveMap = null;
-    cloned.vertexColors = false;
-    cloned.color = OBJECT_WHITE.clone();
-    // 디밍된 조명 아래에서도 확실한 흰색으로 읽히도록 발광을 준다 —
-    // 형태·깊이는 조명 음영이 아니라 림 글로우와 접지 앵커가 전달한다.
-    cloned.emissive = OBJECT_WHITE.clone();
-    cloned.emissiveIntensity = 0.3;
-    cloned.roughness = 1;
-    cloned.metalness = 0;
-  }
-  cloned.transparent = true;
-  cloned.opacity = 0;
-  return cloned;
-}
 
 interface DetectedObjectModelProps {
   type: DetectedObjectType;
@@ -159,6 +142,14 @@ export function DetectedObjectModel({
   const prepared = useMemo(() => {
     const clone = SkeletonUtils.clone(scene);
 
+    // 스킨드 메시의 박스는 월드 행렬을 한 번 갱신한 뒤에 잰다. 막 복제한
+    // 메시는 bindMatrixInverse 가 단위 행렬이라 박스가 월드 좌표로 나오고,
+    // 거기에 메시의 월드 행렬이 한 번 더 곱해진다 — 루트에 스케일이 실린
+    // 리그(cm 단위 아마추어)는 그만큼 작게 재져 정규화 배율이 부풀어 오른다.
+    clone.updateMatrixWorld(true);
+    clone.traverse((child) => {
+      if (child instanceof SkinnedMesh) child.computeBoundingBox();
+    });
     const box = new Box3().setFromObject(clone);
     const size = box.getSize(new Vector3());
     const center = box.getCenter(new Vector3());
@@ -172,14 +163,15 @@ export function DetectedObjectModel({
       child.castShadow = false;
       child.receiveShadow = false;
       const original = child.material as Material | Material[];
-      if (Array.isArray(original)) {
-        const clonedList = original.map(prepareMaterial);
-        materials.push(...clonedList);
-        child.material = clonedList;
-      } else {
-        const clonedMaterial = prepareMaterial(original);
-        materials.push(clonedMaterial);
-        child.material = clonedMaterial;
+      const clonedList = (Array.isArray(original) ? original : [original]).map(
+        (material) =>
+          prepareGuardObjectMaterial(material) as MeshStandardMaterial,
+      );
+      materials.push(...clonedList);
+      child.material = Array.isArray(original) ? clonedList : clonedList[0];
+      // 유리·눈썹처럼 원래 반투명인 재질은 같은 객체의 본체 뒤에 그린다.
+      if (clonedList.some(isGuardBlendedMaterial)) {
+        child.renderOrder = GUARD_BLENDED_RENDER_ORDER;
       }
     });
 
@@ -215,26 +207,29 @@ export function DetectedObjectModel({
     [prepared],
   );
 
-  // 애니메이션 (사람 걷기 등) — 첫 클립 루프 재생.
+  // 애니메이션 (사람 걷기) — 소스가 지정한 클립을 루프 재생.
   const mixerRef = useRef<AnimationMixer | null>(null);
   useEffect(() => {
     if (animations.length === 0) return;
+    const clip =
+      animations.find((entry) => entry.name === source.clip) ?? animations[0];
     const mixer = new AnimationMixer(prepared.clone);
     mixer.timeScale = animationTimeScale;
-    mixer.clipAction(animations[0]).play();
+    mixer.clipAction(clip).play();
     mixerRef.current = mixer;
     return () => {
       mixer.stopAllAction();
       mixerRef.current = null;
     };
-  }, [animations, prepared, animationTimeScale]);
+  }, [animations, prepared, source, animationTimeScale]);
 
-  // 걷기 클립이 없는 정적 사람 모델(예: Tripo 생성 man.glb)은 그대로
-  // 두면 마네킹이 미끄러지듯 이동한다 — 케이던스에 맞춘 절차적 보브
-  // (걸음마다 상하 + 미세 요잉)로 걷는 리듬을 흉내 낸다. 차량류에는
-  // 적용하지 않는다.
+  // 걷기 클립이 없는 정적 사람 모델은 그대로 두면 마네킹이 미끄러지듯
+  // 이동한다 — 케이던스에 맞춘 절차적 보브(걸음마다 상하 + 미세 요잉)로
+  // 걷는 리듬을 흉내 낸다. 차량류에는 적용하지 않는다.
   const needsWalkBob =
-    type === 'person' && animations.length === 0 && animationTimeScale > 0;
+    isPedestrianType(type) &&
+    animations.length === 0 &&
+    animationTimeScale > 0;
   const bobRef = useRef<Group>(null);
   const bobClockRef = useRef(0);
 
