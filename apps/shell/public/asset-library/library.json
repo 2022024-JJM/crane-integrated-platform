@@ -3235,6 +3235,13 @@
         }
       ],
       "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/fork-lift.png"
+        },
+        "updatedAt": "2026-10-06T04:15:04.490Z"
+      },
       "createdAt": "2026-10-06T04:14:23.370Z",
       "updatedAt": "2026-10-06T04:14:26.424Z",
       "history": [
@@ -3278,14 +3285,7 @@
           "actor": "crane.ocean",
           "action": "thumbnail"
         }
-      ],
-      "thumbnail": {
-        "ref": {
-          "storage": "public",
-          "path": "/asset-library/thumbnails/fork-lift.png"
-        },
-        "updatedAt": "2026-10-06T04:15:04.490Z"
-      }
+      ]
     },
     {
       "id": "truck",
@@ -3335,6 +3335,13 @@
         }
       ],
       "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/truck.png"
+        },
+        "updatedAt": "2026-10-06T04:16:04.061Z"
+      },
       "createdAt": "2026-10-06T04:16:03.152Z",
       "updatedAt": "2026-10-06T04:16:12.956Z",
       "history": [
@@ -3372,14 +3379,7 @@
           "from": "approved",
           "to": "published"
         }
-      ],
-      "thumbnail": {
-        "ref": {
-          "storage": "public",
-          "path": "/asset-library/thumbnails/truck.png"
-        },
-        "updatedAt": "2026-10-06T04:16:04.061Z"
-      }
+      ]
     },
     {
       "id": "worker-bike",
@@ -3429,6 +3429,13 @@
         }
       ],
       "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/worker-bike.png"
+        },
+        "updatedAt": "2026-10-06T04:16:32.458Z"
+      },
       "createdAt": "2026-10-06T04:16:31.662Z",
       "updatedAt": "2026-10-06T04:16:35.973Z",
       "history": [
@@ -3466,14 +3473,7 @@
           "from": "approved",
           "to": "published"
         }
-      ],
-      "thumbnail": {
-        "ref": {
-          "storage": "public",
-          "path": "/asset-library/thumbnails/worker-bike.png"
-        },
-        "updatedAt": "2026-10-06T04:16:32.458Z"
-      }
+      ]
     },
     {
       "id": "worker",
@@ -3488,7 +3488,7 @@
       "versions": [
         {
           "version": 1,
-          "status": "draft",
+          "status": "published",
           "file": {
             "ref": {
               "storage": "public",
@@ -3523,8 +3523,15 @@
         }
       ],
       "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/worker.png"
+        },
+        "updatedAt": "2026-10-06T04:16:56.240Z"
+      },
       "createdAt": "2026-10-06T04:16:55.540Z",
-      "updatedAt": "2026-10-06T04:16:55.540Z",
+      "updatedAt": "2026-10-06T05:20:43.241Z",
       "history": [
         {
           "id": "919f2329-5f34-42de-b1cb-91e277ad0094",
@@ -3532,15 +3539,35 @@
           "actor": "crane.ocean",
           "action": "created",
           "version": 1
-        }
-      ],
-      "thumbnail": {
-        "ref": {
-          "storage": "public",
-          "path": "/asset-library/thumbnails/worker.png"
         },
-        "updatedAt": "2026-10-06T04:16:56.240Z"
-      }
+        {
+          "id": "097e1c04-9e18-4b42-8f2d-ef01bcad4f4a",
+          "at": "2026-10-06T05:20:41.807Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "5cb2bfa1-8a88-4da2-8aa5-8bbcdfc84258",
+          "at": "2026-10-06T05:20:42.390Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "a474d716-7b22-49b6-98c3-8fcc743db623",
+          "at": "2026-10-06T05:20:43.241Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ]
     },
     {
       "id": "oil-tanker",
@@ -3591,6 +3618,13 @@
         }
       ],
       "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/oil-tanker.png"
+        },
+        "updatedAt": "2026-10-06T04:17:57.321Z"
+      },
       "createdAt": "2026-10-06T04:17:56.948Z",
       "updatedAt": "2026-10-06T04:18:37.505Z",
       "history": [
@@ -3637,14 +3671,7 @@
             "categories"
           ]
         }
-      ],
-      "thumbnail": {
-        "ref": {
-          "storage": "public",
-          "path": "/asset-library/thumbnails/oil-tanker.png"
-        },
-        "updatedAt": "2026-10-06T04:17:57.321Z"
-      }
+      ]
     }
   ],
   "collections": []
