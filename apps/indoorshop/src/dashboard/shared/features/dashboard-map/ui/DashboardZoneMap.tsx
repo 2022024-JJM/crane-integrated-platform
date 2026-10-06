@@ -844,27 +844,8 @@ export function DashboardZoneMap() {
     [parcels]
   )
 
-  /*
-   * 패널을 지도 위에 겹칠 자리가 있는가 — 셸이 고정 뷰포트를 켜는 선(xl)과 **같은 선**을
-   * 쓴다. 그보다 좁으면 셸도 문서처럼 스크롤하는데 지도만 패널을 겹쳐 두면, 좌(상세
-   * 19rem)·우(공정존 21rem) 두 기둥이 서로 올라타 글자가 글자 위에 얹힌다.
-   * 좁은 화면에서는 패널을 지도 **아래**로 내려 페이지가 스크롤하게 둔다.
-   */
-  const wide = useMediaQuery('(min-width: 80rem)')
   /* 세로가 빠듯한 화면(1366×768·1280×720 같은 현장 모니터) — 미니맵이 몸집을 줄인다 */
   const shortScreen = useMediaQuery('(max-height: 900px)')
-
-  /*
-   * 좁은 화면에서 상세 카드는 지도 아래에 선다 — 지도에서 공장을 눌렀는데 카드가 화면
-   * 밖이면 누른 것이 아무 반응도 없었던 것처럼 보인다. `nearest` 라서 이미 보이는
-   * 경우에는 화면을 흔들지 않는다.
-   */
-  const stackedPanelsRef = useRef<HTMLDivElement>(null)
-  const openDetailKey = selectedBay ?? focusedFactory ?? null
-  useEffect(() => {
-    if (wide || !openDetailKey) return
-    stackedPanelsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [wide, openDetailKey])
 
   const detailCard = selectedBayData ? (
     <BayDetailCard
@@ -911,12 +892,13 @@ export function DashboardZoneMap() {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-3">
       {/*
-        지도 상자. 넓은 화면에서는 남은 높이를 다 쓰고(패널이 그 위에 뜬다), 좁은 화면에서는
-        아래에 선 패널이 화면 밖으로 밀리지 않도록 높이를 덜어 준다.
+        지도 상자. 넓은 화면에서는 남은 높이를 다 쓴다. 상세 카드는 화면 폭과 무관하게 늘
+        지도 위에 뜬다 — 좁은 화면에서 지도 아래로 내리면 지도와 카드 사이가 비고 고른
+        공장과 상세가 한눈에 안 들어온다. 카드는 제 안에서 스크롤하므로 높이만 있으면 된다.
       */}
       <div
         data-tour="dashboard-map"
-        className="relative min-h-0 w-full overflow-hidden rounded-inshop-xl border border-border bg-[#0b0f14] max-xl:h-[min(60vh,34rem)] max-xl:min-h-[22rem] xl:flex-1"
+        className="relative min-h-0 w-full overflow-hidden rounded-inshop-xl border border-border bg-[#0b0f14] max-md:h-[min(85vh,48rem)] max-md:min-h-[30rem] md:flex-1"
       >
         {/* 지도 — 준비되면 붙는다. 그 전엔 패널이 먼저 서 있고 여기만 로딩 표시 */}
         {data?.backdrop && parcelLayer && basemapLayers ? (
@@ -1098,7 +1080,7 @@ export function DashboardZoneMap() {
                 둔다. 베이를 고르면 같은 자리를 베이 상세가 이어받는다(두 카드를 나란히
                 세우면 지도를 반쯤 덮고, 어느 쪽이 지금 이야기인지도 흐려진다).
                 남는 높이를 전부 가져가되(`flex-1`), 넘치는 내용은 카드 안에서 스크롤한다. */}
-            {wide && detailCard && (
+            {detailCard && (
               <DraggableCard
                 key={selectedBayData ? 'bay' : 'factory'}
                 cardKey="detail"
@@ -1141,20 +1123,6 @@ export function DashboardZoneMap() {
 
       </div>
 
-      {/*
-        좁은 화면 — 겹칠 자리가 없으므로 패널을 지도 아래 문서 흐름에 세운다. 지도에서 공장을
-        고르면 그 상세가 여기 열리는데, 화면 밖이면 아무 일도 없었던 것처럼 보이므로
-        스크롤로 데려온다.
-      */}
-      {!wide && (
-        <div ref={stackedPanelsRef} className="flex flex-col gap-3">
-          {detailCard && (
-            <div key={selectedBayData ? 'bay' : 'factory'} className="animate-slide-up">
-              {detailCard}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

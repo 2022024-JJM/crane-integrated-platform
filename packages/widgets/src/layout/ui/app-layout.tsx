@@ -5,7 +5,7 @@ import {
   useLocation,
   useNavigationType,
 } from 'react-router-dom';
-import { AuthSiteTypeSync } from '@crane/features/auth';
+import { AuthSiteTypeSync, useAuth } from '@crane/features/auth';
 import { HeaderDisplaySettingsProvider } from '@crane/core/lib/header-display-settings-context';
 import { NavigationProgressProvider } from '@crane/core/lib/navigation-progress-context';
 import { SidebarProvider, useSidebar } from '@crane/core/lib/sidebar-context';
@@ -18,6 +18,7 @@ import { AppToaster } from '@crane/ui/organisms/app-toaster';
 import { NavigationProgressBar } from '@crane/ui/organisms/navigation-progress-bar';
 import { AppHeader } from './app-header';
 import { AppSidebar } from './app-sidebar';
+import { sidebarRailMinWidth } from '../lib/sidebar-breakpoint';
 
 function NavigationProgressSync() {
   const location = useLocation();
@@ -68,13 +69,15 @@ function NavigationProgressSync() {
 function SidebarDrawerCloseSync() {
   const { pathname } = useLocation();
   const { close } = useSidebar();
+  const { user } = useAuth();
+  const railMinWidth = sidebarRailMinWidth(user?.role);
 
   useEffect(() => {
-    // lg 미만(오버레이 드로어)에서만 라우트 변경 시 닫는다 — 데스크톱은 no-op
-    if (!window.matchMedia('(min-width: 1024px)').matches) {
+    // 레일 선 미만(오버레이 드로어)에서만 라우트 변경 시 닫는다 — 데스크톱은 no-op
+    if (!window.matchMedia(`(min-width: ${railMinWidth}px)`).matches) {
       close();
     }
-  }, [pathname, close]);
+  }, [pathname, close, railMinWidth]);
 
   return null;
 }

@@ -203,7 +203,7 @@ export function OutfittingWorkspace() {
   const viewportEdge = viewportEdgeColors(displayMode)
   const viewerSizeClass = isFullscreen
     ? 'h-full min-h-0'
-    : 'h-[72vh] min-h-[480px] xl:h-full xl:min-h-0'
+    : 'h-[72vh] min-h-[480px] md:h-full md:min-h-0'
 
   const viewerControlProps = {
     displayMode,
@@ -364,7 +364,7 @@ export function OutfittingWorkspace() {
   )
 
   return (
-    <div className="flex flex-col gap-5 xl:h-full xl:min-h-0 xl:gap-3">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0 md:gap-3">
       <FixedViewport />
 
       {/* 머리글 한 줄 — 나가는 문 + 제목(좌) + 식별 정보(우). 조립 워크스페이스와 같은 문법 */}
@@ -425,14 +425,14 @@ export function OutfittingWorkspace() {
         탭 본문 — ①현황·②뷰어·③블록이 **같은 어두운 판** 위에 선다(감사 A10).
         토큰만 바꾸는 판이라 마크업·레이아웃은 그대로다.
       */}
-      <div className="viewport-surface flex min-w-0 flex-col gap-6 rounded-inshop-lg xl:min-h-0 xl:flex-1 xl:gap-4">
+      <div className="viewport-surface flex min-w-0 flex-col gap-6 rounded-inshop-lg md:min-h-0 md:flex-1 md:gap-4">
         {workTab === 'viewer' ? (
           /* ② 3D 뷰어 — 공장 전체(전 베이 센서퓨전) 또는 베이 하나. 전폭 */
-          <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+          <div className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
             <div
               ref={viewportRef}
               style={isFullscreen ? { background: viewportEdge.background } : undefined}
-              className="viewport-frame relative min-w-0 xl:min-h-0 xl:flex-1"
+              className="viewport-frame relative min-w-0 md:min-h-0 md:flex-1"
             >
               {!bayScenes ? (
                 <div
@@ -469,8 +469,12 @@ export function OutfittingWorkspace() {
                   className={viewerSizeClass}
                 />
               )}
-              {/* 왼쪽 위 묶음 — 조립 워크스페이스와 **같은 구조**다(나가는 문 → 도구줄) */}
-              <div className="absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+              {/*
+                위쪽 한 줄 — 조립 워크스페이스와 **같은 구조**다. 왼쪽 도구줄과 오른쪽 손잡이·범례를
+                한 흐름에 세워, 좁은 화면에서도 서로 밑으로 파고들지 않는다.
+              */}
+              <div className="pointer-events-none absolute inset-x-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start justify-between gap-2">
+              <div className="pointer-events-auto flex min-w-0 flex-1 flex-col items-start gap-2">
                 <ViewportToolbar
                   title={
                     locationId
@@ -483,7 +487,7 @@ export function OutfittingWorkspace() {
                       : t('outfitting.workspace.factoryFusionHint')
                   }
                   nav={bayPills}
-                  className="static max-w-none"
+                  className="static max-w-full"
                   /*
                    * 물러나기는 **서 있는 층에 따라 다르다** (조립과 같은 규칙):
                    *  · 베이에 들어와 있으면 → 그 공장으로 **나가는 문**
@@ -510,11 +514,8 @@ export function OutfittingWorkspace() {
                   <PointCloudViewControls {...viewerControlProps} tone="glass" />
                 </ViewportToolbar>
               </div>
-              <PointCloudLegend
-                colorMode={colorMode}
-                className="left-auto right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.5rem)]"
-              />
-              <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start gap-2">
+              <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
+              <div className="flex items-start gap-2">
                 {selectedBlock && (
                   <button
                     type="button"
@@ -535,6 +536,9 @@ export function OutfittingWorkspace() {
                   <ViewportFullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />
                 )}
               </div>
+              <PointCloudLegend colorMode={colorMode} className="static" />
+              </div>
+              </div>
               {bayScenes && !locationId && (
                 <FirstRunHint className="absolute bottom-[calc(var(--vp-inset,1rem)+3rem)] left-1/2 z-10 -translate-x-1/2" />
               )}
@@ -553,7 +557,7 @@ export function OutfittingWorkspace() {
            * 그대로 한다. 위에 버드뷰가 붙어 "그게 어느 자리인가" 까지 한 화면에서 답한다.
            * 공장 선택은 보드의 왼쪽 목록이 쥔다 — 그래서 이 화면의 공장 탭바는 없앴다.
            */
-          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+          <div className="flex min-w-0 flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
             <OutfittingStatusTab
               selectedFactory={factory.name}
               onSelectFactory={(next) => {
@@ -562,12 +566,12 @@ export function OutfittingWorkspace() {
               }}
               /* 베이에서 건너왔으면 그 구획을 골라 둔 채로 (조립과 같은 승계) */
               focusBay={locationId ? bayNoOfLocationId(factory.id, locationId) : null}
-              className="xl:min-h-0 xl:flex-1"
+              className="md:min-h-0 md:flex-1"
             />
           </div>
         ) : (
           /* ③ 블록·실적 — 문서형 리스트의 블록 현황이 제 축의 전면으로 (딥링크 유지) */
-          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+          <div className="flex min-w-0 flex-col gap-3 md:min-h-0 md:flex-1">
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
               <h2 className="text-inshop-base font-semibold text-foreground">
                 {t('outfitting.workspace.blockListTitle')}{' '}
@@ -586,7 +590,7 @@ export function OutfittingWorkspace() {
                 )}
               </p>
             ) : (
-              <div className="space-y-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+              <div className="space-y-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
                 {blocksByBay
                   .filter((entry) => entry.blocks.length > 0)
                   .map((entry) => {

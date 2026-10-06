@@ -254,7 +254,7 @@ export function BayDetailPanel({
         </div>
       </div>
 
-      <div className="min-w-0 space-y-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+      <div className="min-w-0 space-y-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
         {/*
           정반 선택 목록 — 3D 라벨과 같은 선택을 카드 쪽에서도 제공한다 (FR-8 동기화).
           행 순서는 배치 데이터 순서 그대로다 — 탭·3D 와 같은 순서라야 손이 헤매지 않는다.

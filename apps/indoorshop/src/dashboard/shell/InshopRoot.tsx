@@ -102,10 +102,10 @@ export function InshopRoot() {
  * 본문 틀 — 원본 `LayoutWrapper` 의 `<main>` 에 해당한다.
  *
  * 기본은 문서형(본문이 길면 셸 ScrollArea 가 스크롤)이지만, 페이지가
- * `<FixedViewport />` 를 걸면 넓은 화면(xl)에서 본문을 뷰포트 높이에 **고정**하고
+ * `<FixedViewport />` 를 걸면 넓은 화면(md 이상)에서 본문을 뷰포트 높이에 **고정**하고
  * 스크롤은 각 패널 안으로 들어간다. 야드 지도·라이다 뷰어가 이 모드다.
  *
- * 이 고정이 없으면 그 화면들의 `xl:h-full` 사슬이 전부 `auto` 로 풀린다 —
+ * 이 고정이 없으면 그 화면들의 `md:h-full` 사슬이 전부 `auto` 로 풀린다 —
  * 캔버스 컨테이너의 높이가 캔버스 자신의 크기에서 나오고, ResizeObserver 가
  * 그걸 다시 캔버스에 써 넣는 되먹임으로 지도가 수만 px 로 자라 화면 저 아래로
  * 밀려난다. 셸 ScrollArea 의 viewport 는 `size-full` 이라 `h-full` 이 여기서
@@ -131,7 +131,7 @@ function InshopFrame() {
     <div
       className={cn(
         'inshop-root min-h-full px-4 py-6 md:px-7 md:py-8',
-        fixed && 'flex flex-col xl:h-full xl:min-h-0 xl:overflow-hidden xl:py-5',
+        fixed && 'flex flex-col md:h-full md:min-h-0 md:overflow-hidden md:py-5',
       )}
     >
       {/*

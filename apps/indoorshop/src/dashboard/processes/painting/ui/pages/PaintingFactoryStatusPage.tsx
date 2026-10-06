@@ -200,7 +200,7 @@ export function PaintingFactoryStatusPage() {
      * 안에서 흐른다. 예전에는 페이지째 흘러서, 설비 그리드를 훑는 동안 '어느 자리인가'를
      * 답하는 배치 그림이 위로 밀려 사라졌다 — 그러면 그때부터는 그냥 긴 목록이다.
      */
-    <div className="flex flex-col gap-4 xl:h-full xl:min-h-0 xl:gap-3">
+    <div className="flex flex-col gap-4 md:h-full md:min-h-0 md:gap-3">
       <FixedViewport />
 
       <div className="shrink-0">
@@ -277,13 +277,13 @@ export function PaintingFactoryStatusPage() {
         뒤집힌다. 조립·의장 워크스페이스가 쓰는 판을 그대로 쓴다 — 토큰만 바꾸는 판이라
         아래 컴포넌트의 마크업·레이아웃은 그대로다.
       */}
-      <div className="viewport-surface flex min-w-0 flex-col gap-4 rounded-inshop-lg p-3 xl:min-h-0 xl:flex-1">
+      <div className="viewport-surface flex min-w-0 flex-col gap-4 rounded-inshop-lg p-3 md:min-h-0 md:flex-1">
       {tab === 'status' ? (
         /* ① 현황 — 공장 목록 + 버드뷰 + 베이별 설비 그리드 (공용 보드).
            보드가 남는 높이를 통째로 받고 **목록만 그 안에서 흐른다** — 배치 그림은
            스크롤을 굴려도 제자리에 남아야 두 층이 함께 일한다(R29). */
         <PaintingStatusTab
-          className="xl:min-h-0 xl:flex-1"
+          className="md:min-h-0 md:flex-1"
           selectedFactory={factory}
           onSelectFactory={(next) => {
             const id = paintingFactoryIdOf(next)
@@ -303,7 +303,7 @@ export function PaintingFactoryStatusPage() {
         </Suspense>
       ) : (
         /* ③ 공장 현황 — 문서형 카드라 여기만 스스로 흐른다 */
-        <div className="flex min-w-0 flex-col gap-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+        <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
           {/* ── 스텝 진행 — 절점 축. 계획한 블록이 없는 스텝은 자리를 비우고 그렇다고 말한다 ── */}
           <section className="rounded-inshop-lg border border-border bg-surface p-3">
             <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
@@ -349,7 +349,7 @@ export function PaintingFactoryStatusPage() {
             </div>
           </section>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start">
             {/* ── 블록 목록 (BTS 귀속) ── */}
             <section className="min-w-0 flex-1 rounded-inshop-lg border border-border bg-surface p-3">
               <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
@@ -372,7 +372,7 @@ export function PaintingFactoryStatusPage() {
             </section>
 
             {/* ── 설비 요약 — 지도의 설비 상태 단과 같은 인벤토리 ── */}
-            <aside className="rounded-inshop-lg border border-border bg-surface p-3 lg:w-72 lg:shrink-0">
+            <aside className="rounded-inshop-lg border border-border bg-surface p-3 md:w-72 md:shrink-0">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-inshop-sm font-semibold text-foreground">
                   {t('painting.factoryStatus.equipmentTitle')}

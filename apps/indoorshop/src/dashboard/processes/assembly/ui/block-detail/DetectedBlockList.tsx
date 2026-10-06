@@ -292,7 +292,7 @@ export function DetectedBlockList({
   }
 
   return (
-    <div className={cn('grid grid-cols-1 gap-5 xl:grid-cols-2', className)}>
+    <div className={cn('grid grid-cols-1 gap-5 md:grid-cols-2', className)}>
       {blocks.map((block) => {
         const selected = block.id === selectedBlockId
         return (

@@ -171,6 +171,8 @@ export function AssemblyWorkspace() {
   }, [sensorFocus?.id])
   /* `전체보기` — 화면을 떠나지 않고 카메라만 전 베이로 물린다(공장 뷰 전용) */
   const [fitAllRequest, setFitAllRequest] = useState(0)
+  /* 실측 뷰어의 정합 범례가 포털해 들어올 자리(오른쪽 위 손잡이 열) */
+  const [legendSlot, setLegendSlot] = useState<HTMLDivElement | null>(null)
 
   /** 목록에서 가리키는 중인 정반 — 3D 뷰의 강조와 같은 값을 공유한다 */
   const [highlightedBayId, setHighlightedBayId] = useState<string | null>(null)
@@ -219,7 +221,7 @@ export function AssemblyWorkspace() {
   /* 전체 화면에서는 칸이 곧 화면이다 — 문서 흐름용 고정 높이를 쓰면 아래가 남는다 */
   const viewerSizeClass = isFullscreen
     ? 'h-full min-h-0'
-    : 'h-[72vh] min-h-[480px] xl:h-full xl:min-h-0'
+    : 'h-[72vh] min-h-[480px] md:h-full md:min-h-0'
 
   const handleDisplayModeChange = (next: ViewerDisplayMode) => {
     if (next === 'cad' && displayMode !== 'cad' && colorMode !== 'progress') {
@@ -506,7 +508,7 @@ export function AssemblyWorkspace() {
      * 이 화면은 문서가 아니라 계기판이다 — 넓은 화면에서는 뷰포트에 딱 맞춰 고정하고,
      * 넘치는 목록은 페이지가 아니라 각 패널이 안에서 스크롤한다.
      */
-    <div className="flex flex-col gap-5 xl:h-full xl:min-h-0 xl:gap-3">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0 md:gap-3">
       <FixedViewport />
 
       {/*
@@ -600,7 +602,7 @@ export function AssemblyWorkspace() {
         탭 본문 — ①현황·②뷰어·③블록이 **같은 어두운 판** 위에 선다(감사 A10).
         토큰만 바꾸는 판이라 마크업·레이아웃은 그대로다.
       */}
-      <div className="viewport-surface flex min-w-0 flex-col gap-6 rounded-inshop-lg xl:min-h-0 xl:flex-1 xl:gap-4">
+      <div className="viewport-surface flex min-w-0 flex-col gap-6 rounded-inshop-lg md:min-h-0 md:flex-1 md:gap-4">
         {workTab === 'status' ? (
           /*
            * ① 현황 — 공장 목록 + 버드뷰 + 베이별 설비 그리드 (P4). 공용 보드를 그대로 쓴다.
@@ -612,7 +614,7 @@ export function AssemblyWorkspace() {
            * 3D 장면을 기다리지 않는다 — 설비 현황의 재료는 설비 엔티티와 상태 스냅샷이라
            * 포인트 클라우드가 오기 전에 이미 답할 수 있다.
            */
-          <div className="flex min-w-0 flex-col gap-3 xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">
+          <div className="flex min-w-0 flex-col gap-3 md:-m-1.5 md:min-h-0 md:flex-1 md:overflow-y-auto md:p-1.5">
             <AssemblyStatusTab
               selectedFactory={factory.name}
               onSelectFactory={(next) => {
@@ -628,17 +630,17 @@ export function AssemblyWorkspace() {
                * 목록은 그 구획을 맨 앞에 세운다(칸을 직접 누른 것과 같은 상태).
                */
               focusBay={assemblyBayKeyOfLocationId(factory.id, selectedLocation?.id ?? '')}
-              className="xl:min-h-0 xl:flex-1"
+              className="md:min-h-0 md:flex-1"
             />
           </div>
         ) : selectedLocation ? (
           // ── 정반 레벨 ──
           !detail || !bayScene ? (
             /* 첫 진입 — 장면은 아직 없지만 탭과 상자는 자리에 선다 (기다리는 동안에도 갈아탈 수 있어야 한다) */
-            <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+            <div className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
               <div
                 style={{ background: viewportEdge.background }}
-                className="flex h-[72vh] min-h-[480px] w-full items-center justify-center rounded-inshop-lg border border-border xl:h-auto xl:min-h-0 xl:flex-1"
+                className="flex h-[72vh] min-h-[480px] w-full items-center justify-center rounded-inshop-lg border border-border md:h-auto md:min-h-0 md:flex-1"
               >
                 {showDetailSpinner && <Spinner size={26} label={t('viewer.loadingDetection')} className="text-accent" />}
               </div>
@@ -646,12 +648,12 @@ export function AssemblyWorkspace() {
           ) : workTab === 'viewer' ? (
             /* ② 3D 뷰어 — 순수 뷰어(전폭). 센서 목록·블록 목록은 제 축의 탭으로 갔다.
                유리 도구줄·범례·선택 블록 카드는 뷰어의 조작 부속이라 남는다. */
-            <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+            <div className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
               <div
                 ref={viewportRef}
                 // 전체 화면에서는 이 칸이 곧 화면이다 — 지금 팔레트의 바탕을 직접 칠한다
                 style={isFullscreen ? { background: viewportEdge.background } : undefined}
-                className="viewport-frame relative xl:min-h-0 xl:flex-1"
+                className="viewport-frame relative md:min-h-0 md:flex-1"
               >
                 {realView ? (
                   <RealScanViewer
@@ -667,6 +669,7 @@ export function AssemblyWorkspace() {
                     onSelectBlock={setSelectedBlockId}
                     className={viewerSizeClass}
                     sensorFocus={sensorFocus}
+                    legendContainer={legendSlot}
                   />
                 ) : (
                   <LidarPointCloudViewer
@@ -687,7 +690,13 @@ export function AssemblyWorkspace() {
                   그 **아래에 이어 붙인다** — 절대좌표 둘을 겹치면 도구줄 높이가
                   바뀔 때마다 상세의 자리를 다시 재야 한다.
                 */}
-                <div className="absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+                {/*
+                  위쪽 한 줄 — 왼쪽 도구줄과 오른쪽 손잡이(조작·전체 화면·범례)를 **한 흐름**에
+                  세운다. 둘을 따로 띄우면 도구줄이 오른쪽 몫을 어림값으로만 비켜, 좁은 화면에서
+                  범례·버튼 밑으로 파고든다. 빈 가운데는 3D 조작을 가로채지 않는다.
+                */}
+                <div className="pointer-events-none absolute inset-x-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start justify-between gap-2">
+                <div className="pointer-events-auto flex min-w-0 flex-1 flex-col items-start gap-2">
                   <ViewportToolbar
                     title={t('assembly.workspace.registeredCloud')}
                     hint={t('assembly.workspace.registeredCloudHint')}
@@ -703,7 +712,7 @@ export function AssemblyWorkspace() {
                         parts="bays"
                       />
                     }
-                    className="static max-w-none"
+                    className="static max-w-full"
                     back={
                       <BackLink
                         to={backLink.to}
@@ -716,19 +725,12 @@ export function AssemblyWorkspace() {
                     <PointCloudViewControls {...viewerControlProps} tone="glass" />
                   </ViewportToolbar>
                   {selectedBlock && (
-                    <BlockDetailOverlay block={selectedBlock} className="static w-64" />
+                    <BlockDetailOverlay block={selectedBlock} className="static w-64 max-w-full" />
                   )}
                 </div>
-                {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 오른쪽 위(도구 묶음 아래)로 */}
-                {!viewerOwnsLegend && (
-                  <PointCloudLegend
-                    colorMode={colorMode}
-                    className="left-auto right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.5rem)]"
-                  />
-                )}
-                {showDetailSpinner && <SpinnerOverlay label={t('viewer.loadingDetection')} />}
-                {/* 우상단 도구 묶음 — 늘어놓지 않고 한 줄로 모은다 */}
-                <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] flex items-center gap-2">
+                {/* 우상단 도구 묶음 — 늘어놓지 않고 한 줄로 모으고, 범례는 그 아래 */}
+                <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
                   {selectedBlock && (
                     <button
                       type="button"
@@ -752,12 +754,18 @@ export function AssemblyWorkspace() {
                     />
                   )}
                 </div>
+                {!viewerOwnsLegend && <PointCloudLegend colorMode={colorMode} className="static" />}
+                {/* 실측 뷰어가 쥔 정합 범례가 서는 자리 — 같은 열이라 도구줄과 겹치지 않는다 */}
+                <div ref={setLegendSlot} className="flex flex-col items-end empty:hidden" />
+                </div>
+                </div>
+                {showDetailSpinner && <SpinnerOverlay label={t('viewer.loadingDetection')} />}
               </div>
             </div>
           ) : (
             /* ③ 블록·실적 — 인식 목록이 옆구리 패널이 아니라 전면이다. 실적의 다음
                단계(일일 생산)는 여기서 나간다. */
-            <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+            <div className="flex min-w-0 flex-col gap-3 md:min-h-0 md:flex-1">
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
                 <h2 className="text-inshop-base font-semibold text-foreground">
                   {t('blocks.listTitle')}{' '}
@@ -770,7 +778,7 @@ export function AssemblyWorkspace() {
                   {t('assembly.workspace.dailyProductionLink')}
                 </Link>
               </div>
-              <div className="xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">
+              <div className="md:-m-1.5 md:min-h-0 md:flex-1 md:overflow-y-auto md:p-1.5">
                 <DetectedBlockList
                   blocks={detail.blocks}
                   model={detail.previewModel}
@@ -785,11 +793,11 @@ export function AssemblyWorkspace() {
            * ── 공장 레벨 ② 3D 뷰어 — 공장 전체 센서퓨전, 전폭 ──
            * 정반 선택은 상단 탭과 3D 라벨이 맡는다. 정반 상세 패널(FR-8)은 ③ 탭으로 갔다.
            */
-          <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+          <div className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
             <div
               ref={viewportRef}
               style={isFullscreen ? { background: viewportEdge.background } : undefined}
-              className="viewport-frame relative min-w-0 xl:min-h-0 xl:flex-1"
+              className="viewport-frame relative min-w-0 md:min-h-0 md:flex-1"
             >
               {/*
                 장면이 아직 없어도 칸과 도구줄은 자리에 남는다 — 불러오는 동안
@@ -824,7 +832,13 @@ export function AssemblyWorkspace() {
                 왼쪽 위 묶음 — 정반 뷰와 **같은 구조**다(나가는 문 → 도구줄). 두 화면이
                 같은 자리에 같은 순서로 서야, 들어가고 나오는 동안 눈이 다시 적응하지 않는다.
               */}
-              <div className="absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+              {/*
+                위쪽 한 줄 — 왼쪽 도구줄과 오른쪽 손잡이(조작·전체 화면·범례)를 **한 흐름**에
+                세운다. 둘을 따로 띄우면 도구줄이 오른쪽 몫을 어림값으로만 비켜, 좁은 화면에서
+                범례·버튼 밑으로 파고든다. 빈 가운데는 3D 조작을 가로채지 않는다.
+              */}
+              <div className="pointer-events-none absolute inset-x-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start justify-between gap-2">
+              <div className="pointer-events-auto flex min-w-0 flex-1 flex-col items-start gap-2">
                 <ViewportToolbar
                   title={t('assembly.workspace.factoryFusion')}
                   hint={t('assembly.workspace.factoryFusionHint')}
@@ -839,7 +853,7 @@ export function AssemblyWorkspace() {
                       parts="bays"
                     />
                   }
-                  className="static max-w-none"
+                  className="static max-w-full"
                   /*
                    * 공장 뷰의 물러나기는 **카메라**다 — 화면을 떠나지 않는다.
                    * 여기가 이미 이 공장의 '전체' 이므로, 한 계단 더 나가는 문(공장 목록)은
@@ -856,21 +870,21 @@ export function AssemblyWorkspace() {
                   <PointCloudViewControls {...viewerControlProps} tone="glass" />
                 </ViewportToolbar>
               </div>
-              {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 전체 화면 버튼 아래로 비켜 세운다 */}
-              {factoryScene && !viewerOwnsLegend && (
-                <PointCloudLegend
-                  colorMode={colorMode}
-                  className="left-auto right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.5rem)]"
-                />
-              )}
-              <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start gap-2">
-                {factoryScene && <ViewportHelp className="static flex-col-reverse" />}
-                {fullscreenSupported && (
-                  <ViewportFullscreenButton
-                    isFullscreen={isFullscreen}
-                    onToggle={toggleFullscreen}
-                  />
+              {/* 우상단 — 조작·전체 화면, 범례는 그 아래로 */}
+              <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
+                <div className="flex items-start gap-2">
+                  {factoryScene && <ViewportHelp className="static flex-col-reverse" />}
+                  {fullscreenSupported && (
+                    <ViewportFullscreenButton
+                      isFullscreen={isFullscreen}
+                      onToggle={toggleFullscreen}
+                    />
+                  )}
+                </div>
+                {factoryScene && !viewerOwnsLegend && (
+                  <PointCloudLegend colorMode={colorMode} className="static" />
                 )}
+              </div>
               </div>
               {/*
                 데이터 지연 (FR-9) — 마지막 값이 정상처럼 보이지 않게 뷰 전체에 알린다.
@@ -901,7 +915,7 @@ export function AssemblyWorkspace() {
         ) : (
           /* ③ 공장 블록·실적 — 정반 상세 패널(작업 상태·필터)이 전면이다.
              일일 생산 링크는 머리글(공장 뷰 상시)이 이미 낸다 — 같은 문을 두 번 세우지 않는다 */
-          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+          <div className="flex min-w-0 flex-col gap-3 md:min-h-0 md:flex-1">
             {/* 이 공장에서 지금 붙이고 있는 것 — 정반이 '무엇이 서 있나' 라면 이건 '무엇이
                 만들어지고 있나' 다. 완료분은 떠났으므로 여기 없는 것이 맞다(W7-7-5). */}
             <JudgingAssyList
@@ -909,7 +923,7 @@ export function AssemblyWorkspace() {
               loading={judgingLoading}
               className="shrink-0"
             />
-            <div className="flex h-[72vh] min-h-[480px] flex-col xl:h-auto xl:min-h-0 xl:flex-1">
+            <div className="flex h-[72vh] min-h-[480px] flex-col md:h-auto md:min-h-0 md:flex-1">
               <BayDetailPanel
                 bays={factoryScene.bays}
                 selectedBayId={selectedBayId}

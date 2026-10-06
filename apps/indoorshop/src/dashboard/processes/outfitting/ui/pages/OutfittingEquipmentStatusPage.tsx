@@ -127,7 +127,7 @@ export function OutfittingEquipmentStatusPage() {
 
   return (
     /* 계기판이라 넓은 화면에서는 뷰포트에 맞춰 고정한다 — 워크스페이스와 같은 골격 */
-    <div className="flex flex-col gap-5 xl:h-full xl:min-h-0 xl:gap-3">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0 md:gap-3">
       <FixedViewport />
 
       {/* 머리글 한 줄 — 나가는 문 + 제목(좌) + 안내(우). 워크스페이스와 같은 문법 */}
@@ -150,7 +150,7 @@ export function OutfittingEquipmentStatusPage() {
       )}
 
       {/* 몸통 — 워크스페이스 현황 탭과 같은 판 위의 같은 보드 */}
-      <div className="viewport-surface flex min-w-0 flex-col rounded-inshop-lg p-3 xl:min-h-0 xl:flex-1">
+      <div className="viewport-surface flex min-w-0 flex-col rounded-inshop-lg p-3 md:min-h-0 md:flex-1">
         <OutfittingStatusTab
           selectedFactory={selectedFactory}
           onSelectFactory={setSelectedFactory}

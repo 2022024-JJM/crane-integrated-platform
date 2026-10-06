@@ -114,12 +114,13 @@ export function OutfittingBayViewer({
         )
       )}
 
-      {/* 좌상단 유리 도구줄 — 조립 베이 화면과 같은 자리·같은 부품 */}
-      <div className="absolute left-4 top-4 z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+      {/* 위쪽 한 줄 — 왼쪽 유리 도구줄과 오른쪽 손잡이·범례를 한 흐름에 (조립과 같은 구조) */}
+      <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-2">
+      <div className="pointer-events-auto flex min-w-0 flex-1 flex-col items-start gap-2">
         <ViewportToolbar
           title={t('outfitting.mapEntry.viewer.title', { factory, bay: bayLabel })}
           hint={t('outfitting.mapEntry.viewer.hint')}
-          className="static max-w-none"
+          className="static max-w-full"
         >
           <PointCloudViewControls
             displayMode={displayMode}
@@ -134,11 +135,9 @@ export function OutfittingBayViewer({
         </ViewportToolbar>
       </div>
 
-      {/* 범례 — 도구 묶음 아래 우측 (조립과 동일) */}
-      <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
-
-      {/* 우상단 도구 묶음 — 선택 해제 · 조작 도움말 · 닫기 */}
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+      {/* 우상단 도구 묶음 — 선택 해제 · 조작 도움말 · 닫기, 범례는 그 아래 */}
+      <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
+      <div className="flex items-center gap-2">
         {selectedBlock && (
           <button
             type="button"
@@ -167,6 +166,9 @@ export function OutfittingBayViewer({
         >
           <CloseIcon size={14} />
         </button>
+      </div>
+      <PointCloudLegend colorMode={colorMode} className="static" />
+      </div>
       </div>
 
       {/* 모의 데이터 단서 — 하단 중앙, 항상 보인다 */}

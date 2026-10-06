@@ -503,7 +503,7 @@ export function YardWorkspace() {
      * 조립 화면과 같이 — 문서가 아니라 계기판이다. 넓은 화면에서는 뷰포트에 맞춰
      * 고정하고, 넘치는 목록은 페이지가 아니라 오른쪽 패널이 안에서 스크롤한다.
      */
-    <div className="flex flex-col gap-5 xl:h-full xl:min-h-0 xl:gap-3">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0 md:gap-3">
       <FixedViewport />
 
       <div className="shrink-0">
@@ -575,13 +575,13 @@ export function YardWorkspace() {
       <div
         ref={splitRef}
         style={{ '--list-w': `${listWidth}px` } as CSSProperties}
-        className="flex flex-col gap-6 xl:min-h-0 xl:flex-1 xl:flex-row xl:gap-0"
+        className="flex flex-col gap-6 md:min-h-0 md:flex-1 md:flex-row md:gap-0"
       >
-        <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+        <div className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
           <div
             ref={viewportRef}
             className={cn(
-              'relative xl:min-h-0 xl:flex-1',
+              'relative md:min-h-0 md:flex-1',
               resizingList && '[&_canvas]:pointer-events-none',
               isFullscreen && 'bg-viewport',
             )}
@@ -625,7 +625,7 @@ export function YardWorkspace() {
               focusBlockId={focusBlockId}
               focusMoveIndex={focusMoveIndex}
               className={
-                isFullscreen ? 'h-full min-h-0' : 'h-[72vh] min-h-[480px] xl:h-full xl:min-h-0'
+                isFullscreen ? 'h-full min-h-0' : 'h-[72vh] min-h-[480px] md:h-full md:min-h-0'
               }
             />
 
@@ -704,9 +704,9 @@ export function YardWorkspace() {
           </div>
         </div>
 
-        <ResizeHandle {...separatorProps} dragging={resizingList} className="hidden xl:block" />
+        <ResizeHandle {...separatorProps} dragging={resizingList} className="hidden md:block" />
 
-        <div className="flex min-w-0 flex-col xl:min-h-0 xl:w-[var(--list-w)] xl:shrink-0">
+        <div className="flex min-w-0 flex-col md:min-h-0 md:w-[var(--list-w)] md:shrink-0">
           <div className="mb-3 flex shrink-0 items-center gap-2">
             <Segmented
               legend={t('yard.tab.legend')}
@@ -732,10 +732,10 @@ export function YardWorkspace() {
               onSelectFacility={selectFacilityFromList}
               onHoverFacility={hoverFacility}
               facilityHref={facilityHref}
-              className="xl:min-h-0 xl:flex-1"
+              className="md:min-h-0 md:flex-1"
             />
           ) : (
-            <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+            <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
               {panel === 'blocks' ? (
                 <YardBlockList
                   blocks={listedBlocks}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -116,6 +117,11 @@ interface RealScanViewerProps {
   className?: string
   /** 센서 카드 클릭으로 요청된 센서 인덱스와 반복 요청 식별자 */
   sensorFocus?: { index: number; request: number } | null
+  /**
+   * 정합 범례를 세울 바깥 자리 — 있으면 그 안으로 포털한다. 페이지가 위쪽 손잡이들과
+   * 한 흐름으로 세워야 좁은 화면에서 도구줄과 겹치지 않는다. 없으면 뷰어 오른쪽 위에 띄운다.
+   */
+  legendContainer?: HTMLElement | null
 }
 
 /** 실측 점군 기본 점 크기(m) — 밀도가 높아 큰 점은 뭉개진다. 뷰포트 슬라이더로 조절 */
@@ -424,6 +430,7 @@ export function RealScanViewer({
   onHoverBay,
   className,
   sensorFocus = null,
+  legendContainer = null,
 }: RealScanViewerProps) {
   const { t, i18n } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -1340,13 +1347,15 @@ export function RealScanViewer({
     >
       <div ref={containerRef} className="absolute inset-0" />
 
-      {segmentLegend && (
+      {segmentLegend && maybePortal(
         <div
           className={cn(
-            'pointer-events-none absolute max-h-[60%] overflow-hidden rounded-inshop-lg glass-panel px-2.5 py-1.5',
-            // 왼쪽 위는 어느 화면에서나 유리 도구줄(ViewportToolbar) 자리다 — 늘 오른쪽으로 비킨다
-            // (오른쪽 위 도구 묶음 한 줄 아래 — 가장자리 여백은 뷰포트 액자가 정한다)
-            'right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2rem)]'
+            'pointer-events-none overflow-hidden rounded-inshop-lg glass-panel px-2.5 py-1.5',
+            legendContainer
+              ? 'max-w-full'
+              : // 왼쪽 위는 어느 화면에서나 유리 도구줄(ViewportToolbar) 자리다 — 늘 오른쪽으로 비킨다
+                // (오른쪽 위 도구 묶음 한 줄 아래 — 가장자리 여백은 뷰포트 액자가 정한다)
+                'absolute right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2rem)] max-h-[60%]'
           )}
         >
           <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-glass-foreground/54">
@@ -1391,7 +1400,8 @@ export function RealScanViewer({
               </span>
             </li>
           </ul>
-        </div>
+        </div>,
+        legendContainer
       )}
 
       <LiveAxisGizmo
@@ -1436,4 +1446,9 @@ export function RealScanViewer({
       {loading && <SpinnerOverlay label={t('viewer.loadingRealScan')} />}
     </div>
   )
+}
+
+/** 바깥 자리가 있으면 그리로 포털하고, 없으면 제자리에 그린다 */
+function maybePortal(node: React.ReactNode, container: HTMLElement | null) {
+  return container ? createPortal(node, container) : node
 }

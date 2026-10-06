@@ -144,15 +144,13 @@ export function EquipmentStatusBoard({
   /* 보기 모드는 새로고침·공장 이동을 넘어 남는다 — 화면 상태가 아니라 보는 방식이다 */
   const mode = useEquipmentBoardMode()
   const birdviewOnly = mode === 'birdview'
-  /*
-   * 나란히 세울 만큼 넓은가 — 클래스만으로는 표현할 수 없다. 붙어 있는 머리의 여백
-   * (`--board-head`)과 그림 높이가 배치에 따라 통째로 달라지기 때문이다.
-   */
-  const wide = useMediaQuery('(min-width: 1280px)')
+  /* 클래스만으로는 표현할 수 없다 — 머리 여백(`--board-head`)과 그림 높이가 통째로 달라진다 */
+  const wide = useMediaQuery('(min-width: 48rem)')
   /* 배치 전용에서는 그림이 곧 화면이라 접는 손잡이가 설 자리가 없다 */
   const birdviewShown = birdviewOnly || birdviewOpen
   /*
-   * 두 열로 세우는가 — 넓은 화면에서 **그림이 서 있을 때만**.
+   * 두 열로 세우는가 — 셸이 화면을 고정하는 폭(md) 이상에서 **그림이 서 있을 때만**.
+   * 그 위로는 화면이 줄어도 배치를 바꾸지 않는다 — 그림은 상자에 맞춰 작아질 뿐이다.
    *
    * 접었는데도 두 열을 유지하면 왼쪽이 빈 칸으로 남고 목록은 반쪽 폭에 갇힌다. 접기의
    * 뜻은 "그림 대신 목록을 보겠다" 이므로, 접는 순간 목록이 폭을 통째로 받아야 한다.
@@ -248,7 +246,7 @@ export function EquipmentStatusBoard({
     <div
       ref={rootRef}
       className={cn(
-        'grid gap-4 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
+        'grid gap-4 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
         /*
          * 두 열로 서면 보드가 **그릇을 그대로 채우고** 목록만 안에서 흐른다.
          *
@@ -256,15 +254,15 @@ export function EquipmentStatusBoard({
          * 올라간다 — 스크롤을 굴릴 때마다 도면이 흠칫하는 그 움직임이 "고정되지 않았다"로
          * 읽힌다. 아예 스크롤될 것을 목록 열에만 주면 그림은 처음부터 끝까지 한 자리다.
          */
-        columns && 'lg:h-full lg:min-h-0',
+        columns && 'md:h-full md:min-h-0',
         className
       )}
     >
       {/* ⓐ 공장 목록 — 접힌 줄에 대수·이상이 이미 보여 열지 않고도 훑는다 */}
       <div
         className={cn(
-          'flex flex-col gap-2 self-start lg:sticky lg:top-0',
-          columns && 'lg:min-h-0 lg:self-stretch lg:overflow-y-auto lg:pr-1'
+          'flex flex-col gap-2 self-start md:sticky md:top-0',
+          columns && 'md:min-h-0 md:self-stretch md:overflow-y-auto md:pr-1'
         )}
       >
         <ul className="flex flex-col gap-1.5" aria-label={t('equipmentBoard.factories')}>
@@ -349,7 +347,8 @@ export function EquipmentStatusBoard({
               tone={issues > 0 ? 'text-status-degraded' : 'text-status-healthy'}
             />
             <SummaryStat label={t('equipmentBoard.summaryBays')} value={String(groups.length)} />
-            <div className="ml-auto flex items-center gap-2">
+            {/* 좁은 열에서는 손잡이들이 다음 줄로 내려간다 — 옆 열(목록) 위로 넘치지 않게 */}
+            <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
               {headerExtra}
               {/* 자리 배분 — 그림을 크게 볼 것인가, 목록과 나눌 것인가 (R40) */}
               <Segmented<EquipmentBoardMode>
@@ -369,7 +368,7 @@ export function EquipmentStatusBoard({
                   type="button"
                   aria-expanded={birdviewOpen}
                   onClick={() => setBirdviewOpen((open) => !open)}
-                  className="shrink-0 rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="shrink-0 whitespace-nowrap rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {birdviewOpen
                     ? t('equipmentBoard.collapseBirdview')
@@ -416,6 +415,7 @@ export function EquipmentStatusBoard({
                 cardOf={cardOf}
                 colorByType={colorByType}
                 emptyLabel={t('equipmentBoard.birdviewEmpty')}
+                resetZoomLabel={t('equipmentBoard.birdviewResetZoom')}
                 /*
                  * 배치 전용은 **뷰포트를 기준으로** 키운다 — 그릇이 커지면 투영이 그만큼
                  * 크게 그리므로(1 단위 = 1px) 칸 이름과 심볼이 같이 자란다.

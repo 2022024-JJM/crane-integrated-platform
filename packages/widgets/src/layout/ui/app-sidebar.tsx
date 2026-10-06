@@ -15,10 +15,11 @@ import { cn } from '@crane/core/lib/utils';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { getNavigationConfig } from '../config/navigation';
+import { sidebarRailMinWidth } from '../lib/sidebar-breakpoint';
 
 /**
- * 사이드바는 접힘(rail)/펼침 두 상태다. 접히면 lg 이상에서 아이콘만 남는
- * 좁은 레일이 되고 항목 이름은 hover/focus 툴팁으로 보여 준다. lg 미만은
+ * 사이드바는 접힘(rail)/펼침 두 상태다. 접히면 레일 선(`sidebarRailMinWidth`, 기본 lg) 이상에서 아이콘만 남는
+ * 좁은 레일이 되고 항목 이름은 hover/focus 툴팁으로 보여 준다. 그 미만은
  * 오버레이 드로어라 레일을 둘 자리가 없어 접힘 = 완전히 숨김이다.
  *
  * 접힌 레일의 폭·항목 박스·간격·구분선은 3D 모니터링 우측 독 레일
@@ -33,6 +34,8 @@ export function AppSidebar() {
   const { user } = useAuth();
   const navGroups = getNavigationConfig(pathname, siteType, user?.role);
   const collapsed = !isOpen;
+  // 레일이 서는 선 — tailwind 는 클래스 문자열을 정적으로 읽으므로 두 벌을 그대로 적는다
+  const railFromMd = sidebarRailMinWidth(user?.role) === 768;
   // 접힘 시 독 레일의 DockRailSeparator 와 같은 20px 중앙 선. Separator 아톰이
   // data-horizontal:w-full 을 쓰므로 같은 variant 로 덮어야 tailwind-merge 가 이긴다.
   const separatorClassName = collapsed
@@ -42,19 +45,25 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* lg 미만 드로어 백드롭 — 헤더(h-14)는 클릭 가능하게 남긴다 */}
+      {/* 레일 선 미만 드로어 백드롭 — 헤더(h-14)는 클릭 가능하게 남긴다 */}
       {isOpen && (
         <div
-          className="fixed inset-0 top-14 z-40 bg-black/40 lg:hidden"
+          className={cn(
+            'fixed inset-0 top-14 z-40 bg-black/40',
+            railFromMd ? 'md:hidden' : 'lg:hidden',
+          )}
           onClick={close}
           aria-hidden="true"
         />
       )}
-      {/* lg 미만에서는 본문을 밀지 않는 오버레이 드로어, lg 이상은 기존 인라인 push 유지 */}
+      {/* 레일 선 미만에서는 본문을 밀지 않는 오버레이 드로어, 그 이상은 인라인 push */}
       <aside
         className={cn(
-          'bg-sidebar h-full min-h-0 shrink-0 overflow-hidden border-r max-lg:fixed max-lg:top-14 max-lg:bottom-0 max-lg:left-0 max-lg:z-50 max-lg:h-auto max-lg:shadow-xl',
-          collapsed ? 'max-lg:hidden' : 'w-64',
+          'bg-sidebar h-full min-h-0 shrink-0 overflow-hidden border-r',
+          railFromMd
+            ? 'max-md:fixed max-md:top-14 max-md:bottom-0 max-md:left-0 max-md:z-50 max-md:h-auto max-md:shadow-xl'
+            : 'max-lg:fixed max-lg:top-14 max-lg:bottom-0 max-lg:left-0 max-lg:z-50 max-lg:h-auto max-lg:shadow-xl',
+          collapsed ? (railFromMd ? 'max-md:hidden' : 'max-lg:hidden') : 'w-64',
         )}
         style={collapsed ? { width: SCENE_DOCK_RAIL_COLUMN_WIDTH } : undefined}
       >
