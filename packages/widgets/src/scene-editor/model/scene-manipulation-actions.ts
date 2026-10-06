@@ -10,6 +10,7 @@ import {
   isSceneEnvironmentEqual,
   isSceneSiteLocation,
   normalizeDegrees,
+  resolveSeaMirror,
   resolveTrueNorth,
   withSceneAssetVersion,
   type RulerPlacement,
@@ -315,6 +316,24 @@ export function createSceneManipulationActions({
   };
 
   /**
+   * 바다에 씬을 비출지 설정. 기본값(비춘다)이면 필드를 지우고 끌 때만
+   * `false` 를 쓴다 — sanitize 와 같은 "기본값이면 생략" 규칙. 같은 값이면
+   * 참조를 유지해 히스토리에 쌓이지 않는다.
+   */
+  const setSeaMirror = (enabled: boolean) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (resolveSeaMirror(prev) === enabled) return prev;
+      if (enabled) {
+        const { seaMirror: _removed, ...rest } = prev;
+        void _removed;
+        return rest;
+      }
+      return { ...prev, seaMirror: false };
+    });
+  };
+
+  /**
    * 지역(시간 기준) 설정. 항상 명시값을 쓴다 — 미지정 씬은 region 기본
    * 지역을 보여 주다가 드롭다운에서 고른 순간 명시 상태가 된다(바다 표시와
    * 같은 규칙). 목록에 없는 값은 무시하고, 같은 명시값이면 참조를 유지해
@@ -577,6 +596,7 @@ export function createSceneManipulationActions({
     selectPlacedMap,
     setEnvironment,
     setSeaVisible,
+    setSeaMirror,
     setTrueNorth,
     setSiteLocation,
     setLighting,

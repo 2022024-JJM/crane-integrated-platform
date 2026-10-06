@@ -36,10 +36,12 @@ import { SceneWater } from './scene-water';
  *
  * 바다는 EXR 과 별개로 `seaVisible`(resolveSeaVisible — 씬의 `sea` 필드,
  * 미지정이면 배경이 있을 때)로 켠다. 미러 패스가 scene.background 를 그대로
- * 반사하므로 낮/밤 배경 밝기가 물에도 따라온다. 둘을 한 Suspense·한 return
- * 에 두는 이유: EXR 과 물이 같이 나타나고(물만 먼저 뜨면 몇 초간 검은 배경을
- * 반사), 배경 미지정→지정 전환에도 자식 인덱스가 유지돼 SceneWater(RT·
- * 머티리얼)가 리마운트되지 않는다.
+ * 반사하므로 낮/밤 배경 밝기가 물에도 따라온다. `seaMirror`(resolveSeaMirror
+ * — 씬의 `seaMirror` 필드)가 꺼진 씬은 그 미러 패스가 씬을 빼고 하늘만
+ * 그린다. 배경과 물을 한 Suspense·한 return 에 두는 이유: EXR 과 물이 같이
+ * 나타나고(물만 먼저 뜨면 몇 초간 검은 배경을 반사), 배경 미지정→지정
+ * 전환에도 자식 인덱스가 유지돼 SceneWater(RT·머티리얼)가 리마운트되지
+ * 않는다.
  *
  * 텍스처는 useLoader 전역 캐시 소유이므로 unmount 에 dispose 하지 않는다
  * (재마운트 시 캐시된 텍스처를 다시 쓴다).
@@ -115,10 +117,13 @@ function EnvironmentBackground({ url }: { url: string }) {
 export function SceneEnvironment({
   environment,
   seaVisible,
+  seaMirror,
   maps,
 }: {
   environment?: SavedEnvironmentInfo | null;
   seaVisible: boolean;
+  /** 바다에 씬을 비출지(resolveSeaMirror) — 끄면 하늘만 비친다. */
+  seaMirror: boolean;
   /** 씬 지도 — 컨텍스트 지형을 바다 반사에서 빼고, 바다 도달 마스크를 만든다. */
   maps?: SavedMapInfo[];
 }) {
@@ -135,7 +140,7 @@ export function SceneEnvironment({
         ) : null}
         {seaVisible ? (
           <SceneObjectBoundary label="sea water">
-            <SceneWater maps={maps} />
+            <SceneWater maps={maps} mirror={seaMirror} />
           </SceneObjectBoundary>
         ) : null}
       </Suspense>

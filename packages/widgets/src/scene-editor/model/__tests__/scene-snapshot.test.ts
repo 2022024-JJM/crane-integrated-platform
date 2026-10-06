@@ -183,6 +183,37 @@ describe('isSceneInfoEqual — sea 3-상태', () => {
   });
 });
 
+describe('isSceneInfoEqual — seaMirror (필드 없음 = 비춘다)', () => {
+  it('끈 씬(false)은 미지정·true 와 다르다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ seaMirror: false }))).toBe(false);
+    expect(
+      isSceneInfoEqual(scene({ seaMirror: true }), scene({ seaMirror: false })),
+    ).toBe(false);
+  });
+
+  it('미지정과 true 는 같은 상태다 (기본값 정규화)', () => {
+    expect(isSceneInfoEqual(scene(), scene({ seaMirror: true }))).toBe(true);
+  });
+
+  it('둘 다 끈 씬은 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ seaMirror: false }),
+        scene({ seaMirror: false }),
+      ),
+    ).toBe(true);
+  });
+
+  it('바다 표시가 같아도 미러만 다르면 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ sea: true }),
+        scene({ sea: true, seaMirror: false }),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('isSceneInfoEqual — siteLocation', () => {
   it('미지정(region 기본 지역)과 명시값은 다른 상태다', () => {
     expect(
@@ -584,6 +615,17 @@ describe('createSceneSnapshot', () => {
     const unset = JSON.parse(createSceneSnapshot(scene())!);
     expect(unset).not.toHaveProperty('sea');
     expect(createSceneSnapshot(scene({ sea: false }))).not.toBe(
+      createSceneSnapshot(scene()),
+    );
+  });
+
+  it('seaMirror:false 만 직렬화에 남고, 미지정·true 는 빠진다 (기본값 생략)', () => {
+    const off = JSON.parse(createSceneSnapshot(scene({ seaMirror: false }))!);
+    expect(off).toHaveProperty('seaMirror', false);
+    const unset = JSON.parse(createSceneSnapshot(scene())!);
+    expect(unset).not.toHaveProperty('seaMirror');
+    // true 는 미지정과 같은 스냅샷이다 — dirty 가 서지 않는다.
+    expect(createSceneSnapshot(scene({ seaMirror: true }))).toBe(
       createSceneSnapshot(scene()),
     );
   });

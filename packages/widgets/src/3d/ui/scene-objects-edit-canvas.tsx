@@ -36,6 +36,7 @@ import {
   prefetchModelBottomOffset,
   releaseGltfCache,
   resolveGroundMaps,
+  resolveSeaMirror,
   resolveSeaVisible,
   resolveTrueNorth,
   withBaseUrl,
@@ -1070,6 +1071,7 @@ export function SceneObjectsEditCanvas({
           <SceneEnvironment
             environment={sceneInfo?.environment}
             seaVisible={seaVisible}
+            seaMirror={resolveSeaMirror(sceneInfo)}
             maps={sceneInfo?.maps}
           />
         </Suspense>

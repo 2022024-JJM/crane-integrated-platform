@@ -108,6 +108,13 @@ export interface SavedSceneInfo {
    */
   sea?: boolean;
   /**
+   * 바다에 씬(크레인·야드·지도)을 비출지. 판정은 resolveSeaMirror
+   * (lib/scene-sea.ts) 한 곳이다. 필드 없음 = 비춘다, `false` 만 저장한다
+   * ("기본값이면 생략"). 끄면 미러 패스가 하늘만 그려 씬을 한 번 더 그리는
+   * 비용이 빠진다. 바다가 꺼진 씬에서도 값은 보존된다. 씬 파일 단위 저장.
+   */
+  seaMirror?: boolean;
+  /**
    * 진북 방향(도, [0,360)) — 월드 −Z 에서 +X 쪽(탑뷰 화면 기준 시계 방향)
    * 으로 잰 각도. 필드 없음 = SCENE_TRUE_NORTH_DEFAULT(−Z 가 북).
    *

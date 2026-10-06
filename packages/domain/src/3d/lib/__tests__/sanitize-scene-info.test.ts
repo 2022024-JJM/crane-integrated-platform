@@ -541,6 +541,35 @@ describe('sanitizeSceneInfo — sea (3-상태, boolean 만 유지)', () => {
   });
 });
 
+describe('sanitizeSceneInfo — seaMirror (끈 것만 유지, 기본값이면 생략)', () => {
+  it('false 는 그대로 유지한다', () => {
+    expect(sanitizeSceneInfo(scene({ seaMirror: false })).seaMirror).toBe(
+      false,
+    );
+  });
+
+  it('미지정·true 는 기본값(비춘다)이라 필드 자체가 빠진다', () => {
+    expect(sanitizeSceneInfo(scene())).not.toHaveProperty('seaMirror');
+    expect(sanitizeSceneInfo(scene({ seaMirror: true }))).not.toHaveProperty(
+      'seaMirror',
+    );
+  });
+
+  it("boolean 이 아닌 오염값('false'·0·null·NaN)은 끈 것으로 굳히지 않는다", () => {
+    for (const seaMirror of ['false', 'no', 0, null, Number.NaN, '']) {
+      expect(sanitizeSceneInfo(scene({ seaMirror }))).not.toHaveProperty(
+        'seaMirror',
+      );
+    }
+  });
+
+  it('바다 표시와 독립이다 — 바다를 끈 씬에서도 값이 남는다', () => {
+    const result = sanitizeSceneInfo(scene({ sea: false, seaMirror: false }));
+    expect(result.sea).toBe(false);
+    expect(result.seaMirror).toBe(false);
+  });
+});
+
 describe('sanitizeSceneInfo — siteLocation (목록의 지역만 유지)', () => {
   it('목록의 지역은 그대로 유지한다', () => {
     expect(

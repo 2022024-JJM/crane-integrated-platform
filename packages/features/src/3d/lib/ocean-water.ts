@@ -56,7 +56,9 @@
  *   `undefined`/`null` 항목은 건너뛴다(늦게 등록되는 지도 루트). three 는
  *   `visible=false` 루트의 서브트리를 통째로 건너뛰므로 지도 루트 하나로 LOD
  *   타일 전부가 빠진다. 메인 패스 렌더 리스트는 이미 만들어진 뒤라 메인
- *   프레임엔 영향 없다. `layers` 는 쓰지 않는다.
+ *   프레임엔 영향 없다. `layers` 는 쓰지 않는다. 게터는 그리는 `scene` 을
+ *   받는다 — 호출자가 씬 최상위 객체를 전부 돌려주면 미러 패스에 배경(하늘)
+ *   만 남는다(씬을 비추지 않는 바다, lib/water-reflection.ts).
  * - 직교 카메라엔 미러 패스가 없다 — 미러 카메라가 projectionMatrix 를
  *   복사하므로 직교 투영에선 무의미하다. 미니맵 캡처는 물을 보이는 채로
  *   `reflectionIntensity` 0 으로 그려 낡은 반사 RT 가 섞이지 않게 한다.
@@ -125,8 +127,8 @@ export interface OceanWaterOptions {
   sunDiffuseIntensity?: number;
   side?: Side;
   fog?: boolean;
-  /** 미러 패스 동안만 숨길 객체. 매 패스 호출된다. */
-  excludedObjects?: () => Iterable<Object3D | null | undefined>;
+  /** 미러 패스 동안만 숨길 객체. 그리는 씬을 받아 매 패스 호출된다. */
+  excludedObjects?: (scene: Scene) => Iterable<Object3D | null | undefined>;
 }
 
 export interface OceanWaterUniforms extends Record<string, IUniform> {
@@ -272,7 +274,7 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
 
   private readonly clipBias: number;
   private readonly excludedObjects:
-    | (() => Iterable<Object3D | null | undefined>)
+    | ((scene: Scene) => Iterable<Object3D | null | undefined>)
     | null;
   private readonly renderTarget: WebGLRenderTarget;
   private readonly mirrorCamera = new PerspectiveCamera();
@@ -496,7 +498,7 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     try {
       this.visible = false;
       hideForReflection(
-        this.excludedObjects ? this.excludedObjects() : [],
+        this.excludedObjects ? this.excludedObjects(scene) : [],
         this.hiddenForReflection,
       );
 

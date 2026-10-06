@@ -20,6 +20,7 @@ import {
   getTagMappingTargetKey,
   isSceneAssetRefEqual,
   isSceneEnvironmentEqual,
+  resolveSeaMirror,
   STATUS_TAG_ROLES,
 } from '@crane/domain/3d';
 import {
@@ -349,6 +350,9 @@ export function isSceneInfoEqual(
   // 바다 표시도 3-상태(undefined=레거시 규칙 / boolean=명시)라 !== 로 구분한다.
   // 빠지면 스위치 토글이 동등 단락에 먹혀 dirty 가 서지 않는다.
   if (a.sea !== b.sea) return false;
+  // 바다에 씬을 비출지는 필드 없음 = 기본값(비춘다)이라 판정값으로 비교한다 —
+  // 미지정과 true 는 같고 false 만 다르다.
+  if (resolveSeaMirror(a) !== resolveSeaMirror(b)) return false;
   // 지역도 미지정(region 기본 지역)과 명시값을 구분한다 — 명시로 고른 순간이
   // 저장 대상이다(setSiteLocation).
   if (a.siteLocation !== b.siteLocation) return false;

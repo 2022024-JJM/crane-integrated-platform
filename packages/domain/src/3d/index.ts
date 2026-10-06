@@ -316,7 +316,7 @@ export {
   sanitizeSceneAssetRef,
   sanitizeSceneEnvironment,
 } from './lib/scene-asset-ref';
-export { resolveSeaVisible } from './lib/scene-sea';
+export { resolveSeaMirror, resolveSeaVisible } from './lib/scene-sea';
 export { bearingToWorldAzimuth, resolveTrueNorth } from './lib/true-north';
 export {
   buildSeaReachMask,

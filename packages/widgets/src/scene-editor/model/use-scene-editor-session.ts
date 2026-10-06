@@ -131,6 +131,8 @@ interface UseSceneEditorSessionResult {
   /** 배경 선택 — null 이면 배경 없음. */
   setEnvironment: (environment: SavedEnvironmentInfo | null) => void;
   setSeaVisible: (visible: boolean) => void;
+  /** 바다에 씬을 비출지 — 끄면 하늘만 비친다(resolveSeaMirror). */
+  setSeaMirror: (enabled: boolean) => void;
   setTrueNorth: (degrees: number) => void;
   setSiteLocation: (location: SceneSiteLocation) => void;
   setLighting: (
@@ -384,6 +386,7 @@ export function useSceneEditorSession({
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironment: manipulation.setEnvironment,
     setSeaVisible: manipulation.setSeaVisible,
+    setSeaMirror: manipulation.setSeaMirror,
     setTrueNorth: manipulation.setTrueNorth,
     setSiteLocation: manipulation.setSiteLocation,
     setLighting: manipulation.setLighting,

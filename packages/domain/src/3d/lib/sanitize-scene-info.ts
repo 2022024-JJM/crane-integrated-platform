@@ -330,6 +330,12 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     sanitized.sea = rawSea;
   }
 
+  // 바다에 씬을 비출지는 "기본값이면 필드 생략" — 끈 것(false)만 싣는다.
+  // true·'false'·0 은 전부 기본값(비춘다)이라 버린다(resolveSeaMirror).
+  if ((sceneInfo as SavedSceneInfo).seaMirror === false) {
+    sanitized.seaMirror = false;
+  }
+
   // 지역도 명시값/미지정(region 기본 지역, resolveSceneSiteLocation) 2-상태다.
   // 목록에 있는 값만 싣는다 — 오타·미래 값을 살리면 런타임은 region 기본
   // 지역으로 떨어지는데 저장본에는 모르는 값이 남는다.

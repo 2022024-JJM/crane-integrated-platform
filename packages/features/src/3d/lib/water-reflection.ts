@@ -13,7 +13,24 @@ import type { Object3D } from 'three';
  *
  * 숨김은 `visible` 토글이다(`layers` 안 씀) — three 는 visible=false 루트의
  * 서브트리를 통째로 건너뛰어 지도 루트 하나로 LOD 타일 전부가 빠진다.
+ *
+ * 씬을 비추지 않는 바다(씬의 `seaMirror: false`, resolveSeaMirror)는 같은
+ * 숨김으로 씬 최상위 객체를 전부 뺀다 — 미러 패스에 배경(하늘)만 남아 씬을
+ * 한 번 더 그리는 비용이 빠지고, 먼 바다는 비추는 씬과 같은 하늘색을 받는다.
  */
+
+/**
+ * 미러 패스 동안 숨길 객체를 고른다. 씬을 비추면 제외 목록(`excluded` —
+ * 돔·스프라이트·컨텍스트 지형)만, 비추지 않으면 씬 최상위 객체 전부다.
+ * `excluded` 는 비출 때만 순회된다(게으른 제너레이터를 그대로 받는다).
+ */
+export function selectReflectionHidden(
+  mirror: boolean,
+  scene: Pick<Object3D, 'children'>,
+  excluded: Iterable<Object3D | null | undefined>,
+): Iterable<Object3D | null | undefined> {
+  return mirror ? excluded : scene.children;
+}
 
 /** 씬 지도 중 컨텍스트 지형(role 'context')의 id. 순서 보존. */
 export function resolveReflectionExcludedMapIds(

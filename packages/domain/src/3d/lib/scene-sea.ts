@@ -12,6 +12,10 @@
  *
  * boolean 이 아닌 오염값(문자열·숫자)은 sanitize 가 이미 버리지만, 정규화를
  * 거치지 않은 입력이 와도 명시 상태로 오판하지 않도록 typeof 로 검사한다.
+ *
+ * 바다에 씬을 비출지(`seaMirror`)도 여기서 판정한다 — 필드 없음이 기본값
+ * (비춘다)이고 `false` 만 끈다. 바다 표시와 독립이라 바다가 꺼진 씬에서도
+ * 값은 그대로 읽힌다(쓰는 쪽이 바다가 켜졌을 때만 본다).
  */
 import type { SavedSceneInfo } from '../model/types';
 import { resolveEnvironmentFileUrl } from './scene-environment';
@@ -21,4 +25,10 @@ export function resolveSeaVisible(
 ): boolean {
   if (typeof sceneInfo?.sea === 'boolean') return sceneInfo.sea;
   return resolveEnvironmentFileUrl(sceneInfo?.environment) !== null;
+}
+
+export function resolveSeaMirror(
+  sceneInfo: Pick<SavedSceneInfo, 'seaMirror'> | null | undefined,
+): boolean {
+  return sceneInfo?.seaMirror !== false;
 }

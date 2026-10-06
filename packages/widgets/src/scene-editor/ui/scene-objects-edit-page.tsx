@@ -13,6 +13,7 @@ import {
   getSceneMetersPerUnit,
   resolveMainView,
   resolveSceneHomeCamera,
+  resolveSeaMirror,
   resolveSeaVisible,
   resolveTrueNorth,
 } from '@crane/domain/3d';
@@ -248,6 +249,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectPlacedMap,
     setEnvironment,
     setSeaVisible,
+    setSeaMirror,
     setTrueNorth,
     setSiteLocation,
     setLighting,
@@ -282,6 +284,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // 미지정 씬에는 안내 문구를 붙인다 — 캔버스와 같은 판정 함수 하나를 쓴다.
   const seaVisible = resolveSeaVisible(sceneInfo);
   const seaExplicit = sceneInfo?.sea !== undefined;
+  const seaMirror = resolveSeaMirror(sceneInfo);
   // 씬에 놓인 버전이 라이브러리의 현재 버전과 다른 자산 — 팔레트 아래에
   // 알리고, 눌러서 갱신한다(씬 안의 같은 자산 전부, 히스토리 1회).
   const assetUpdates = useSceneAssetUpdates(sceneInfo);
@@ -630,6 +633,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   seaVisible={seaVisible}
                   seaExplicit={seaExplicit}
                   onSeaVisibleChange={setSeaVisible}
+                  seaMirror={seaMirror}
+                  onSeaMirrorChange={setSeaMirror}
                   trueNorth={trueNorth}
                   onTrueNorthChange={setTrueNorth}
                   views={sceneViews}
@@ -1003,6 +1008,8 @@ function ProjectPalettePanel({
   seaVisible,
   seaExplicit,
   onSeaVisibleChange,
+  seaMirror,
+  onSeaMirrorChange,
   trueNorth,
   onTrueNorthChange,
   views,
@@ -1068,6 +1075,9 @@ function ProjectPalettePanel({
   seaVisible: boolean;
   seaExplicit: boolean;
   onSeaVisibleChange: (visible: boolean) => void;
+  /** 맵 탭 — 미러 스위치. 유효값(resolveSeaMirror)·토글(setSeaMirror). */
+  seaMirror: boolean;
+  onSeaMirrorChange: (enabled: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -1153,6 +1163,8 @@ function ProjectPalettePanel({
                 seaVisible={seaVisible}
                 seaExplicit={seaExplicit}
                 onSeaVisibleChange={onSeaVisibleChange}
+                seaMirror={seaMirror}
+                onSeaMirrorChange={onSeaMirrorChange}
               />
             ) : activeTab === 'view' ? (
               <PaletteViewSection

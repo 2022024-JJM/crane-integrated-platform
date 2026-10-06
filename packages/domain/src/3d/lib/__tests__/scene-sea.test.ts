@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveSeaVisible } from '../scene-sea';
+import { resolveSeaMirror, resolveSeaVisible } from '../scene-sea';
 import type { SavedEnvironmentInfo } from '../../model/types';
 
 const SKY: SavedEnvironmentInfo = {
@@ -58,5 +58,35 @@ describe('resolveSeaVisible — boolean 이 아닌 sea 는 미지정으로 취�
   it('0·null 같은 falsy 오염값도 명시 false 가 아니다 — 배경이 있으면 true', () => {
     expect(resolveSeaVisible(polluted(0, SKY))).toBe(true);
     expect(resolveSeaVisible(polluted(null, SKY))).toBe(true);
+  });
+});
+
+describe('resolveSeaMirror — 필드 없음이 기본값(비춘다), false 만 끈다', () => {
+  it('미지정·true 는 비춘다', () => {
+    expect(resolveSeaMirror({})).toBe(true);
+    expect(resolveSeaMirror({ seaMirror: true })).toBe(true);
+  });
+
+  it('false 는 비추지 않는다', () => {
+    expect(resolveSeaMirror({ seaMirror: false })).toBe(false);
+  });
+
+  it('sceneInfo 가 null/undefined 면 비춘다', () => {
+    expect(resolveSeaMirror(null)).toBe(true);
+    expect(resolveSeaMirror(undefined)).toBe(true);
+  });
+
+  it("boolean 이 아닌 오염값('false'·0·null·'')은 끈 것으로 보지 않는다", () => {
+    for (const seaMirror of ['false', 'no', 0, null, '', Number.NaN]) {
+      expect(
+        resolveSeaMirror({ seaMirror } as unknown as { seaMirror?: boolean }),
+      ).toBe(true);
+    }
+  });
+
+  it('바다 표시와 독립이다 — 바다가 꺼진 씬에서도 값은 그대로 읽힌다', () => {
+    const off = { sea: false, seaMirror: false };
+    expect(resolveSeaVisible(off)).toBe(false);
+    expect(resolveSeaMirror(off)).toBe(false);
   });
 });

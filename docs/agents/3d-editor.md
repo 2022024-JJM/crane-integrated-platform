@@ -15,7 +15,7 @@
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → 씬 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `packages/domain/src/3d/model/scene-file-registry.ts` |
 | 팔레트 목록(모델·맵·배경)과 씬의 자산 참조·새 버전 갱신 | `@crane/features/asset-library` 의 `useScenePalette`·`useSceneAssetUpdates`, `packages/widgets/src/3d/ui/palette-asset-updates.tsx`, 세터 `scene-manipulation-actions.ts`(`addModel`·`addSceneMap`·`setEnvironment`·`updateSceneAsset`) — `docs/agents/asset-library.md` |
-| 씬 설정 팔레트(배경·지역·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭 — 진북 입력·지역 드롭다운 포함), 배경 URL `packages/domain/src/3d/lib/scene-environment.ts`(`resolveEnvironmentFileUrl`), 지역 `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteLocation`), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치), 지도 역할 `packages/domain/src/3d/lib/resolve-ground-map.ts`(`resolveGroundMaps`·`isContextMap`), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
+| 씬 설정 팔레트(배경·지역·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭 — 진북 입력·지역 드롭다운 포함), 배경 URL `packages/domain/src/3d/lib/scene-environment.ts`(`resolveEnvironmentFileUrl`), 지역 `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteLocation`), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 환경 절의 바다·미러 스위치), 지도 역할 `packages/domain/src/3d/lib/resolve-ground-map.ts`(`resolveGroundMaps`·`isContextMap`), 바다·미러 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`·`resolveSeaMirror`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
 | 씬 뷰·분할·메인 뷰 지정(뷰 탭) | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `packages/domain/src/3d/lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 홈 카메라 `lib/scene-home-camera.ts`(`resolveSceneHomeCamera`), 편집 `packages/widgets/src/3d/lib/view-editor.ts`(전부 테스트 대상), 팔레트 `packages/widgets/src/3d/ui/palette-view-section.tsx`, 우상단 고정 줄 `packages/features/src/3d/ui/scene-view-bar.tsx` |
 | dev 저장 미들웨어 / public 자산 리로드 | `apps/shell/vite.config.ts`, `apps/shell/vite-plugin-asset-hash.ts`, `packages/domain/src/3d/lib/scene-dev-storage.ts` |
 | 탑뷰 포즈(정수직 회피 tilt, 뷰어·에디터 공용) | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
@@ -66,10 +66,11 @@
 
 ### 씬 설정(배경·지역·조명·바다·진북)
 
-- 배경(EXR, `environment`)·진북·지역·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx` — 진북 입력은 조명 절 바로 위), 바다는 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래다. 전부 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
+- 배경(EXR, `environment`)·진북·지역·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx` — 진북 입력은 조명 절 바로 위), 바다·미러는 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래 환경 절이다. 전부 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
 - 배경은 `environment: { path, asset }` 이고 필드가 없으면 배경 없음이다. 배경 탭의 선택 표시는 자산 id 로 한다 — 놓인 버전이 현재 버전과 달라도 같은 배경이다. 씬의 배경이 라이브러리에 없는 파일이면 한 줄로 알린다.
 - 바다 필드 `sea` 는 3-상태다 — `undefined` 는 레거시 규칙(배경이 있으면 바다), `true`/`false` 는 명시. 유효값은 `resolveSeaVisible(sceneInfo)` 하나가 정하고 스위치는 그 유효값을 보여 준다. 미지정 씬은 절 제목과 스위치 사이에 안내 문구가 붙는다.
 - 스위치를 누르면 `setSeaVisible` 이 유효값의 반대를 **명시 boolean** 으로 쓴다(미지정 씬도 첫 토글부터 명시 상태가 되어 dirty·히스토리에 잡힌다. 유효값을 그대로 명시로 굳히는 조작은 없다). 같은 명시값 재설정은 참조를 유지한다.
+- 미러 필드 `seaMirror` 는 바다에 씬(크레인·야드·지도)을 비출지다. 필드 없음이 비춘다이고 `false` 만 저장한다. 유효값은 `resolveSeaMirror(sceneInfo)` 하나가 정하고, `setSeaMirror` 가 끌 때 `false` 를 쓰고 켤 때 필드를 지운다. 스위치는 바다 스위치 아래 한 단 들여 있고 바다가 꺼진 씬에서는 잠기되 값은 남는다. 끈 씬이 무엇을 그리는지는 `docs/agents/rendering-perf.md`.
 - 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environment`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.
 - 지역 `siteLocation` 은 현장 시각의 시간 기준(시간대 + 대표 좌표)이다. `undefined` 는 region 기본 지역, 값은 명시이고 유효값은 `resolveSceneSiteLocation(regionId, sceneInfo)` 하나가 정한다. 드롭다운은 현장 시각 연동일 때 배경 탭 시각 패널의 날짜 위에 있고(수동 태양 씬은 region 기본 지역 그대로), 유효값을 보여 주다가 고르면 `setSiteLocation` 이 명시값으로 쓴다(바다와 같은 규칙 — 같은 값은 참조 유지). 모니터링 시계 팝업은 지역 이름만 보이고 바꾸지 않는다(`docs/agents/rendering-perf.md`).
 - 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돈다. 수동 태양 패드의 방위도 지리 방위(패드 위 = 진북)라 진북을 바꾸면 수동 태양이 같이 돈다.
@@ -153,6 +154,7 @@
 - region → 씬 파일 표는 `scene-file-map.ts` 하나. 미등록 region 은 `null`, 기본 파일 fallback 금지.
 - `siteLocation` 은 `SCENE_SITE_LOCATIONS` 에 있는 값만 저장하고 `isSceneInfoEqual` 은 `!==` 로 본다. 현장 위경도·시간대를 region 으로 직접 찾는 새 경로를 두지 않는다(`resolveSceneSiteGeo` 하나).
 - `sea` 는 boolean 만 저장·비교한다 — `sanitizeSceneInfo` 는 boolean 이 아니면 필드를 버리고, `isSceneInfoEqual` 은 `!==` 로 본다(`undefined` 와 `false` 는 다르다). 바다 유무를 배경으로 유추하는 코드를 다른 곳에 두지 않는다(`resolveSeaVisible` 하나).
+- `seaMirror` 는 `false` 만 저장한다 — `sanitizeSceneInfo` 는 그 밖의 값이면 필드를 버리고, `isSceneInfoEqual` 은 판정값(`resolveSeaMirror`)으로 비교한다(미지정과 `true` 는 같다).
 - 씬 객체의 자산 참조(`asset`)·지도 역할(`role`)·배경(`environment`)은 `scene-asset-ref.ts` 의 방어와 동등 비교를 쓴다(`sanitizeSceneAssetRef`·`isSceneAssetRefEqual`·`isSceneEnvironmentEqual`). `scene-snapshot.ts` 가 이것들을 비교하지 않으면 새 버전으로 갱신한 것이 dirty 에 잡히지 않는다.
 - 객체의 파일을 바꾸는 새 경로는 `path` 와 `asset` 을 함께 바꾼다. 지도의 바닥·주변 지형을 경로나 이름으로 가리지 않는다(`role`).
 - `views`·`viewSplit`·`mainViewByRegion` 은 `sanitize-views.ts` 가 뷰 목록 **뒤에** 분할·메인 뷰를 정규화한다(존재하는 뷰만 가리키게). 빈 목록·빈 칸뿐이고 고정 아닌 분할·고정 false·빈 메인 뷰 맵은 필드를 생략하고, `isSceneViewListEqual`·`isViewSplitEqual`·`isMainViewByRegionEqual` 이 같은 규칙으로 비교한다. 필드를 추가하면 셋을 함께 고친다.

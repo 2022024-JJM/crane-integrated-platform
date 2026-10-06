@@ -548,6 +548,61 @@ describe('setSeaVisible', () => {
   });
 });
 
+describe('setSeaMirror', () => {
+  it('끄면 false 를 저장하고, 같은 값이면 참조를 유지한다', () => {
+    const h = createHarness();
+    h.actions.setSeaMirror(false);
+    expect(h.scene?.seaMirror).toBe(false);
+
+    const before = h.scene;
+    h.actions.setSeaMirror(false);
+    expect(h.scene).toBe(before);
+  });
+
+  it('다시 켜면 필드를 지운다 (기본값이면 생략)', () => {
+    const h = createHarness(scene({ seaMirror: false }));
+    const before = h.scene;
+    h.actions.setSeaMirror(true);
+    expect(h.scene).not.toBe(before);
+    expect(h.scene).not.toHaveProperty('seaMirror');
+  });
+
+  it('미지정 씬을 켜면 no-op (참조 유지, 필드 없음)', () => {
+    const h = createHarness();
+    const before = h.scene;
+    h.actions.setSeaMirror(true);
+    expect(h.scene).toBe(before);
+    expect(h.scene).not.toHaveProperty('seaMirror');
+  });
+
+  it('true 가 적힌 씬을 켜도 no-op — 판정값이 같다', () => {
+    const h = createHarness(scene({ seaMirror: true }));
+    const before = h.scene;
+    h.actions.setSeaMirror(true);
+    expect(h.scene).toBe(before);
+  });
+
+  it('바다 표시 값은 건드리지 않는다', () => {
+    const h = createHarness(scene({ sea: false }));
+    h.actions.setSeaMirror(false);
+    expect(h.scene?.sea).toBe(false);
+    h.actions.setSeaMirror(true);
+    expect(h.scene?.sea).toBe(false);
+  });
+
+  it('옵션 없이 updateScene 을 부른다 (히스토리 기본 기록)', () => {
+    const h = createHarness();
+    h.actions.setSeaMirror(false);
+    expect(h.updateOptions).toEqual([undefined]);
+  });
+
+  it('씬이 null 이면 null 그대로', () => {
+    const h = createHarness(null);
+    h.actions.setSeaMirror(false);
+    expect(h.scene).toBeNull();
+  });
+});
+
 describe('setSiteLocation', () => {
   it('지역을 저장하고, 같은 값이면 참조를 유지한다', () => {
     const h = createHarness();

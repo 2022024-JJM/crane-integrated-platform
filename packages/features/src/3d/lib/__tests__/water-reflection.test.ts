@@ -1,10 +1,11 @@
 import type { SavedMapInfo } from '@crane/domain/3d';
-import { Object3D } from 'three';
+import { Object3D, Scene } from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   hideForReflection,
   resolveReflectionExcludedMapIds,
   restoreAfterReflection,
+  selectReflectionHidden,
 } from '../water-reflection';
 
 function map(
@@ -159,5 +160,72 @@ describe('restoreAfterReflection', () => {
       expect(hidden).toHaveLength(0);
       expect(a.visible).toBe(true);
     }
+  });
+});
+
+describe('selectReflectionHidden', () => {
+  function sceneWith(...children: Object3D[]): Scene {
+    const scene = new Scene();
+    scene.add(...children);
+    return scene;
+  }
+
+  it('씬을 비추면 제외 목록만 돌려준다 — 씬 객체는 건드리지 않는다', () => {
+    const crane = new Object3D();
+    const dome = new Object3D();
+    const scene = sceneWith(crane, dome);
+    const excluded = [dome];
+    expect(selectReflectionHidden(true, scene, excluded)).toBe(excluded);
+  });
+
+  it('비추지 않으면 씬 최상위 객체 전부다', () => {
+    const crane = new Object3D();
+    const map = new Object3D();
+    const scene = sceneWith(crane, map);
+    expect([...selectReflectionHidden(false, scene, [])]).toEqual([crane, map]);
+  });
+
+  it('비추지 않으면 제외 목록은 순회하지 않는다 (게으른 제너레이터)', () => {
+    let iterated = false;
+    function* excluded(): Generator<Object3D> {
+      iterated = true;
+      yield new Object3D();
+    }
+    const scene = sceneWith(new Object3D());
+    hideForReflection(selectReflectionHidden(false, scene, excluded()), []);
+    expect(iterated).toBe(false);
+  });
+
+  it('빈 씬은 숨길 것이 없다', () => {
+    const hidden: Object3D[] = [];
+    hideForReflection(selectReflectionHidden(false, new Scene(), []), hidden);
+    expect(hidden).toEqual([]);
+  });
+
+  it('최상위만 숨긴다 — 자식의 visible 은 그대로다(three 가 서브트리를 건너뛴다)', () => {
+    const root = new Object3D();
+    const child = new Object3D();
+    root.add(child);
+    const hidden: Object3D[] = [];
+    hideForReflection(
+      selectReflectionHidden(false, sceneWith(root), []),
+      hidden,
+    );
+    expect(root.visible).toBe(false);
+    expect(child.visible).toBe(true);
+    expect(hidden).toEqual([root]);
+  });
+
+  it('숨김→복원 뒤 원래 꺼져 있던 최상위 객체는 꺼진 채다', () => {
+    const shown = new Object3D();
+    const alreadyHidden = new Object3D();
+    alreadyHidden.visible = false;
+    const scene = sceneWith(shown, alreadyHidden);
+    const hidden: Object3D[] = [];
+    hideForReflection(selectReflectionHidden(false, scene, []), hidden);
+    expect(shown.visible).toBe(false);
+    restoreAfterReflection(hidden);
+    expect(shown.visible).toBe(true);
+    expect(alreadyHidden.visible).toBe(false);
   });
 });

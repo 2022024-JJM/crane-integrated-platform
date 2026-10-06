@@ -17,6 +17,7 @@ import {
   zoneCenterWorld,
   resolveCameraBoundsMaps,
   resolveSceneHomeCamera,
+  resolveSeaMirror,
   resolveSeaVisible,
   resolveSplitLayout,
   resolveTrueNorth,
@@ -640,6 +641,7 @@ export function Monitoring3dView({
             <SceneEnvironment
               environment={sceneInfo?.environment}
               seaVisible={seaVisible}
+              seaMirror={resolveSeaMirror(sceneInfo)}
               maps={sceneInfo?.maps}
             />
           </Suspense>
