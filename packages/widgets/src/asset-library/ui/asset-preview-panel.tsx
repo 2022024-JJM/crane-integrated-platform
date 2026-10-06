@@ -41,6 +41,11 @@ import {
   pickPreviewVersion,
   resolveAttentionTarget,
 } from '../lib/attention-target';
+import {
+  PREVIEW_MODES,
+  resolvePreviewStage,
+  type PreviewMode,
+} from '../lib/preview-stage';
 import { useAssetSaveReport } from '../model/use-asset-save-report';
 import { useSettled } from '../model/use-settled';
 import { AssetAttentionList } from './asset-attention';
@@ -57,13 +62,11 @@ import { AssetThumbnail } from './asset-thumbnail';
  */
 const AUTO_3D_MAX_BYTES = 6 * 1024 * 1024;
 const PREVIEW_MODE_STORAGE_KEY = 'crane:asset-library:preview-mode';
-type PreviewMode = 'image' | '3d';
-const PREVIEW_MODES: PreviewMode[] = ['image', '3d'];
 
 function readPreviewMode(): PreviewMode {
   return getStorageItem(PREVIEW_MODE_STORAGE_KEY) === 'image' ? 'image' : '3d';
 }
-/** 자산을 올리고 이만큼 머물러야 3D 를 연다 — 지나치는 자산은 썸네일만 본다. */
+/** 자산을 올리고 이만큼 머물러야 3D 파일을 받는다 — 지나치는 자산은 받지 않는다. */
 const OPEN_3D_DELAY_MS = 350;
 
 interface AssetPreviewPanelProps {
@@ -219,12 +222,15 @@ export function AssetPreviewPanel({
   const wants3d = small || opened3dFor === asset.id;
   // 돌려 볼 수 있는 자산 — 모델·지도(GLB)와 배경(파노라마).
   const interactive = mode === 'model' || mode === 'environment';
-  const show3d =
-    previewMode === '3d' &&
-    interactive &&
-    file.status === 'ready' &&
-    wants3d &&
-    settled;
+  const stage = resolvePreviewStage({
+    previewMode,
+    interactive,
+    fileStatus: file.status,
+    wants3d,
+    settled,
+  });
+  // 뷰어는 열기로 정해지면 바로 올리고, 파일 주소는 받아도 될 때 넘긴다.
+  const viewerUrl = stage === 'viewer' ? file.url : null;
 
   return (
     <aside
@@ -306,28 +312,25 @@ export function AssetPreviewPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="border-border relative aspect-[16/10] w-full border-b">
-          {show3d ? (
+          {stage === 'opening' || stage === 'viewer' ? (
             // 자산마다 새로 마운트한다 — 앞 자산의 카메라가 남지 않게.
             // 표시 상태는 탭이 기억해 둔 값으로 다시 시작한다.
             mode === 'environment' ? (
               <AssetEnvironmentViewer
                 key={`${asset.id}@${version.version}`}
-                url={file.url}
+                url={viewerUrl}
               />
             ) : (
               <AssetModelViewer
                 key={`${asset.id}@${version.version}`}
-                url={file.url}
+                url={viewerUrl}
                 toolbar="compact"
               />
             )
           ) : (
             <>
               <AssetThumbnail asset={asset} className="absolute inset-0" />
-              {previewMode === '3d' &&
-              interactive &&
-              file.status === 'ready' &&
-              !wants3d ? (
+              {stage === 'ask' ? (
                 <div className="absolute inset-x-0 bottom-3 flex justify-center">
                   <Button
                     variant="secondary"

@@ -150,7 +150,11 @@ export interface AssetViewerLoaded {
 }
 
 interface AssetModelViewerProps {
-  url: string;
+  /**
+   * 열 파일. `null` 이면 아직 열지 않는다 — 자리와 조작 도구, 불러오는 표시만
+   * 그리고 파일은 받지 않는다(목록에서 지나치는 자산).
+   */
+  url: string | null;
   /** 뷰어 아래에 놓이는 표제란. */
   titleBlock?: ReactNode;
   handleRef?: Ref<AssetViewerHandle>;
@@ -560,8 +564,8 @@ export function AssetModelViewer({
   );
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
-  const info = loaded?.url === url ? loaded.info : null;
-  const failed = failedUrl === url;
+  const info = url !== null && loaded?.url === url ? loaded.info : null;
+  const failed = url !== null && failedUrl === url;
 
   useImperativeHandle(
     handleRef,
@@ -589,6 +593,7 @@ export function AssetModelViewer({
   }, [url]);
   const handleInfo = useCallback(
     (next: ModelInfo) => {
+      if (url === null) return;
       setLoaded({ url, info: next });
       setLodLevel(0);
       onLoadedRef.current?.({ stats: next.stats });
@@ -598,16 +603,16 @@ export function AssetModelViewer({
 
   // 화면을 떠나면 이 파일의 파싱 결과를 캐시에서 놓는다 — 자산을 여러 개
   // 열어 볼수록 수십 MB 씩 쌓이는 것을 막는다.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    if (url === null) return;
+    return () => {
       try {
         useGLTF.clear(url);
       } catch {
         // 캐시에 없으면 그만이다.
       }
-    },
-    [url],
-  );
+    };
+  }, [url]);
 
   const tone = BACKGROUND_STYLE[background];
   const light = background === 'light';
@@ -622,7 +627,7 @@ export function AssetModelViewer({
             framedUrl === url ? 'opacity-100' : 'opacity-0',
           )}
         >
-          {surface ? (
+          {surface && url !== null ? (
             <Canvas
               key={url}
               eventSource={surface}

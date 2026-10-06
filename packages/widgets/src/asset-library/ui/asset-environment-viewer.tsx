@@ -51,7 +51,11 @@ const THUMBNAIL_WIDTH = 640;
 const THUMBNAIL_HEIGHT = 400;
 
 interface AssetEnvironmentViewerProps {
-  url: string;
+  /**
+   * 열 파일. `null` 이면 아직 열지 않는다 — 자리와 불러오는 표시만 그리고
+   * 파일은 받지 않는다(목록에서 지나치는 자산).
+   */
+  url: string | null;
   /** 뷰어 아래에 놓이는 표제란. */
   titleBlock?: ReactNode;
   handleRef?: Ref<AssetViewerHandle>;
@@ -140,8 +144,8 @@ export function AssetEnvironmentViewer({
   // 결과는 URL 에 묶어 둔다 — 다른 파일로 바뀌면 옛 결과가 보이지 않는다.
   const [shownUrl, setShownUrl] = useState<string | null>(null);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const shown = shownUrl === url;
-  const failed = failedUrl === url;
+  const shown = url !== null && shownUrl === url;
+  const failed = url !== null && failedUrl === url;
 
   useImperativeHandle(
     handleRef,
@@ -165,16 +169,16 @@ export function AssetEnvironmentViewer({
 
   // 화면을 떠나면 이 파일의 디코딩 결과를 캐시에서 놓는다 — 4K 파노라마
   // 한 장이 수십 MB 다.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    if (url === null) return;
+    return () => {
       try {
         useLoader.clear(EXRLoader, url);
       } catch {
         // 캐시에 없으면 그만이다.
       }
-    },
-    [url],
-  );
+    };
+  }, [url]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -186,7 +190,7 @@ export function AssetEnvironmentViewer({
             shown ? 'opacity-100' : 'opacity-0',
           )}
         >
-          {surface ? (
+          {surface && url !== null ? (
             <Canvas
               key={url}
               eventSource={surface}
