@@ -200,7 +200,6 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
 | 감지 설정 페이지(메뉴 "설정", 충돌·영역 감지 스위치, localStorage 영속) | `packages/widgets/src/detection-settings/`, `packages/features/src/3d/lib/detection-settings-storage.ts` — 기본값·키는 `docs/agents/3d-collision.md` 가 단일 소스 |
-| 3D 캔버스 해상도(DPR 기본 범위 + 설정 페이지의 PC 별 해상도 배율) | `packages/features/src/3d/lib/{scene-dpr,graphics-settings-storage}.ts`, `model/{use-scene-canvas-dpr,use-scene-graphics-store}.ts` — `docs/agents/rendering-perf.md` |
 | 모델 영역(zone) 침범 감지 | 스키마 `SavedModelZone`(`types.ts`), 기하 `packages/domain/src/3d/lib/zone-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-zone-runtime.ts`, 스토어 `model/use-scene-zone-store.ts` — `docs/agents/3d-zone.md` |
 | 영역 침범 → 로컬 알람 / 영역·운전 상태 저널 / 씬 unit 스케일 | `apps/shell/src/runtime/zone-alarm-bridge.tsx`, `@crane/domain/journal`, `packages/domain/src/3d/model/scene-unit-scale.ts` — `docs/agents/3d-zone.md` |
 | 3D 플레이 페이지(리플레이 + 시뮬레이션, 실행 리포트) / 장비 운전 상태 | `packages/features/src/3d/ui/play3d-view.tsx`, `model/play3d-transport.ts`, `lib/play3d-stats.ts`, `lib/model-runtime-status.ts` — `docs/agents/3d-play.md` |
@@ -304,7 +303,8 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 시도했다 되돌린 접근이다. 이유는 한 줄만, 상세는 각 문서의 "하지 않기로 한 것".
 
 - reverse-Z 깊이 — three 의 `reverseDepthBuffer` 는 WebGPU 전용이고 기본 프레임버퍼에선 정밀도 이득이 없다.
-- DPR 상한 1.25 — 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값을 함께 바꾼다). 느린 PC 는 설정 페이지의 해상도 배율로 낮춘다.
+- DPR 상한 1.25 — 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값을 함께 바꾼다).
+- PC 별 해상도 배율 옵션 — 흐려진 화면이 눈에 피로하다. 픽셀 비용은 픽셀당 계산(그림자·재질)에서 줄인다.
 - 미등록 region 의 기본 씬 파일 fallback — 남의 씬을 덮어쓴 사고의 원인.
 - three `TransformControls` 의 `translationSnap` 류 — local 격자가 객체 회전 프레임에 놓여 저장값이 격자를 벗어난다.
 - 탑뷰용 `camera.up` 변경 — OrbitControls 극점이 틀어지고 `{position, target}` 포즈가 up 을 복원할 수 없다.

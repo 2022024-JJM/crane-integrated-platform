@@ -10,8 +10,7 @@
 |---|---|
 | 프레임 거버너(demand 루프의 틱 생산) | `packages/features/src/3d/ui/scene-frame-governor.tsx`(`SceneFrameGovernor`), 판정 `packages/features/src/3d/lib/frame-governor.ts`(테스트 대상) |
 | React 밖 프레임 요청 깔때기 | `packages/features/src/3d/model/scene-frame-request.ts`(`requestSceneFrame`, `isSceneFrameTickerActive`) |
-| 렌더 프리셋·GL 옵션·조명 적용 | `packages/features/src/3d/ui/scene-render-preset.tsx`(`SCENE_GL_OPTIONS`, `SceneLighting`) |
-| 캔버스 해상도(DPR 기본 범위 + PC 별 해상도 배율) | 범위·합성 `packages/features/src/3d/lib/scene-dpr.ts`(`SCENE_DEFAULT_DPR`, `resolveSceneDpr`), 캔버스 훅 `model/use-scene-canvas-dpr.ts`(`useSceneCanvasDpr`), 기기 값 구독 `lib/device-pixel-ratio.ts`, 설정 `model/use-scene-graphics-store.ts`·`lib/graphics-settings-storage.ts`(`RENDER_SCALE_OPTIONS`, 키 `GRAPHICS_SETTINGS_STORAGE_KEY`), UI 는 설정 페이지 `packages/widgets/src/detection-settings/`의 그래픽 카드 — 전부 테스트 대상 |
+| 렌더 프리셋·GL 옵션·DPR·조명 적용 | `packages/features/src/3d/ui/scene-render-preset.tsx`(`SCENE_GL_OPTIONS`, `SCENE_DEFAULT_DPR`, `SceneLighting`) |
 | 낮 기준 조명값·밤 작업등·하늘 곡선 | `packages/features/src/3d/lib/sky-lighting.ts`(`SCENE_LIGHTING_BASE`, `SCENE_ENVIRONMENT_INTENSITY`, `YARD_LIGHT_*`, `FILL_LIGHT_*`, `NIGHT_*`) |
 | 시각+위치 → 조명 스냅샷 합성 | `packages/features/src/3d/lib/solar-lighting.ts`(`KEY_LIGHT_ELEVATION_MIN`, `CELESTIAL_ANGLE_STEP`) |
 | 천문 계산 / 시간대 변환 / 씬 지역 → 현장 위경도·시간대 | `packages/domain/src/3d/lib/solar-position.ts`, `packages/core/src/lib/time-zone.ts`, `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteGeo`) |
@@ -50,7 +49,6 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 야드 지도(kind `'ground'`)와 크레인은 그대로 두고 주변에서 줄인다.
 
 - DPR 상한은 `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값 두 곳이 같은 값(1.5)이어야 한다 — 함께 바꾼다.
-- 픽셀 수에 막힌 PC 는 설정 페이지의 **해상도 배율**(`RENDER_SCALE_OPTIONS`)을 내린다. 씬이 아니라 그 브라우저의 설정(localStorage)이고 기본은 줄이지 않는 1 이다. 모니터링·3D 플레이·에디터 캔버스가 `useSceneCanvasDpr` 로 같은 값을 받는다 — 배율 1 이면 기본 범위 그대로, 그 아래면 범위로 클램프한 기기 값에 곱한 숫자다. 라벨·HUD 는 DOM 이라 흐려지지 않고, 지형 LOD 는 device px 기준이라 배율을 내리면 함께 성겨진다. 자산 뷰어 등 다른 캔버스는 배율을 받지 않는다.
 - 컨텍스트 지형(씬 지도의 `role: 'context'` — `isContextMap`)은 `GltfModel shading='lambert'` 로 PBR 대신 Lambert 다(`lambert-material.ts`, 원본 머티리얼당 변환본 캐시). 조명·낮/밤엔 똑같이 반응하고 스펙큘러·radiance 샘플링만 없다. 모니터링·에디터 같은 규칙.
 - 타일 LOD 임계는 `TERRAIN_LOD_THRESHOLD_PX`(device px). 컨텍스트 지형과 LOD 체인이 붙은 모델에만 LOD 가 있다(생성 절차는 `docs/agents/assets-glb.md`).
 - 씬의 미러 표시(`seaMirror`, `resolveSeaMirror`)를 끄면 미러 패스가 씬 최상위 객체를 전부 빼고 하늘만 그린다 — 씬을 한 번 더 그리는 정점·드로우콜이 빠지고 크레인·야드·지도가 물에 비치지 않는다. 씬별 저작값이며 스위치는 `docs/agents/3d-editor.md`.
@@ -151,7 +149,6 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - three 를 올리면 `ocean-water.ts` 를 새 버전의 `examples/jsm/objects/Water.js` 와 대조한다 — 포크라 자동으로 따라가지 않는다.
 - `SceneFrameGovernor` 주기 틱 중에는 useFrame 안에서 `requestSceneFrame()`/`invalidate()` 를 부르지 않는다(`isSceneFrameTickerActive()` 가드) — 30fps 상한이 무력화된다.
 - `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 의 DPR 기본값은 함께 바꾼다.
-- **씬 캔버스의 `dpr` 은 `useSceneCanvasDpr` 하나에서 받는다.** 범위에 배율을 곱해 넘기지 않는다 — 기기 값이 1 인 PC 는 그 범위 안이라 아무것도 줄지 않는다(`resolveSceneDpr`). 해상도 배율은 PC 의 설정이라 씬 JSON 에 넣지 않는다.
 - `bvh-build-queue` 의 `cancel` 은 `enqueue` 와 같은 옵션(`outline`)으로 부른다.
 - 새 캔버스를 만들면 `SceneLighting`(regionId)·`SceneFrameGovernor`·`SceneTerrainLod`·`SilhouetteOutlineWarmup` 을 기존 세 캔버스와 같이 마운트한다.
 - **기본 카메라(`useThree().camera`, useFrame 의 `camera`)나 캔버스 크기(`size`)로 화면 배치를 계산하는 새 코드는 분할 화면을 고려한다** — DOM 표시는 `PerViewport`/`ViewportAnchor`, 세로 px 는 `useSceneViewportHeight`, 씬 전역 가시성을 카메라로 정하는 것은 렌더 직전 타일 카메라로 다시 쓴다. 위 "분할 화면 렌더" 표에 더한다.
@@ -160,7 +157,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 ## 하지 않기로 한 것
 
 - **reverse-Z 깊이** — three r183 의 `reverseDepthBuffer` 는 WebGPURenderer 전용이고, 기본 프레임버퍼(24bit unorm)에선 부호 반전만으로 정밀도가 늘지 않아(float 깊이 RT 여야 이득) 로그 깊이의 z-fighting 해결을 대체할 수 없다.
-- **DPR 상한 1.25** — 내렸다 되돌렸다. 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 뷰어 기본값 함께). 느린 PC 는 기본값이 아니라 그 PC 의 해상도 배율을 내린다.
+- **DPR 상한 1.25** — 내렸다 되돌렸다. 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 뷰어 기본값 함께).
+- **PC 별 해상도 배율 옵션(설정 페이지에서 그 PC 만 DPR 을 기본 범위 아래로)** — 픽셀 수에 막힌 PC 에서 빨라지지만 흐려진 화면이 눈에 피로해 뺐다. 픽셀 비용은 해상도가 아니라 픽셀당 계산(그림자·재질)에서 줄인다.
 - **shadow 무효화 벽시계 스로틀(20Hz 상한)** — 렌더가 주사율로 도는 동안 대부분 프레임이 이전 자세의 depth map 이라 배속 ≥2 에서 자기 그림자 오차가 명멸했다. 임계 `SHADOW_STEP_EPS` 를 넘긴 프레임마다 무효화한다.
 - **`compileAsync` 프리워밍** — 폴링 중 캔버스 언마운트·머티리얼 dispose 에 three 내부가 던진다. 동기 `compile` 을 쓴다.
 - **PCFSoftShadowMap(Canvas `shadows` true·`'soft'`)** — r183 은 첫 shadow pass 에서 PCF 로 바꾸고 R3F 는 Canvas 재렌더마다 되돌린다. 그 사이 컴파일된 셰이더는 BASIC 변형(`sampler2D`)이 되어 그림자 받는 메시의 드로우를 WebGL 이 버린다(shadow pass 를 막고 찍는 미니맵 캡처에서 조선소 지도가 빠졌다). `sceneCanvasShadows` 의 `'percentage'` 만 쓴다.
