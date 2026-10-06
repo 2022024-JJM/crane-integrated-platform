@@ -316,9 +316,12 @@ describe('updateAssetMetadata', () => {
         ),
       ).toBe(model);
       expect(
-        updateAssetMetadata(model, { placement: { floating: true } }, ctx())
-          .placement,
-      ).toEqual({ floating: true });
+        updateAssetMetadata(
+          model,
+          { placement: { mapRole: 'context', paletteHidden: true } },
+          ctx(),
+        ).placement,
+      ).toEqual({ paletteHidden: true });
     });
 
     it('종류를 바꾸면 그 종류에 맞지 않는 배치 속성이 떨어진다', () => {
@@ -335,7 +338,7 @@ describe('updateAssetMetadata', () => {
     it('씬에 쓰지 않는 종류(도면)로 바꾸면 배치 속성 전체가 사라진다', () => {
       const before = asset({
         kind: 'model',
-        placement: { paletteHidden: true, floating: true },
+        placement: { paletteHidden: true },
       });
       const after = updateAssetMetadata(before, { kind: 'drawing' }, ctx());
       expect('placement' in after).toBe(false);

@@ -172,11 +172,6 @@ export interface AssetPlacement {
   mapRole?: AssetMapRole;
   /** 지도 — 추가할 때의 초기 위치. 없으면 원점. */
   defaultPosition?: Vector3Tuple;
-  /**
-   * 모델 — 떠 있는 모델(배). 드롭할 때 바닥을 지면에 맞추지 않고 원점을
-   * 수면에 놓는다. true 만 저장한다.
-   */
-  floating?: boolean;
 }
 
 export interface AssetRecord {

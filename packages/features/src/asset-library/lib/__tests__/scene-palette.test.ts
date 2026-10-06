@@ -171,15 +171,6 @@ describe('buildScenePaletteModels', () => {
     expect(models.map((m) => m.item.id)).toEqual(['categorized']);
   });
 
-  it('떠 있는 모델 표시는 배치 속성에서 온다 — 없으면 필드를 싣지 않는다', () => {
-    const [ship, crane] = buildScenePaletteModels([
-      asset({ id: 'ship', placement: { floating: true } }),
-      asset({ id: 'crane' }),
-    ]);
-    expect(ship.item.floating).toBe(true);
-    expect(crane.item).not.toHaveProperty('floating');
-  });
-
   it('카테고리는 라이브러리의 것을 그대로 싣는다 — 없으면 빈 목록, 철자도 그대로', () => {
     const [bare, categorized] = buildScenePaletteModels([
       asset({ id: 'bare' }),
@@ -314,7 +305,6 @@ describe('selectPlaceableModels', () => {
   it.each([
     ['이름', asset({ id: 'a', name: 'Renamed' })],
     ['버전·경로', withVersion2(asset({ id: 'a' }), 'published', 2)],
-    ['떠 있는 모델 표시', asset({ id: 'a', placement: { floating: true } })],
   ])('%s 이(가) 달라지면 새 배열이다', (_label, changed) => {
     const first = selectPlaceableModels(models([asset({ id: 'a' })]), EMPTY);
     const second = selectPlaceableModels(models([changed]), first);

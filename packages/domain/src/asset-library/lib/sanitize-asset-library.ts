@@ -285,9 +285,6 @@ export function sanitizeAssetPlacement(
       placement.defaultPosition = position;
     }
   }
-  if (kind === 'model' && value.floating === true) {
-    placement.floating = true;
-  }
   return Object.keys(placement).length > 0 ? placement : undefined;
 }
 

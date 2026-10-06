@@ -503,8 +503,6 @@
     },
     "defaultPosition": "Default position",
     "defaultPositionHint": "Where the map goes when added from the palette. Use it to line up several maps that share a coordinate system.",
-    "floating": "Place on the water",
-    "floatingHint": "A floating model such as a ship. When dropped, its origin is put at sea level instead of resting its bottom on the ground.",
     "note": "Changes here apply the next time the asset is placed. Anything already in a scene stays as it is."
   },
   "protect": {

@@ -304,7 +304,6 @@ function isSamePlacement(
   return (
     a?.paletteHidden === b?.paletteHidden &&
     a?.mapRole === b?.mapRole &&
-    a?.floating === b?.floating &&
     isSameValue(a?.defaultPosition ?? [], b?.defaultPosition ?? [])
   );
 }

@@ -47,7 +47,7 @@ function PlacementRow({
  *
  * 값은 놓는 순간 씬에 복사된다. 그 뒤로는 씬이 자기 값을 가지므로 여기서
  * 바꿔도 이미 놓인 것은 달라지지 않는다 — 탭 아래에 그렇게 적는다. 종류에
- * 맞는 속성만 나온다(지도: 역할·기본 위치, 모델: 수면에 놓기).
+ * 맞는 속성만 나온다(지도: 역할·기본 위치).
  */
 export function AssetPlacementTab({ asset, actor }: AssetPlacementTabProps) {
   const { t } = useTranslation();
@@ -134,19 +134,6 @@ export function AssetPlacementTab({ asset, actor }: AssetPlacementTabProps) {
             </div>
           </PlacementRow>
         </>
-      ) : null}
-
-      {asset.kind === 'model' ? (
-        <PlacementRow
-          label={t('asset-library:placement.floating')}
-          hint={t('asset-library:placement.floatingHint')}
-        >
-          <Switch
-            checked={placement.floating === true}
-            onCheckedChange={(floating) => patch({ floating })}
-            aria-label={t('asset-library:placement.floating')}
-          />
-        </PlacementRow>
       ) : null}
 
       <p className="text-muted-foreground px-5 py-4 text-xs leading-relaxed">

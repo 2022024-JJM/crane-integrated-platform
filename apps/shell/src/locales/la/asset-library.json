@@ -503,8 +503,6 @@
     },
     "defaultPosition": "Locus praedefinitus",
     "defaultPositionHint": "Ubi tabula ponitur cum ex tabula editoris additur. Utere ut plures tabulae eiusdem systematis coordinatarum congruant.",
-    "floating": "In aqua pone",
-    "floatingHint": "Exemplar natans, ut navis. Cum demittitur, origo in aequore ponitur neque fundus ad solum aptatur.",
     "note": "Quae hic mutas valent cum res proxime ponetur. Quae iam in scaena sunt non mutantur."
   },
   "protect": {

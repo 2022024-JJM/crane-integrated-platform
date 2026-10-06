@@ -93,16 +93,10 @@ function listPaletteAssets(
 export function buildScenePaletteModels(
   assets: readonly AssetRecord[],
 ): ScenePaletteModel[] {
-  return listPaletteAssets(assets, 'model').map((asset) => {
-    const entry = toEntry(asset);
-    return {
-      ...entry,
-      item: asset.placement?.floating
-        ? { ...entry.item, floating: true }
-        : entry.item,
-      categories: asset.categories,
-    };
-  });
+  return listPaletteAssets(assets, 'model').map((asset) => ({
+    ...toEntry(asset),
+    categories: asset.categories,
+  }));
 }
 
 export function buildScenePaletteMaps(
@@ -136,8 +130,7 @@ function samePlaceableModel(
     a.id === b.id &&
     a.version === b.version &&
     a.label === b.label &&
-    a.path === b.path &&
-    a.floating === b.floating
+    a.path === b.path
   );
 }
 

@@ -104,7 +104,7 @@ describe('sanitizeAssetRecord', () => {
       description: null,
       categories: { a: 1 },
       owner: [],
-      placement: 'floating',
+      placement: 'hidden',
       relatedAssetIds: 'none',
       versions: [version()],
       currentVersion: 'one',
@@ -154,22 +154,15 @@ describe('sanitizeAssetPlacement', () => {
         'map',
       ),
     ).toBeUndefined();
-    expect(sanitizeAssetPlacement({ floating: false }, 'model')).toBeUndefined();
+    expect(
+      sanitizeAssetPlacement({ paletteHidden: false }, 'model'),
+    ).toBeUndefined();
   });
 
   it('한 축만 0 이 아니어도 기본 위치를 남긴다(경계)', () => {
     expect(
       sanitizeAssetPlacement({ defaultPosition: [0, -40.35, 0] }, 'map'),
     ).toEqual({ defaultPosition: [0, -40.35, 0] });
-  });
-
-  it('모델 — 수면에 놓기는 true 만 남긴다', () => {
-    expect(sanitizeAssetPlacement({ floating: true }, 'model')).toEqual({
-      floating: true,
-    });
-    for (const floating of ['yes', 1, null, undefined]) {
-      expect(sanitizeAssetPlacement({ floating }, 'model')).toBeUndefined();
-    }
   });
 
   it('팔레트 숨김은 씬에 쓰는 종류(모델·지도·배경)에 남는다', () => {
@@ -180,12 +173,26 @@ describe('sanitizeAssetPlacement', () => {
     }
   });
 
+  it('팔레트 숨김은 true 만 남긴다', () => {
+    for (const paletteHidden of ['yes', 1, null, undefined]) {
+      expect(
+        sanitizeAssetPlacement({ paletteHidden }, 'model'),
+      ).toBeUndefined();
+    }
+  });
+
+  it('모르는 항목은 떨어진다 — 옛 문서의 수면에 놓기(floating)', () => {
+    expect(sanitizeAssetPlacement({ floating: true }, 'model')).toBeUndefined();
+    expect(
+      sanitizeAssetPlacement({ floating: true, paletteHidden: true }, 'model'),
+    ).toEqual({ paletteHidden: true });
+  });
+
   it('씬에 쓰지 않는 종류(도면·CAD)에는 배치 속성이 없다', () => {
     const full = {
       paletteHidden: true,
       mapRole: 'context',
       defaultPosition: [1, 2, 3],
-      floating: true,
     };
     expect(sanitizeAssetPlacement(full, 'drawing')).toBeUndefined();
     expect(sanitizeAssetPlacement(full, 'cad')).toBeUndefined();
@@ -195,9 +202,8 @@ describe('sanitizeAssetPlacement', () => {
     const full = {
       mapRole: 'context',
       defaultPosition: [1, 2, 3],
-      floating: true,
     };
-    expect(sanitizeAssetPlacement(full, 'model')).toEqual({ floating: true });
+    expect(sanitizeAssetPlacement(full, 'model')).toBeUndefined();
     expect(sanitizeAssetPlacement(full, 'map')).toEqual({
       mapRole: 'context',
       defaultPosition: [1, 2, 3],
@@ -217,7 +223,7 @@ describe('sanitizeAssetPlacement', () => {
     expect(sanitizeAssetPlacement(value, 'map')).toBeUndefined();
   });
 
-  it.each([undefined, null, 'floating', 3, [], true])(
+  it.each([undefined, null, 'hidden', 3, [], true])(
     '객체가 아닌 입력 %j 은 undefined',
     (value) => {
       expect(sanitizeAssetPlacement(value, 'model')).toBeUndefined();
@@ -235,10 +241,10 @@ describe('sanitizeAssetPlacement', () => {
 describe('sanitizeAssetRecord — 버전·포인터', () => {
   it('배치 속성을 종류에 맞게 거른다', () => {
     const result = sanitizeAssetRecord({
-      ...asset({ kind: 'map' }),
-      placement: { mapRole: 'context', floating: true },
+      ...asset({ kind: 'model' }),
+      placement: { mapRole: 'context', paletteHidden: true },
     });
-    expect(result?.placement).toEqual({ mapRole: 'context' });
+    expect(result?.placement).toEqual({ paletteHidden: true });
   });
 
   it('현재 버전 포인터가 없는 버전을 가리키면 마지막 버전으로 맞춘다', () => {

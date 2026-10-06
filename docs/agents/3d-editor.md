@@ -59,7 +59,7 @@
 모델·맵·배경 탭의 목록은 자산 라이브러리의 그 종류 자산이다(`useScenePalette`). 게시된 자산만 놓을 수 있고, 캔버스에는 놓을 수 있는 모델만 넘긴다(프리로드·드롭 대상). 목록 규칙은 `docs/agents/asset-library.md` 의 "3D 화면 편집의 팔레트".
 
 - 놓는 순간 씬에 파일 경로와 자산 참조(`asset: { id, version }`)를 함께 적는다 — 모델은 `createSceneModel`, 지도는 `addSceneMap`, 배경은 `setEnvironment`. 지도는 자산의 역할(`role`)과 기본 위치도 복사해 온다. 그 뒤로는 씬이 자기 값을 가진다.
-- 새 모델은 등배로 놓인다. 떠 있는 모델(자산의 배치 속성)은 원점을 수면에 둔다(`use-scene-drop.ts`).
+- 새 모델은 등배로, 바닥이 드롭 지점의 지면에 닿게 놓인다(`use-scene-drop.ts`).
 - 맵 탭의 타일은 자산당 한 장이고 같은 자산(또는 같은 경로)은 다시 추가되지 않는다. 바닥 지도는 카메라 영역 제한에 체크된 채 들어간다.
 - 팔레트 아래에는 씬에 놓인 버전이 라이브러리의 현재 버전과 다른 자산이 뜬다. "갱신" 은 `updateSceneAsset` 하나로 그 자산을 가리키는 객체 전부를 옮기고 히스토리에 한 번 남는다 — `docs/agents/asset-library.md` 의 "씬의 자산 참조와 새 버전 갱신".
 - 지도의 역할은 씬의 `role` 로 판정한다. `ground` 는 드롭 raycast 가 닿는 바닥(`resolveGroundMaps` — 하나도 없으면 첫 지도), `context` 는 그림자·바다 반사·PBR 에서 빼는 주변 지형(`isContextMap`)이다. 에디터와 모니터링이 같은 판정을 쓴다.

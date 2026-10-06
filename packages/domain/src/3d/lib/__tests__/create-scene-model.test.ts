@@ -32,12 +32,4 @@ describe('createSceneModel', () => {
     expect(a.id).not.toBe(b.id);
     expect(a.id.length).toBeGreaterThan(0);
   });
-
-  it('배치 전용 값(floating)은 씬에 싣지 않는다', () => {
-    const created = createSceneModel({
-      model: { ...model, floating: true },
-      position: [0, 0, 0],
-    });
-    expect(created).not.toHaveProperty('floating');
-  });
 });
