@@ -41,7 +41,7 @@ export const CODE_ASSETS = {
     id: 'rt-gantry-crane',
     version: 1,
     path: '/models/gantry_crane.glb',
-    usedBy: 'crane-type-model, goliath-3d-viewer',
+    usedBy: 'crane-type-model',
   },
   ttc27: {
     id: 'rt-ttc-27',

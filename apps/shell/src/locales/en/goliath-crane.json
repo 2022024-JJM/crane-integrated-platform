@@ -1,28 +1,10 @@
 {
-  "pageTitle": "Goliath Crane Monitoring",
-  "selectCrane": "Select a crane to monitor",
-  "notFound": "Crane not found",
-  "back": "Back to list",
   "status": {
     "operating": "Operating",
     "idle": "Idle",
     "maintenance": "Maintenance",
     "warning": "Warning",
     "stopped": "Stopped"
-  },
-  "header": {
-    "emergencyStop": "Emergency Stop",
-    "maintenanceMode": "Maintenance Mode",
-    "craneInfo": "Crane Live Status",
-    "lastHeartbeat": "Last heartbeat",
-    "justNow": "just now",
-    "secondsAgo": "s ago"
-  },
-  "diagram": {
-    "title": "Crane Real-time Diagram"
-  },
-  "viewer3d": {
-    "title": "3D Model Viewer"
   },
   "collisionGuard": {
     "enable": "Show collision detection",
@@ -66,44 +48,12 @@
     "operatingHours": "Operating Hours",
     "cycleCount": "Cycle Count"
   },
-  "charts": {
-    "title": "Sensor Data Trends",
-    "loadSeries": "Load (ton)",
-    "windSeries": "Wind (m/s)",
-    "heightSeries": "Height (m)"
-  },
   "safety": {
-    "title": "Safety Status",
-    "safetyParameters": "Safety Parameters",
-    "protectionStatus": "Protection Systems",
     "antiCollision": "Anti-Collision",
-    "overloadProtection": "Overload Protection",
-    "mainLoad": "Main Load",
-    "auxLoad": "Aux Load",
-    "windSpeed": "Wind Speed",
-    "hoistHeight": "Hoist Height"
+    "overloadProtection": "Overload Protection"
   },
   "dashboard": {
     "liveStatus": "Live Status"
-  },
-  "operationLog": {
-    "title": "Operation Log"
-  },
-  "timeRange": {
-    "1h": "1H",
-    "6h": "6H",
-    "12h": "12H",
-    "24h": "24H"
-  },
-  "log": {
-    "hoistUp": "Hoist Up",
-    "hoistDown": "Hoist Down",
-    "trolleyMove": "Trolley Move",
-    "loadPickup": "Load Pickup",
-    "loadRelease": "Load Release",
-    "slewRotate": "Slew Rotation",
-    "emergencyStopTest": "E-Stop Test",
-    "systemCheck": "System Check"
   },
   "visionStrip": {
     "cam1": "Hoist Top",
@@ -117,19 +67,7 @@
     "cam9": "Cabin Front",
     "cam10": "Cabin Rear",
     "cam11": "Engine Room",
-    "cam12": "External Wide",
-    "noImage": "NO IMAGE",
-    "noSignal": "NO SIGNAL",
-    "lidarReady": "Coming Soon",
-    "lidarWaiting": "Waiting for camera feed",
-    "cameraOffline": "Camera Offline",
-    "close": "Close",
-    "lidarTitle": "LiDAR POINT CLOUD",
-    "lidarHardwareWaiting": "Hardware connection pending",
-    "lidarHint": "Point cloud will display when LiDAR sensor is connected",
-    "lidarScanRate": "Scan Rate",
-    "lidarPointsPerFrame": "Points/Frame",
-    "lidarDetectRange": "Detection Range"
+    "cam12": "External Wide"
   },
   "vision": {
     "title": "Vision Monitoring",

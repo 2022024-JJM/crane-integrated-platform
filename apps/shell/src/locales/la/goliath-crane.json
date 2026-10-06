@@ -1,28 +1,10 @@
 {
-  "pageTitle": "Goliath Crane Monitio",
-  "selectCrane": "Elige gruem ad monendum",
-  "notFound": "Grues non inventa",
-  "back": "Revertere ad indicem",
   "status": {
     "operating": "Operans",
     "idle": "Otiosus",
     "maintenance": "Refectio",
     "warning": "Monitio",
     "stopped": "Substitit"
-  },
-  "header": {
-    "emergencyStop": "Subsiste Subito",
-    "maintenanceMode": "Modus Refectionis",
-    "craneInfo": "Status Gruis Vivus",
-    "lastHeartbeat": "Ultima responsio",
-    "justNow": "modo",
-    "secondsAgo": "s ante"
-  },
-  "diagram": {
-    "title": "Diagramma Gruis Temporis Realis"
-  },
-  "viewer3d": {
-    "title": "Exemplar 3D"
   },
   "collisionGuard": {
     "enable": "Monstra detectionem collisionis",
@@ -66,44 +48,12 @@
     "operatingHours": "Horae Operationis",
     "cycleCount": "Numerus Cyclorum"
   },
-  "charts": {
-    "title": "Data Sensorum",
-    "loadSeries": "Onus (ton)",
-    "windSeries": "Ventus (m/s)",
-    "heightSeries": "Altitudo (m)"
-  },
   "safety": {
-    "title": "Status Securitatis",
-    "safetyParameters": "Parametra Securitatis",
-    "protectionStatus": "Systemata Protectionis",
     "antiCollision": "Anti-Collisio",
-    "overloadProtection": "Protectio Nimii Oneris",
-    "mainLoad": "Onus Principale",
-    "auxLoad": "Onus Auxiliare",
-    "windSpeed": "Ventus",
-    "hoistHeight": "Altitudo Tollenonis"
+    "overloadProtection": "Protectio Nimii Oneris"
   },
   "dashboard": {
     "liveStatus": "Status Vivus"
-  },
-  "operationLog": {
-    "title": "Acta Operationis"
-  },
-  "timeRange": {
-    "1h": "1H",
-    "6h": "6H",
-    "12h": "12H",
-    "24h": "24H"
-  },
-  "log": {
-    "hoistUp": "Tolleno Sursum",
-    "hoistDown": "Tolleno Deorsum",
-    "trolleyMove": "Motus Currus",
-    "loadPickup": "Sublatio Oneris",
-    "loadRelease": "Dimissio Oneris",
-    "slewRotate": "Gyratio",
-    "emergencyStopTest": "Probatio Subsist.",
-    "systemCheck": "Inspectio Systematis"
   },
   "visionStrip": {
     "cam1": "Summus Tolleno",
@@ -117,19 +67,7 @@
     "cam9": "Ante Cellae",
     "cam10": "Post Cellae",
     "cam11": "Cella Machinae",
-    "cam12": "Externa Ampla",
-    "noImage": "NULLA IMAGO",
-    "noSignal": "NULLUM SIGNUM",
-    "lidarReady": "Paratur",
-    "lidarWaiting": "Exspectat signum camerae",
-    "cameraOffline": "Camera Absens",
-    "close": "Claudere",
-    "lidarTitle": "NUBES PUNCTORUM LIDAR",
-    "lidarHardwareWaiting": "Conexio machinarum exspectatur",
-    "lidarHint": "Nubes punctorum ostenditur cum sensor LiDAR conectetur",
-    "lidarScanRate": "Celeritas Scanni",
-    "lidarPointsPerFrame": "Puncta per Imaginem",
-    "lidarDetectRange": "Spatium Detectionis"
+    "cam12": "Externa Ampla"
   },
   "vision": {
     "title": "Monitoratio Visus",

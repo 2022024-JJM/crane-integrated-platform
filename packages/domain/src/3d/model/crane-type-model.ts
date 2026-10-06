@@ -40,7 +40,7 @@ const LLC: CraneModelConfig = {
   },
 };
 
-// 갠트리 계열 — Goliath3dViewer 프리셋 재사용
+// 갠트리 계열
 const GANTRY: CraneModelConfig = {
   url: CODE_ASSETS.gantryCrane.path,
   scale: [1.2, 1.2, 1.2],

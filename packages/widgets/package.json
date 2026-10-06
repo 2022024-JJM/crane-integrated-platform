@@ -10,7 +10,6 @@
     "./crane": "./src/crane/index.ts",
     "./3d": "./src/3d/index.ts",
     "./layout": "./src/layout/index.ts",
-    "./goliath-crane": "./src/goliath-crane/index.ts",
     "./scene-editor": "./src/scene-editor/index.ts",
     "./virtual-tags": "./src/virtual-tags/index.ts",
     "./detection-settings": "./src/detection-settings/index.ts",
