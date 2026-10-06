@@ -1,4 +1,193 @@
 {
+  "/asset-library/files/bus/v1/Bus.glb": {
+    "hash": "7bd96bb9",
+    "bytes": 6025900,
+    "stats": {
+      "triangles": 261645,
+      "vertices": 409020,
+      "meshes": 22,
+      "materials": 20,
+      "textures": 26,
+      "drawCalls": 22,
+      "nodes": 10,
+      "textureMemoryBytes": 118737426,
+      "size": [
+        3.196,
+        3.81,
+        13.714
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/car/v1/Car.glb": {
+    "hash": "e7469399",
+    "bytes": 3728248,
+    "stats": {
+      "triangles": 164401,
+      "vertices": 119215,
+      "meshes": 47,
+      "materials": 16,
+      "textures": 19,
+      "drawCalls": 47,
+      "nodes": 18,
+      "textureMemoryBytes": 104181055,
+      "size": [
+        4.806,
+        1.47,
+        2.093
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/fork-lift/v1/Fork-Lift.glb": {
+    "hash": "2673186f",
+    "bytes": 2932324,
+    "stats": {
+      "triangles": 6242,
+      "vertices": 7342,
+      "meshes": 1,
+      "materials": 1,
+      "textures": 3,
+      "drawCalls": 1,
+      "nodes": 5,
+      "textureMemoryBytes": 66941092,
+      "size": [
+        0.884,
+        1.532,
+        2.702
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/oil-tanker/v1/Oil-Tanker.glb": {
+    "hash": "5ef6c882",
+    "bytes": 1570124,
+    "stats": {
+      "triangles": 80234,
+      "vertices": 151186,
+      "meshes": 8,
+      "materials": 8,
+      "textures": 2,
+      "drawCalls": 8,
+      "nodes": 1,
+      "textureMemoryBytes": 2959963,
+      "size": [
+        330.598,
+        71.904,
+        570.203
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/person-bike/v1/Person_Bike.glb": {
+    "hash": "da230f40",
+    "bytes": 3495176,
+    "stats": {
+      "triangles": 92368,
+      "vertices": 52119,
+      "meshes": 25,
+      "materials": 13,
+      "textures": 16,
+      "drawCalls": 25,
+      "nodes": 56,
+      "textureMemoryBytes": 152012063,
+      "size": [
+        1.76,
+        1.85,
+        1.663
+      ],
+      "lodLevels": 1,
+      "animations": 1
+    }
+  },
+  "/asset-library/files/person/v1/Person.glb": {
+    "hash": "37dc6ad8",
+    "bytes": 4101596,
+    "stats": {
+      "triangles": 40254,
+      "vertices": 22832,
+      "meshes": 7,
+      "materials": 7,
+      "textures": 7,
+      "drawCalls": 7,
+      "nodes": 60,
+      "textureMemoryBytes": 101806244,
+      "size": [
+        1.663,
+        1.777,
+        0.332
+      ],
+      "lodLevels": 1,
+      "animations": 1
+    }
+  },
+  "/asset-library/files/truck/v1/Truck.glb": {
+    "hash": "b6f75917",
+    "bytes": 5589660,
+    "stats": {
+      "triangles": 175204,
+      "vertices": 206064,
+      "meshes": 53,
+      "materials": 27,
+      "textures": 36,
+      "drawCalls": 53,
+      "nodes": 18,
+      "textureMemoryBytes": 191920468,
+      "size": [
+        2.91,
+        3.689,
+        10.683
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/worker-bike/v1/Worker_Bike.glb": {
+    "hash": "9bf9f0cd",
+    "bytes": 14767456,
+    "stats": {
+      "triangles": 100910,
+      "vertices": 57535,
+      "meshes": 26,
+      "materials": 8,
+      "textures": 14,
+      "drawCalls": 26,
+      "nodes": 75,
+      "textureMemoryBytes": 161774305,
+      "size": [
+        1.76,
+        1.951,
+        1.844
+      ],
+      "lodLevels": 1,
+      "animations": 1
+    }
+  },
+  "/asset-library/files/worker/v1/Worker.glb": {
+    "hash": "04775253",
+    "bytes": 14398972,
+    "stats": {
+      "triangles": 48796,
+      "vertices": 28248,
+      "meshes": 8,
+      "materials": 2,
+      "textures": 5,
+      "drawCalls": 8,
+      "nodes": 61,
+      "textureMemoryBytes": 111568486,
+      "size": [
+        1.844,
+        1.852,
+        0.326
+      ],
+      "lodLevels": 1,
+      "animations": 4
+    }
+  },
   "/drawings/equipment-layout/3ds.webp": {
     "hash": "552d2079",
     "bytes": 73490
@@ -937,9 +1126,9 @@
       "nodes": 11,
       "textureMemoryBytes": 0,
       "size": [
-        0.539,
-        2,
-        0.284
+        0.462,
+        1.714,
+        0.243
       ],
       "lodLevels": 1,
       "animations": 3

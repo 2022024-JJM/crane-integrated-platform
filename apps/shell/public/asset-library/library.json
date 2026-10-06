@@ -286,8 +286,7 @@
       "description": "",
       "categories": [
         "outdoor",
-        "block",
-        "philly"
+        "block"
       ],
       "owner": "whdals6831",
       "relatedAssetIds": [],
@@ -319,11 +318,20 @@
         "updatedAt": "2026-10-01T08:05:02.571Z"
       },
       "createdAt": "2026-08-20T01:23:05.000Z",
-      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "updatedAt": "2026-10-06T04:19:44.840Z",
       "history": [
         {
           "id": "id-muqawrpk-kfc10wjv",
           "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        },
+        {
+          "id": "cb892e85-4dd1-4cd8-a539-2324e4213fb7",
+          "at": "2026-10-06T04:19:44.840Z",
           "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
@@ -339,8 +347,7 @@
       "description": "",
       "categories": [
         "outdoor",
-        "block",
-        "philly"
+        "block"
       ],
       "owner": "whdals6831",
       "relatedAssetIds": [],
@@ -372,11 +379,20 @@
         "updatedAt": "2026-10-01T08:05:07.259Z"
       },
       "createdAt": "2026-08-20T01:23:05.000Z",
-      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "updatedAt": "2026-10-06T04:19:44.840Z",
       "history": [
         {
           "id": "id-muqawrpk-z91kv9nk",
           "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        },
+        {
+          "id": "92bf7a5b-2620-4aec-a72c-ef763033f476",
+          "at": "2026-10-06T04:19:44.840Z",
           "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
@@ -392,8 +408,7 @@
       "description": "",
       "categories": [
         "outdoor",
-        "vessel",
-        "philly"
+        "vessel"
       ],
       "owner": "jobeomhee",
       "relatedAssetIds": [],
@@ -425,11 +440,20 @@
         "updatedAt": "2026-10-01T08:05:13.264Z"
       },
       "createdAt": "2026-09-04T02:07:44.000Z",
-      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "updatedAt": "2026-10-06T04:18:22.072Z",
       "history": [
         {
           "id": "id-muqawrpk-m8jocet8",
           "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        },
+        {
+          "id": "d47e51e2-738e-4127-b5e6-ed613b10e5cf",
+          "at": "2026-10-06T04:18:22.072Z",
           "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
@@ -1416,7 +1440,6 @@
       "name": "Okpo",
       "description": "",
       "categories": [
-        "ground",
         "okpo"
       ],
       "owner": "정종민",
@@ -1456,8 +1479,18 @@
         "updatedAt": "2026-10-01T06:00:11.773Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-09-27T14:03:32.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "history": [
+        {
+          "id": "45511873-b29c-417e-8cbd-2079dcfdda29",
+          "at": "2026-10-06T04:21:19.890Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-okpo-terrain",
@@ -1465,7 +1498,6 @@
       "name": "Okpo Terrain",
       "description": "",
       "categories": [
-        "context",
         "terrain",
         "okpo"
       ],
@@ -1507,8 +1539,18 @@
         "updatedAt": "2026-10-01T06:00:18.408Z"
       },
       "createdAt": "2026-09-21T00:43:32.000Z",
-      "updatedAt": "2026-09-21T00:43:32.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:27.106Z",
+      "history": [
+        {
+          "id": "d0333ee4-b9f8-4890-9067-9953a4ba47dc",
+          "at": "2026-10-06T04:21:27.106Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-okpo-tree",
@@ -1516,7 +1558,6 @@
       "name": "Okpo Tree",
       "description": "",
       "categories": [
-        "context",
         "terrain",
         "okpo"
       ],
@@ -1558,8 +1599,18 @@
         "updatedAt": "2026-10-01T06:00:26.308Z"
       },
       "createdAt": "2026-09-21T00:43:32.000Z",
-      "updatedAt": "2026-09-21T00:43:32.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:27.106Z",
+      "history": [
+        {
+          "id": "00b9dbe8-74e0-4420-8575-512d55c399f3",
+          "at": "2026-10-06T04:21:27.106Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-philly-area-1",
@@ -1567,7 +1618,6 @@
       "name": "Philly Area 1",
       "description": "",
       "categories": [
-        "ground",
         "philly"
       ],
       "owner": "정종민",
@@ -1600,8 +1650,18 @@
         "updatedAt": "2026-10-01T06:00:32.379Z"
       },
       "createdAt": "2026-09-10T23:33:53.000Z",
-      "updatedAt": "2026-09-27T14:03:32.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "history": [
+        {
+          "id": "2bc93567-4743-429a-809f-002eea319666",
+          "at": "2026-10-06T04:21:19.890Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-philly-area-2",
@@ -1609,7 +1669,6 @@
       "name": "Philly Area 2",
       "description": "",
       "categories": [
-        "ground",
         "philly"
       ],
       "owner": "정종민",
@@ -1642,8 +1701,18 @@
         "updatedAt": "2026-10-01T06:00:38.140Z"
       },
       "createdAt": "2026-09-10T23:33:53.000Z",
-      "updatedAt": "2026-09-27T14:03:32.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "history": [
+        {
+          "id": "eaf48a56-7ed7-4623-8a0c-9bd6fa36b3c8",
+          "at": "2026-10-06T04:21:19.890Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-philly-terrain",
@@ -1651,7 +1720,6 @@
       "name": "Philly Terrain",
       "description": "",
       "categories": [
-        "context",
         "terrain",
         "philly"
       ],
@@ -1693,17 +1761,25 @@
         "updatedAt": "2026-10-01T06:00:44.836Z"
       },
       "createdAt": "2026-09-08T04:41:16.000Z",
-      "updatedAt": "2026-09-10T23:33:53.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:27.106Z",
+      "history": [
+        {
+          "id": "949e9d06-c746-4321-8e67-08b6392d2950",
+          "at": "2026-10-06T04:21:27.106Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-1dock",
       "kind": "map",
       "name": "1 Dock",
       "description": "",
-      "categories": [
-        "ground"
-      ],
+      "categories": [],
       "owner": "조범희",
       "relatedAssetIds": [],
       "versions": [
@@ -1734,17 +1810,25 @@
         "updatedAt": "2026-10-01T06:00:49.419Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-04-03T09:02:47.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "history": [
+        {
+          "id": "384c1ea7-729b-4cde-86b9-3cf663190d70",
+          "at": "2026-10-06T04:21:19.890Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "map-plane",
       "kind": "map",
       "name": "Plane",
       "description": "",
-      "categories": [
-        "ground"
-      ],
+      "categories": [],
       "owner": "조범희",
       "relatedAssetIds": [],
       "versions": [
@@ -1775,8 +1859,18 @@
         "updatedAt": "2026-10-01T06:00:53.358Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-04-03T09:02:47.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "history": [
+        {
+          "id": "96f466ed-8bc4-4411-abda-90037a5842cf",
+          "at": "2026-10-06T04:21:19.890Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "overcast-atlantic",
@@ -1881,9 +1975,7 @@
       "kind": "model",
       "name": "Crane (MRO)",
       "description": "",
-      "categories": [
-        "runtime"
-      ],
+      "categories": [],
       "owner": "jobeomhee",
       "placement": {
         "paletteHidden": true
@@ -1917,11 +2009,20 @@
         "updatedAt": "2026-10-01T06:00:58.164Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-10-02T01:32:06.331Z",
+      "updatedAt": "2026-10-06T04:19:24.990Z",
       "history": [
         {
           "id": "id-muqafmt7-q9un02ud",
           "at": "2026-10-02T01:32:06.331Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        },
+        {
+          "id": "85e0ea86-47d6-4ac5-9c87-1f88840989f2",
+          "at": "2026-10-06T04:19:24.990Z",
           "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
@@ -1936,7 +2037,6 @@
       "name": "Gantry Crane (MRO)",
       "description": "",
       "categories": [
-        "runtime",
         "MRO"
       ],
       "owner": "jobeomhee",
@@ -1972,8 +2072,18 @@
         "updatedAt": "2026-10-01T06:01:02.207Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-09-11T10:27:42.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "history": [
+        {
+          "id": "4e758d01-c180-4bed-a37f-4e79fe5f91fd",
+          "at": "2026-10-06T04:19:24.991Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-ttc-27",
@@ -1981,7 +2091,6 @@
       "name": "TTC-27 (MRO)",
       "description": "",
       "categories": [
-        "runtime",
         "MRO"
       ],
       "owner": "jobeomhee",
@@ -2017,8 +2126,18 @@
         "updatedAt": "2026-10-01T06:01:06.349Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-09-11T10:27:42.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "history": [
+        {
+          "id": "d7c0dde2-8416-478f-8dd3-17e74ea3e526",
+          "at": "2026-10-06T04:19:24.991Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-goliath-crane-body",
@@ -2026,7 +2145,6 @@
       "name": "Goliath Crane Body",
       "description": "",
       "categories": [
-        "runtime",
         "MRO",
         "part",
         "philly"
@@ -2064,11 +2182,20 @@
         "updatedAt": "2026-10-01T06:01:10.728Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "updatedAt": "2026-10-06T04:19:24.991Z",
       "history": [
         {
           "id": "id-muqawrpk-1r0yhy5p",
           "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        },
+        {
+          "id": "6514be63-7bf1-4dcb-988f-944bbf6c50e8",
+          "at": "2026-10-06T04:19:24.991Z",
           "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
@@ -2083,7 +2210,6 @@
       "name": "Goliath Crane Trolley",
       "description": "",
       "categories": [
-        "runtime",
         "MRO",
         "part",
         "philly"
@@ -2121,11 +2247,20 @@
         "updatedAt": "2026-10-01T06:01:14.366Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "updatedAt": "2026-10-06T04:19:24.991Z",
       "history": [
         {
           "id": "id-muqawrpk-hlo9ikdg",
           "at": "2026-10-02T01:45:29.481Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        },
+        {
+          "id": "ea32d5f9-a38a-42bd-8fa5-1c5af368db74",
+          "at": "2026-10-06T04:19:24.991Z",
           "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
@@ -2140,7 +2275,6 @@
       "name": "Worker",
       "description": "",
       "categories": [
-        "runtime",
         "collision-guard"
       ],
       "owner": "jobeomhee",
@@ -2176,8 +2310,18 @@
         "updatedAt": "2026-10-01T06:01:18.139Z"
       },
       "createdAt": "2026-08-11T13:49:25.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "history": [
+        {
+          "id": "96bf8bae-5dbb-43e3-b558-0ae501ab1b64",
+          "at": "2026-10-06T04:19:24.991Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-car",
@@ -2185,7 +2329,6 @@
       "name": "Vehicle",
       "description": "",
       "categories": [
-        "runtime",
         "collision-guard"
       ],
       "owner": "jobeomhee",
@@ -2221,8 +2364,18 @@
         "updatedAt": "2026-10-01T06:01:22.857Z"
       },
       "createdAt": "2026-08-11T01:42:25.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "history": [
+        {
+          "id": "4a723e4d-93d8-4b1e-a2f2-916cd469e145",
+          "at": "2026-10-06T04:19:24.991Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "rt-fork-lift",
@@ -2230,7 +2383,6 @@
       "name": "Forklift",
       "description": "",
       "categories": [
-        "runtime",
         "collision-guard"
       ],
       "owner": "jobeomhee",
@@ -2266,8 +2418,18 @@
         "updatedAt": "2026-10-01T06:01:26.639Z"
       },
       "createdAt": "2026-08-11T01:42:25.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "history": [
+        {
+          "id": "4cfb4977-7ea5-4624-ac23-4a51567e5f69",
+          "at": "2026-10-06T04:19:24.991Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ]
     },
     {
       "id": "dwg-equipment-layout-bos2",
@@ -2637,6 +2799,852 @@
       "createdAt": "2026-09-04T01:55:15.000Z",
       "updatedAt": "2026-09-04T01:55:15.000Z",
       "history": []
+    },
+    {
+      "id": "person",
+      "kind": "model",
+      "name": "Person",
+      "description": "",
+      "categories": [
+        "person"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/person/v1/Person.glb"
+            },
+            "fileName": "Person.glb",
+            "format": "glb",
+            "sizeBytes": 4101596,
+            "contentHash": "sha256:b83c2df485c27eff57eec3d8139a75e88a8c45bd4a6aa933eeee845b2a7348b8",
+            "originalSizeBytes": 19313748
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:10:30.090Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 40254,
+            "vertices": 22832,
+            "meshes": 7,
+            "materials": 7,
+            "textures": 7,
+            "drawCalls": 7,
+            "nodes": 61,
+            "textureMemoryBytes": 101806242,
+            "size": [
+              1.663047345817756,
+              1.7767406067967888,
+              0.33178230590628355
+            ],
+            "lodLevels": 1,
+            "animations": 1
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/person.png"
+        },
+        "updatedAt": "2026-10-06T04:10:30.889Z"
+      },
+      "createdAt": "2026-10-06T04:10:30.090Z",
+      "updatedAt": "2026-10-06T04:11:32.009Z",
+      "history": [
+        {
+          "id": "6db174fb-99cd-4ee0-a6ce-2b5fca5c5967",
+          "at": "2026-10-06T04:10:30.090Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "e4c136cd-fdfb-4c67-bd24-f16aea7f08f0",
+          "at": "2026-10-06T04:10:33.442Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "84881ffd-b1a1-49df-83bf-975646b9b480",
+          "at": "2026-10-06T04:10:34.058Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "5fd530a5-e096-4c8f-aa08-47668c3b98af",
+          "at": "2026-10-06T04:11:29.692Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "owner",
+            "description",
+            "name"
+          ]
+        },
+        {
+          "id": "af984ee6-956c-430b-9eaf-99329b6c2c56",
+          "at": "2026-10-06T04:11:32.009Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ]
+    },
+    {
+      "id": "person-bike",
+      "kind": "model",
+      "name": "Person Bike",
+      "description": "",
+      "categories": [
+        "person"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/person-bike/v1/Person_Bike.glb"
+            },
+            "fileName": "Person_Bike.glb",
+            "format": "glb",
+            "sizeBytes": 3495176,
+            "contentHash": "sha256:40161e84ce634f9759a401fc626dd333c4a0ecbe1fc0e25da20324a4def58cba",
+            "originalSizeBytes": 19616836
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:12:07.943Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 92368,
+            "vertices": 52119,
+            "meshes": 25,
+            "materials": 13,
+            "textures": 16,
+            "drawCalls": 25,
+            "nodes": 75,
+            "textureMemoryBytes": 152012058,
+            "size": [
+              1.7597673886714045,
+              1.849795579287591,
+              1.6630464023348677
+            ],
+            "lodLevels": 1,
+            "animations": 1
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/person-bike.png"
+        },
+        "updatedAt": "2026-10-06T04:12:08.838Z"
+      },
+      "createdAt": "2026-10-06T04:12:07.943Z",
+      "updatedAt": "2026-10-06T04:12:11.958Z",
+      "history": [
+        {
+          "id": "16e2aecf-b136-4157-8f4b-d7e3c5b3e04a",
+          "at": "2026-10-06T04:12:07.943Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "0a8b6dcc-c5f5-4c2e-9bf5-502e75a9dd63",
+          "at": "2026-10-06T04:12:10.925Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "ba998ff4-0eae-4430-b4f1-5b93502fd0f2",
+          "at": "2026-10-06T04:12:11.358Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "ca77211c-d921-4e48-acce-cd54a0dbde01",
+          "at": "2026-10-06T04:12:11.958Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ]
+    },
+    {
+      "id": "bus",
+      "kind": "model",
+      "name": "Bus",
+      "description": "",
+      "categories": [
+        "vehicle"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/bus/v1/Bus.glb"
+            },
+            "fileName": "Bus.glb",
+            "format": "glb",
+            "sizeBytes": 6025900,
+            "contentHash": "sha256:1af6abe8a0439f048dd45af36cdfd54ecf07cdbdc3793515c3cb3e6f5f5344cb",
+            "originalSizeBytes": 20595900
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:13:41.176Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 261645,
+            "vertices": 409020,
+            "meshes": 22,
+            "materials": 20,
+            "textures": 26,
+            "drawCalls": 22,
+            "nodes": 29,
+            "textureMemoryBytes": 118737420,
+            "size": [
+              3.1959968812189103,
+              3.8101177343948662,
+              13.714409351348877
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/bus.png"
+        },
+        "updatedAt": "2026-10-06T04:13:42.051Z"
+      },
+      "createdAt": "2026-10-06T04:13:41.176Z",
+      "updatedAt": "2026-10-06T04:13:45.275Z",
+      "history": [
+        {
+          "id": "464309c8-2063-4bc9-9e16-878ebcb0d2a1",
+          "at": "2026-10-06T04:13:41.176Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "3bfd752b-0d2e-49a6-a622-bac226b2c462",
+          "at": "2026-10-06T04:13:44.508Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "8a4b728b-b5d1-4527-b25f-8ad300bd592b",
+          "at": "2026-10-06T04:13:44.775Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "7bf51a20-5295-415c-a814-00ed64c30c2f",
+          "at": "2026-10-06T04:13:45.275Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ]
+    },
+    {
+      "id": "car",
+      "kind": "model",
+      "name": "Car",
+      "description": "",
+      "categories": [
+        "vehicle"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/car/v1/Car.glb"
+            },
+            "fileName": "Car.glb",
+            "format": "glb",
+            "sizeBytes": 3728248,
+            "contentHash": "sha256:44ba3253ea55e35adb2ceeff7a3c66317684d394d833af4b2237a2429c8e0dbb",
+            "originalSizeBytes": 10502748
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:13:59.543Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 164401,
+            "vertices": 124071,
+            "meshes": 47,
+            "materials": 16,
+            "textures": 19,
+            "drawCalls": 47,
+            "nodes": 66,
+            "textureMemoryBytes": 104181049,
+            "size": [
+              4.8061587828488195,
+              1.469578994515516,
+              2.092699673837452
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/car.png"
+        },
+        "updatedAt": "2026-10-06T04:14:00.112Z"
+      },
+      "createdAt": "2026-10-06T04:13:59.543Z",
+      "updatedAt": "2026-10-06T04:14:06.874Z",
+      "history": [
+        {
+          "id": "3fdb079c-2694-468d-ad01-0284d49239f2",
+          "at": "2026-10-06T04:13:59.543Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "8bbe6a58-0aa1-4490-8aae-7b7facd6e07a",
+          "at": "2026-10-06T04:14:05.491Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "c6dbc15d-9895-4632-b73b-77ffbd25e05c",
+          "at": "2026-10-06T04:14:05.958Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "a988b389-c6a7-4fbf-a0b3-49e901f673d7",
+          "at": "2026-10-06T04:14:06.874Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ]
+    },
+    {
+      "id": "fork-lift",
+      "kind": "model",
+      "name": "Fork Lift",
+      "description": "",
+      "categories": [
+        "vehicle"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/fork-lift/v1/Fork-Lift.glb"
+            },
+            "fileName": "Fork-Lift.glb",
+            "format": "glb",
+            "sizeBytes": 2932324,
+            "contentHash": "sha256:a4b370848427c15215eb4328b910ee692014a166c45399eb4c649b15cffe7736",
+            "originalSizeBytes": 16588804
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:14:23.370Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 6242,
+            "vertices": 7342,
+            "meshes": 1,
+            "materials": 1,
+            "textures": 3,
+            "drawCalls": 1,
+            "nodes": 6,
+            "textureMemoryBytes": 66941091,
+            "size": [
+              0.8843755214168558,
+              1.5315982223586646,
+              2.7019424438476562
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-10-06T04:14:23.370Z",
+      "updatedAt": "2026-10-06T04:14:26.424Z",
+      "history": [
+        {
+          "id": "6599f714-e305-481d-97b3-8678a63dcb94",
+          "at": "2026-10-06T04:14:23.370Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "13c0b8a3-a12f-4e33-9914-b284a4a1a5ac",
+          "at": "2026-10-06T04:14:25.358Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "7c7ca062-6f66-4d8b-9296-805089e581a0",
+          "at": "2026-10-06T04:14:26.143Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "0b6dbf23-12d6-4fe1-b47b-651995dbed39",
+          "at": "2026-10-06T04:14:26.424Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "508b792c-807f-466a-8453-55d987795ee3",
+          "at": "2026-10-06T04:15:04.490Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ],
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/fork-lift.png"
+        },
+        "updatedAt": "2026-10-06T04:15:04.490Z"
+      }
+    },
+    {
+      "id": "truck",
+      "kind": "model",
+      "name": "Truck",
+      "description": "",
+      "categories": [
+        "vehicle"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/truck/v1/Truck.glb"
+            },
+            "fileName": "Truck.glb",
+            "format": "glb",
+            "sizeBytes": 5589660,
+            "contentHash": "sha256:95e8813f63b8903bd792b2884ee00811d308fa7b9f5b7da2fb75913b4b135671",
+            "originalSizeBytes": 17990788
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:16:03.152Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 175204,
+            "vertices": 206064,
+            "meshes": 53,
+            "materials": 32,
+            "textures": 36,
+            "drawCalls": 53,
+            "nodes": 72,
+            "textureMemoryBytes": 191920458,
+            "size": [
+              2.909742388465035,
+              3.688934735733476,
+              10.683216512203217
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-10-06T04:16:03.152Z",
+      "updatedAt": "2026-10-06T04:16:12.956Z",
+      "history": [
+        {
+          "id": "5c9fa567-7051-4b54-818c-ba3c00353f04",
+          "at": "2026-10-06T04:16:03.152Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "1c21f78c-4d65-4d7e-a0d5-cce46f42a8c3",
+          "at": "2026-10-06T04:16:11.723Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "40c48e63-931f-4474-a931-440a644f3677",
+          "at": "2026-10-06T04:16:11.990Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "95366f65-e485-4c07-bc54-031d40ac3aa9",
+          "at": "2026-10-06T04:16:12.956Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ],
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/truck.png"
+        },
+        "updatedAt": "2026-10-06T04:16:04.061Z"
+      }
+    },
+    {
+      "id": "worker-bike",
+      "kind": "model",
+      "name": "Worker Bike",
+      "description": "",
+      "categories": [
+        "person"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/worker-bike/v1/Worker_Bike.glb"
+            },
+            "fileName": "Worker_Bike.glb",
+            "format": "glb",
+            "sizeBytes": 14767456,
+            "contentHash": "sha256:7be5c41eb10727db4b37c8b4bf376e3a0cffb5bdcc82b941464b00046ed02497",
+            "originalSizeBytes": 71657992
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:16:31.662Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 100910,
+            "vertices": 57535,
+            "meshes": 26,
+            "materials": 8,
+            "textures": 14,
+            "drawCalls": 26,
+            "nodes": 94,
+            "textureMemoryBytes": 161774301,
+            "size": [
+              1.759767289292797,
+              1.951125229827904,
+              1.8439393029871045
+            ],
+            "lodLevels": 1,
+            "animations": 1
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-10-06T04:16:31.662Z",
+      "updatedAt": "2026-10-06T04:16:35.973Z",
+      "history": [
+        {
+          "id": "29fd7505-de2e-44b9-b4c3-2b27e4773e48",
+          "at": "2026-10-06T04:16:31.662Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "6865660f-95e2-4ab6-847a-ee683adc8c27",
+          "at": "2026-10-06T04:16:35.123Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "39934033-f0b3-4105-b031-c5f5ca7bcf68",
+          "at": "2026-10-06T04:16:35.456Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "7e2def1d-89e1-47f2-91e2-11cd6d1a6ec7",
+          "at": "2026-10-06T04:16:35.973Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ],
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/worker-bike.png"
+        },
+        "updatedAt": "2026-10-06T04:16:32.458Z"
+      }
+    },
+    {
+      "id": "worker",
+      "kind": "model",
+      "name": "Worker",
+      "description": "",
+      "categories": [
+        "person"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "draft",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/worker/v1/Worker.glb"
+            },
+            "fileName": "Worker.glb",
+            "format": "glb",
+            "sizeBytes": 14398972,
+            "contentHash": "sha256:17ae30d6bf9ea71119c7872b8b2353f27b5317b445e7d8397ed79b79b3ef61a6",
+            "originalSizeBytes": 68954572
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:16:55.540Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 48796,
+            "vertices": 28248,
+            "meshes": 8,
+            "materials": 2,
+            "textures": 5,
+            "drawCalls": 8,
+            "nodes": 62,
+            "textureMemoryBytes": 111568485,
+            "size": [
+              1.8439391563596037,
+              1.852136730231073,
+              0.32568646931501516
+            ],
+            "lodLevels": 1,
+            "animations": 4
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-10-06T04:16:55.540Z",
+      "updatedAt": "2026-10-06T04:16:55.540Z",
+      "history": [
+        {
+          "id": "919f2329-5f34-42de-b1cb-91e277ad0094",
+          "at": "2026-10-06T04:16:55.540Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        }
+      ],
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/worker.png"
+        },
+        "updatedAt": "2026-10-06T04:16:56.240Z"
+      }
+    },
+    {
+      "id": "oil-tanker",
+      "kind": "model",
+      "name": "Oil Tanker",
+      "description": "",
+      "categories": [
+        "vessel",
+        "outdoor"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/oil-tanker/v1/Oil-Tanker.glb"
+            },
+            "fileName": "Oil-Tanker.glb",
+            "format": "glb",
+            "sizeBytes": 1570124,
+            "contentHash": "sha256:667df8c9c250c161ff40ae6c6f90307efb200d57befc6ad0c88df1a02f0a0d6b",
+            "originalSizeBytes": 6202308
+          },
+          "note": "",
+          "createdAt": "2026-10-06T04:17:56.948Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 80234,
+            "vertices": 151186,
+            "meshes": 8,
+            "materials": 8,
+            "textures": 2,
+            "drawCalls": 8,
+            "nodes": 10,
+            "textureMemoryBytes": 2959963,
+            "size": [
+              330.59806736085534,
+              71.90396725125505,
+              570.2027309887435
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "createdAt": "2026-10-06T04:17:56.948Z",
+      "updatedAt": "2026-10-06T04:18:37.505Z",
+      "history": [
+        {
+          "id": "0aa28b0c-d673-486c-a396-1a7c51927f8b",
+          "at": "2026-10-06T04:17:56.948Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "8658b0a0-ef56-45c0-bd28-95b1d8e86101",
+          "at": "2026-10-06T04:18:27.005Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "97506566-d117-435c-8026-1a97e9057517",
+          "at": "2026-10-06T04:18:27.389Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "ab62b17d-967f-400b-ba30-1ef675a43e1a",
+          "at": "2026-10-06T04:18:29.572Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "c4374f32-4936-4d4f-b091-72703bac0819",
+          "at": "2026-10-06T04:18:37.505Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "categories"
+          ]
+        }
+      ],
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/oil-tanker.png"
+        },
+        "updatedAt": "2026-10-06T04:17:57.321Z"
+      }
     }
   ],
   "collections": []
