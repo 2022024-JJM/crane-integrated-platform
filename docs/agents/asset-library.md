@@ -20,7 +20,7 @@
 | 처리할 일 판정(자산마다 손이 가야 하는 이유) | `lib/asset-attention.ts`, 누르면 갈 곳 `packages/widgets/src/asset-library/lib/attention-target.ts` |
 | 사용처(씬·코드 → 자산의 버전별 사용 횟수), 철회·삭제 보호 | `lib/asset-usage.ts`(`getAssetRemoveBlock`·`getAssetWithdrawBlock`), 씬 읽기 `packages/features/src/asset-library/lib/scene-asset-sources.ts`, 코드 사용 `lib/code-asset-sources.ts` |
 | 코드가 직접 로드하는 자산 표 | 모델 `packages/domain/src/3d/model/code-asset-refs.ts`(`CODE_ASSETS`), 도면 `packages/domain/src/asset-library/model/code-used-assets.ts` |
-| 3D 화면 편집의 팔레트(모델·맵·배경) | `packages/features/src/asset-library/lib/scene-palette.ts`, `model/use-scene-palette.ts`, 화면 `packages/widgets/src/3d/ui/{palette-asset-grid,palette-category-filter,palette-map-section,palette-environment-section}.tsx`, 타일 상태 `packages/widgets/src/3d/lib/map-palette-tiles.ts` |
+| 3D 화면 편집의 팔레트(모델·맵·배경) | `packages/features/src/asset-library/lib/scene-palette.ts`, `model/use-scene-palette.ts`, 화면 `packages/widgets/src/3d/ui/{palette-asset-grid,palette-category-filter,palette-map-section,palette-environment-section,palette-tile-thumbnail}.tsx`, 타일 상태 `packages/widgets/src/3d/lib/map-palette-tiles.ts`, 썸네일 주소 `lib/palette-thumbnail.ts` |
 | 씬의 자산 참조(스키마·방어) | `SceneAssetRef`·`SavedEnvironmentInfo`(`packages/domain/src/3d/model/types.ts`), `packages/domain/src/3d/lib/scene-asset-ref.ts` |
 | 새 버전 알림과 갱신 | 찾기 `packages/features/src/asset-library/lib/scene-asset-updates.ts`, 바꾸기 `packages/domain/src/3d/lib/scene-asset-update.ts`(`withSceneAssetVersion`), 화면 `packages/widgets/src/3d/ui/palette-asset-updates.tsx` |
 | 씬 JSON 에 자산 참조 채우기 `node scripts/migrate-scene-asset-refs.mjs [--check]` | `scripts/migrate-scene-asset-refs.mjs` |
@@ -214,6 +214,7 @@
 - 모델 탭은 라이브러리의 카테고리로 좁힌다(`palette-category-filter.tsx`). 칩 줄은 "전체" + 고른 카테고리 + 카테고리 검색 버튼이고, 버튼을 누르면 팔레트 오른쪽에 뜨는 목록에서 카테고리를 고른다. 여러 개를 고르면 모두 가진 모델만 남고, 목록의 수는 "이 카테고리까지 걸면 남는 수" 다 — 계층의 카테고리 체크박스와 같은 구현이다(`buildAssetCategoryNodes`·`hasAllAssetCategories`).
 - 고른 카테고리는 편집 화면의 상태일 뿐 저장하지 않는다. 라이브러리에서 없어진 카테고리는 풀린다(`pruneScenePaletteCategories`). 맵·배경 탭에는 카테고리 필터가 없다.
 - 맵 탭의 타일은 자산당 한 장이다. 놓였는지는 자산 id 로 본다(`getMapPaletteTiles`) — 놓인 버전이 현재 버전과 달라도 같은 자산이다.
+- 세 탭 모두 라이브러리에 저장된 썸네일을 보인다(`toPaletteThumbnailUrl` — 저장 시각을 쿼리로 붙여 다시 찍은 그림의 캐시를 깬다). 지도는 받침 위에 띄우고 배경은 자리를 채우며, 없거나 못 읽으면 종류 아이콘이다(`palette-tile-thumbnail.tsx`). 모델만 썸네일이 없을 때 런타임 offscreen 렌더로 폴백한다(`SceneModelPreview`) — 지도는 수십 MB 라 팔레트가 열지 않는다.
 - 라이브러리를 읽지 못하면 세 탭이 비고 다시 읽기를 권한다. 이미 놓인 것은 씬이 경로를 들고 있어 그대로 보이고 편집된다.
 - 캔버스는 놓을 수 있는 모델 목록이 바뀌면 프리로드한 모델을 비우고 다시 받는다. 그래서 라이브러리를 읽는 동안에는 빈 목록을 주고, 내용이 같으면 같은 배열을 유지한다(`selectPlaceableModels`).
 

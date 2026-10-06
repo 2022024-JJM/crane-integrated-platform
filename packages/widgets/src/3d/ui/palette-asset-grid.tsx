@@ -1,28 +1,16 @@
 import { Search } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  humanizeModelPath,
-  withBaseUrl,
-  type ScenePlaceableModel,
-} from '@crane/domain/3d';
+import { humanizeModelPath, type ScenePlaceableModel } from '@crane/domain/3d';
 import type { ScenePaletteModel } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
+import { toPaletteThumbnailUrl } from '../lib/palette-thumbnail';
 import { SceneModelPreview } from './scene-model-preview';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
-
-/** 라이브러리에 저장된 썸네일의 주소. 같은 경로에 덮어쓴 그림의 캐시를 깬다. */
-function toThumbnailUrl(thumbnail: ScenePaletteModel['thumbnail']) {
-  if (!thumbnail) return undefined;
-  const url = withBaseUrl(thumbnail.path);
-  if (!thumbnail.stamp) return url;
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}t=${encodeURIComponent(thumbnail.stamp)}`;
-}
 
 interface PaletteAssetGridProps {
   /** 팔레트 항목 — 자산 라이브러리의 모델(놓을 수 없는 것 포함). */
@@ -188,7 +176,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                     <SceneModelPreview
                       path={item.path}
                       label={item.label}
-                      previewUrl={toThumbnailUrl(model.thumbnail)}
+                      previewUrl={toPaletteThumbnailUrl(model.thumbnail)}
                       overlayLabel={item.label}
                       overlayHint={t('monitoring:palette.dragToPlace')}
                       showOverlay={isDragging}

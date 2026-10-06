@@ -9,6 +9,8 @@ import {
   getMapPaletteTiles,
   type MapPaletteTile,
 } from '../lib/map-palette-tiles';
+import { toPaletteThumbnailUrl } from '../lib/palette-thumbnail';
+import { PaletteTileThumbnail } from './palette-tile-thumbnail';
 
 interface PaletteMapSectionProps {
   /** 팔레트 항목 — 자산 라이브러리의 지도(놓을 수 없는 것 포함). */
@@ -98,39 +100,40 @@ export const PaletteMapSection = memo(function PaletteMapSection({
           // 놓을 수 없는 이유는 안 놓인 타일에만 뜻이 있다 — 놓인 것은 뺄 수 있다.
           const blocked = tile.placed ? null : tile.entry.blocked;
           return (
-          <MapTile
-            key={tile.entry.item.id}
-            label={tile.entry.item.label}
-            placed={tile.placed !== null}
-            locked={tile.locked}
-            blockedLabel={
-              blocked === null
-                ? null
-                : blocked === 'unpublished'
-                  ? t(`asset-library:status.${tile.entry.status}`)
-                  : t(`monitoring:palette.blocked.${blocked}`)
-            }
-            title={
-              blocked
-                ? t(`monitoring:palette.blockedHint.${blocked}`)
-                : !tile.placed
-                  ? t('monitoring:editor.mapAdd')
-                  : tile.locked
-                    ? t('monitoring:editor.mapLockedHint')
-                    : t('monitoring:editor.mapRemove')
-            }
-            lockLabel={
-              tile.locked
-                ? t('monitoring:editor.unlockObject')
-                : t('monitoring:editor.lockObject')
-            }
-            onClick={() => handleTileClick(tile)}
-            onToggleLock={
-              tile.placed
-                ? () => onToggleLock(tile.placed!.id, !tile.locked)
-                : undefined
-            }
-          />
+            <MapTile
+              key={tile.entry.item.id}
+              label={tile.entry.item.label}
+              thumbnailUrl={toPaletteThumbnailUrl(tile.entry.thumbnail)}
+              placed={tile.placed !== null}
+              locked={tile.locked}
+              blockedLabel={
+                blocked === null
+                  ? null
+                  : blocked === 'unpublished'
+                    ? t(`asset-library:status.${tile.entry.status}`)
+                    : t(`monitoring:palette.blocked.${blocked}`)
+              }
+              title={
+                blocked
+                  ? t(`monitoring:palette.blockedHint.${blocked}`)
+                  : !tile.placed
+                    ? t('monitoring:editor.mapAdd')
+                    : tile.locked
+                      ? t('monitoring:editor.mapLockedHint')
+                      : t('monitoring:editor.mapRemove')
+              }
+              lockLabel={
+                tile.locked
+                  ? t('monitoring:editor.unlockObject')
+                  : t('monitoring:editor.lockObject')
+              }
+              onClick={() => handleTileClick(tile)}
+              onToggleLock={
+                tile.placed
+                  ? () => onToggleLock(tile.placed!.id, !tile.locked)
+                  : undefined
+              }
+            />
           );
         })}
       </div>
@@ -184,6 +187,7 @@ export const PaletteMapSection = memo(function PaletteMapSection({
 
 function MapTile({
   label,
+  thumbnailUrl,
   placed,
   locked,
   blockedLabel,
@@ -193,6 +197,8 @@ function MapTile({
   onToggleLock,
 }: {
   label: string;
+  /** 라이브러리에 저장된 썸네일. 없으면 지도 아이콘. */
+  thumbnailUrl: string | undefined;
   placed: boolean;
   locked: boolean;
   /** 추가할 수 없는 이유(자산 상태). 추가할 수 있거나 이미 놓였으면 null. */
@@ -212,7 +218,7 @@ function MapTile({
         title={title}
         onClick={onClick}
         className={cn(
-          'group relative flex w-full flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
+          'group relative flex w-full flex-col items-center gap-1 rounded-md border p-1 pb-1.5 transition',
           blockedLabel !== null
             ? 'cursor-not-allowed opacity-55'
             : locked
@@ -228,7 +234,12 @@ function MapTile({
             <Check className="size-2.5" />
           </span>
         ) : null}
-        <Map className="text-muted-foreground size-5" />
+        <PaletteTileThumbnail
+          url={thumbnailUrl}
+          alt=""
+          fit="contain"
+          fallback={<Map className="text-muted-foreground size-5" />}
+        />
         <span
           className={cn(
             'w-full truncate text-center text-[11px] font-medium',
@@ -253,10 +264,11 @@ function MapTile({
           title={lockLabel}
           onClick={onToggleLock}
           className={cn(
+            // 썸네일 위에 놓인다 — 평소엔 아이콘만 두고 올렸을 때만 받침을 깐다.
             'absolute top-1.5 left-1.5 flex size-5 cursor-pointer items-center justify-center rounded-sm transition-colors',
             locked
-              ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              : 'text-amber-500 hover:bg-amber-500/15 hover:text-amber-400',
+              ? 'text-muted-foreground hover:bg-card/85 hover:text-foreground'
+              : 'hover:bg-card/85 text-amber-500 hover:text-amber-400',
           )}
         >
           {locked ? (

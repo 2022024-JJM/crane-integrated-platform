@@ -20,7 +20,9 @@ import { clampToRange, cn } from '@crane/core/lib/utils';
 import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
+import { toPaletteThumbnailUrl } from '../lib/palette-thumbnail';
 import { NUMBER_INPUT, NUMBER_WRAPPER } from './inspector-field-classes';
+import { PaletteTileThumbnail } from './palette-tile-thumbnail';
 
 interface PaletteEnvironmentSectionProps {
   /** 씬이 지역을 지정하지 않았을 때 region 기본 지역을 찾는 키. */
@@ -174,6 +176,7 @@ export const PaletteEnvironmentSection = memo(
                     asset: { id: entry.item.id, version: entry.item.version },
                   });
                 }}
+                thumbnailUrl={toPaletteThumbnailUrl(entry.thumbnail)}
                 icon={<ImageIcon className="text-muted-foreground size-5" />}
               />
             );
@@ -451,6 +454,7 @@ function EnvironmentTile({
   blockedLabel = null,
   title,
   onSelect,
+  thumbnailUrl,
   icon,
 }: {
   label: string;
@@ -459,6 +463,8 @@ function EnvironmentTile({
   blockedLabel?: string | null;
   title?: string;
   onSelect: () => void;
+  /** 라이브러리에 저장된 썸네일. 없으면(배경 없음 타일 포함) 아이콘. */
+  thumbnailUrl?: string;
   icon: React.ReactNode;
 }) {
   const blocked = blockedLabel !== null;
@@ -470,7 +476,7 @@ function EnvironmentTile({
       title={title}
       onClick={onSelect}
       className={cn(
-        'group relative flex flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
+        'group relative flex flex-col items-center gap-1 rounded-md border p-1 pb-1.5 transition',
         blocked ? 'cursor-not-allowed opacity-55' : 'cursor-pointer',
         isSelected
           ? 'border-primary/50 bg-primary/10'
@@ -482,7 +488,13 @@ function EnvironmentTile({
           <Check className="size-2.5" />
         </span>
       ) : null}
-      {icon}
+      {/* 배경 썸네일은 화면을 채운 그림이라 받침 위에 띄우지 않고 자리를 채운다. */}
+      <PaletteTileThumbnail
+        url={thumbnailUrl}
+        alt=""
+        fit="cover"
+        fallback={icon}
+      />
       <span
         className={cn(
           'w-full truncate text-center text-[11px] font-medium',
