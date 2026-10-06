@@ -1,19 +1,24 @@
 import { Check, Lock, LockOpen, Map } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedMapInfo, SceneMapCatalogItem } from '@crane/domain/3d';
+import type { SavedMapInfo, ScenePlaceableMap } from '@crane/domain/3d';
+import type { ScenePaletteMap } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Switch } from '@crane/ui/atoms/switch';
 import {
   getMapPaletteTiles,
   type MapPaletteTile,
 } from '../lib/map-palette-tiles';
+import { toPaletteThumbnailUrl } from '../lib/palette-thumbnail';
+import { PaletteTileThumbnail } from './palette-tile-thumbnail';
 
 interface PaletteMapSectionProps {
-  /** 씬에 놓인 지도 전체. 배치·잠금 표시는 경로 매칭으로 한다. */
+  /** 팔레트 항목 — 자산 라이브러리의 지도(놓을 수 없는 것 포함). */
+  entries: ScenePaletteMap[];
+  /** 씬에 놓인 지도 전체. 배치·잠금 표시는 자산 id(없으면 경로)로 맞춘다. */
   maps: SavedMapInfo[];
-  /** 카탈로그 항목을 씬에 append(addSceneMap). */
-  onAddMap: (catalogItem: SceneMapCatalogItem) => void;
+  /** 지도 자산을 씬에 append(addSceneMap). */
+  onAddMap: (map: ScenePlaceableMap) => void;
   /** 놓인 지도 제거 — 계층 목록의 삭제와 같은 액션(deletePlacedMap). */
   onRemoveMap: (id: string) => void;
   /** 잠금 토글 — 계층 목록의 자물쇠 버튼과 같은 액션(setObjectLocked). */
@@ -27,20 +32,31 @@ interface PaletteMapSectionProps {
   seaExplicit: boolean;
   /** 바다 스위치 토글 — 항상 명시 boolean 을 저장한다(setSeaVisible). */
   onSeaVisibleChange: (visible: boolean) => void;
+  /** 바다에 씬을 비출지의 유효값(resolveSeaMirror). 끄면 하늘만 비친다. */
+  seaMirror: boolean;
+  /** 미러 스위치 토글(setSeaMirror). */
+  onSeaMirrorChange: (enabled: boolean) => void;
 }
 
 /**
- * 지도 추가/제거 + 바다 표시 스위치 — Project 패널의 Map 카테고리.
+ * 지도 추가/제거 + 환경 절(바다 표시·미러 표시 스위치) — Project 패널의 Map
+ * 카테고리.
  * 배경(PaletteEnvironmentSection)과 달리 단일 선택이 아니다: 씬에는 지도가
  * 여러 장 놓일 수 있고(조선소 + 주변 지형), 타일은 그 한 장의 토글이다 —
  * 안 놓인 타일 클릭 = 추가, 놓인(잠금 해제) 타일 클릭 = 제거. 배치·잠금
  * 상태 파생은 getMapPaletteTiles.
  *
- * 타일 아래 바다 절은 배경 탭의 조명 절과 같은 마크업이다. 스위치는 유효값을
- * 보이고 누르면 그 반대를 명시 boolean 으로 씬에 저장한다 — 미지정 씬은 첫
- * 토글부터 레거시 규칙 → 명시 상태로 바뀌는 편집이라 dirty 가 선다(유효값을
- * 그대로 명시로 굳히는 조작은 없다 — 두 번 누른다). 값은 씬 파일 단위라
- * 파일을 공유하는 region(okpo dock-1·dock-2)에 함께 적용된다.
+ * 목록은 자산 라이브러리의 지도다. 게시되지 않은 지도는 흐리게 보이고 상태가
+ * 적히며 추가할 수 없다 — 이미 놓인 것은 그대로 제거할 수 있다.
+ *
+ * 타일 아래 환경 절은 배경 탭의 조명 절과 같은 마크업이다. 바다 스위치는
+ * 유효값을 보이고 누르면 그 반대를 명시 boolean 으로 씬에 저장한다 — 미지정
+ * 씬은 첫 토글부터 레거시 규칙 → 명시 상태로 바뀌는 편집이라 dirty 가 선다
+ * (유효값을 그대로 명시로 굳히는 조작은 없다 — 두 번 누른다). 값은 씬 파일
+ * 단위라 파일을 공유하는 region(okpo dock-1·dock-2)에 함께 적용된다.
+ *
+ * 미러 표시는 바다에 딸린 설정이라 한 단 들여 쓴다. 바다가 꺼져 있으면
+ * 스위치가 잠기고 값은 그대로 남는다.
  *
  * 잠긴 지도의 타일은 체크·자물쇠만 보이고 클릭을 무시한다 — 잠금은 선택·변형·
  * 삭제를 모두 막는 규칙이다. 타일마다 자물쇠 버튼을 두어(계층 목록과 같은
@@ -52,6 +68,7 @@ interface PaletteMapSectionProps {
  * 배치). button 안의 button 은 유효하지 않은 HTML 이고 React 가 경고한다.
  */
 export const PaletteMapSection = memo(function PaletteMapSection({
+  entries,
   maps,
   onAddMap,
   onRemoveMap,
@@ -59,13 +76,15 @@ export const PaletteMapSection = memo(function PaletteMapSection({
   seaVisible,
   seaExplicit,
   onSeaVisibleChange,
+  seaMirror,
+  onSeaMirrorChange,
 }: PaletteMapSectionProps) {
   const { t } = useTranslation();
-  const tiles = getMapPaletteTiles(maps);
+  const tiles = getMapPaletteTiles(maps, entries);
 
-  const handleTileClick = ({ item, placed, locked }: MapPaletteTile) => {
+  const handleTileClick = ({ entry, placed, locked }: MapPaletteTile) => {
     if (!placed) {
-      onAddMap(item);
+      if (entry.blocked === null) onAddMap(entry.item);
       return;
     }
     if (locked) {
@@ -77,38 +96,52 @@ export const PaletteMapSection = memo(function PaletteMapSection({
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-2">
-        {tiles.map((tile) => (
-          <MapTile
-            key={tile.item.id}
-            label={tile.item.label}
-            placed={tile.placed !== null}
-            locked={tile.locked}
-            title={
-              !tile.placed
-                ? t('monitoring:editor.mapAdd')
-                : tile.locked
-                  ? t('monitoring:editor.mapLockedHint')
-                  : t('monitoring:editor.mapRemove')
-            }
-            lockLabel={
-              tile.locked
-                ? t('monitoring:editor.unlockObject')
-                : t('monitoring:editor.lockObject')
-            }
-            onClick={() => handleTileClick(tile)}
-            onToggleLock={
-              tile.placed
-                ? () => onToggleLock(tile.placed!.id, !tile.locked)
-                : undefined
-            }
-          />
-        ))}
+        {tiles.map((tile) => {
+          // 놓을 수 없는 이유는 안 놓인 타일에만 뜻이 있다 — 놓인 것은 뺄 수 있다.
+          const blocked = tile.placed ? null : tile.entry.blocked;
+          return (
+            <MapTile
+              key={tile.entry.item.id}
+              label={tile.entry.item.label}
+              thumbnailUrl={toPaletteThumbnailUrl(tile.entry.thumbnail)}
+              placed={tile.placed !== null}
+              locked={tile.locked}
+              blockedLabel={
+                blocked === null
+                  ? null
+                  : blocked === 'unpublished'
+                    ? t(`asset-library:status.${tile.entry.status}`)
+                    : t(`monitoring:palette.blocked.${blocked}`)
+              }
+              title={
+                blocked
+                  ? t(`monitoring:palette.blockedHint.${blocked}`)
+                  : !tile.placed
+                    ? t('monitoring:editor.mapAdd')
+                    : tile.locked
+                      ? t('monitoring:editor.mapLockedHint')
+                      : t('monitoring:editor.mapRemove')
+              }
+              lockLabel={
+                tile.locked
+                  ? t('monitoring:editor.unlockObject')
+                  : t('monitoring:editor.lockObject')
+              }
+              onClick={() => handleTileClick(tile)}
+              onToggleLock={
+                tile.placed
+                  ? () => onToggleLock(tile.placed!.id, !tile.locked)
+                  : undefined
+              }
+            />
+          );
+        })}
       </div>
 
-      {/* 바다 — 씬 설정 스위치(배경 탭의 조명 절과 같은 마크업) */}
+      {/* 환경 — 씬 설정 스위치(배경 탭의 조명 절과 같은 마크업) */}
       <div className="border-border mt-1 flex flex-col gap-2 border-t pt-2">
         <span className="text-muted-foreground text-[11px] font-medium">
-          {t('monitoring:editor.seaSection')}
+          {t('monitoring:editor.mapEnvironmentSection')}
         </span>
 
         {!seaExplicit ? (
@@ -127,6 +160,26 @@ export const PaletteMapSection = memo(function PaletteMapSection({
             aria-label={t('monitoring:editor.seaVisible')}
           />
         </div>
+
+        <div
+          className="flex items-center justify-between pl-3"
+          title={t('monitoring:editor.seaMirrorHint')}
+        >
+          <span
+            className={cn(
+              'text-[11px]',
+              seaVisible ? 'text-foreground' : 'text-muted-foreground',
+            )}
+          >
+            {t('monitoring:editor.seaMirror')}
+          </span>
+          <Switch
+            checked={seaMirror}
+            disabled={!seaVisible}
+            onCheckedChange={onSeaMirrorChange}
+            aria-label={t('monitoring:editor.seaMirror')}
+          />
+        </div>
       </div>
     </div>
   );
@@ -134,16 +187,22 @@ export const PaletteMapSection = memo(function PaletteMapSection({
 
 function MapTile({
   label,
+  thumbnailUrl,
   placed,
   locked,
+  blockedLabel,
   title,
   lockLabel,
   onClick,
   onToggleLock,
 }: {
   label: string;
+  /** 라이브러리에 저장된 썸네일. 없으면 지도 아이콘. */
+  thumbnailUrl: string | undefined;
   placed: boolean;
   locked: boolean;
+  /** 추가할 수 없는 이유(자산 상태). 추가할 수 있거나 이미 놓였으면 null. */
+  blockedLabel: string | null;
   title: string;
   lockLabel: string;
   onClick: () => void;
@@ -155,12 +214,16 @@ function MapTile({
       <button
         type="button"
         aria-pressed={placed}
-        aria-disabled={locked || undefined}
+        aria-disabled={locked || blockedLabel !== null || undefined}
         title={title}
         onClick={onClick}
         className={cn(
-          'group relative flex w-full flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
-          locked ? 'cursor-default' : 'cursor-pointer',
+          'group relative flex w-full flex-col items-center gap-1 rounded-md border p-1 pb-1.5 transition',
+          blockedLabel !== null
+            ? 'cursor-not-allowed opacity-55'
+            : locked
+              ? 'cursor-default'
+              : 'cursor-pointer',
           placed
             ? 'border-primary/50 bg-primary/10'
             : 'border-border bg-card hover:border-border hover:bg-muted/60',
@@ -171,7 +234,12 @@ function MapTile({
             <Check className="size-2.5" />
           </span>
         ) : null}
-        <Map className="text-muted-foreground size-5" />
+        <PaletteTileThumbnail
+          url={thumbnailUrl}
+          alt=""
+          fit="contain"
+          fallback={<Map className="text-muted-foreground size-5" />}
+        />
         <span
           className={cn(
             'w-full truncate text-center text-[11px] font-medium',
@@ -180,6 +248,11 @@ function MapTile({
         >
           {label}
         </span>
+        {blockedLabel !== null ? (
+          <span className="text-muted-foreground/80 w-full truncate text-center text-[9px] leading-none">
+            {blockedLabel}
+          </span>
+        ) : null}
       </button>
       {onToggleLock ? (
         // 계층 목록의 자물쇠 버튼과 같은 규칙 — 아이콘·색은 현재 상태를,
@@ -191,10 +264,11 @@ function MapTile({
           title={lockLabel}
           onClick={onToggleLock}
           className={cn(
+            // 썸네일 위에 놓인다 — 평소엔 아이콘만 두고 올렸을 때만 받침을 깐다.
             'absolute top-1.5 left-1.5 flex size-5 cursor-pointer items-center justify-center rounded-sm transition-colors',
             locked
-              ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              : 'text-amber-500 hover:bg-amber-500/15 hover:text-amber-400',
+              ? 'text-muted-foreground hover:bg-card/85 hover:text-foreground'
+              : 'hover:bg-card/85 text-amber-500 hover:text-amber-400',
           )}
         >
           {locked ? (

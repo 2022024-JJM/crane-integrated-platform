@@ -1,7 +1,8 @@
-import type {
-  AssetLibraryDocument,
-  AssetRecord,
-  AssetVersion,
+import {
+  ASSET_LIBRARY_SCHEMA_VERSION,
+  type AssetLibraryDocument,
+  type AssetRecord,
+  type AssetVersion,
 } from '../../model/types';
 import type { AssetChangeContext } from '../asset-versions';
 
@@ -27,12 +28,10 @@ export function asset(overrides: Partial<AssetRecord> = {}): AssetRecord {
   return {
     id: 'asset-a',
     kind: 'model',
-    origin: 'user',
     name: 'Asset A',
     description: '',
-    tags: [],
+    categories: [],
     owner: '',
-    defaultScale: [1, 1, 1],
     relatedAssetIds: [],
     versions: [version()],
     currentVersion: 1,
@@ -46,7 +45,7 @@ export function asset(overrides: Partial<AssetRecord> = {}): AssetRecord {
 export function document(
   assets: AssetRecord[] = [],
 ): AssetLibraryDocument {
-  return { schemaVersion: 1, assets, collections: [] };
+  return { schemaVersion: ASSET_LIBRARY_SCHEMA_VERSION, assets, collections: [] };
 }
 
 let counter = 0;

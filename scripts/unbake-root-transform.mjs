@@ -3,14 +3,14 @@
 // 언제 쓰나: Blender 에서 씬에 배치된 오브젝트를 그대로 내보내면 루트 노드
 // translation/rotation 에 월드 좌표가 실려 온다(Block_001/002 가 그랬다 —
 // 정점은 원점 중심인데 루트 노드가 (-2214, 0, 1868) 에 놓여 있었다). 이 상태로
-// 카탈로그에 등록하면 드롭 지점에서 수 km 떨어진 곳에 나타나고 회전 피벗도
+// 등록하면 드롭 지점에서 수 km 떨어진 곳에 나타나고 회전 피벗도
 // 원점으로 튄다. 정점 자체에 좌표가 베이크된 goliath_crane.glb 는 다리 위치
 // 계약까지 맞춰야 하므로 전용 스크립트(unbake-goliath-crane.mjs)를 쓴다.
 //
 // 사용법:
 //   node scripts/unbake-root-transform.mjs assets-src/models/Block_001.glb [...]
 //   node scripts/unbake-root-transform.mjs --fold-scale assets-src/models/LLC_002.glb
-//   pnpm optimize:glb Block_001.glb                # 이어서 압축 배포
+//   이어서: 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)
 //
 // --fold-scale: 루트에 실린 uniform scale 을 지우는 대신 **직계 자식에 접어
 // 넣는다**(자식 translation×s, scale×s). 리깅된 Blender export 는 루트 Empty 에
@@ -21,8 +21,8 @@
 // scale [1,1,1] 로 놓을 수 있고, 리그 드라이버의 scale 체인 누적도 단순해진다.
 //
 // 입력은 어느 경로든 받지만 출력은 항상 assets-src/models/<파일명> 이다 —
-// optimize:glb 가 그 백업본을 원본으로 취급하기 때문(public 에 쓰면 옛 백업이
-// 도로 덮어쓴다). 제거한 포즈는 "씬 배치값"으로 출력하므로 원래 자리에 두고
+// 배포 경로에는 직접 쓰지 않는다. 지도는 이 스크립트를 따로 돌릴 필요가 없다:
+// optimize-map.mjs 가 이동만 실린 루트 오프셋을 스스로 지운다. 제거한 포즈는 "씬 배치값"으로 출력하므로 원래 자리에 두고
 // 싶으면 씬 JSON 에 그대로 기입하면 된다.
 import { basename, join } from 'node:path';
 import { NodeIO } from '@gltf-transform/core';

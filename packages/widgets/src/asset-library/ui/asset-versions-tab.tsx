@@ -20,10 +20,12 @@ import {
   formatSignedCount,
   getAllowedAssetKinds,
   getAllowedStatusTransitions,
+  isAssetVersionInUse,
   isDocumentAssetKind,
+  isGeometryAssetKind,
+  isSceneAssetKind,
   resolveVersionSizeBytes,
   resolveVersionStats,
-  toMeterSize,
   type AssetRecord,
   type AssetVersion,
   type AssetVersionStatus,
@@ -41,7 +43,11 @@ import {
   SelectPopup,
   SelectTrigger,
 } from '@crane/ui/molecules/select';
-import { analyzeAssetFile } from '../lib/analyze-asset-file';
+import {
+  analyzeAssetFile,
+  getAssetFileProblemMessage,
+} from '../lib/analyze-asset-file';
+import { summarizeFileReport } from '../lib/file-report';
 import { formatAssetDateTime } from '../lib/asset-presentation';
 import {
   compareVersions,
@@ -104,9 +110,11 @@ function VersionUpload({
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
   const [revision, setRevision] = useState('');
+  const canManageFiles = useAssetLibraryStore((state) => state.canManageFiles);
   const canOptimize = useAssetLibraryStore((state) => state.canOptimize);
   const [optimize, setOptimize] = useState(true);
-  const offerOptimize = canOptimize && asset.kind === 'model';
+  // 모델과 지도는 종류마다 다른 파이프라인으로 최적화한다 — 옵션은 하나다.
+  const offerOptimize = canOptimize && isGeometryAssetKind(asset.kind);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -129,15 +137,8 @@ function VersionUpload({
       return;
     }
     if (analysis.problem) {
-      setProblem(
-        analysis.problem.code === 'glb'
-          ? t(`asset-library:import.problem.glb.${analysis.problem.reason}`)
-          : analysis.problem.code === 'empty'
-            ? t('asset-library:import.problem.empty')
-            : t('asset-library:import.problem.unsupported', {
-                format: analysis.problem.format || '?',
-              }),
-      );
+      const message = getAssetFileProblemMessage(analysis.problem);
+      setProblem(t(message.key, message.values));
       setBusy(false);
       return;
     }
@@ -167,11 +168,28 @@ function VersionUpload({
     if (isAssetSaveFailed()) {
       toast.error(t('asset-library:toast.saveFailed'));
     } else {
-      toast.success(t('asset-library:toast.versionAdded', { version: added }));
+      const summary = summarizeFileReport(
+        useAssetLibraryStore.getState().fileReport,
+      );
+      toast.success(t('asset-library:toast.versionAdded', { version: added }), {
+        description: summary
+          ? [t(`asset-library:optimize.${summary.outcome}`), ...summary.lines]
+              .join(' · ')
+          : undefined,
+      });
     }
     reset();
     onView(added);
   };
+
+  // 파일을 올릴 수 없는 환경(운영)에서는 올리는 자리를 내지 않고 이유를 적는다.
+  if (!canManageFiles) {
+    return (
+      <p className="text-muted-foreground border-border border-b px-5 py-4 text-xs leading-relaxed">
+        {t('asset-library:versions.uploadUnavailable')}
+      </p>
+    );
+  }
 
   return (
     <section className="border-border border-b px-5 py-4">
@@ -223,6 +241,7 @@ function VersionUpload({
           {offerOptimize ? (
             <AssetOptimizeOption
               compact
+              kind={asset.kind}
               checked={optimize}
               disabled={busy}
               onChange={setOptimize}
@@ -286,6 +305,19 @@ export function AssetVersionsTab({
     (state) => state.updateVersionNote,
   );
   const removeVersion = useAssetLibraryStore((state) => state.removeVersion);
+  const canManageFiles = useAssetLibraryStore((state) => state.canManageFiles);
+  const usageIndex = useAssetLibraryStore((state) => state.usageIndex);
+  // 쓰이고 있는 버전은 철회되지 않는다(스토어가 사용처를 다시 읽어 확인한다).
+  // 저장은 됐는데 철회되지 않았으면 그 이유를 알린다.
+  const changeStatus = (versionNumber: number, to: AssetVersionStatus) =>
+    report(
+      transitionStatus(asset.id, versionNumber, to, actor).then((changed) => {
+        if (!changed && to === 'withdrawn' && !isAssetSaveFailed()) {
+          toast.error(t('asset-library:protect.withdrawBlocked'));
+        }
+        return changed;
+      }),
+    );
   // 한 번 더 묻는 일 — 되돌리는 상태 전환(반려·철회)과 버전 지우기.
   const [pending, setPending] = useState<
     | { kind: 'status'; version: number; to: AssetVersionStatus }
@@ -301,7 +333,7 @@ export function AssetVersionsTab({
     return {
       sizeBytes: resolveVersionSizeBytes(version, statsTable),
       stats,
-      meters: stats?.size ? toMeterSize(stats.size, asset.defaultScale) : null,
+      meters: stats?.size ?? null,
     };
   };
   const compared = asset.versions.find(
@@ -405,6 +437,14 @@ export function AssetVersionsTab({
                       onValueChange={(value) => {
                         if (value === version.status) return;
                         const to = value as AssetVersionStatus;
+                        // 쓰이는 버전의 철회는 묻기 전에 막는다.
+                        if (
+                          to === 'withdrawn' &&
+                          isAssetVersionInUse(asset, version.version, usageIndex)
+                        ) {
+                          toast.error(t('asset-library:protect.withdrawInUse'));
+                          return;
+                        }
                         if (to === 'rejected' || to === 'withdrawn') {
                           setPending({
                             kind: 'status',
@@ -413,9 +453,7 @@ export function AssetVersionsTab({
                           });
                           return;
                         }
-                        report(
-                          transitionStatus(asset.id, version.version, to, actor),
-                        );
+                        changeStatus(version.version, to);
                       }}
                     >
                       <SelectTrigger
@@ -543,8 +581,10 @@ export function AssetVersionsTab({
                   </Button>
                 ) : null}
                 <DownloadLink version={version} />
-                {/* 잘못 올린 버전을 걷어낸다 — 게시된 적 없는 것만. */}
-                {canRemoveAssetVersion(asset, version.version) ? (
+                {/* 잘못 올린 버전을 걷어낸다 — 게시된 적 없는 것만, 파일을
+                    지울 수 있는 환경에서만. */}
+                {canManageFiles &&
+                canRemoveAssetVersion(asset, version.version) ? (
                   <Button
                     variant="ghost"
                     size="xs"
@@ -565,12 +605,9 @@ export function AssetVersionsTab({
       {/* 목록을 가리지 않게, 알아 둘 것은 아래에 조용히 적는다. */}
       <div className="text-muted-foreground border-border flex flex-col gap-1.5 border-t px-5 py-4 text-xs leading-relaxed">
         <p>{t('asset-library:versions.uploadHint')}</p>
-        {asset.catalogId ? (
-          <p>{t('asset-library:versions.catalogNotice')}</p>
-        ) : asset.kind === 'model' ? (
-          <p>{t('asset-library:versions.paletteNotice')}</p>
-        ) : asset.kind === 'environment' ? (
-          <p>{t('asset-library:versions.environmentNotice')}</p>
+        {/* 씬은 놓을 때의 버전을 기억한다 — 현재 버전을 바꿔도 따라오지 않는다. */}
+        {isSceneAssetKind(asset.kind) ? (
+          <p>{t('asset-library:versions.sceneNotice')}</p>
         ) : null}
       </div>
       <AssetConfirmDialog
@@ -610,9 +647,7 @@ export function AssetVersionsTab({
             if (compareVersion === pending.version) onCompare(null);
             report(removeVersion(asset.id, pending.version, actor));
           } else {
-            report(
-              transitionStatus(asset.id, pending.version, pending.to, actor),
-            );
+            changeStatus(pending.version, pending.to);
           }
         }}
         onClose={() => setPending(null)}

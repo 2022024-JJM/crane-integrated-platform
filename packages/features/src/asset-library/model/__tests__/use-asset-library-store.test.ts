@@ -1,5 +1,7 @@
 import {
+  ASSET_LIBRARY_SCHEMA_VERSION,
   AssetLibraryConflictError,
+  countAssetPlacements,
 } from '@crane/domain/asset-library';
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,35 +9,77 @@ import type {
   AssetFileRef,
   AssetLibraryDocument,
   AssetLibraryRepository,
+  AssetOptimizeKind,
+  AssetRecord,
   AssetStatsTable,
-  BuiltinAssetSource,
+  AssetUsageSource,
 } from '@crane/domain/asset-library';
 import {
   ASSET_FAVORITES_STORAGE_KEY,
   createAssetLibraryStore,
+  toAssetUsageState,
 } from '../use-asset-library-store';
 
-const builtin: BuiltinAssetSource = {
+/** 배포돼 있는 게시된 모델 — 파일은 옛 배포 경로에 있다. */
+const okpoTtc: AssetRecord = {
   id: 'okpo-ttc',
   kind: 'model',
   name: 'Okpo TTC',
-  path: '/models/okpo_ttc.glb',
-  catalogId: 'okpo-ttc',
-  tags: ['outdoor'],
+  description: '',
+  categories: ['outdoor'],
+  owner: '',
+  relatedAssetIds: [],
+  versions: [
+    {
+      version: 1,
+      status: 'published',
+      file: {
+        ref: { storage: 'public', path: '/models/okpo_ttc.glb' },
+        fileName: 'okpo_ttc.glb',
+        format: 'glb',
+        sizeBytes: null,
+        contentHash: null,
+      },
+      note: '',
+      createdAt: '',
+      createdBy: 'system',
+    },
+  ],
+  currentVersion: 1,
+  createdAt: '',
+  updatedAt: '',
+  history: [],
 };
 
-const emptyDocument: AssetLibraryDocument = {
-  schemaVersion: 1,
-  assets: [],
+const baseDocument: AssetLibraryDocument = {
+  schemaVersion: ASSET_LIBRARY_SCHEMA_VERSION,
+  assets: [okpoTtc],
   collections: [],
 };
 
+/** okpo.json 이 okpo-ttc v1 을 두 번 놓았다. */
+const okpoScene: AssetUsageSource = {
+  kind: 'scene',
+  name: 'okpo.json',
+  regionIds: ['dock-1'],
+  editorPath: '/outdoor-work/dock-1/3d-viewer-edit',
+  refs: [
+    { path: '/models/okpo_ttc.glb', asset: { id: 'okpo-ttc', version: 1 } },
+    { path: '/models/okpo_ttc.glb', asset: { id: 'okpo-ttc', version: 1 } },
+  ],
+};
+
 /** 메모리 저장소 — 저장한 문서와 파일 호출을 기록한다. */
-function createRepository(initial: AssetLibraryDocument = emptyDocument) {
+function createRepository(
+  initial: AssetLibraryDocument = baseDocument,
+  options: { canManageFiles?: boolean } = {},
+) {
   const saved: AssetLibraryDocument[] = [];
   const files = new Map<string, Blob>();
   const removed: string[] = [];
-  const optimizeRequests: boolean[] = [];
+  /** 자산을 지울 때 함께 넘어온 옛 배포 경로. */
+  const removedLegacyPaths: string[][] = [];
+  const optimizeRequests: (AssetOptimizeKind | null)[] = [];
   let failSave = false;
   let conflictSave = false;
   let failPut = false;
@@ -44,10 +88,11 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
 
   const repository: AssetLibraryRepository = {
     localOnly: true,
+    canManageFiles: options.canManageFiles ?? true,
     canOptimize: true,
     load: async () => {
       loadCalls += 1;
-      return initial;
+      return structuredClone(initial);
     },
     loadStatsTable: async () => table,
     save: async (document) => {
@@ -59,12 +104,17 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
       if (failPut) throw new Error('put failed');
       const key = `files/${target.assetId}/v${target.version}/${target.fileName}`;
       files.set(key, blob);
-      optimizeRequests.push(options?.optimize === true);
+      optimizeRequests.push(options?.optimize ?? null);
       const ref = { storage: 'browser', key } satisfies AssetFileRef;
       // 최적화를 요청받으면 절반 크기로 줄어든 것으로 친다.
       return options?.optimize
-        ? { ref, sizeBytes: Math.floor(blob.size / 2), optimized: true }
-        : { ref, sizeBytes: blob.size, optimized: false };
+        ? {
+            ref,
+            sizeBytes: Math.floor(blob.size / 2),
+            optimized: true,
+            report: [`${options.optimize} pipeline`],
+          }
+        : { ref, sizeBytes: blob.size, optimized: false, report: [] };
     },
     putThumbnail: async (assetId, blob) => {
       if (failPut) throw new Error('put failed');
@@ -72,8 +122,9 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
       files.set(key, blob);
       return { storage: 'browser', key };
     },
-    removeAssetFiles: async (assetId) => {
+    removeAssetFiles: async (assetId, legacyPaths = []) => {
       removed.push(assetId);
+      removedLegacyPaths.push([...legacyPaths]);
     },
     removeVersionFiles: async (assetId, version) => {
       removed.push(`${assetId}@v${version}`);
@@ -86,6 +137,7 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
     saved,
     files,
     removed,
+    removedLegacyPaths,
     optimizeRequests,
     get loadCalls() {
       return loadCalls;
@@ -105,30 +157,41 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
   };
 }
 
-function setup(initial?: AssetLibraryDocument) {
-  const repo = createRepository(initial);
+interface SetupOptions {
+  initial?: AssetLibraryDocument;
+  /** 씬이 쓰는 자산. 기본은 "아무 씬도 쓰지 않는다". */
+  scenes?: AssetUsageSource[];
+  /** 읽지 못한 씬 파일. */
+  failedScenes?: string[];
+  /** 화면 코드가 쓰는 자산. */
+  code?: AssetUsageSource[];
+  canManageFiles?: boolean;
+}
+
+function setup(options: SetupOptions = {}) {
+  const repo = createRepository(options.initial, {
+    canManageFiles: options.canManageFiles,
+  });
   let tick = 0;
   let id = 0;
+  // 테스트가 도중에 사용처를 바꿀 수 있다 — 지우기 직전에 다시 읽는지 본다.
+  const usage = {
+    scenes: options.scenes ?? [],
+    failed: options.failedScenes ?? [],
+    reads: 0,
+  };
   const store = createAssetLibraryStore({
     getRepository: () => repo.repository,
-    getBuiltinSources: () => [builtin],
-    loadSceneSources: async () => ({
-      sources: [
-        {
-          sceneFile: 'okpo.json',
-          regionIds: ['dock-1'],
-          editorPath: '/outdoor-work/dock-1/3d-viewer-edit',
-          modelPaths: ['/models/okpo_ttc.glb', '/models/okpo_ttc.glb'],
-          mapPaths: [],
-        },
-      ],
-      failed: ['broken.json'],
-    }),
+    getCodeSources: () => options.code ?? [],
+    loadSceneSources: async () => {
+      usage.reads += 1;
+      return { sources: usage.scenes, failed: usage.failed };
+    },
     // 호출마다 1분씩 흐르는 결정론적 시계.
     now: () => new Date(Date.UTC(2026, 0, 1, 0, tick++)).toISOString(),
     createId: () => `id-${++id}`,
   });
-  return { store, repo };
+  return { store, repo, usage };
 }
 
 const glbFile = (name = 'Crane Model.glb') =>
@@ -141,7 +204,7 @@ beforeEach(() => {
 });
 
 describe('load', () => {
-  it('builtin 과 저장 문서를 합쳐 ready 가 된다', async () => {
+  it('저장 문서를 읽어 ready 가 된다 — 문서가 자산의 유일한 원천이다', async () => {
     const { store } = setup();
     expect(store.getState().status).toBe('idle');
     await store.getState().load();
@@ -149,6 +212,20 @@ describe('load', () => {
     expect(state.status).toBe('ready');
     expect(state.assets.map((a) => a.id)).toEqual(['okpo-ttc']);
     expect(state.localOnly).toBe(true);
+    expect(state.canManageFiles).toBe(true);
+  });
+
+  it('빈 문서는 빈 라이브러리다 — 코드에서 채워지는 자산이 없다', async () => {
+    const { store } = setup({
+      initial: {
+        schemaVersion: ASSET_LIBRARY_SCHEMA_VERSION,
+        assets: [],
+        collections: [],
+      },
+    });
+    await store.getState().load();
+    expect(store.getState().status).toBe('ready');
+    expect(store.getState().assets).toEqual([]);
   });
 
   it('동시에 여러 번 불러도, ready 뒤에 다시 불러도 한 번만 읽는다', async () => {
@@ -180,16 +257,16 @@ describe('메타데이터·상태', () => {
     expect(
       await store
         .getState()
-        .updateMetadata('okpo-ttc', { tags: ['outdoor', 'okpo'] }, 'me'),
+        .updateMetadata('okpo-ttc', { categories: ['outdoor', 'okpo'] }, 'me'),
     ).toBe(true);
     expect(repo.saved).toHaveLength(1);
-    expect(repo.saved[0].assets[0].tags).toEqual(['outdoor', 'okpo']);
+    expect(repo.saved[0].assets[0].categories).toEqual(['outdoor', 'okpo']);
 
     const before = store.getState().assets;
     expect(
       await store
         .getState()
-        .updateMetadata('okpo-ttc', { tags: ['outdoor', 'okpo'] }, 'me'),
+        .updateMetadata('okpo-ttc', { categories: ['outdoor', 'okpo'] }, 'me'),
     ).toBe(false);
     expect(store.getState().assets).toBe(before);
     expect(repo.saved).toHaveLength(1);
@@ -205,7 +282,7 @@ describe('메타데이터·상태', () => {
   it('표가 허용하지 않는 상태 전이는 no-op', async () => {
     const { store, repo } = setup();
     await store.getState().load();
-    // builtin 버전 1 은 published — 바로 approved 로 갈 수 없다.
+    // 버전 1 은 published — 바로 approved 로 갈 수 없다.
     expect(
       await store.getState().transitionStatus('okpo-ttc', 1, 'approved', 'me'),
     ).toBe(false);
@@ -281,16 +358,15 @@ describe('importAsset', () => {
         kind: 'model',
         name: 'Crane Model',
         description: '',
-        tags: ['crane', 'philly'],
+        categories: ['crane', 'philly'],
         contentHash: 'sha256:abc',
       },
       'crane.ocean',
     );
     expect(record).toMatchObject({
       id: 'crane-model',
-      origin: 'user',
       owner: 'crane.ocean',
-      tags: ['crane', 'philly'],
+      categories: ['crane', 'philly'],
     });
     expect(record?.versions[0]).toMatchObject({
       version: 1,
@@ -320,14 +396,14 @@ describe('importAsset', () => {
       kind: 'model' as const,
       name: 'Okpo TTC',
       description: '',
-      tags: [],
+      categories: [],
       contentHash: null,
     };
     expect((await store.getState().importAsset(input, 'me'))?.id).toBe('okpo-ttc-2');
     expect((await store.getState().importAsset(input, 'me'))?.id).toBe('okpo-ttc-3');
   });
 
-  it('태그 없이 등록하면 종류 바로 아래에 놓인다(조선소·분류 필드는 없다)', async () => {
+  it('카테고리 없이 등록하면 종류 바로 아래에 놓인다(조선소·분류 필드는 없다)', async () => {
     const { store } = setup();
     await store.getState().load();
     const record = await store.getState().importAsset(
@@ -336,12 +412,12 @@ describe('importAsset', () => {
         kind: 'model',
         name: 'Bare',
         description: '',
-        tags: [],
+        categories: [],
         contentHash: null,
       },
       'me',
     );
-    expect(record?.tags).toEqual([]);
+    expect(record?.categories).toEqual([]);
     expect(record).not.toHaveProperty('sites');
     expect(record).not.toHaveProperty('category');
   });
@@ -356,7 +432,7 @@ describe('importAsset', () => {
         kind: 'model',
         name: 'Crane',
         description: '',
-        tags: [],
+        categories: [],
         contentHash: null,
       },
       'me',
@@ -421,15 +497,14 @@ describe('addVersion·saveThumbnail', () => {
 });
 
 describe('removeAsset', () => {
-  it('builtin 자산은 지울 수 없다', async () => {
+  it('없는 자산은 false', async () => {
     const { store, repo } = setup();
     await store.getState().load();
-    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
-    expect(store.getState().assets).toHaveLength(1);
+    expect(await store.getState().removeAsset('nope')).toBe(false);
     expect(repo.removed).toEqual([]);
   });
 
-  it('사용자 자산을 지우면 파일·컬렉션·연결·즐겨찾기에서도 빠진다', async () => {
+  it('자산을 지우면 파일·컬렉션·연결·즐겨찾기에서도 빠진다', async () => {
     const { store, repo } = setup();
     await store.getState().load();
     const record = await store.getState().importAsset(
@@ -438,7 +513,7 @@ describe('removeAsset', () => {
         kind: 'model',
         name: 'Temp',
         description: '',
-        tags: [],
+        categories: [],
         contentHash: null,
       },
       'me',
@@ -467,7 +542,7 @@ describe('removeAsset', () => {
         kind: 'model',
         name: 'Temp',
         description: '',
-        tags: [],
+        categories: [],
         contentHash: null,
       },
       'me',
@@ -632,7 +707,7 @@ describe('즐겨찾기 — 없어진 자산', () => {
         kind: 'model',
         name: 'Mine',
         description: '',
-        tags: [],
+        categories: [],
         contentHash: null,
       },
       'me',
@@ -646,26 +721,293 @@ describe('즐겨찾기 — 없어진 자산', () => {
   });
 });
 
+const codeUse = (id: string, path: string): AssetUsageSource => ({
+  kind: 'code',
+  name: 'crane-type-model',
+  regionIds: [],
+  editorPath: '',
+  refs: [{ path, asset: { id, version: 1 } }],
+});
+
 describe('loadUsage', () => {
   it('씬의 배치 개수를 인덱스로 만들고 실패한 씬을 알린다', async () => {
-    const { store } = setup();
+    const { store } = setup({
+      scenes: [okpoScene],
+      failedScenes: ['broken.json'],
+    });
     await store.getState().loadUsage();
     const state = store.getState();
     expect(state.usageStatus).toBe('ready');
-    expect(state.usageIndex.get('/models/okpo_ttc.glb')?.[0].count).toBe(2);
+    expect(countAssetPlacements(okpoTtc, state.usageIndex)).toBe(2);
     expect(state.usageFailedScenes).toEqual(['broken.json']);
+    // 읽지 못한 씬이 있으면 사용처를 다 안다고 보지 않는다.
+    expect(toAssetUsageState(state).known).toBe(false);
   });
 
-  it('씬 읽기가 통째로 실패하면 error', async () => {
+  it('씬을 전부 읽으면 사용처를 다 아는 상태다', async () => {
+    const { store } = setup({ scenes: [okpoScene] });
+    expect(toAssetUsageState(store.getState()).known).toBe(false);
+    await store.getState().loadUsage();
+    expect(toAssetUsageState(store.getState()).known).toBe(true);
+  });
+
+  it('화면 코드가 쓰는 자산은 씬을 읽기 전부터 사용처에 있다', () => {
+    const { store } = setup({
+      code: [codeUse('okpo-ttc', '/models/okpo_ttc.glb')],
+    });
+    expect(store.getState().usageStatus).toBe('idle');
+    expect(countAssetPlacements(okpoTtc, store.getState().usageIndex)).toBe(1);
+  });
+
+  it('씬과 코드의 사용을 합쳐 센다', async () => {
+    const { store } = setup({
+      scenes: [okpoScene],
+      code: [codeUse('okpo-ttc', '/models/okpo_ttc.glb')],
+    });
+    await store.getState().loadUsage();
+    expect(countAssetPlacements(okpoTtc, store.getState().usageIndex)).toBe(3);
+  });
+
+  it('씬 읽기가 통째로 실패하면 error — 코드가 쓰는 자산은 사용처에 남는다', async () => {
     const repo = createRepository();
     const store = createAssetLibraryStore({
       getRepository: () => repo.repository,
-      getBuiltinSources: () => [],
+      getCodeSources: () => [codeUse('okpo-ttc', '/models/okpo_ttc.glb')],
       loadSceneSources: () => Promise.reject(new Error('boom')),
     });
     await store.getState().loadUsage();
-    expect(store.getState().usageStatus).toBe('error');
-    expect(store.getState().usageIndex.size).toBe(0);
+    const state = store.getState();
+    expect(state.usageStatus).toBe('error');
+    expect(countAssetPlacements(okpoTtc, state.usageIndex)).toBe(1);
+    expect(toAssetUsageState(state).known).toBe(false);
+  });
+
+  it('동시에 여러 번 불러도 씬은 한 번만 읽는다', async () => {
+    const { store, usage } = setup({ scenes: [okpoScene] });
+    await Promise.all([store.getState().loadUsage(), store.getState().loadUsage()]);
+    expect(usage.reads).toBe(1);
+  });
+
+  it('이미 읽은 뒤 다시 읽는 동안에는 "읽는 중" 으로 되돌아가지 않는다', async () => {
+    const { store } = setup({ scenes: [okpoScene] });
+    await store.getState().loadUsage();
+    const again = store.getState().loadUsage();
+    expect(store.getState().usageStatus).toBe('ready');
+    await again;
+    expect(store.getState().usageStatus).toBe('ready');
+  });
+});
+
+describe('쓰이고 있는 자산의 보호', () => {
+  it('씬에 놓인 자산은 지우지 않는다 — 문서도 파일도 그대로', async () => {
+    const { store, repo } = setup({ scenes: [okpoScene] });
+    await store.getState().load();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
+    expect(store.getState().assets.map((a) => a.id)).toEqual(['okpo-ttc']);
+    expect(repo.saved).toHaveLength(0);
+    expect(repo.removed).toEqual([]);
+  });
+
+  it('화면 코드가 쓰는 자산도 지우지 않는다', async () => {
+    const { store, repo } = setup({
+      code: [codeUse('okpo-ttc', '/models/okpo_ttc.glb')],
+    });
+    await store.getState().load();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
+    expect(repo.removed).toEqual([]);
+  });
+
+  it('어디에서도 쓰이지 않으면 지우고, 옛 배포 경로의 파일을 함께 넘긴다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(true);
+    expect(store.getState().assets).toEqual([]);
+    expect(repo.removed).toEqual(['okpo-ttc']);
+    expect(repo.removedLegacyPaths).toEqual([['/models/okpo_ttc.glb']]);
+  });
+
+  it('남는 자산이 같은 파일을 가리키면 그 경로는 넘기지 않는다', async () => {
+    const twin: AssetRecord = { ...okpoTtc, id: 'okpo-ttc-twin' };
+    const { store, repo } = setup({
+      initial: { ...baseDocument, assets: [okpoTtc, twin] },
+    });
+    await store.getState().load();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(true);
+    expect(repo.removedLegacyPaths).toEqual([[]]);
+  });
+
+  it('읽지 못한 씬이 있으면 안 쓰이는 것처럼 보여도 지우지 않는다', async () => {
+    const { store, repo } = setup({ failedScenes: ['broken.json'] });
+    await store.getState().load();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
+    expect(repo.removed).toEqual([]);
+  });
+
+  it('씬 읽기가 실패하면 지우지 않는다', async () => {
+    const repo = createRepository();
+    const store = createAssetLibraryStore({
+      getRepository: () => repo.repository,
+      getCodeSources: () => [],
+      loadSceneSources: () => Promise.reject(new Error('offline')),
+    });
+    await store.getState().load();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
+    expect(repo.removed).toEqual([]);
+  });
+
+  it('지우기 직전에 사용처를 다시 읽는다 — 화면을 연 뒤 놓인 것도 막는다', async () => {
+    const { store, repo, usage } = setup();
+    await store.getState().load();
+    await store.getState().loadUsage();
+    // 처음 읽었을 때는 안 쓰였다. 그 뒤 씬에 놓였다.
+    usage.scenes = [okpoScene];
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
+    expect(usage.reads).toBe(2);
+    expect(repo.removed).toEqual([]);
+  });
+
+  it('쓰이는 버전은 철회하지 않는다', async () => {
+    const { store, repo } = setup({ scenes: [okpoScene] });
+    await store.getState().load();
+    expect(
+      await store.getState().transitionStatus('okpo-ttc', 1, 'withdrawn', 'me'),
+    ).toBe(false);
+    expect(store.getState().assets[0].versions[0].status).toBe('published');
+    expect(repo.saved).toHaveLength(0);
+  });
+
+  it('쓰이지 않는 버전은 같은 자산의 다른 버전이 쓰여도 철회한다', async () => {
+    const twoVersions: AssetRecord = {
+      ...okpoTtc,
+      versions: [
+        okpoTtc.versions[0],
+        {
+          ...okpoTtc.versions[0],
+          version: 2,
+          file: {
+            ...okpoTtc.versions[0].file,
+            ref: {
+              storage: 'public',
+              path: '/asset-library/files/okpo-ttc/v2/okpo_ttc.glb',
+            },
+          },
+        },
+      ],
+    };
+    // 씬은 v1 만 쓴다.
+    const { store } = setup({
+      initial: { ...baseDocument, assets: [twoVersions] },
+      scenes: [okpoScene],
+    });
+    await store.getState().load();
+    expect(
+      await store.getState().transitionStatus('okpo-ttc', 2, 'withdrawn', 'me'),
+    ).toBe(true);
+    expect(
+      await store.getState().transitionStatus('okpo-ttc', 1, 'withdrawn', 'me'),
+    ).toBe(false);
+  });
+
+  it('철회가 아닌 전이는 사용처를 읽지 않는다', async () => {
+    const { store, usage } = setup({ scenes: [okpoScene] });
+    await store.getState().load();
+    await store.getState().importAsset(
+      {
+        file: glbFile(),
+        kind: 'model',
+        name: 'Draft',
+        description: '',
+        categories: [],
+        contentHash: null,
+      },
+      'me',
+    );
+    expect(
+      await store.getState().transitionStatus('draft', 1, 'in-review', 'me'),
+    ).toBe(true);
+    expect(usage.reads).toBe(0);
+  });
+
+  it('일괄 철회는 쓰이는 자산을 건너뛴다', async () => {
+    const free: AssetRecord = {
+      ...okpoTtc,
+      id: 'free',
+      versions: [
+        {
+          ...okpoTtc.versions[0],
+          file: {
+            ...okpoTtc.versions[0].file,
+            ref: { storage: 'public', path: '/models/free.glb' },
+          },
+        },
+      ],
+    };
+    const { store } = setup({
+      initial: { ...baseDocument, assets: [okpoTtc, free] },
+      scenes: [okpoScene],
+    });
+    await store.getState().load();
+    expect(
+      await store
+        .getState()
+        .transitionManyStatus(['okpo-ttc', 'free'], 'withdrawn', 'me'),
+    ).toBe(1);
+    const status = (id: string) =>
+      store.getState().assets.find((a) => a.id === id)!.versions[0].status;
+    expect(status('okpo-ttc')).toBe('published');
+    expect(status('free')).toBe('withdrawn');
+  });
+});
+
+describe('파일을 다룰 수 없는 환경(운영)', () => {
+  const input = {
+    file: glbFile(),
+    kind: 'model' as const,
+    name: 'Crane',
+    description: '',
+    categories: [],
+    contentHash: null,
+  };
+
+  it('등록·새 버전·삭제는 아무것도 하지 않는다', async () => {
+    const { store, repo } = setup({ canManageFiles: false });
+    await store.getState().load();
+    expect(store.getState().canManageFiles).toBe(false);
+
+    expect(await store.getState().importAsset(input, 'me')).toBeNull();
+    expect(
+      await store
+        .getState()
+        .addVersion('okpo-ttc', { file: glbFile(), note: '', contentHash: null }, 'me'),
+    ).toBeNull();
+    expect(await store.getState().removeAsset('okpo-ttc')).toBe(false);
+    expect(await store.getState().removeManyAssets(['okpo-ttc'])).toBe(0);
+    expect(await store.getState().removeVersion('okpo-ttc', 1, 'me')).toBe(false);
+
+    expect(repo.files.size).toBe(0);
+    expect(repo.removed).toEqual([]);
+    expect(repo.saved).toHaveLength(0);
+    expect(store.getState().assets.map((a) => a.id)).toEqual(['okpo-ttc']);
+  });
+
+  it('이름·카테고리·상태 같은 문서 수정은 된다(이 브라우저에 저장된다)', async () => {
+    const { store, repo } = setup({ canManageFiles: false });
+    await store.getState().load();
+    expect(
+      await store.getState().updateMetadata('okpo-ttc', { name: 'Renamed' }, 'me'),
+    ).toBe(true);
+    expect(
+      await store.getState().transitionStatus('okpo-ttc', 1, 'withdrawn', 'me'),
+    ).toBe(true);
+    expect(repo.saved).toHaveLength(2);
+  });
+
+  it('썸네일은 저장할 수 있다 — 처음 열 때 자동으로 찍힌다', async () => {
+    const { store } = setup({ canManageFiles: false });
+    await store.getState().load();
+    expect(
+      await store.getState().saveThumbnail('okpo-ttc', new Blob(['p']), null),
+    ).toBe(true);
   });
 });
 
@@ -675,7 +1017,7 @@ describe('읽기 전·읽기 실패 상태에서는 고치지도 저장하지도
     kind: 'model' as const,
     name: 'Crane',
     description: '',
-    tags: [],
+    categories: [],
     contentHash: null,
   };
 
@@ -748,7 +1090,7 @@ describe('removeAsset — 저장 실패', () => {
         kind: 'model',
         name: 'Temp',
         description: '',
-        tags: [],
+        categories: [],
         contentHash: null,
       },
       'me',
@@ -768,7 +1110,7 @@ describe('버전 지우기·일괄 작업', () => {
     kind: 'model' as const,
     name,
     description: '',
-    tags: [],
+    categories: [],
     contentHash: null,
   });
 
@@ -808,11 +1150,11 @@ describe('버전 지우기·일괄 작업', () => {
     const before = repo.saved.length;
     const changed = await store
       .getState()
-      .updateManyMetadata([a!.id, b!.id, 'nope'], () => ({ tags: ['hull'] }), 'me');
+      .updateManyMetadata([a!.id, b!.id, 'nope'], () => ({ categories: ['hull'] }), 'me');
     expect(changed).toBe(2);
     expect(repo.saved.length).toBe(before + 1);
     expect(
-      store.getState().assets.filter((x) => x.tags.includes('hull')),
+      store.getState().assets.filter((x) => x.categories.includes('hull')),
     ).toHaveLength(2);
   });
 
@@ -840,8 +1182,9 @@ describe('버전 지우기·일괄 작업', () => {
     expect(after.versions[0].status).toBe('in-review');
   });
 
-  it('일괄 삭제는 등록한 자산만 지우고, 저장에 실패하면 되돌린다', async () => {
-    const { store, repo } = setup();
+  it('일괄 삭제는 쓰이지 않는 자산만 지우고, 저장에 실패하면 되돌린다', async () => {
+    // okpo-ttc 는 씬에 놓여 있다 — 고른 목록에 있어도 남는다.
+    const { store, repo } = setup({ scenes: [okpoScene] });
     await store.getState().load();
     const a = await store.getState().importAsset(input('A'), 'me');
     const b = await store.getState().importAsset(input('B'), 'me');
@@ -862,7 +1205,7 @@ describe('버전 지우기·일괄 작업', () => {
 describe('등록 시 최적화', () => {
   const base = {
     description: '',
-    tags: [],
+    categories: [],
     contentHash: 'sha256:orig',
   };
 
@@ -874,7 +1217,7 @@ describe('등록 시 최적화', () => {
       { ...base, file: glbFile(), kind: 'model', name: 'Opt', optimize: true },
       'me',
     );
-    expect(repo.optimizeRequests).toEqual([true]);
+    expect(repo.optimizeRequests).toEqual(['model']);
     expect(record?.versions[0].file).toMatchObject({
       sizeBytes: 2,
       originalSizeBytes: 4,
@@ -889,18 +1232,76 @@ describe('등록 시 최적화', () => {
     const record = await store
       .getState()
       .importAsset({ ...base, file: glbFile(), kind: 'model', name: 'Raw' }, 'me');
-    expect(repo.optimizeRequests).toEqual([false]);
+    expect(repo.optimizeRequests).toEqual([null]);
     expect(record?.versions[0].file.sizeBytes).toBe(4);
     expect(record?.versions[0].file).not.toHaveProperty('originalSizeBytes');
+    // 요청하지 않은 일은 알리지 않는다.
+    expect(store.getState().fileReport).toMatchObject({
+      requested: false,
+      optimized: false,
+      lines: [],
+    });
   });
 
-  it('지도·도면에는 요청해도 걸지 않는다', async () => {
+  it('지도는 지도 파이프라인으로 최적화한다', async () => {
     const { store, repo } = setup();
     await store.getState().load();
-    await store.getState().importAsset(
+    const record = await store.getState().importAsset(
       { ...base, file: glbFile(), kind: 'map', name: 'Map', optimize: true },
       'me',
     );
+    expect(repo.optimizeRequests).toEqual(['map']);
+    expect(record?.versions[0].file.originalSizeBytes).toBe(4);
+  });
+
+  it('지도 파이프라인이 지운 루트 오프셋은 새 지도의 기본 위치가 된다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    vi.spyOn(repo.repository, 'putVersionFile').mockResolvedValue({
+      ref: { storage: 'public', path: '/asset-library/files/terrain/v1/t.glb' },
+      sizeBytes: 2,
+      optimized: true,
+      report: ['루트 오프셋 (515.305, 0, -814.879) 제거'],
+      rootOffset: [515.305, 0, -814.879],
+    });
+    const record = await store.getState().importAsset(
+      { ...base, file: glbFile(), kind: 'map', name: 'Terrain', optimize: true },
+      'me',
+    );
+    expect(record?.placement).toEqual({
+      defaultPosition: [515.305, 0, -814.879],
+    });
+  });
+
+  it('루트 오프셋은 새 버전에는 적용하지 않는다 — 기본 위치는 그 자산의 것이다', async () => {
+    const map: AssetRecord = {
+      ...okpoTtc,
+      id: 'map-a',
+      kind: 'map',
+      placement: { defaultPosition: [1, 2, 3] },
+    };
+    const { store, repo } = setup({
+      initial: { ...baseDocument, assets: [map] },
+    });
+    await store.getState().load();
+    vi.spyOn(repo.repository, 'putVersionFile').mockResolvedValue({
+      ref: { storage: 'public', path: '/asset-library/files/map-a/v2/a.glb' },
+      sizeBytes: 2,
+      optimized: true,
+      report: [],
+      rootOffset: [9, 9, 9],
+    });
+    await store
+      .getState()
+      .addVersion('map-a', { file: glbFile(), note: '', contentHash: null }, 'me');
+    expect(store.getState().assets[0].placement).toEqual({
+      defaultPosition: [1, 2, 3],
+    });
+  });
+
+  it('GLB 가 아닌 종류(도면·배경)에는 요청해도 걸지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
     await store.getState().importAsset(
       {
         ...base,
@@ -911,7 +1312,34 @@ describe('등록 시 최적화', () => {
       },
       'me',
     );
-    expect(repo.optimizeRequests).toEqual([false, false]);
+    await store.getState().importAsset(
+      {
+        ...base,
+        file: new File([new Uint8Array([1])], 'sky.exr'),
+        kind: 'environment',
+        name: 'Sky',
+        optimize: true,
+      },
+      'me',
+    );
+    expect(repo.optimizeRequests).toEqual([null, null]);
+  });
+
+  it('파이프라인이 한 일을 fileReport 로 남긴다', async () => {
+    const { store } = setup();
+    await store.getState().load();
+    expect(store.getState().fileReport).toBeNull();
+    const record = await store.getState().importAsset(
+      { ...base, file: glbFile(), kind: 'map', name: 'Map', optimize: true },
+      'me',
+    );
+    expect(store.getState().fileReport).toEqual({
+      assetId: record!.id,
+      version: 1,
+      requested: true,
+      optimized: true,
+      lines: ['map pipeline'],
+    });
   });
 
   it('새 버전에도 같은 규칙이다', async () => {
@@ -925,8 +1353,24 @@ describe('등록 시 최적화', () => {
       { file: glbFile('b.glb'), note: '', contentHash: null, optimize: true },
       'me',
     );
-    expect(repo.optimizeRequests).toEqual([false, true]);
+    expect(repo.optimizeRequests).toEqual([null, 'model']);
     const after = store.getState().assets.find((a) => a.id === record!.id)!;
     expect(after.versions[1].file.originalSizeBytes).toBe(4);
+    expect(store.getState().fileReport).toMatchObject({
+      assetId: record!.id,
+      version: 2,
+      requested: true,
+      optimized: true,
+    });
+  });
+
+  it('파일 저장에 실패한 새 버전은 fileReport 를 바꾸지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    repo.setFailPut(true);
+    await store
+      .getState()
+      .addVersion('okpo-ttc', { file: glbFile(), note: '', contentHash: null }, 'me');
+    expect(store.getState().fileReport).toBeNull();
   });
 });

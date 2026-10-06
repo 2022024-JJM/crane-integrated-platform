@@ -9,8 +9,7 @@ import {
   ASSET_OWNER_MAX,
   formatBytes,
   isDocumentAssetKind,
-  isGeometryAssetKind,
-  listAssetKindTags,
+  listAssetKindCategories,
   resolveVersionSizeBytes,
   type AssetMetadataPatch,
   type AssetRecord,
@@ -19,7 +18,6 @@ import {
 import { useAssetLibraryStore } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { AppLink } from '@crane/ui/atoms/app-link';
-import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Combobox } from '@crane/ui/molecules/combobox';
 import { copyText } from '../lib/copy-text';
 import { shortenContentHash } from '../lib/asset-presentation';
@@ -28,7 +26,7 @@ import { AssetKindIcon } from './asset-badges';
 import {
   CommitInput,
   CommitTextArea,
-  TagEditor,
+  CategoryEditor,
 } from './asset-form-fields';
 
 interface AssetInfoTabProps {
@@ -50,7 +48,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 /**
  * 속성 한 줄 — 라벨은 왼쪽 열, 값은 오른쪽 열. 라벨이 한 줄로 서 있어 값만
- * 훑어 내려갈 수 있다. `top` 은 여러 줄 값(설명·태그)의 라벨을 위에 맞춘다.
+ * 훑어 내려갈 수 있다. `top` 은 여러 줄 값(설명·카테고리)의 라벨을 위에 맞춘다.
  */
 function PropertyRow({
   label,
@@ -100,10 +98,10 @@ export function AssetInfoTab({
   const { t } = useTranslation();
   const report = useAssetSaveReport();
   const assets = useAssetLibraryStore((state) => state.assets);
-  // 같은 종류에 이미 있는 태그를 권한다 — 철자가 갈리면 탐색 계층의
+  // 같은 종류에 이미 있는 카테고리를 권한다 — 철자가 갈리면 탐색 계층의
   // 체크박스가 둘로 나뉜다.
-  const kindTags = useMemo(
-    () => listAssetKindTags(assets, asset.kind),
+  const kindCategories = useMemo(
+    () => listAssetKindCategories(assets, asset.kind),
     [asset.kind, assets],
   );
   const collections = useAssetLibraryStore((state) => state.collections);
@@ -153,14 +151,13 @@ export function AssetInfoTab({
     version.file.ref.storage === 'public'
       ? version.file.ref.path
       : version.file.ref.key;
-  const editable = asset.origin === 'user';
   const baseId = useId();
   const ids = {
     name: `${baseId}-name`,
     description: `${baseId}-description`,
     owner: `${baseId}-owner`,
     drawingNo: `${baseId}-drawing-no`,
-    tags: `${baseId}-tags`,
+    categories: `${baseId}-categories`,
   };
 
   return (
@@ -213,15 +210,15 @@ export function AssetInfoTab({
 
       <Section title={t('asset-library:info.classification')}>
         <PropertyRow
-          label={t('asset-library:field.tags')}
-          htmlFor={ids.tags}
+          label={t('asset-library:field.categories')}
+          htmlFor={ids.categories}
           top
         >
-          <TagEditor
-            id={ids.tags}
-            value={asset.tags}
-            suggestions={kindTags}
-            onChange={(tags) => patch({ tags })}
+          <CategoryEditor
+            id={ids.categories}
+            value={asset.categories}
+            suggestions={kindCategories}
+            onChange={(categories) => patch({ categories })}
           />
         </PropertyRow>
         {collections.length > 0 ? (
@@ -375,34 +372,7 @@ export function AssetInfoTab({
             </span>
           </ReadOnlyRow>
           <ReadOnlyRow label="ID">{asset.id}</ReadOnlyRow>
-          {isGeometryAssetKind(asset.kind) ? (
-            <ReadOnlyRow label={t('asset-library:field.defaultScale')}>
-              {editable ? (
-                <InputNumber
-                  value={asset.defaultScale[0]}
-                  min={0.0001}
-                  max={10000}
-                  step={0.1}
-                  className="h-7 w-24"
-                  inputClassName="text-xs"
-                  onChange={(scale) =>
-                    patch({ defaultScale: [scale, scale, scale] })
-                  }
-                />
-              ) : (
-                asset.defaultScale.join(' × ')
-              )}
-            </ReadOnlyRow>
-          ) : null}
-          <ReadOnlyRow label={t('asset-library:field.origin')}>
-            {t(`asset-library:origin.${asset.origin}`)}
-          </ReadOnlyRow>
         </dl>
-        {isGeometryAssetKind(asset.kind) ? (
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            {t('asset-library:info.defaultScaleHint')}
-          </p>
-        ) : null}
       </Section>
     </div>
   );

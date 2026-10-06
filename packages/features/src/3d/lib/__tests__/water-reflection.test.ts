@@ -1,35 +1,46 @@
 import type { SavedMapInfo } from '@crane/domain/3d';
-import { Object3D } from 'three';
+import { Object3D, Scene } from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   hideForReflection,
   resolveReflectionExcludedMapIds,
   restoreAfterReflection,
+  selectReflectionHidden,
 } from '../water-reflection';
 
-function map(id: string, path: string): SavedMapInfo {
-  return { id, path };
+function map(
+  id: string,
+  path: string,
+  role?: SavedMapInfo['role'],
+): SavedMapInfo {
+  return role ? { id, path, role } : { id, path };
 }
 
 describe('resolveReflectionExcludedMapIds', () => {
-  it('카탈로그 kind 가 context 인 지도의 id 만 고른다', () => {
+  it('역할이 context 인 지도의 id 만 고른다', () => {
     const maps = [
-      map('a', '/maps/okpo.glb'),
-      map('b', '/maps/okpo-terrain.glb'),
-      map('c', '/maps/okpo-tree.glb'),
-      map('d', '/maps/philly-area-1.glb'),
-      map('e', '/maps/philly-terrain.glb'),
+      map('a', '/maps/okpo.glb', 'ground'),
+      map('b', '/maps/okpo-terrain.glb', 'context'),
+      map('c', '/maps/okpo-tree.glb', 'context'),
+      map('d', '/maps/philly-area-1.glb', 'ground'),
+      map('e', '/maps/philly-terrain.glb', 'context'),
     ];
     expect(resolveReflectionExcludedMapIds(maps)).toEqual(['b', 'c', 'e']);
   });
 
-  it('ground·미등록 경로·빈 경로는 제외한다', () => {
+  it('ground·역할이 없는 지도·빈 경로는 제외한다', () => {
     const maps = [
-      map('ground', '/maps/plane.glb'),
-      map('unknown', '/maps/not-in-catalog.glb'),
+      map('ground', '/maps/plane.glb', 'ground'),
+      map('unknown', '/maps/no-role.glb'),
       map('empty', ''),
     ];
     expect(resolveReflectionExcludedMapIds(maps)).toEqual([]);
+  });
+
+  it('판정은 경로가 아니라 role 이다 — 지형 파일이어도 역할이 없으면 반사에 그린다', () => {
+    expect(
+      resolveReflectionExcludedMapIds([map('t', '/maps/okpo-terrain.glb')]),
+    ).toEqual([]);
   });
 
   it('undefined·빈 배열 → 빈 배열', () => {
@@ -39,16 +50,16 @@ describe('resolveReflectionExcludedMapIds', () => {
 
   it('배열 순서를 보존하고 같은 경로가 두 번이면 두 id 모두 남긴다', () => {
     const maps = [
-      map('z', '/maps/philly-terrain.glb'),
-      map('y', '/maps/okpo.glb'),
-      map('x', '/maps/okpo-terrain.glb'),
-      map('w', '/maps/philly-terrain.glb'),
+      map('z', '/maps/philly-terrain.glb', 'context'),
+      map('y', '/maps/okpo.glb', 'ground'),
+      map('x', '/maps/okpo-terrain.glb', 'context'),
+      map('w', '/maps/philly-terrain.glb', 'context'),
     ];
     expect(resolveReflectionExcludedMapIds(maps)).toEqual(['z', 'x', 'w']);
   });
 
   it('입력 배열을 바꾸지 않고 매번 새 배열을 돌려준다', () => {
-    const maps = [map('b', '/maps/okpo-terrain.glb')];
+    const maps = [map('b', '/maps/okpo-terrain.glb', 'context')];
     const first = resolveReflectionExcludedMapIds(maps);
     const second = resolveReflectionExcludedMapIds(maps);
     expect(first).toEqual(second);
@@ -149,5 +160,72 @@ describe('restoreAfterReflection', () => {
       expect(hidden).toHaveLength(0);
       expect(a.visible).toBe(true);
     }
+  });
+});
+
+describe('selectReflectionHidden', () => {
+  function sceneWith(...children: Object3D[]): Scene {
+    const scene = new Scene();
+    scene.add(...children);
+    return scene;
+  }
+
+  it('씬을 비추면 제외 목록만 돌려준다 — 씬 객체는 건드리지 않는다', () => {
+    const crane = new Object3D();
+    const dome = new Object3D();
+    const scene = sceneWith(crane, dome);
+    const excluded = [dome];
+    expect(selectReflectionHidden(true, scene, excluded)).toBe(excluded);
+  });
+
+  it('비추지 않으면 씬 최상위 객체 전부다', () => {
+    const crane = new Object3D();
+    const map = new Object3D();
+    const scene = sceneWith(crane, map);
+    expect([...selectReflectionHidden(false, scene, [])]).toEqual([crane, map]);
+  });
+
+  it('비추지 않으면 제외 목록은 순회하지 않는다 (게으른 제너레이터)', () => {
+    let iterated = false;
+    function* excluded(): Generator<Object3D> {
+      iterated = true;
+      yield new Object3D();
+    }
+    const scene = sceneWith(new Object3D());
+    hideForReflection(selectReflectionHidden(false, scene, excluded()), []);
+    expect(iterated).toBe(false);
+  });
+
+  it('빈 씬은 숨길 것이 없다', () => {
+    const hidden: Object3D[] = [];
+    hideForReflection(selectReflectionHidden(false, new Scene(), []), hidden);
+    expect(hidden).toEqual([]);
+  });
+
+  it('최상위만 숨긴다 — 자식의 visible 은 그대로다(three 가 서브트리를 건너뛴다)', () => {
+    const root = new Object3D();
+    const child = new Object3D();
+    root.add(child);
+    const hidden: Object3D[] = [];
+    hideForReflection(
+      selectReflectionHidden(false, sceneWith(root), []),
+      hidden,
+    );
+    expect(root.visible).toBe(false);
+    expect(child.visible).toBe(true);
+    expect(hidden).toEqual([root]);
+  });
+
+  it('숨김→복원 뒤 원래 꺼져 있던 최상위 객체는 꺼진 채다', () => {
+    const shown = new Object3D();
+    const alreadyHidden = new Object3D();
+    alreadyHidden.visible = false;
+    const scene = sceneWith(shown, alreadyHidden);
+    const hidden: Object3D[] = [];
+    hideForReflection(selectReflectionHidden(false, scene, []), hidden);
+    expect(shown.visible).toBe(false);
+    restoreAfterReflection(hidden);
+    expect(shown.visible).toBe(true);
+    expect(alreadyHidden.visible).toBe(false);
   });
 });

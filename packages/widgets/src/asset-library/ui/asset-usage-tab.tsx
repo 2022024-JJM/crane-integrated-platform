@@ -1,9 +1,8 @@
-import { ArrowUpRight, Loader2 } from 'lucide-react';
+import { ArrowUpRight, Code2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   getAssetUsage,
-  isDocumentAssetKind,
-  isGeometryAssetKind,
+  isSceneAssetKind,
   type AssetRecord,
 } from '@crane/domain/asset-library';
 import { useAssetLibraryStore } from '@crane/features/asset-library';
@@ -15,7 +14,11 @@ interface AssetUsageTabProps {
   asset: AssetRecord;
 }
 
-/** 사용처 — 이 자산의 파일을 배치한 씬. */
+/**
+ * 사용처 — 이 자산을 쓰는 씬과 화면 코드. 버전별로 묶는다(씬은 놓을 때의
+ * 버전을 기억한다). 여기에 나오는 버전은 철회할 수 없고, 하나라도 나오면
+ * 자산을 지울 수 없다.
+ */
 export function AssetUsageTab({ asset }: AssetUsageTabProps) {
   const { t } = useTranslation();
   const usageIndex = useAssetLibraryStore((state) => state.usageIndex);
@@ -23,18 +26,10 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
   const failedScenes = useAssetLibraryStore((state) => state.usageFailedScenes);
   const loadUsage = useAssetLibraryStore((state) => state.loadUsage);
 
-  if (!isGeometryAssetKind(asset.kind)) {
-    return (
-      <p className="text-muted-foreground px-5 py-6 text-[13px] leading-relaxed">
-        {t(
-          isDocumentAssetKind(asset.kind)
-            ? 'asset-library:usage.drawing'
-            : 'asset-library:usage.environment',
-        )}
-      </p>
-    );
-  }
-  if (usageStatus === 'loading' || usageStatus === 'idle') {
+  // 씬에 쓰는 종류는 씬을 읽어야 사용처를 안다. 도면·CAD 의 사용처는 화면
+  // 코드뿐이라(항상 인덱스에 있다) 씬을 기다리지 않는다.
+  const sceneKind = isSceneAssetKind(asset.kind);
+  if (sceneKind && (usageStatus === 'loading' || usageStatus === 'idle')) {
     return (
       <p className="text-muted-foreground flex items-center gap-2 px-5 py-6 text-[13px] leading-relaxed">
         <Loader2 className="size-3.5 animate-spin" />
@@ -42,7 +37,7 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
       </p>
     );
   }
-  if (usageStatus === 'error') {
+  if (sceneKind && usageStatus === 'error') {
     return (
       <div className="flex flex-col items-start gap-2 px-4 py-6">
         <p className="text-foreground text-[13px]">
@@ -59,7 +54,7 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
 
   return (
     <div className="flex flex-col gap-5 px-5 py-5">
-      {failedScenes.length > 0 ? (
+      {sceneKind && failedScenes.length > 0 ? (
         <p
           role="status"
           className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-200"
@@ -76,15 +71,7 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
             {t('asset-library:usage.none')}
           </p>
           <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
-            {t(
-              asset.catalogId
-                ? 'asset-library:usage.noneCatalogHint'
-                : asset.origin === 'builtin'
-                  ? 'asset-library:usage.noneRuntimeHint'
-                  : asset.kind === 'map'
-                    ? 'asset-library:usage.noneUserMapHint'
-                    : 'asset-library:usage.noneUserHint',
-            )}
+            {t(`asset-library:usage.noneHint.${asset.kind}`)}
           </p>
         </div>
       ) : (
@@ -98,22 +85,35 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
             <ul className="border-border divide-border divide-y rounded-md border">
               {entry.usages.map((item) => (
                 <li
-                  key={item.sceneFile}
+                  key={`${item.kind}:${item.name}`}
                   className="flex items-center gap-3 px-3 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-foreground truncate text-[13px] font-medium">
-                      {item.regionIds
-                        .map((regionId) => t(getRegionTitleKey(regionId)))
-                        .join(', ')}
+                    <p className="text-foreground flex items-center gap-1.5 truncate text-[13px] font-medium">
+                      {item.kind === 'code' ? (
+                        <>
+                          <Code2
+                            className="text-muted-foreground size-3.5 shrink-0"
+                            aria-hidden
+                          />
+                          {t('asset-library:usage.code')}
+                        </>
+                      ) : (
+                        item.regionIds
+                          .map((regionId) => t(getRegionTitleKey(regionId)))
+                          .join(', ')
+                      )}
                     </p>
                     <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                      {item.sceneFile}
+                      {item.name}
                     </p>
                   </div>
-                  <span className="text-foreground font-condensed shrink-0 text-base font-semibold tabular-nums">
-                    {t('asset-library:usage.count', { count: item.count })}
-                  </span>
+                  {/* 코드는 "몇 번" 이 뜻이 없다 — 쓰인다는 사실만 보인다. */}
+                  {item.kind === 'scene' ? (
+                    <span className="text-foreground font-condensed shrink-0 text-base font-semibold tabular-nums">
+                      {t('asset-library:usage.count', { count: item.count })}
+                    </span>
+                  ) : null}
                   {item.editorPath ? (
                     <AppLink
                       to={item.editorPath}

@@ -8,7 +8,7 @@ import { extendGltfLoaderWithKtx2 } from './ktx2-loader';
  * GLTF url 단위로 모델의 unscaled bottom offset을 캐시한다.
  *
  * GLTF 모델마다 origin 위치가 다르다 — 어떤 모델은 origin이 모델 중앙,
- * 어떤 건 바닥, 어떤 건 위쪽에 있다. 사용자가 카탈로그에서 모델을 드래그-드롭
+ * 어떤 건 바닥, 어떤 건 위쪽에 있다. 사용자가 팔레트에서 모델을 드래그-드롭
  * 할 때 "바닥이 지면(y=0)에 딱 닿도록" 자동 배치하려면 모델별로 origin 기준
  * 바닥까지의 거리를 알아야 한다.
  *

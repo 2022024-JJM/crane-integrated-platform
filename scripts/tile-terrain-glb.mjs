@@ -137,10 +137,11 @@
 //   를 "안 쓰는 속성"으로 지워 버린다. 입력 데이터 보존 원칙에 따라 keep 옵션을
 //   명시해 막는다.
 //
-// 산출물 교체 절차 (AGENTS.md 규약):
-//   이 스크립트의 출력을 apps/shell/public/maps/ 에 직접 두지 말 것 — 기존 파일
-//   교체는 assets-src/maps/ 에 먼저 넣는 순서다(optimize 스크립트가 백업본을
-//   원본으로 취급해, public 에 직접 덮으면 옛 백업이 새 파일을 되돌린다).
+// 부르는 곳:
+//   지도 파이프라인(optimize-map.mjs)이 압축을 끝낸 파일을 이 스크립트에 넘겨
+//   타일로 나눈다. 격자 수(--grid)도 그쪽이 파일을 재서 정한다. 배포 경로의
+//   파일을 이 스크립트로 직접 바꾸지 않는다 — 지도가 바뀌면 자산 라이브러리의
+//   새 버전이다.
 //
 // 내장 검증 (하나라도 실패하면 출력 파일을 지우고 exit 1):
 //   (1) LOD0(원본 지오메트리) 총 삼각형 수가 입력과 정확히 같다 — --lod 는
@@ -202,8 +203,8 @@ if (inPath === outPath) {
   process.exit(1);
 }
 if (/apps[\\/]shell[\\/]public[\\/]/.test(outPath)) {
-  // 헤더 주석 "산출물 교체 절차" 참고 — 막지는 않되 사고 패턴이라 경고한다.
-  console.warn('경고: 출력이 public/ 하위입니다. 배포 교체는 assets-src/maps/ 를 먼저 갱신하는 순서입니다.');
+  // 막지는 않되 사고 패턴이라 경고한다 — 배포 파일은 자산 라이브러리의 버전으로만 바뀐다.
+  console.warn('경고: 출력이 public/ 하위입니다. 배포 파일은 자산 라이브러리에서 새 버전으로 올려 바꿉니다.');
 }
 
 // LOD 티어 — 실측 곡선(헤더 주석 참고) 기준. lodError(extras 상한, m)와 기대
@@ -1267,4 +1268,4 @@ console.log(`월드 bbox 차이 최대: ${bboxDiff.toExponential(3)}m`);
 if (warnings.length > 0) {
   console.log(`경고 ${warnings.length}건 (실패 아님 — 검증 출력의 WARN 참고)`);
 }
-console.log('\n검증 통과. 배포 교체는 assets-src/maps/ 우선 규약을 따르세요 (헤더 주석 참고).');
+console.log('\n검증 통과.');

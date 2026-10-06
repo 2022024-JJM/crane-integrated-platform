@@ -15,10 +15,6 @@
     "published": "Editum",
     "withdrawn": "Revocatum"
   },
-  "origin": {
-    "builtin": "Res edita",
-    "user": "In hac pagina addita"
-  },
   "storage": {
     "public": "Fasciculus editus",
     "browser": "Hic navigator"
@@ -41,7 +37,7 @@
     "version": "Versio",
     "revision": "Recensio",
     "drawingNo": "Numerus delineationis",
-    "tags": "Notae",
+    "categories": "Categoriae",
     "owner": "Curator",
     "file": "Fasciculus",
     "size": "Magnitudo",
@@ -53,8 +49,6 @@
     "storage": "Locus servandi",
     "path": "Via",
     "hash": "Summa contenti",
-    "defaultScale": "Scala praefinita",
-    "origin": "Origo",
     "format": "Forma",
     "fileName": "Nomen fasciculi"
   },
@@ -67,12 +61,13 @@
     "delete": "Dele",
     "add": "Adde",
     "reload": "Iterum lege",
-    "apply": "Applica"
+    "apply": "Applica",
+    "close": "Claude"
   },
   "save": {
     "saving": "Servatur",
     "failed": "Mutationes servari non potuerunt. Iterum tempta, aliter pagina renovata peribunt.",
-    "localOnly": "Servitor rerum nondum est; quae hic addis vel mutas in hoc navigatore tantum servantur. Alii et aliae machinae ea non videbunt.",
+    "localOnly": "Res addere, novas versiones mittere, delere hic non licet (in ambitu evolutionis fac et deduce). Nomina, categoriae, status mutati in hoc navigatro tantum servantur.",
     "conflict": "Bibliotheca alibi mutata est; mutatio tua novissima servata non est. Iterum lege, deinde iterum muta."
   },
   "rail": {
@@ -87,7 +82,7 @@
     "browse": "Perlustra"
   },
   "browser": {
-    "search": "Quaere nomen, notam, fasciculum",
+    "search": "Quaere nomen, categoriam, fasciculum",
     "resultCount": "{{count}} ex {{total}}",
     "clearFilters": "Cola tolle",
     "sort": "Ordo",
@@ -126,21 +121,23 @@
   "bulk": {
     "label": "Actiones in res electas",
     "selected": "{{count}} electae",
-    "addTag": "Notam adde",
+    "addCategory": "Categoriam adde",
     "addToCollection": "Collectioni adde",
     "clear": "Electionem tolle",
     "changeStatus": "Statum muta",
-    "removeTag": "Notam tolle",
+    "removeCategory": "Categoriam tolle",
     "remove": "Dele ({{count}})",
-    "removeTitle": "{{count}} res additas delere vis?",
-    "removeHint": "Fasciculi et historia delentur neque restitui possunt. Res editae non delentur.",
+    "removeTitle": "{{count}} res delere?",
+    "removeHint": "Fasciculi et historia simul delentur neque restitui possunt. Res in usu non delentur.",
+    "removeHintBlocked": "Fasciculi et historia simul delentur neque restitui possunt. Res in usu ({{count}}) non delentur et manent.",
+    "removeNone": "Omnes res electae in usu sunt aut usus earum inspici non potuit; nulla deleri potest.",
     "statusTitle": "Res electas: {{action}}?"
   },
   "form": {
-    "tagPlaceholder": "Notam scribe, deinde Enter",
-    "tagsFull": "Res usque ad {{max}} notas habere potest",
-    "removeTag": "Notam {{tag}} tolle",
-    "addSuggestedTag": "Notam {{tag}} adde"
+    "categoryPlaceholder": "Categoriam scribe, deinde Enter",
+    "categoriesFull": "Res usque ad {{max}} categorias habere potest",
+    "removeCategory": "Categoriam {{category}} tolle",
+    "addSuggestedCategory": "Categoriam {{category}} adde"
   },
   "import": {
     "title": "Rem adde",
@@ -162,8 +159,14 @@
         "bad-magic": "Hic fasciculus GLB non est. Fortasse alia forma cum extensione .glb.",
         "bad-version": "Hoc GLB non est glTF 2.0. Iterum ut glTF 2.0 exporta.",
         "bad-length": "Fasciculus GLB corruptus est. Longitudo in capite cum magnitudine non congruit; fortasse in transmissione truncatus est."
+      },
+      "exr": {
+        "bad-magic": "Fasciculus EXR non est. Fortasse alia forma extensionem .exr habet.",
+        "no-size": "Magnitudo imaginis EXR legi non potuit. Fasciculus fortasse corruptus est.",
+        "too-large": "EXR cuius latus {{max}}px excedit fundum nigrum reddit. Ad 4096×2048 minue et iterum mitte."
       }
-    }
+    },
+    "unavailable": "Res hic addi non possunt. In ambitu evolutionis adde et deduce."
   },
   "detail": {
     "backToLibrary": "Ad bibliothecam",
@@ -173,18 +176,18 @@
       "stats": "Numeri",
       "versions": "Versiones",
       "usage": "Usus",
-      "activity": "Acta"
+      "activity": "Acta",
+      "placement": "Collocatio"
     },
     "viewingOldVersion": "v{{version}} spectas. Versionem praesentem v{{current}} monstra",
     "notFound": "Res non inventa",
-    "notFoundHint": "Fortasse deleta est, aut in alio navigatore addita.",
+    "notFoundHint": "Fortasse deleta est, vel inscriptio falsa est.",
     "fileMissing": "Hic navigator fasciculum non habet",
     "fileMissingHint": "Fasciculus huius versionis in navigatore tantum servatur qui eum addidit. Servitore parato ubique aperietur.",
     "deleteTitle": "{{name}} delere vis?",
     "deleteDescription": "Fasciculi et acta {{count}} versionum delebuntur. Hoc revocari non potest.",
     "previousAsset": "Res prior (←)",
-    "nextAsset": "Res sequens (→)",
-    "deletePlaced": "{{count}} in scaenis posita. Si deles, ex illis scaenis evanescet."
+    "nextAsset": "Res sequens (→)"
   },
   "titleBlock": {
     "size": "Latitudo × profunditas × altitudo"
@@ -201,8 +204,7 @@
     "noLinkCandidates": "Nullae res conectendae",
     "unlink": "{{name}} disiunge",
     "linkedFromOther": "Ab altera re conexa",
-    "copyPath": "Viam exscribe",
-    "defaultScaleHint": "Mensurae in unitatibus scaenae sunt, scala praefinita applicata. In plerisque scaenis una unitas 1 m est, sed scaena interior (dock-in) alia unitate utitur."
+    "copyPath": "Viam exscribe"
   },
   "stats": {
     "dimensions": "Mensurae",
@@ -254,28 +256,29 @@
     },
     "kindMismatch": "Hic fasciculus alterius generis est. Rebus 3D GLB, fundis EXR, delineationibus PDF vel SVG vel imaginem, CAD fasciculum CAD mitte.",
     "sameContent": "Hic fasciculus idem contentum habet ac versio quam haec res iam habet.",
-    "catalogNotice": "Scaenae fasciculo edito versionis 1 utuntur. Ut nova versio in scaenis adhibeatur, fasciculum editum per fistulam rerum (assets-src → optimize:glb) muta.",
     "revisionShort": "Rec. {{revision}}",
-    "paletteNotice": "Palaestra editoris 3D fasciculum versionis praesentis ponit. Iam posita versionem qua posita sunt retinent.",
-    "environmentNotice": "Scaenae fasciculis editis ex electione fundi editoris 3D utuntur. Fundi hic additi eorumque versiones novae scaenis nondum adhibentur.",
     "remove": "Versionem dele",
     "removeTitle": "Versionem v{{version}} delere vis?",
-    "removeHint": "Fasciculus huius versionis deletur neque restitui potest. Tantum versiones numquam editae deleri possunt."
+    "removeHint": "Fasciculus huius versionis deletur neque restitui potest. Tantum versiones numquam editae deleri possunt.",
+    "sceneNotice": "Scaena versionem meminit qua res posita est. Versione praesenti mutata scaenae per se non mutantur — cum editor 3D novam versionem nuntiat, ibi renova et serva.",
+    "uploadUnavailable": "Novae versiones hic mitti non possunt. In ambitu evolutionis mitte et deduce."
   },
   "usage": {
     "loading": "Scaenae inspiciuntur",
     "failed": "Fasciculi scaenarum legi non potuerunt; usus ignotus est.",
     "partial": "Quaedam scaenae legi non potuerunt; usus fortasse incompletus: {{scenes}}",
-    "none": "In nulla scaena posita",
-    "noneCatalogHint": "Ex palaestra editoris 3D in scaena poni potest.",
-    "noneRuntimeHint": "Codex paginae hanc rem directe arcessit neque in scaena ponit. Noli delere, etsi nulla scaena ea utitur.",
-    "noneUserHint": "Edita in palaestra editoris 3D apparet et in scaenis poni potest.",
-    "versionHeading": "Scaenae v{{version}} utentes",
+    "none": "Nusquam adhibetur",
+    "versionHeading": "Ubi v{{version}} adhibetur",
     "count": "{{count}} positae",
     "openEditor": "In editore 3D aperi",
-    "drawing": "Delineationes et CAD in scaenis non ponuntur. Res conexas in scheda Notitia vide.",
-    "environment": "Fundi in scaenis non ponuntur. Fundus scaenae in editore 3D eligitur.",
-    "noneUserMapHint": "Tabulae hic additae nondum in scheda Tabula editoris 3D apparent."
+    "code": "A codice ipso adhibetur",
+    "noneHint": {
+      "model": "Edita in scheda Exemplarium editoris 3D apparet et in scaena poni potest.",
+      "map": "Edita in scheda Tabulae editoris 3D apparet et scaenae addi potest.",
+      "environment": "Edita in scheda Fundi editoris 3D ut fundus scaenae eligi potest.",
+      "drawing": "Delineationes in scaenis non ponuntur. Res coniunctas in scheda Notitiae vide.",
+      "cad": "Fontes CAD in scaenis non ponuntur. Res coniunctas in scheda Notitiae vide."
+    }
   },
   "activity": {
     "created": "Rem addidit",
@@ -285,18 +288,17 @@
     "metadata": "{{fields}} mutavit",
     "thumbnail": "Imagunculam servavit",
     "empty": "Nulla acta adhuc notata.",
-    "emptyBuiltin": "Haec res edita est. Mutationes in hac pagina factae hinc notantur.",
     "field": {
       "name": "nomen",
       "description": "descriptionem",
       "category": "classem",
       "sites": "navale",
-      "tags": "notas",
+      "categories": "categorias",
       "owner": "curatorem",
       "kind": "genus",
       "drawingNo": "numerum delineationis",
       "relatedAssetIds": "res conexas",
-      "defaultScale": "scalam praefinitam"
+      "placement": "Collocatio"
     },
     "versionRemoved": "Versio v{{version}} deleta"
   },
@@ -331,7 +333,6 @@
       "right": "A latere",
       "top": "Desuper"
     },
-    "fit": "Ad aspectum apta",
     "display": "Optiones ostensionis",
     "panoramaHint": "Trahe ut circumspicias"
   },
@@ -394,10 +395,12 @@
     "favorite": "Dilectis adde",
     "unfavorite": "E dilectis tolle",
     "copyLink": "Nexum exscribe",
+    "delete": "Dele",
     "more": "Plura de {{name}}"
   },
   "preview": {
     "label": "Praevisio: {{name}}",
+    "delete": "{{name}} dele",
     "previous": "Res prior",
     "next": "Res sequens",
     "close": "Praevisionem claude",
@@ -413,7 +416,7 @@
     "relatedCount": "Res conexae",
     "lodLevels": "Gradus LOD",
     "animations": "Animationes",
-    "filterByTag": "Res nota {{tag}} signatas ostende",
+    "filterByCategory": "Res categoriae {{category}} ostende",
     "previousHint": "Res prior (← ↑)",
     "nextHint": "Res sequens (→ ↓)",
     "closeHint": "Praevisionem claude (Esc)",
@@ -431,7 +434,7 @@
     "confirmTitle": "v{{version}} — {{action}}",
     "confirmHint": {
       "rejected": "Versio reiecta adhiberi non potest donec iterum ad recognitionem mittatur.",
-      "withdrawn": "Res retracta ex palaestra editoris 3D poni iam non potest. Quae in scaenis iam posita sunt manent."
+      "withdrawn": "Retracta res ex tabula editoris 3D non iam poni potest. Versio qua scaena vel codex utitur retrahi non potest."
     }
   },
   "compare": {
@@ -472,15 +475,44 @@
     "path": "Locus",
     "expand": "{{name}} explica",
     "collapse": "{{name}} complica",
-    "tagsOf": "Notae: {{name}}"
+    "categoriesOf": "Categoriae: {{name}}"
   },
   "optimize": {
-    "label": "Exemplar optima",
+    "label": "Optima",
     "hint": "Texturas minuit et recodit, geometriam comprimit antequam servet. Archetypum missum seorsum servatur.",
     "result": "Optimatum: {{before}} → {{after}}",
-    "skipped": "Optimatio nihil minuit; fasciculus ut missus servatus est.",
+    "skipped": "Ut missum est servatum.",
     "from": "← {{before}}",
     "stored": "Optimatum servatum. Sinistra magnitudo servata, dextra archetypi.",
-    "original": "Magnitudo archetypi"
+    "original": "Magnitudo archetypi",
+    "hintMap": "Texturas minuit, geometriam simplicem facit et comprimit antequam servet. Terra lata in tessellas et gradus LOD dividitur — modus ex mensura fasciculi eligitur. Archetypum missum seorsum servatur.",
+    "optimized": "Optimatum et servatum."
+  },
+  "placement": {
+    "palette": "In tabula editoris ostende",
+    "paletteHint": "Si exstinguitur, res in tabula editoris 3D non apparet. Utere pro rebus quae numquam in scaena ponuntur, ut partes quas codex ipse onerat.",
+    "mapRole": "Munus",
+    "mapRoleOption": {
+      "ground": "Solum",
+      "context": "Circumiecta"
+    },
+    "mapRoleHint": {
+      "ground": "Solum in quod exemplaria demissa cadunt. Addita etiam finibus camerae praeest.",
+      "context": "Terra extra aream operis. Multa triangula habet, itaque ex umbris et imaginibus maris eximitur neque solum ponendis exemplaribus praebet."
+    },
+    "defaultPosition": "Locus praedefinitus",
+    "defaultPositionHint": "Ubi tabula ponitur cum ex tabula editoris additur. Utere ut plures tabulae eiusdem systematis coordinatarum congruant.",
+    "note": "Quae hic mutas valent cum res proxime ponetur. Quae iam in scaena sunt non mutantur."
+  },
+  "protect": {
+    "removeTitle": "{{name}} deleri non potest",
+    "remove": {
+      "in-use": "Scaena vel codex ea utitur ({{count}} locis). Prius e scaena tolle vel aliam rem substitue.",
+      "usage-unknown": "Non omnes scaenae legi potuerunt; num res in usu sit ignoratur. Usum iterum lege antequam deleas."
+    },
+    "openUsage": "Usum ostende",
+    "removeBlocked": "Res in usu est, itaque non deleta. Vide ubi adhibeatur.",
+    "withdrawBlocked": "Versio in usu est, itaque non retracta. Vide ubi adhibeatur.",
+    "withdrawInUse": "Versio qua scaena vel codex utitur retrahi non potest."
   }
 }

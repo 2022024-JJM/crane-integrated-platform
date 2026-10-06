@@ -1,20 +1,19 @@
 import {
-  SCENE_MODEL_CATEGORIES,
-  sceneModelCatalog,
   type RulerPlacement,
   type SavedCameraInfo,
+  type SavedEnvironmentInfo,
   type SavedLightingInfo,
   type SavedMapInfo,
   type SavedSceneInfo,
   type SavedSceneView,
   type SavedViewSplit,
-  type SceneMapCatalogItem,
-  type SceneModelCategory,
-  type SceneModelCatalogItem,
+  type ScenePlaceableMap,
+  type ScenePlaceableModel,
   type SceneSiteLocation,
   getSceneMetersPerUnit,
   resolveMainView,
   resolveSceneHomeCamera,
+  resolveSeaMirror,
   resolveSeaVisible,
   resolveTrueNorth,
 } from '@crane/domain/3d';
@@ -30,16 +29,26 @@ import {
   type SceneTransformMode,
 } from '@crane/features/3d';
 import {
-  listScenePaletteGroups,
-  useScenePaletteModels,
+  filterScenePaletteModels,
+  listScenePaletteCategories,
+  pruneScenePaletteCategories,
+  toggleScenePaletteCategory,
+  useSceneAssetUpdates,
+  useScenePalette,
+  type AssetLibraryStatus,
+  type SceneAssetIssues,
+  type SceneAssetUpdate,
+  type ScenePaletteEnvironment,
+  type ScenePaletteMap,
   type ScenePaletteModel,
 } from '@crane/features/asset-library';
-import { Images, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import { cn } from '@crane/core/lib/utils';
 import { AppLink } from '@crane/ui/atoms/app-link';
+import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
 import {
   ResizableHandle,
@@ -54,12 +63,13 @@ import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
   PaletteAssetGrid,
+  PaletteAssetUpdates,
   PaletteEnvironmentSection,
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
+  PaletteCategoryFilter,
   PaletteViewSection,
-  PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
   type SceneEditorCameraActions,
@@ -139,10 +149,10 @@ function isEditableTarget(target: EventTarget | null) {
 export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
-    useState<SceneModelCatalogItem | null>(null);
-  // 모델 팔레트는 카탈로그를 자산 라이브러리와 합친 것이다 — 라이브러리의
-  // 이름·분류·썸네일로 보이고 게시된 자산만 놓는다(asset-library.md).
-  const palette = useScenePaletteModels(sceneModelCatalog);
+    useState<ScenePlaceableModel | null>(null);
+  // 팔레트(모델·맵·배경)는 자산 라이브러리에서 만든다 — 게시된 자산만 놓고,
+  // 놓는 순간 자산 id·버전·경로를 씬에 적는다(asset-library.md).
+  const palette = useScenePalette();
   // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
   // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어진다. 접기/펼치기는 헤더
   // 바 양끝의 고정 토글이 맡는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
@@ -235,9 +245,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     deletePlacedRuler,
     deletePlacedMap,
     addSceneMap,
+    updateSceneAsset,
     selectPlacedMap,
-    setEnvironmentId,
+    setEnvironment,
     setSeaVisible,
+    setSeaMirror,
     setTrueNorth,
     setSiteLocation,
     setLighting,
@@ -270,8 +282,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 
   // 맵 탭의 바다 스위치는 유효값(명시 boolean 또는 레거시 규칙)을 보이고,
   // 미지정 씬에는 안내 문구를 붙인다 — 캔버스와 같은 판정 함수 하나를 쓴다.
-  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
+  const seaVisible = resolveSeaVisible(sceneInfo);
   const seaExplicit = sceneInfo?.sea !== undefined;
+  const seaMirror = resolveSeaMirror(sceneInfo);
+  // 씬에 놓인 버전이 라이브러리의 현재 버전과 다른 자산 — 팔레트 아래에
+  // 알리고, 눌러서 갱신한다(씬 안의 같은 자산 전부, 히스토리 1회).
+  const assetUpdates = useSceneAssetUpdates(sceneInfo);
   const trueNorth = resolveTrueNorth(sceneInfo);
 
   // 씬 뷰 — 뷰 탭이 편집하고, 고정한 뷰·고정한 분할은 캔버스 우상단 줄에
@@ -593,7 +609,20 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             >
               <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
                 <ProjectPalettePanel
+                  libraryStatus={palette.status}
+                  onReloadLibrary={palette.reload}
                   items={palette.models}
+                  mapEntries={palette.maps}
+                  environmentEntries={palette.environments}
+                  assetUpdates={assetUpdates.updates}
+                  assetIssues={assetUpdates.issues}
+                  onUpdateAsset={(update) =>
+                    updateSceneAsset(
+                      update.assetId,
+                      update.toVersion,
+                      update.toPath,
+                    )
+                  }
                   maps={sceneInfo?.maps ?? EMPTY_MAPS}
                   draggingItemId={draggingCatalogItem?.id ?? null}
                   onDragStart={setDraggingCatalogItem}
@@ -604,6 +633,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   seaVisible={seaVisible}
                   seaExplicit={seaExplicit}
                   onSeaVisibleChange={setSeaVisible}
+                  seaMirror={seaMirror}
+                  onSeaMirrorChange={setSeaMirror}
                   trueNorth={trueNorth}
                   onTrueNorthChange={setTrueNorth}
                   views={sceneViews}
@@ -613,8 +644,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   regionId={regionId}
                   siteLocation={sceneInfo?.siteLocation}
                   onSiteLocationChange={setSiteLocation}
-                  environmentId={sceneInfo?.environmentId}
-                  onEnvironmentChange={setEnvironmentId}
+                  environment={sceneInfo?.environment}
+                  onEnvironmentChange={setEnvironment}
                   lighting={sceneInfo?.lighting}
                   onLightingChange={setLighting}
                   onLightingInteractionStart={startTransformInteraction}
@@ -676,7 +707,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 homeCamera={homeCamera}
                 sceneInfo={sceneInfo}
                 regionId={regionId}
-                catalogItems={palette.placeable}
+                catalogItems={palette.placeableModels}
                 transformMode={transformMode}
                 draggingModelCatalogItem={draggingCatalogItem}
                 onTransformVectorChange={(field, value) => {
@@ -729,7 +760,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   겹치지 않는다. */}
               <SceneShortcutsHelp />
               {/* 좌측 상단 — 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드·
-                  충돌 기준선·카탈로그 로드). 우상단 축 기즈모·하단 바와
+                  충돌 기준선·팔레트 모델 로드). 우상단 축 기즈모·하단 바와
                   겹치지 않는다. 비차단이다. */}
               <div className="pointer-events-none absolute top-1.5 left-1.5 z-10 flex items-start gap-2">
                 <SceneCompass ref={compassRef} />
@@ -930,16 +961,13 @@ function HierarchyPanel({
   );
 }
 
-const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
-
 /**
  * Project 패널은 상단 탭(모델/맵/배경)으로 나뉜다.
  *
  * 맵과 배경은 모델 카테고리가 아니다 — 드래그 앤 드롭으로 배치하는 에셋이
  * 아니라 씬에 하나뿐인 전역 설정(클릭 단일 선택)이라, 카테고리 목록에 섞으면
- * 카탈로그·드롭 경로까지 모델처럼 다루게 된다. 그래서 모델 탭 안의 좌측
- * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
- * 같은 층위의 탭으로 분리한다.
+ * 팔레트 목록·드롭 경로까지 모델처럼 다루게 된다. 그래서 모델 탭 안의
+ * 카테고리 필터는 모델만 좁히고, 맵·배경은 같은 층위의 탭으로 분리한다.
  *
  * 시뮬레이션(태그 재생·충돌 기록)과 영역 감지 탭은 2026-09-17 에 뺐다 —
  * 감지 설정은 사이드바의 감지 설정 페이지가, 영역 정의는 인스펙터 "영역"
@@ -956,25 +984,20 @@ const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   view: 'monitoring:editor.paletteTabs.view',
 };
 
-// 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
-// 빈 폴더로만 남으므로 표시에서 제외한다. domain 타입은 건드리지 않는다.
-type ModelPanelCategory = Exclude<SceneModelCategory, 'map'>;
-const MODEL_PANEL_CATEGORIES = SCENE_MODEL_CATEGORIES.filter(
-  (category): category is ModelPanelCategory => category !== 'map',
-);
-
-const MODEL_CATEGORY_LABEL_KEY: Record<ModelPanelCategory, string> = {
-  indoor: 'monitoring:editor.modelCategories.indoor',
-  outdoor: 'monitoring:editor.modelCategories.outdoor',
-};
-
 /**
  * 좌측 도킹 Project 팔레트 — 상단 탭(모델/맵/배경)으로 전환하는 세로 패널.
- * 모델 탭은 카테고리 칩 + 검색 + 드래그 가능한 에셋 그리드,
+ * 모델 탭은 카테고리 필터(전체 + 고른 카테고리 칩) + 검색 + 드래그 가능한 에셋 그리드,
  * 배경 탭은 클릭 단일 선택, 맵 탭은 추가/제거 토글 타일 그리드 + 바다 스위치다.
  */
 function ProjectPalettePanel({
+  libraryStatus,
+  onReloadLibrary,
   items,
+  mapEntries,
+  environmentEntries,
+  assetUpdates,
+  assetIssues,
+  onUpdateAsset,
   maps,
   draggingItemId,
   onDragStart,
@@ -985,6 +1008,8 @@ function ProjectPalettePanel({
   seaVisible,
   seaExplicit,
   onSeaVisibleChange,
+  seaMirror,
+  onSeaMirrorChange,
   trueNorth,
   onTrueNorthChange,
   views,
@@ -994,15 +1019,29 @@ function ProjectPalettePanel({
   regionId,
   siteLocation,
   onSiteLocationChange,
-  environmentId,
+  environment,
   onEnvironmentChange,
   lighting,
   onLightingChange,
   onLightingInteractionStart,
   onLightingInteractionEnd,
 }: {
-  /** 모델 탭 — 자산 라이브러리와 합친 팔레트 항목. */
+  /**
+   * 자산 라이브러리를 읽는 상태 — 읽지 못하면 세 탭의 목록이 비고 다시 읽기를
+   * 권한다(이미 놓인 것은 씬이 경로를 들고 있어 그대로 보인다).
+   */
+  libraryStatus: AssetLibraryStatus;
+  onReloadLibrary: () => void;
+  /** 모델 탭 — 자산 라이브러리의 모델. */
   items: ScenePaletteModel[];
+  /** 맵 탭 — 자산 라이브러리의 지도. */
+  mapEntries: ScenePaletteMap[];
+  /** 배경 탭 — 자산 라이브러리의 배경. */
+  environmentEntries: ScenePaletteEnvironment[];
+  /** 새 버전으로 갱신할 수 있는 자산과 라이브러리 밖의 객체 수. */
+  assetUpdates: SceneAssetUpdate[];
+  assetIssues: SceneAssetIssues;
+  onUpdateAsset: (update: SceneAssetUpdate) => void;
   maps: SavedMapInfo[];
   /** 뷰 탭 — 씬 뷰 목록·분할 칸과 그 편집 콜백. */
   views: SavedSceneView[];
@@ -1014,8 +1053,8 @@ function ProjectPalettePanel({
   /** 배경 탭 — 씬 지역(시간 기준)·세터(setSiteLocation). */
   siteLocation: SceneSiteLocation | undefined;
   onSiteLocationChange: (location: SceneSiteLocation) => void;
-  environmentId: string | null | undefined;
-  onEnvironmentChange: (environmentId: string | null) => void;
+  environment: SavedEnvironmentInfo | undefined;
+  onEnvironmentChange: (environment: SavedEnvironmentInfo | null) => void;
   /** 배경 탭 — 진북 입력. 유효값(resolveTrueNorth)·세터(setTrueNorth). */
   trueNorth: number;
   onTrueNorthChange: (degrees: number) => void;
@@ -1027,36 +1066,37 @@ function ProjectPalettePanel({
   onLightingInteractionStart: () => void;
   onLightingInteractionEnd: () => void;
   draggingItemId: string | null;
-  onDragStart: (item: SceneModelCatalogItem) => void;
+  onDragStart: (item: ScenePlaceableModel) => void;
   onDragEnd: () => void;
-  onAddMap: (catalogItem: SceneMapCatalogItem) => void;
+  onAddMap: (map: ScenePlaceableMap) => void;
   onRemoveMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
   /** 맵 탭 — 바다 스위치. 유효값·명시 여부·토글(setSeaVisible). */
   seaVisible: boolean;
   seaExplicit: boolean;
   onSeaVisibleChange: (visible: boolean) => void;
+  /** 맵 탭 — 미러 스위치. 유효값(resolveSeaMirror)·토글(setSeaMirror). */
+  seaMirror: boolean;
+  onSeaMirrorChange: (enabled: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    DEFAULT_MODEL_CATEGORY,
-  );
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [assetSearch, setAssetSearch] = useState('');
-  const [showThumbnailGenerator, setShowThumbnailGenerator] = useState(false);
-  // 묶음은 라이브러리의 태그(indoor·outdoor)가 정한다 — 카탈로그의 분류가
-  // 앞에 오고, 묶음이 정해지지 않은 자산은 그 뒤의 빈 묶음에 모인다.
-  const groups = useMemo(
-    () => listScenePaletteGroups(items, MODEL_PANEL_CATEGORIES),
-    [items],
+  // 고른 카테고리가 라이브러리에서 사라지면(이름을 고쳤을 때) 그 조건은
+  // 풀린다 — 칩으로 보이지 않는 조건이 목록을 비우지 않는다.
+  const activeCategories = useMemo(
+    () => pruneScenePaletteCategories(items, selectedCategories),
+    [items, selectedCategories],
   );
-  // 고른 묶음이 사라지면(태그를 고쳤을 때) 첫 묶음으로 돌아간다.
-  const activeCategory = groups.some((entry) => entry.group === selectedCategory)
-    ? selectedCategory
-    : (groups[0]?.group ?? DEFAULT_MODEL_CATEGORY);
-  const categoryItems = useMemo(() => {
-    return items.filter((model) => model.group === activeCategory);
-  }, [activeCategory, items]);
+  const paletteCategories = useMemo(
+    () => listScenePaletteCategories(items, activeCategories),
+    [activeCategories, items],
+  );
+  const categoryItems = useMemo(
+    () => filterScenePaletteModels(items, activeCategories),
+    [activeCategories, items],
+  );
   const blockedCount = useMemo(
     () => items.filter((model) => model.blocked === 'unpublished').length,
     [items],
@@ -1091,11 +1131,31 @@ function ProjectPalettePanel({
           );
         })}
       </div>
+      {libraryStatus === 'error' ? (
+        // 라이브러리를 읽지 못했다 — 놓을 목록이 없다. 씬은 그대로 편집된다.
+        <div
+          role="status"
+          className="border-border flex shrink-0 items-center gap-2 border-b bg-amber-500/10 px-2 py-1.5"
+        >
+          <p className="min-w-0 flex-1 text-[10px] leading-snug text-amber-800 dark:text-amber-200">
+            {t('monitoring:palette.libraryFailed')}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 shrink-0 px-2 text-[10px]"
+            onClick={onReloadLibrary}
+          >
+            {t('monitoring:palette.libraryRetry')}
+          </Button>
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-hidden p-2">
         {activeTab !== 'models' ? (
           <div className="h-full min-h-0 overflow-y-auto">
             {activeTab === 'map' ? (
               <PaletteMapSection
+                entries={mapEntries}
                 maps={maps}
                 onAddMap={onAddMap}
                 onRemoveMap={onRemoveMap}
@@ -1103,6 +1163,8 @@ function ProjectPalettePanel({
                 seaVisible={seaVisible}
                 seaExplicit={seaExplicit}
                 onSeaVisibleChange={onSeaVisibleChange}
+                seaMirror={seaMirror}
+                onSeaMirrorChange={onSeaMirrorChange}
               />
             ) : activeTab === 'view' ? (
               <PaletteViewSection
@@ -1116,7 +1178,8 @@ function ProjectPalettePanel({
                 regionId={regionId}
                 siteLocation={siteLocation}
                 onSiteLocationChange={onSiteLocationChange}
-                environmentId={environmentId}
+                entries={environmentEntries}
+                environment={environment}
                 onChange={onEnvironmentChange}
                 trueNorth={trueNorth}
                 onTrueNorthChange={onTrueNorthChange}
@@ -1138,43 +1201,18 @@ function ProjectPalettePanel({
           </div>
         ) : (
           <div className="flex h-full min-h-0 flex-col">
-            {/* 카테고리 — 좁은 세로 패널이라 사이드 목록 대신 칩 줄로 배치 */}
-            <div className="flex shrink-0 flex-wrap gap-1 pb-2">
-              {groups.map(({ group: category, count }) => {
-                const isActive = activeCategory === category;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => setSelectedCategory(category)}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition',
-                      isActive
-                        ? 'border-primary/30 bg-primary/12 text-foreground'
-                        : 'border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground',
-                    )}
-                  >
-                    {category in MODEL_CATEGORY_LABEL_KEY
-                      ? t(
-                          MODEL_CATEGORY_LABEL_KEY[
-                            category as ModelPanelCategory
-                          ],
-                        )
-                      : category ||
-                        t('monitoring:editor.modelCategories.none')}
-                    <span
-                      className={cn(
-                        'text-[10px]',
-                        isActive ? 'text-primary' : 'text-muted-foreground/70',
-                      )}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* 카테고리 필터 — 전체 + 고른 카테고리 칩 + 카테고리 검색(오른쪽 팝업) */}
+            <PaletteCategoryFilter
+              total={items.length}
+              selected={activeCategories}
+              categories={paletteCategories}
+              onToggle={(category) =>
+                setSelectedCategories(
+                  toggleScenePaletteCategory(activeCategories, category),
+                )
+              }
+              onClear={() => setSelectedCategories([])}
+            />
             <div className="mb-2 flex shrink-0 items-center gap-1.5">
               <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full min-w-0 flex-1 items-center border px-2 transition-colors focus-within:ring-3">
                 <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
@@ -1187,41 +1225,22 @@ function ProjectPalettePanel({
                   className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
                 />
               </div>
-              {/* dev 전용: 아래 모델 목록을 정적 썸네일 생성 패널로 토글한다.
-                  저장 미들웨어가 dev 서버에만 있으므로 운영에는 노출하지 않는다. */}
-              {import.meta.env.DEV ? (
-                <button
-                  type="button"
-                  onClick={() => setShowThumbnailGenerator((v) => !v)}
-                  aria-pressed={showThumbnailGenerator}
-                  title="미리보기 썸네일 생성"
-                  aria-label="미리보기 썸네일 생성"
-                  className={cn(
-                    'inline-flex size-7 shrink-0 cursor-pointer items-center justify-center border transition-colors',
-                    showThumbnailGenerator
-                      ? 'border-primary/30 bg-primary/12 text-foreground'
-                      : 'border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground',
-                  )}
-                >
-                  <Images className="size-3.5" />
-                </button>
-              ) : null}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {showThumbnailGenerator ? (
-                <PreviewThumbnailGeneratorPanel />
-              ) : (
-                <PaletteAssetGrid
-                  items={categoryItems}
-                  draggingItemId={draggingItemId}
-                  onDragStart={onDragStart}
-                  onDragEnd={onDragEnd}
-                  emptyMessage={t('monitoring:editor.noModelsInCategory')}
-                  assetSearch={assetSearch}
-                  onAssetSearchChange={setAssetSearch}
-                  showToolbar={false}
-                />
-              )}
+              <PaletteAssetGrid
+                items={categoryItems}
+                draggingItemId={draggingItemId}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                emptyMessage={
+                  items.length === 0
+                    ? t('monitoring:editor.noModels')
+                    : t('monitoring:editor.noModelsMatch')
+                }
+                assetSearch={assetSearch}
+                onAssetSearchChange={setAssetSearch}
+                showToolbar={false}
+              />
             </div>
             {blockedCount > 0 ? (
               <p className="border-border text-muted-foreground shrink-0 border-t px-1 pt-2 text-[10px] leading-relaxed">
@@ -1237,6 +1256,12 @@ function ProjectPalettePanel({
           </div>
         )}
       </div>
+      {/* 탭과 무관하게 맨 아래 — 어느 탭에서든 새 버전이 보인다. */}
+      <PaletteAssetUpdates
+        updates={assetUpdates}
+        issues={assetIssues}
+        onUpdate={onUpdateAsset}
+      />
     </div>
   );
 }

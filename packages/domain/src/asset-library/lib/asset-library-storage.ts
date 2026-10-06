@@ -1,4 +1,5 @@
 import { getAssetContentHash, withBaseUrl } from '@crane/core/lib/asset-url';
+import type { Vector3Tuple } from '@crane/core/types/math';
 import {
   ASSET_LIBRARY_DOCUMENT_PATH,
   ASSET_LIBRARY_REVISION_HEADER,
@@ -7,6 +8,7 @@ import {
   buildAssetVersionFileKey,
   DEV_ASSET_LIBRARY_API_PATH,
   hashAssetLibraryText,
+  isRemovableLegacyAssetPath,
   toAssetLibraryPublicPath,
 } from '../model/asset-library-paths';
 import type {
@@ -37,9 +39,11 @@ import {
  *   public/asset-library/library.json 에, 파일은 `/file` 하위로
  *   public/asset-library/files·thumbnails 에 쓴다. git 으로 커밋하면 배포의
  *   기준값이 된다.
- * - 운영: 미들웨어가 없으므로 문서는 localStorage 봉투에, 파일은 IndexedDB 에
- *   둔다 — **이 브라우저에만** 남는다. 봉투의 baseVersion(배포 문서의 콘텐츠
- *   해시)이 현재 배포와 다르면 배포본이 이긴다(씬·가상 태그와 같은 규칙).
+ * - 운영: 미들웨어가 없으므로 문서는 localStorage 봉투에 둔다 — **이
+ *   브라우저에만** 남는다. 파일은 올릴 수 없다(`canManageFiles: false`) —
+ *   등록·새 버전·삭제는 dev 에서 하고 배포한다. IndexedDB 에는 그 브라우저가
+ *   찍은 썸네일만 들어간다. 봉투의 baseVersion(배포 문서의 콘텐츠 해시)이
+ *   현재 배포와 다르면 배포본이 이긴다(씬·가상 태그와 같은 규칙).
  */
 
 export const ASSET_LIBRARY_STORAGE_KEY = 'crane:asset-library';
@@ -56,6 +60,9 @@ export class AssetLibraryConflictError extends Error {
   }
 }
 
+/** 어느 파이프라인으로 최적화할지 — 모델과 지도는 정책이 다르다. */
+export type AssetOptimizeKind = 'model' | 'map';
+
 /** 버전 파일을 저장한 결과. */
 export interface AssetStoredFile {
   ref: AssetFileRef;
@@ -63,14 +70,30 @@ export interface AssetStoredFile {
   sizeBytes: number;
   /** 최적화해 저장했는가. 요청했어도 실패하면 원본 그대로 저장하고 false 다. */
   optimized: boolean;
+  /**
+   * 파이프라인이 한 일(또는 원본 그대로 저장한 이유)을 적은 줄들. 지도는
+   * 타일·압축을 스스로 정하므로 무엇을 골랐는지 화면이 알린다.
+   */
+  report: string[];
+  /**
+   * 지도 파이프라인이 지운 루트 오프셋(Blender 씬에 놓여 있던 자리). 새로
+   * 등록하는 지도는 이 값을 기본 위치로 삼아 원래 자리에 놓인다.
+   */
+  rootOffset?: Vector3Tuple;
 }
 
 export interface AssetLibraryRepository {
   /** 저장이 이 브라우저 안에만 남는 환경인지. */
   readonly localOnly: boolean;
   /**
-   * 등록할 때 모델을 최적화할 수 있는 환경인지. 최적화는 Node 스크립트
-   * (`scripts/optimize-glb.mjs`)라 dev 서버에서만 된다.
+   * 파일을 올리고 지울 수 있는 환경인지 — 자산 등록, 새 버전 올리기, 자산·버전
+   * 삭제. dev 서버에서만 된다. 운영 브라우저에서 올린 파일은 그 브라우저에만
+   * 남아 씬이 가리킬 수 없으므로 막는다(이름·카테고리·상태 같은 문서 수정은 된다).
+   */
+  readonly canManageFiles: boolean;
+  /**
+   * 등록할 때 모델·지도를 최적화할 수 있는 환경인지. 최적화는 Node 스크립트
+   * (`scripts/optimize-glb.mjs`·`optimize-map.mjs`)라 dev 서버에서만 된다.
    */
   readonly canOptimize: boolean;
   load(): Promise<AssetLibraryDocument>;
@@ -82,17 +105,23 @@ export interface AssetLibraryRepository {
   save(document: AssetLibraryDocument): Promise<void>;
   /**
    * 버전 파일을 저장하고 그 위치를 돌려준다. 같은 위치에 덮어쓰지 않는다.
-   * `optimize` 는 GLB 를 최적화 파이프라인에 통과시켜 저장한다(할 수 있는
-   * 환경에서만).
+   * `optimize` 는 GLB 를 그 종류의 최적화 파이프라인에 통과시켜 저장한다(할 수
+   * 있는 환경에서만).
    */
   putVersionFile(
     target: { assetId: string; version: number; fileName: string },
     blob: Blob,
-    options?: { optimize?: boolean },
+    options?: { optimize?: AssetOptimizeKind },
   ): Promise<AssetStoredFile>;
   putThumbnail(assetId: string, blob: Blob): Promise<AssetFileRef>;
-  /** 자산의 모든 파일(버전·썸네일)을 지운다. */
-  removeAssetFiles(assetId: string): Promise<void>;
+  /**
+   * 자산의 모든 파일(버전·썸네일)을 지운다. `legacyPaths` 는 라이브러리
+   * 디렉터리 밖에 있는 그 자산의 버전 파일(옛 배포 경로 `/models/x.glb`)이다.
+   */
+  removeAssetFiles(
+    assetId: string,
+    legacyPaths?: readonly string[],
+  ): Promise<void>;
   /** 한 버전의 파일만 지운다(지운 버전의 뒷정리). */
   removeVersionFiles(assetId: string, version: number): Promise<void>;
   /** 화면에서 읽을 수 있는 URL. 브라우저 저장분은 object URL 이다. */
@@ -117,8 +146,8 @@ async function fetchDeployedDocument(): Promise<LoadedDocument> {
   const response = await fetch(withBaseUrl(ASSET_LIBRARY_DOCUMENT_PATH), {
     cache: 'no-store',
   });
-  // 문서가 아직 없는 배포(404)는 "저장된 메타데이터 없음" 이다 — builtin
-  // 자산만으로 라이브러리가 성립하므로 빈 문서로 본다.
+  // 문서가 아직 없는 배포(404)는 자산이 하나도 없는 라이브러리다 — 빈 문서로
+  // 본다.
   if (response.status === 404) {
     return {
       document: createEmptyAssetLibraryDocument(),
@@ -186,6 +215,7 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
 
   return {
     localOnly: false,
+    canManageFiles: true,
     canOptimize: true,
     load: async () => {
       const loaded = await fetchDeployedDocument();
@@ -232,7 +262,7 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
         target.fileName,
       );
       const params = new URLSearchParams({ key });
-      if (options?.optimize) params.set('optimize', '1');
+      if (options?.optimize) params.set('optimize', options.optimize);
       const response = await fetch(
         `${DEV_ASSET_LIBRARY_API_PATH}/file?${params.toString()}`,
         { method: 'POST', body: blob },
@@ -243,8 +273,14 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
       const result: unknown = await response.json().catch(() => null);
       const info =
         typeof result === 'object' && result !== null
-          ? (result as { bytes?: unknown; optimized?: unknown })
+          ? (result as {
+              bytes?: unknown;
+              optimized?: unknown;
+              report?: unknown;
+              rootOffset?: unknown;
+            })
           : {};
+      const rootOffset = info.rootOffset;
       return {
         ref: { storage: 'public', path: toAssetLibraryPublicPath(key) },
         sizeBytes:
@@ -252,12 +288,27 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
             ? info.bytes
             : blob.size,
         optimized: info.optimized === true,
+        report: Array.isArray(info.report)
+          ? info.report.filter((line): line is string => typeof line === 'string')
+          : [],
+        ...(Array.isArray(rootOffset) &&
+        rootOffset.length === 3 &&
+        rootOffset.every(
+          (item) => typeof item === 'number' && Number.isFinite(item),
+        )
+          ? { rootOffset: [rootOffset[0], rootOffset[1], rootOffset[2]] }
+          : {}),
       };
     },
     putThumbnail: (assetId, blob) =>
       postFile(buildAssetThumbnailKey(assetId), blob),
-    removeAssetFiles: async (assetId) => {
+    removeAssetFiles: async (assetId, legacyPaths = []) => {
       const params = new URLSearchParams({ assetId });
+      // 미들웨어가 정해진 디렉터리·확장자만 받는다 — 여기서도 같은 판정으로
+      // 걸러, 거부될 요청을 보내지 않는다.
+      for (const path of legacyPaths) {
+        if (isRemovableLegacyAssetPath(path)) params.append('path', path);
+      }
       const response = await fetch(
         `${DEV_ASSET_LIBRARY_API_PATH}/file?${params.toString()}`,
         { method: 'DELETE' },
@@ -385,6 +436,7 @@ export function createBrowserAssetLibraryRepository(
 
   return {
     localOnly: true,
+    canManageFiles: false,
     canOptimize: false,
     load: async () => {
       const stored = readStoredRecord();
@@ -448,6 +500,7 @@ export function createBrowserAssetLibraryRepository(
       ),
       sizeBytes: blob.size,
       optimized: false,
+      report: [],
     }),
     putThumbnail: (assetId, blob) => put(buildAssetThumbnailKey(assetId), blob),
     removeAssetFiles: async (assetId) => {

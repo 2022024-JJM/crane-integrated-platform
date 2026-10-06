@@ -7,7 +7,7 @@ import {
   formatMeters,
   formatSignedCount,
   pickGridStep,
-  toMeterSize,  formatDimensions,
+  formatDimensions,
 } from '../asset-format';
 
 const stats = (patch = {}) => ({
@@ -73,12 +73,6 @@ describe('formatMeters', () => {
     expect(formatMeters(100)).toBe('100.0 m');
     expect(formatMeters(0.5)).toBe('0.50 m');
     expect(formatMeters(Number.NaN)).toBe('—');
-  });
-});
-
-describe('toMeterSize', () => {
-  it('축마다 기본 스케일을 곱한다', () => {
-    expect(toMeterSize([130, 64, 43], [0.1, 0.1, 0.1])).toEqual([13, 6.4, 4.3]);
   });
 });
 

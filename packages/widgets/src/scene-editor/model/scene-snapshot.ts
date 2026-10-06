@@ -16,7 +16,13 @@ import type {
   SavedViewSplit,
   TagMapping,
 } from '@crane/domain/3d';
-import { getTagMappingTargetKey, STATUS_TAG_ROLES } from '@crane/domain/3d';
+import {
+  getTagMappingTargetKey,
+  isSceneAssetRefEqual,
+  isSceneEnvironmentEqual,
+  resolveSeaMirror,
+  STATUS_TAG_ROLES,
+} from '@crane/domain/3d';
 import {
   RULER_GUIDE_OPACITY_DEFAULT,
   RULER_GUIDE_SIDE_DEFAULT,
@@ -125,6 +131,9 @@ function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
+    // 자산 참조·역할 — 새 버전으로 갱신한 것이 dirty/undo 에 잡혀야 저장된다.
+    if (!isSceneAssetRefEqual(a[i].asset, b[i].asset)) return false;
+    if (a[i].role !== b[i].role) return false;
     if (a[i].name !== b[i].name) return false;
     // 잠금은 씬 데이터다 — 토글이 dirty/undo에 잡혀야 저장된다.
     // 지도는 필드 없음 = 잠김(types.ts 주석 참고).
@@ -313,6 +322,7 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     a.equipName === b.equipName &&
     a.craneId === b.craneId &&
     a.path === b.path &&
+    isSceneAssetRefEqual(a.asset, b.asset) &&
     a.opacity === b.opacity &&
     (a.locked ?? false) === (b.locked ?? false) &&
     (a.labelHidden ?? false) === (b.labelHidden ?? false) &&
@@ -334,12 +344,15 @@ export function isSceneInfoEqual(
 ): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  // 배경 선택도 저장 대상이라 dirty 판정에 포함한다. undefined(미지정)와
-  // null(배경 없음)은 다른 상태이므로 === 로 구분한다.
-  if (a.environmentId !== b.environmentId) return false;
+  // 배경 선택도 저장 대상이라 dirty 판정에 포함한다 — 경로와 자산 참조(버전)를
+  // 함께 본다.
+  if (!isSceneEnvironmentEqual(a.environment, b.environment)) return false;
   // 바다 표시도 3-상태(undefined=레거시 규칙 / boolean=명시)라 !== 로 구분한다.
   // 빠지면 스위치 토글이 동등 단락에 먹혀 dirty 가 서지 않는다.
   if (a.sea !== b.sea) return false;
+  // 바다에 씬을 비출지는 필드 없음 = 기본값(비춘다)이라 판정값으로 비교한다 —
+  // 미지정과 true 는 같고 false 만 다르다.
+  if (resolveSeaMirror(a) !== resolveSeaMirror(b)) return false;
   // 지역도 미지정(region 기본 지역)과 명시값을 구분한다 — 명시로 고른 순간이
   // 저장 대상이다(setSiteLocation).
   if (a.siteLocation !== b.siteLocation) return false;

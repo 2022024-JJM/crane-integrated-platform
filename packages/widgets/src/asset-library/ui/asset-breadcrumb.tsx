@@ -17,7 +17,7 @@ interface AssetBreadcrumbProps {
 
 /**
  * 계층 위의 위치 표기 — 라이브러리 › 종류. 앞 마디를 누르면 그 위치로
- * 올라간다. 고른 태그는 위치가 아니라 필터라 여기 적지 않는다(결과 위의 칩).
+ * 올라간다. 고른 카테고리는 위치가 아니라 필터라 여기 적지 않는다(결과 위의 칩).
  */
 export function AssetBreadcrumb({
   scope,

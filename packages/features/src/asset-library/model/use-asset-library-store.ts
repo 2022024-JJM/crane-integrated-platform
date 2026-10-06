@@ -9,10 +9,11 @@ import {
   ASSET_LIBRARY_SCHEMA_VERSION,
   buildAssetUsageIndex,
   createAssetId,
-  createUserAssetRecord,
+  createAssetRecord,
   getAssetLibraryRepository,
+  getAssetRemoveBlock,
+  getAssetWithdrawBlock,
   getFileExtension,
-  mergeAssetLibrary,
   sanitizeAssetFileName,
   setAssetThumbnail,
   setAssetVersionStats,
@@ -26,13 +27,14 @@ import {
   type AssetLibraryDocument,
   type AssetLibraryRepository,
   type AssetMetadataPatch,
+  type AssetOptimizeKind,
   type AssetRecord,
   type AssetStats,
   type AssetStatsTable,
   type AssetUsageIndex,
+  type AssetUsageSource,
+  type AssetUsageState,
   type AssetVersionStatus,
-  type BuiltinAssetSource,
-  type SceneAssetSource,
   ASSET_VERSIONS_MAX,
   getCurrentAssetVersion,
   getNextAssetVersionNumber,
@@ -40,7 +42,7 @@ import {
   type AssetFile,
   type AssetStoredFile,
 } from '@crane/domain/asset-library';
-import { collectBuiltinAssetSources } from '../lib/builtin-asset-sources';
+import { collectCodeAssetSources } from '../lib/code-asset-sources';
 import { loadSceneAssetSources } from '../lib/scene-asset-sources';
 
 /**
@@ -55,6 +57,11 @@ import { loadSceneAssetSources } from '../lib/scene-asset-sources';
  * 레코드를 바꾸는 규칙은 @crane/domain/asset-library 의 순수 함수에 있고,
  * 여기서는 그 결과를 반영·저장만 한다. 순수 함수가 같은 참조를 돌려주면
  * (바뀐 것이 없으면) 저장하지 않는다.
+ *
+ * 스토어가 직접 지키는 것은 두 가지다. 파일을 올리고 지우는 일(등록·새 버전·
+ * 삭제)은 그럴 수 있는 환경(`canManageFiles`)에서만 한다. 그리고 씬이나 화면
+ * 코드가 쓰고 있는 자산은 지우지 않고, 쓰이는 버전은 철회하지 않는다 —
+ * 그때마다 사용처를 다시 읽어 확인한다.
  */
 
 export const ASSET_FAVORITES_STORAGE_KEY = 'crane:asset-library:favorites';
@@ -72,12 +79,24 @@ export interface ImportAssetInput {
   name: string;
   description: string;
   /** 종류 안의 세부 분류 — 탐색 계층의 체크박스가 이 값으로 좁힌다. */
-  tags: string[];
+  categories: string[];
   revision?: string;
   drawingNo?: string;
   contentHash: string | null;
-  /** 모델을 최적화해 저장한다(할 수 있는 환경에서만 듣는다). */
+  /** 모델·지도를 최적화해 저장한다(할 수 있는 환경에서만 듣는다). */
   optimize?: boolean;
+}
+
+/** 방금 올린 파일을 저장하면서 파이프라인이 한 일. */
+export interface AssetFileReport {
+  assetId: string;
+  version: number;
+  /** 최적화를 요청했는가. */
+  requested: boolean;
+  /** 최적화해 저장했는가. 요청했는데 false 면 원본 그대로 저장한 것이다. */
+  optimized: boolean;
+  /** 파이프라인이 고른 것·건너뛴 이유. */
+  lines: string[];
 }
 
 export interface AddVersionInput {
@@ -101,11 +120,19 @@ export interface AssetLibraryState {
   saveState: AssetLibrarySaveState;
   /** 저장이 이 브라우저 안에만 남는 환경인지. */
   localOnly: boolean;
-  /** 등록할 때 모델을 최적화할 수 있는 환경인지(dev 서버). */
+  /**
+   * 파일을 올리고 지울 수 있는 환경인지(dev 서버) — 자산 등록, 새 버전 올리기,
+   * 자산·버전 삭제. 아니면 그 작업들은 아무것도 하지 않는다.
+   */
+  canManageFiles: boolean;
+  /** 등록할 때 모델·지도를 최적화할 수 있는 환경인지(dev 서버). */
   canOptimize: boolean;
+  /** 마지막으로 올린 파일의 처리 결과 — 화면이 한 번 알린다. */
+  fileReport: AssetFileReport | null;
 
   /** `force` 는 이미 읽었어도 다시 읽는다(다른 곳에서 바뀌었을 때). */
   load: (options?: { force?: boolean }) => Promise<void>;
+  /** 사용처를 (다시) 읽는다. 이미 읽는 중이면 그 읽기를 기다린다. */
   loadUsage: () => Promise<void>;
   retrySave: () => Promise<boolean>;
 
@@ -114,6 +141,7 @@ export interface AssetLibraryState {
     patch: AssetMetadataPatch,
     actor: string,
   ) => Promise<boolean>;
+  /** 쓰이고 있는 버전은 철회하지 않는다(false). */
   transitionStatus: (
     assetId: string,
     version: number,
@@ -155,7 +183,7 @@ export interface AssetLibraryState {
     blob: Blob,
     actor: string | null,
   ) => Promise<boolean>;
-  /** 이 화면에서 등록한 자산만 지울 수 있다. */
+  /** 어디에서도 쓰이지 않는 자산만 지운다(파일까지). */
   removeAsset: (assetId: string) => Promise<boolean>;
   /** 게시된 적 없는(초안·반려) 버전을 파일과 함께 지운다. */
   removeVersion: (
@@ -173,13 +201,16 @@ export interface AssetLibraryState {
     toPatch: (asset: AssetRecord) => AssetMetadataPatch | null,
     actor: string,
   ) => Promise<number>;
-  /** 여러 자산의 현재 버전 상태를 한 번에 옮긴다. 허용되지 않는 것은 건너뛴다. */
+  /**
+   * 여러 자산의 현재 버전 상태를 한 번에 옮긴다. 허용되지 않는 것(표에 없는
+   * 전이, 쓰이고 있는 버전의 철회)은 건너뛴다.
+   */
   transitionManyStatus: (
     assetIds: readonly string[],
     to: AssetVersionStatus,
     actor: string,
   ) => Promise<number>;
-  /** 등록한 자산 여럿을 한 번에 지운다. 지운 수를 돌려준다. */
+  /** 쓰이지 않는 자산 여럿을 한 번에 지운다. 지운 수를 돌려준다. */
   removeManyAssets: (assetIds: readonly string[]) => Promise<number>;
 
   toggleFavorite: (assetId: string) => void;
@@ -195,9 +226,10 @@ export interface AssetLibraryState {
 
 export interface AssetLibraryStoreDeps {
   getRepository: () => AssetLibraryRepository;
-  getBuiltinSources: () => BuiltinAssetSource[];
+  /** 화면 코드가 직접 쓰는 자산 — 씬과 함께 사용처가 된다. */
+  getCodeSources: () => AssetUsageSource[];
   loadSceneSources: () => Promise<{
-    sources: SceneAssetSource[];
+    sources: AssetUsageSource[];
     failed: string[];
   }>;
   now: () => string;
@@ -206,11 +238,24 @@ export interface AssetLibraryStoreDeps {
 
 const defaultDeps: AssetLibraryStoreDeps = {
   getRepository: getAssetLibraryRepository,
-  getBuiltinSources: collectBuiltinAssetSources,
+  getCodeSources: collectCodeAssetSources,
   loadSceneSources: loadSceneAssetSources,
   now: () => new Date().toISOString(),
   createId,
 };
+
+/** 사용처를 다 읽었는가 — 다 읽지 못했으면 "안 쓰인다" 를 믿을 수 없다. */
+export function toAssetUsageState(
+  state: Pick<
+    AssetLibraryState,
+    'usageIndex' | 'usageStatus' | 'usageFailedScenes'
+  >,
+): AssetUsageState {
+  return {
+    index: state.usageIndex,
+    known: state.usageStatus === 'ready' && state.usageFailedScenes.length === 0,
+  };
+}
 
 function readFavorites(): string[] {
   const stored = getStorageJson<unknown>(ASSET_FAVORITES_STORAGE_KEY);
@@ -228,6 +273,7 @@ export function createAssetLibraryStore(
   // 저장을 한 줄로 세운다. 앞선 저장이 실패해도 다음 저장은 진행한다.
   let saveQueue: Promise<unknown> = Promise.resolve();
   let loadPromise: Promise<void> | null = null;
+  let usagePromise: Promise<void> | null = null;
 
   return create<AssetLibraryState>((set, get) => {
     const context = (actor: string): AssetChangeContext => ({
@@ -250,17 +296,59 @@ export function createAssetLibraryStore(
     const isReady = () => get().status === 'ready';
 
     /**
-     * 최적화를 걸지 — 요청했고, 모델이고, GLB 일 때만. 지도는 전용
-     * 파이프라인(타일·LOD)이 따로 있어 여기서 건드리지 않는다.
+     * 어느 파이프라인으로 최적화할지 — 요청했고, GLB 이고, 모델이나 지도일
+     * 때만. 지도는 정책이 달라(타일·LOD·평면 레이어 보호) 전용 파이프라인을
+     * 탄다.
      */
-    const canOptimizeFile = (
+    const resolveOptimizeKind = (
       requested: boolean | undefined,
       kind: AssetRecord['kind'],
       fileName: string,
-    ) =>
-      requested === true &&
-      kind === 'model' &&
-      getFileExtension(fileName) === 'glb';
+    ): AssetOptimizeKind | undefined => {
+      if (requested !== true || getFileExtension(fileName) !== 'glb') {
+        return undefined;
+      }
+      return kind === 'model' || kind === 'map' ? kind : undefined;
+    };
+
+    /**
+     * 사용처를 새로 읽고, 다 읽었는지와 함께 돌려준다. 철회·삭제 직전에
+     * 부른다 — 화면을 연 뒤로 씬이 바뀌었을 수 있다.
+     */
+    const readUsage = async (): Promise<AssetUsageState> => {
+      await get().loadUsage();
+      return toAssetUsageState(get());
+    };
+
+    /**
+     * 자산을 지울 때 함께 지울 옛 배포 경로의 파일 — 남는 자산이 같은 파일을
+     * 가리키면 뺀다. 라이브러리 디렉터리 안의 파일은 저장소가 자산 id 로
+     * 지운다.
+     */
+    const collectLegacyPaths = (
+      removed: readonly AssetRecord[],
+      remaining: readonly AssetRecord[],
+    ): Map<string, string[]> => {
+      const kept = new Set<string>();
+      for (const asset of remaining) {
+        for (const version of asset.versions) {
+          if (version.file.ref.storage === 'public') {
+            kept.add(version.file.ref.path);
+          }
+        }
+      }
+      return new Map(
+        removed.map((asset) => [
+          asset.id,
+          asset.versions.flatMap((version) =>
+            version.file.ref.storage === 'public' &&
+            !kept.has(version.file.ref.path)
+              ? [version.file.ref.path]
+              : [],
+          ),
+        ]),
+      );
+    };
 
     /** 저장 결과를 버전의 파일 정보로. */
     const toAssetFile = (
@@ -357,13 +445,16 @@ export function createAssetLibraryStore(
       assets: [],
       collections: [],
       statsTable: {},
-      usageIndex: new Map(),
+      // 화면 코드가 쓰는 자산은 씬을 읽기 전에도 안다 — 처음부터 담아 둔다.
+      usageIndex: buildAssetUsageIndex(deps.getCodeSources()),
       usageStatus: 'idle',
       usageFailedScenes: [],
       favorites: readFavorites(),
       saveState: 'idle',
       localOnly: false,
+      canManageFiles: false,
       canOptimize: false,
+      fileReport: null,
 
       load: (options) => {
         // 여러 화면이 동시에 불러도 한 번만 읽는다.
@@ -378,24 +469,21 @@ export function createAssetLibraryStore(
           repository.loadStatsTable(),
         ])
           .then(([document, statsTable]) => {
-            const merged = mergeAssetLibrary(
-              deps.getBuiltinSources(),
-              document,
-            );
             // 없어진 자산을 가리키는 즐겨찾기는 걷어낸다(다른 곳에서 지워졌거나
             // 배포가 바뀌어 사라진 자산). 남겨 두면 레일의 개수에는 세어지는데
             // 눌러도 보이지 않는다. 읽기에 성공했을 때만 한다 — 실패한 상태의
             // 빈 목록으로 견주면 전부 지워진다.
-            const liveIds = new Set(merged.assets.map((asset) => asset.id));
+            const liveIds = new Set(document.assets.map((asset) => asset.id));
             const current = get().favorites;
             const favorites = current.filter((id) => liveIds.has(id));
             const pruned = favorites.length !== current.length;
             set({
               status: 'ready',
-              assets: merged.assets,
-              collections: merged.collections,
+              assets: document.assets,
+              collections: document.collections,
               statsTable,
               localOnly: repository.localOnly,
+              canManageFiles: repository.canManageFiles,
               canOptimize: repository.canOptimize,
               // 다시 읽었으니 저장 못 한 변경과 충돌은 여기서 끝난다.
               saveState: 'idle',
@@ -413,20 +501,40 @@ export function createAssetLibraryStore(
         return loadPromise;
       },
 
-      loadUsage: async () => {
-        if (get().usageStatus === 'loading') return;
-        set({ usageStatus: 'loading' });
-        try {
-          const { sources, failed } = await deps.loadSceneSources();
-          set({
-            usageIndex: buildAssetUsageIndex(sources),
-            usageFailedScenes: failed,
-            usageStatus: 'ready',
+      loadUsage: () => {
+        if (usagePromise) return usagePromise;
+        // 이미 읽은 것을 다시 읽을 때는 화면을 "읽는 중" 으로 되돌리지 않는다 —
+        // 읽은 값이 보이는 채로 새 값으로 바뀐다.
+        if (get().usageStatus !== 'ready') set({ usageStatus: 'loading' });
+        usagePromise = deps
+          .loadSceneSources()
+          .then(
+            ({ sources, failed }) => {
+              set({
+                usageIndex: buildAssetUsageIndex([
+                  ...sources,
+                  ...deps.getCodeSources(),
+                ]),
+                usageFailedScenes: failed,
+                usageStatus: 'ready',
+              });
+            },
+            (error: unknown) => {
+              console.error(
+                '[asset-library] Failed to load scene usage.',
+                error,
+              );
+              // 씬을 못 읽어도 코드가 쓰는 자산은 사용처에 남긴다.
+              set({
+                usageIndex: buildAssetUsageIndex(deps.getCodeSources()),
+                usageStatus: 'error',
+              });
+            },
+          )
+          .finally(() => {
+            usagePromise = null;
           });
-        } catch (error) {
-          console.error('[asset-library] Failed to load scene usage.', error);
-          set({ usageStatus: 'error' });
-        }
+        return usagePromise;
       },
 
       retrySave: () => persist(),
@@ -436,10 +544,19 @@ export function createAssetLibraryStore(
           updateAssetMetadata(asset, patch, context(actor)),
         ),
 
-      transitionStatus: (assetId, version, to, actor) =>
-        applyToAsset(assetId, (asset) =>
+      transitionStatus: async (assetId, version, to, actor) => {
+        if (to === 'withdrawn') {
+          if (!isReady()) return false;
+          const usage = await readUsage();
+          const asset = get().assets.find((a) => a.id === assetId);
+          if (!asset || getAssetWithdrawBlock(asset, version, usage)) {
+            return false;
+          }
+        }
+        return applyToAsset(assetId, (asset) =>
           transitionAssetVersionStatus(asset, version, to, context(actor)),
-        ),
+        );
+      },
 
       setCurrentVersion: (assetId, version, actor) =>
         applyToAsset(assetId, (asset) =>
@@ -459,58 +576,90 @@ export function createAssetLibraryStore(
         }),
 
       importAsset: async (input, actor) => {
-        if (!isReady()) return null;
+        if (!isReady() || !get().canManageFiles) return null;
         const existingIds = new Set(get().assets.map((asset) => asset.id));
         const id = createAssetId(input.name, existingIds, deps.createId());
         const fileName = sanitizeAssetFileName(input.file.name);
+        const optimize = resolveOptimizeKind(
+          input.optimize,
+          input.kind,
+          fileName,
+        );
         let stored;
         try {
           stored = await deps
             .getRepository()
             .putVersionFile({ assetId: id, version: 1, fileName }, input.file, {
-              optimize: canOptimizeFile(input.optimize, input.kind, fileName),
+              optimize,
             });
         } catch (error) {
           console.error('[asset-library] Failed to store file.', error);
           return null;
         }
-        const record = createUserAssetRecord(
+        const record = createAssetRecord(
           {
             id,
             kind: input.kind,
             name: input.name,
             description: input.description,
-            tags: input.tags,
+            categories: input.categories,
             file: toAssetFile(stored, fileName, input.file, input.contentHash),
             revision: input.revision,
             drawingNo: input.drawingNo,
+            // 지도 파이프라인이 지운 루트 오프셋 — 팔레트로 추가하면 그 자리에
+            // 놓인다(Blender 씬에 있던 자리). 새 버전에는 적용하지 않는다:
+            // 이미 놓인 것과 기본 위치는 그 자산의 것이다.
+            ...(stored.rootOffset
+              ? { placement: { defaultPosition: stored.rootOffset } }
+              : {}),
           },
           context(actor),
         );
-        set({ assets: [...get().assets, record] });
+        set({
+          assets: [...get().assets, record],
+          fileReport: {
+            assetId: id,
+            version: 1,
+            requested: optimize !== undefined,
+            optimized: stored.optimized,
+            lines: stored.report,
+          },
+        });
         await persist();
         return record;
       },
 
       addVersion: async (assetId, input, actor) => {
-        if (!isReady()) return null;
+        if (!isReady() || !get().canManageFiles) return null;
         const asset = get().assets.find((a) => a.id === assetId);
         if (!asset) return null;
         // 상한에 닿은 자산에는 파일부터 올리지 않는다(주인 없는 파일이 남는다).
         if (asset.versions.length >= ASSET_VERSIONS_MAX) return null;
         const version = getNextAssetVersionNumber(asset);
         const fileName = sanitizeAssetFileName(input.file.name);
+        const optimize = resolveOptimizeKind(
+          input.optimize,
+          asset.kind,
+          fileName,
+        );
         let stored;
         try {
           stored = await deps
             .getRepository()
             .putVersionFile({ assetId, version, fileName }, input.file, {
-              optimize: canOptimizeFile(input.optimize, asset.kind, fileName),
+              optimize,
             });
         } catch (error) {
           console.error('[asset-library] Failed to store file.', error);
           return null;
         }
+        const report: AssetFileReport = {
+          assetId,
+          version,
+          requested: optimize !== undefined,
+          optimized: stored.optimized,
+          lines: stored.report,
+        };
         let added: number | null = null;
         await applyToAsset(assetId, (current) => {
           const next = addAssetVersion(
@@ -527,6 +676,7 @@ export function createAssetLibraryStore(
           }
           return next;
         });
+        if (added !== null) set({ fileReport: report });
         return added;
       },
 
@@ -550,9 +700,10 @@ export function createAssetLibraryStore(
       },
 
       removeAsset: async (assetId) => {
-        if (!isReady()) return false;
+        if (!isReady() || !get().canManageFiles) return false;
+        const usage = await readUsage();
         const asset = get().assets.find((a) => a.id === assetId);
-        if (!asset || asset.origin !== 'user') return false;
+        if (!asset || getAssetRemoveBlock(asset, usage)) return false;
         const before = {
           assets: get().assets,
           collections: get().collections,
@@ -590,8 +741,11 @@ export function createAssetLibraryStore(
           return false;
         }
         // 파일 삭제 실패는 고아 파일로 남을 뿐이다.
+        const legacyPaths = collectLegacyPaths([asset], get().assets);
         try {
-          await deps.getRepository().removeAssetFiles(assetId);
+          await deps
+            .getRepository()
+            .removeAssetFiles(assetId, legacyPaths.get(assetId) ?? []);
         } catch (error) {
           console.warn('[asset-library] Failed to remove asset files.', error);
         }
@@ -599,6 +753,7 @@ export function createAssetLibraryStore(
       },
 
       removeVersion: async (assetId, version, actor) => {
+        if (!get().canManageFiles) return false;
         const saved = await applyToAsset(assetId, (asset) =>
           removeAssetVersion(asset, version, context(actor)),
         );
@@ -617,25 +772,31 @@ export function createAssetLibraryStore(
           return patch ? updateAssetMetadata(asset, patch, context(actor)) : asset;
         }),
 
-      transitionManyStatus: (assetIds, to, actor) =>
-        applyToMany(assetIds, (asset) =>
-          transitionAssetVersionStatus(
+      transitionManyStatus: async (assetIds, to, actor) => {
+        if (!isReady()) return 0;
+        const usage = to === 'withdrawn' ? await readUsage() : null;
+        return applyToMany(assetIds, (asset) => {
+          const version = getCurrentAssetVersion(asset).version;
+          if (usage && getAssetWithdrawBlock(asset, version, usage)) {
+            return asset;
+          }
+          return transitionAssetVersionStatus(
             asset,
-            getCurrentAssetVersion(asset).version,
+            version,
             to,
             context(actor),
-          ),
-        ),
+          );
+        });
+      },
 
       removeManyAssets: async (assetIds) => {
-        if (!isReady()) return 0;
-        const targets = new Set(
-          get()
-            .assets.filter(
-              (asset) => assetIds.includes(asset.id) && asset.origin === 'user',
-            )
-            .map((asset) => asset.id),
+        if (!isReady() || !get().canManageFiles) return 0;
+        const usage = await readUsage();
+        const removed = get().assets.filter(
+          (asset) =>
+            assetIds.includes(asset.id) && !getAssetRemoveBlock(asset, usage),
         );
+        const targets = new Set(removed.map((asset) => asset.id));
         if (targets.size === 0) return 0;
         const before = {
           assets: get().assets,
@@ -669,9 +830,12 @@ export function createAssetLibraryStore(
           set(before);
           return 0;
         }
+        const legacyPaths = collectLegacyPaths(removed, get().assets);
         for (const assetId of targets) {
           try {
-            await deps.getRepository().removeAssetFiles(assetId);
+            await deps
+              .getRepository()
+              .removeAssetFiles(assetId, legacyPaths.get(assetId) ?? []);
           } catch (error) {
             console.warn('[asset-library] Failed to remove asset files.', error);
           }

@@ -2,7 +2,7 @@
 //
 // 사용법:
 //   node scripts/add-model-lod.mjs <파일명.glb>   # assets-src/models/ 의 현재본에 LOD 추가
-//   이어서 반드시: pnpm optimize:glb <파일명.glb> # public 으로 압축 배포
+//   이어서: 그 파일을 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)
 //
 // 왜:
 //   타워크레인 한 기가 11만~17만 삼각형인데 관제 시점(300m 안팎)에선 그
@@ -29,13 +29,14 @@
 //
 // 동작:
 //   1. assets-src/models/<파일>(현재본)을 읽는다. LOD 전 원본을 <파일>.nolod 로
-//      보존한다(이미 있으면 건너뜀 — .glb 가 아니라 optimize:glb 대상이 아니다).
+//      보존한다(이미 있으면 건너뜀).
 //      자산을 새 버전으로 교체할 때는 옛 .nolod 를 함께 지운다.
 //   2. 노드별 삼각형이 MIN_NODE_TRIS 이상인 메시 노드에 LOD_LEVELS 를 만든다.
 //      각 레벨은 목표 비율(ratio)까지 줄이되 상대 오차(maxError, 메시 크기 대비)를
 //      넘지 않는다. lodError(extras)는 달성 오차 × 메시 크기 × 노드 월드 스케일
 //      = 절대 미터 상한이다. 직전 레벨 대비 90% 넘게 남으면 그 레벨은 생략.
-//   3. 결과를 assets-src/models/<파일> 에 덮어쓴다 → pnpm optimize:glb 로 배포.
+//   3. 결과를 assets-src/models/<파일> 에 덮어쓴다 → 자산 라이브러리에서 새
+//      버전으로 올려 배포한다(등록 화면의 최적화가 압축한다).
 import { copyFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -76,8 +77,8 @@ if (!file || !file.endsWith('.glb')) {
 const backupPath = join(BACKUP_DIR, file);
 if (!existsSync(backupPath)) {
   console.error(
-    `원본 백업본이 없습니다: ${backupPath}\n` +
-      '신규 모델이면 먼저 pnpm optimize:glb 로 반입해 백업본을 만든 뒤 실행하세요.',
+    `원본이 없습니다: ${backupPath}\n` +
+      '가공할 원본 GLB 를 assets-src/models/ 에 놓고 실행하세요.',
   );
   process.exit(1);
 }
@@ -421,4 +422,6 @@ for (const r of report) {
     );
   }
 }
-console.log(`\n저장: ${backupPath}\n이어서: pnpm optimize:glb ${file}`);
+console.log(
+  `\n저장: ${backupPath}\n이어서: 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)`,
+);

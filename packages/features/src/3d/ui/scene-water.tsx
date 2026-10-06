@@ -15,7 +15,10 @@ import {
 import { OceanWater, type OceanWaterUniforms } from '../lib/ocean-water';
 import type { RgbTuple } from '../lib/sky-lighting';
 import { ensureRepeatWrapping } from '../lib/water-normals';
-import { resolveReflectionExcludedMapIds } from '../lib/water-reflection';
+import {
+  resolveReflectionExcludedMapIds,
+  selectReflectionHidden,
+} from '../lib/water-reflection';
 import { resolveWaterSunUniforms } from '../lib/water-sun-uniforms';
 import { sceneLightingInfo } from '../model/scene-lighting-info';
 import { getReflectionExclusions } from '../model/scene-reflection-exclusions';
@@ -38,7 +41,8 @@ import { getReflectionExclusions } from '../model/scene-reflection-exclusions';
  * water-reflection 의 id 판정 → 매 패스 modelObjectRegistry 조회(늦게 로드되는
  * 지도 루트도 잡히고, 미등록 id 는 undefined 라 포크가 건너뛴다). 밤하늘 틴트
  * 돔·태양/달 스프라이트는 SceneLighting 이 model/scene-reflection-exclusions
- * 에 등록한다.
+ * 에 등록한다. `mirror` 가 꺼진 씬(resolveSeaMirror)은 씬 최상위 객체를 전부
+ * 빼 하늘만 비춘다 — 판정은 lib/water-reflection 의 selectReflectionHidden.
  *
  * 태양 하이라이트는 sceneLightingInfo.sun*(실제 태양 — manual·solar 모두
  * SceneLighting 이 발행) 을 따르고 변환은 lib/water-sun-uniforms 가 한다.
@@ -97,14 +101,18 @@ const WATER_TIME_SCALE = 0.35;
 const WATER_NORMALS_PATH = '/textures/waternormals.jpg';
 
 /**
- * 물 인스턴스별 반사 제외 지도 id — React 밖 슬롯. 물 memo 는 노멀맵에만
- * 의존해야 하고(maps 는 에디터 편집마다 새 배열이라 deps 에 넣으면 RT·
- * 머티리얼이 매번 재생성), 클로저로 잡으면 나중에 추가한 컨텍스트 지도가
- * 반사에서 빠지지 않는다. 훅이 돌려준 물은 effect 에서 고칠 수 없고
- * (react-hooks/immutability), ref 를 읽는 게터는 생성자 인자 검사
+ * 물 인스턴스별 반사 설정(제외 지도 id·씬을 비출지) — React 밖 슬롯. 물
+ * memo 는 노멀맵에만 의존해야 하고(maps 는 에디터 편집마다 새 배열이라 deps
+ * 에 넣으면 RT·머티리얼이 매번 재생성), 클로저로 잡으면 나중에 추가한
+ * 컨텍스트 지도가 반사에서 빠지지 않는다. 훅이 돌려준 물은 effect 에서 고칠
+ * 수 없고(react-hooks/immutability), ref 를 읽는 게터는 생성자 인자 검사
  * (react-hooks/refs)에 걸리므로 effect 가 여기에 쓰고 게터가 매 패스 읽는다.
  */
-const excludedMapIdsByWater = new WeakMap<OceanWater, readonly string[]>();
+interface WaterReflectionSlot {
+  excludedMapIds: readonly string[];
+  mirror: boolean;
+}
+const reflectionSlotByWater = new WeakMap<OceanWater, WaterReflectionSlot>();
 const NO_MAP_IDS: readonly string[] = [];
 
 /**
@@ -113,7 +121,8 @@ const NO_MAP_IDS: readonly string[] = [];
  */
 function* excludedObjectsOf(water: OceanWater) {
   yield* getReflectionExclusions();
-  for (const id of excludedMapIdsByWater.get(water) ?? NO_MAP_IDS) {
+  const mapIds = reflectionSlotByWater.get(water)?.excludedMapIds ?? NO_MAP_IDS;
+  for (const id of mapIds) {
     yield modelObjectRegistry.get(id);
   }
 }
@@ -137,7 +146,14 @@ function createFrameState(uniforms: OceanWaterUniforms): WaterFrameState {
   };
 }
 
-export function SceneWater({ maps }: { maps?: SavedMapInfo[] }) {
+export function SceneWater({
+  maps,
+  mirror,
+}: {
+  maps?: SavedMapInfo[];
+  /** 바다에 씬을 비출지(resolveSeaMirror) — 끄면 하늘만 비친다. */
+  mirror: boolean;
+}) {
   const normals = useLoader(TextureLoader, withBaseUrl(WATER_NORMALS_PATH));
   const invalidate = useThree((s) => s.invalidate);
 
@@ -163,8 +179,14 @@ export function SceneWater({ maps }: { maps?: SavedMapInfo[] }) {
       sunDiffuseIntensity: WATER_SUN_DIFFUSE_INTENSITY,
       alpha: 1,
       fog: false,
-      // 미러 패스마다 호출 — 이 물의 슬롯(excludedMapIdsByWater)을 읽는다.
-      excludedObjects: () => excludedObjectsOf(water),
+      // 미러 패스마다 호출 — 이 물의 슬롯(reflectionSlotByWater)을 읽는다.
+      // 슬롯이 차기 전(첫 layout effect 전)엔 씬을 비추는 기본 동작이다.
+      excludedObjects: (scene) =>
+        selectReflectionHidden(
+          reflectionSlotByWater.get(water)?.mirror ?? true,
+          scene,
+          excludedObjectsOf(water),
+        ),
     });
     water.rotation.x = -Math.PI / 2;
     water.position.y = SEA_LEVEL_Y;
@@ -179,13 +201,14 @@ export function SceneWater({ maps }: { maps?: SavedMapInfo[] }) {
     [maps],
   );
   // layout effect — 첫 미러 패스(다음 rAF)보다 먼저 슬롯이 차 있어야
-  // 컨텍스트 지형(수백만 삼각형)이 첫 프레임 반사에 들어가지 않는다.
+  // 컨텍스트 지형(수백만 삼각형)이 첫 프레임 반사에 들어가지 않고, 씬을
+  // 비추지 않는 바다가 첫 프레임에 씬 전체를 한 번 그리지 않는다.
   useLayoutEffect(() => {
-    excludedMapIdsByWater.set(water, excludedIds);
+    reflectionSlotByWater.set(water, { excludedMapIds: excludedIds, mirror });
     return () => {
-      excludedMapIdsByWater.delete(water);
+      reflectionSlotByWater.delete(water);
     };
-  }, [water, excludedIds]);
+  }, [water, excludedIds, mirror]);
 
   // R3F 는 removeChild 에서 invalidate 하지 않아(parent 를 먼저 null) 끈 뒤
   // 마지막 프레임이 남는다 — 직접 깨운다(EnvironmentBackground 와 같은 처리).

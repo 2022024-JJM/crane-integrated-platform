@@ -7,11 +7,11 @@ import { useSceneHistory } from '../use-scene-history';
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * environmentId만 다른 씬 — isSceneInfoEqual이 구분하는 최소 차이.
- * overrides 로 다른 씬 설정(sea 등)을 덮어쓴다.
+ * 배경 경로만 다른 씬 — isSceneInfoEqual이 구분하는 최소 차이. `tag` 는 씬을
+ * 구별하는 표식이다. overrides 로 다른 씬 설정(sea 등)을 덮어쓴다.
  */
 function scene(
-  environmentId: string,
+  tag: string,
   overrides: Partial<SavedSceneInfo> = {},
 ): SavedSceneInfo {
   return {
@@ -19,7 +19,7 @@ function scene(
     models: [],
     texts: [],
     camera: null,
-    environmentId,
+    environment: { path: tag },
     ...overrides,
   };
 }
@@ -47,7 +47,7 @@ describe('초기 상태 / replaceScene', () => {
     expect(result.current.canUndo).toBe(true);
 
     act(() => result.current.replaceScene(scene('fresh')));
-    expect(result.current.sceneInfo?.environmentId).toBe('fresh');
+    expect(result.current.sceneInfo?.environment?.path).toBe('fresh');
     expect(result.current.canUndo).toBe(false);
     expect(result.current.canRedo).toBe(false);
   });
@@ -59,20 +59,20 @@ describe('updateScene', () => {
     act(() => result.current.replaceScene(scene('a')));
     act(() => result.current.updateScene(scene('b')));
     act(() =>
-      result.current.updateScene((prev) => ({ ...prev!, environmentId: 'c' })),
+      result.current.updateScene((prev) => ({ ...prev!, environment: { path: 'c' } })),
     );
 
-    expect(result.current.sceneInfo?.environmentId).toBe('c');
+    expect(result.current.sceneInfo?.environment?.path).toBe('c');
 
     act(() => result.current.undo());
-    expect(result.current.sceneInfo?.environmentId).toBe('b');
+    expect(result.current.sceneInfo?.environment?.path).toBe('b');
     act(() => result.current.undo());
-    expect(result.current.sceneInfo?.environmentId).toBe('a');
+    expect(result.current.sceneInfo?.environment?.path).toBe('a');
     expect(result.current.canUndo).toBe(false);
 
     act(() => result.current.redo());
     act(() => result.current.redo());
-    expect(result.current.sceneInfo?.environmentId).toBe('c');
+    expect(result.current.sceneInfo?.environment?.path).toBe('c');
     expect(result.current.canRedo).toBe(false);
   });
 
@@ -91,14 +91,14 @@ describe('updateScene', () => {
     act(() => result.current.replaceScene(scene('a')));
     act(() => result.current.updateScene(scene('b'), { recordHistory: false }));
 
-    expect(result.current.sceneInfo?.environmentId).toBe('b');
+    expect(result.current.sceneInfo?.environment?.path).toBe('b');
     expect(result.current.canUndo).toBe(false);
   });
 
   it('present가 null이면 히스토리 없이 채운다', () => {
     const { result } = setup();
     act(() => result.current.updateScene(scene('a')));
-    expect(result.current.sceneInfo?.environmentId).toBe('a');
+    expect(result.current.sceneInfo?.environment?.path).toBe('a');
     expect(result.current.canUndo).toBe(false);
   });
 
@@ -126,7 +126,7 @@ describe('updateScene', () => {
     act(() => result.current.updateScene(scene('branch')));
     expect(result.current.canRedo).toBe(false);
     act(() => result.current.undo());
-    expect(result.current.sceneInfo?.environmentId).toBe('a');
+    expect(result.current.sceneInfo?.environment?.path).toBe('a');
   });
 
   it('undo 깊이는 50으로 제한된다', () => {
@@ -143,7 +143,7 @@ describe('updateScene', () => {
     }
     expect(undoCount).toBe(50);
     // 가장 오래된 5개(base, v0..v3)는 잘려 나갔다.
-    expect(result.current.sceneInfo?.environmentId).toBe('v4');
+    expect(result.current.sceneInfo?.environment?.path).toBe('v4');
   });
 });
 
@@ -196,7 +196,7 @@ describe('undo / redo 경계', () => {
     act(() => result.current.replaceScene(scene('a')));
     act(() => result.current.undo());
     act(() => result.current.redo());
-    expect(result.current.sceneInfo?.environmentId).toBe('a');
+    expect(result.current.sceneInfo?.environment?.path).toBe('a');
   });
 });
 
@@ -218,9 +218,9 @@ describe('commitHistoryFrom', () => {
     expect(result.current.canUndo).toBe(true);
 
     act(() => result.current.undo());
-    expect(result.current.sceneInfo?.environmentId).toBe('base');
+    expect(result.current.sceneInfo?.environment?.path).toBe('base');
     act(() => result.current.redo());
-    expect(result.current.sceneInfo?.environmentId).toBe('final');
+    expect(result.current.sceneInfo?.environment?.path).toBe('final');
   });
 
   it('base가 present와 같거나 null이면 no-op', () => {

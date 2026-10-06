@@ -4,9 +4,10 @@ export {
 } from './ui/scene-objects-edit-canvas';
 export { SceneObjectInspector } from './ui/scene-object-inspector';
 export { SceneModelPreview } from './ui/scene-model-preview';
-export { PreviewThumbnailGeneratorPanel } from './ui/preview-thumbnail-generator';
 export { PaletteHeader } from './ui/palette-header';
 export { PaletteAssetGrid } from './ui/palette-asset-grid';
+export { PaletteAssetUpdates } from './ui/palette-asset-updates';
+export { PaletteCategoryFilter } from './ui/palette-category-filter';
 export { PalettePlacedObjects } from './ui/palette-placed-objects';
 export { PaletteMapSection } from './ui/palette-map-section';
 export { PaletteViewSection } from './ui/palette-view-section';

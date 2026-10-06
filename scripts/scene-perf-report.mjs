@@ -418,7 +418,7 @@ function buildWarnings({ assets, missing, totals }) {
     const s = a.stats;
     const file = basename(a.path);
     // MODEL_* 기준은 모델에만 적용한다 — 지도는 병합 하한(=머티리얼 수)에
-    // 이미 도달해 있고(phillyshipyard 41) 전용 파이프라인(optimize:map)을
+    // 이미 도달해 있고(phillyshipyard 41) 전용 파이프라인(optimize-map.mjs)을
     // 쓰므로, 지도 부하는 씬 합계 기준으로만 본다.
     if (a.kind !== 'model') continue;
 
@@ -440,7 +440,7 @@ function buildWarnings({ assets, missing, totals }) {
     }
     if (structureFacts.length > 0) {
       const action = a.join.eligible
-        ? `node scripts/join-static-glb.mjs ${file} → pnpm optimize:glb ${file} (전 씬 역스캔: 차단 참조 없음 — join-static-glb 후보)`
+        ? `node scripts/join-static-glb.mjs ${file} → 자산 라이브러리에서 새 버전으로 올리기 (전 씬 역스캔: 차단 참조 없음 — join-static-glb 후보)`
         : `join 불가: ${a.join.reasons.join(' · ')} — 계층 병합 금지, 원 자산 정리로만 개선 가능`;
       push('warn', `${file}: ${structureFacts.join(' · ')}`, action);
     }
@@ -449,7 +449,7 @@ function buildWarnings({ assets, missing, totals }) {
       push(
         'warn',
         `${file}: 텍스처 VRAM ${fmtMB(s.texVramBytes)}MB (기준 ${MODEL_TEX_VRAM_WARN_MB}MB, ${s.textures.length}장)`,
-        'pnpm optimize:glb 의 resize 상한은 2048 — 이미 그 이하라면 장수·해상도 자체를 텍스처별로 검토',
+        '등록 시 최적화의 resize 상한은 2048 — 이미 그 이하라면 장수·해상도 자체를 텍스처별로 검토',
       );
     }
 
@@ -465,7 +465,7 @@ function buildWarnings({ assets, missing, totals }) {
       push(
         'warn',
         `${file}: 삼각형 ${num(s.renderTris)}/인스턴스 (기준 ${num(MODEL_TRIS_WARN)})`,
-        '모델용 데시메이션 자동 스테이지는 없다(optimize:map 은 지도 전용) — 원 자산에서 감축 검토',
+        '모델용 데시메이션 자동 스테이지는 없다(데시메이션은 지도 파이프라인 전용) — 원 자산에서 감축 검토',
       );
     }
 

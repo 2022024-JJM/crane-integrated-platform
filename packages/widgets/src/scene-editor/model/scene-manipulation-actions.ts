@@ -7,15 +7,19 @@ import {
   createSceneModel,
   createSceneRuler,
   createSceneText,
+  isSceneEnvironmentEqual,
   isSceneSiteLocation,
   normalizeDegrees,
+  resolveSeaMirror,
   resolveTrueNorth,
+  withSceneAssetVersion,
   type RulerPlacement,
   type SavedCameraInfo,
+  type SavedEnvironmentInfo,
   type SavedLightingInfo,
   type SavedSceneInfo,
-  type SceneMapCatalogItem,
-  type SceneModelCatalogItem,
+  type ScenePlaceableMap,
+  type ScenePlaceableModel,
   type SceneSiteLocation,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
@@ -67,13 +71,10 @@ export function createSceneManipulationActions({
   transformHistoryBaseRef,
 }: SceneManipulationDeps) {
   const addModel = (
-    catalogItem: SceneModelCatalogItem,
+    model: ScenePlaceableModel,
     position: [number, number, number],
   ) => {
-    const nextModel = createSceneModel({
-      catalogItem,
-      position,
-    });
+    const nextModel = createSceneModel({ model, position });
 
     updateScene((prev) => {
       if (!prev) {
@@ -209,25 +210,26 @@ export function createSceneManipulationActions({
   };
 
   /**
-   * 지도 추가 — 팔레트 "맵" 탭의 타일 클릭. 배경(setEnvironmentId)과 달리 단일
+   * 지도 추가 — 팔레트 "맵" 탭의 타일 클릭. 배경(setEnvironment)과 달리 단일
    * 선택이 아니라 append 다: 씬에는 지도가 여러 장 놓일 수 있고(조선소 +
    * 주변 지형), 제거는 deletePlacedMap 이 맡는다. 바닥 지도 판정은 배열
-   * 순서가 아니라 카탈로그 kind(resolveGroundMaps)라 뒤에 붙여도 무방하다.
+   * 순서가 아니라 지도의 role(resolveGroundMaps)이라 뒤에 붙여도 무방하다.
    *
-   * 같은 경로가 이미 있으면(잠김 여부 무관) 아무것도 하지 않는다 — 팔레트는
-   * 경로당 한 장만 관리하며, UI 도 배치된 타일을 "추가" 로 다루지 않지만
-   * 여기서 한 번 더 막아야 다른 경로가 생겨도 중복이 안 생긴다.
+   * 같은 자산(또는 같은 경로)이 이미 있으면(잠김 여부 무관) 아무것도 하지
+   * 않는다 — 팔레트는 자산당 한 장만 관리하며, UI 도 배치된 타일을 "추가" 로
+   * 다루지 않지만 여기서 한 번 더 막아야 다른 경로가 생겨도 중복이 안 생긴다.
    *
    * 새 지도는 잠기지 않은 상태로 시작하고 곧바로 선택한다(addModel 과 같은
    * 규약) — 기즈모가 바로 붙어 배치를 먼저 하고, 계층 목록·타일의 자물쇠로
-   * 잠근다. position 은 카탈로그 defaultPosition(주변 지형의 조선소 기준
-   * 오프셋)이 있으면 그 값, 없으면 원점이다. ground 지도는 카메라 영역 제한
-   * (cameraBounds)에 체크된 채 들어간다 — 기존 씬 파일의 초기 기록과 같은
-   * 규칙이고, 카탈로그 kind 를 카메라 제한이 보는 건 이 추가 시점 한 번뿐이다.
+   * 잠근다. 자산 참조(id·버전)와 역할은 자산에서 **복사**해 씬에 적는다 —
+   * 그 뒤로는 씬이 자기 값을 가진다. position 은 자산의 기본 위치(주변 지형의
+   * 조선소 기준 오프셋)가 있으면 그 값, 없으면 원점이다. ground 지도는 카메라
+   * 영역 제한(cameraBounds)에 체크된 채 들어간다 — 역할을 카메라 제한이 보는
+   * 건 이 추가 시점 한 번뿐이다.
    */
-  const addSceneMap = (catalogItem: SceneMapCatalogItem) => {
+  const addSceneMap = (map: ScenePlaceableMap) => {
     const maps = sceneInfoRef.current?.maps ?? [];
-    if (maps.some((m) => m.path === catalogItem.path)) {
+    if (maps.some((m) => m.asset?.id === map.id || m.path === map.path)) {
       return;
     }
 
@@ -247,13 +249,15 @@ export function createSceneManipulationActions({
           ...(prev.maps ?? []),
           {
             id,
-            path: catalogItem.path,
-            name: catalogItem.label,
-            position: catalogItem.defaultPosition ?? [0, 0, 0],
+            path: map.path,
+            asset: { id: map.id, version: map.version },
+            role: map.role,
+            name: map.label,
+            position: map.defaultPosition ?? [0, 0, 0],
             rotation: [0, 0, 0],
             scale: [1, 1, 1],
             locked: false,
-            ...(catalogItem.kind === 'ground' ? { cameraBounds: true } : {}),
+            ...(map.role === 'ground' ? { cameraBounds: true } : {}),
           },
         ],
       };
@@ -271,15 +275,30 @@ export function createSceneManipulationActions({
   };
 
   /**
-   * 배경 파노라마 선택. null이면 "배경 없음"을 명시적으로 저장한다 —
-   * undefined로 지우면 region 기본 배경이 되살아나 사용자가 끌 수 없다.
+   * 배경 파노라마 선택. null 이면 배경 없음 — 필드를 지운다. 같은 배경이면
+   * 참조를 유지해 히스토리에 쌓이지 않는다.
    */
-  const setEnvironmentId = (environmentId: string | null) => {
+  const setEnvironment = (environment: SavedEnvironmentInfo | null) => {
     updateScene((prev) => {
       if (!prev) return prev;
-      if (prev.environmentId === environmentId) return prev;
-      return { ...prev, environmentId };
+      if (isSceneEnvironmentEqual(prev.environment, environment ?? undefined)) {
+        return prev;
+      }
+      const { environment: _previous, ...rest } = prev;
+      void _previous;
+      return environment ? { ...rest, environment } : rest;
     });
+  };
+
+  /**
+   * 씬에 놓인 자산을 다른 버전으로 갱신한다 — 그 자산을 가리키는 모델·지도·
+   * 배경을 전부 한꺼번에 옮긴다(withSceneAssetVersion). 히스토리에 한 번
+   * 남아 되돌리기 한 번으로 돌아간다. 바뀐 것이 없으면 아무 일도 없다.
+   */
+  const updateSceneAsset = (assetId: string, version: number, path: string) => {
+    updateScene((prev) =>
+      prev ? withSceneAssetVersion(prev, assetId, version, path) : prev,
+    );
   };
 
   /**
@@ -293,6 +312,24 @@ export function createSceneManipulationActions({
       if (!prev) return prev;
       if (prev.sea === visible) return prev;
       return { ...prev, sea: visible };
+    });
+  };
+
+  /**
+   * 바다에 씬을 비출지 설정. 기본값(비춘다)이면 필드를 지우고 끌 때만
+   * `false` 를 쓴다 — sanitize 와 같은 "기본값이면 생략" 규칙. 같은 값이면
+   * 참조를 유지해 히스토리에 쌓이지 않는다.
+   */
+  const setSeaMirror = (enabled: boolean) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (resolveSeaMirror(prev) === enabled) return prev;
+      if (enabled) {
+        const { seaMirror: _removed, ...rest } = prev;
+        void _removed;
+        return rest;
+      }
+      return { ...prev, seaMirror: false };
     });
   };
 
@@ -555,9 +592,11 @@ export function createSceneManipulationActions({
     selectPlacedRuler,
     deletePlacedRuler,
     addSceneMap,
+    updateSceneAsset,
     selectPlacedMap,
-    setEnvironmentId,
+    setEnvironment,
     setSeaVisible,
+    setSeaMirror,
     setTrueNorth,
     setSiteLocation,
     setLighting,

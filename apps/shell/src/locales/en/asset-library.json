@@ -15,10 +15,6 @@
     "published": "Published",
     "withdrawn": "Withdrawn"
   },
-  "origin": {
-    "builtin": "Deployed asset",
-    "user": "Added on this page"
-  },
   "storage": {
     "public": "Deployed file",
     "browser": "This browser"
@@ -41,7 +37,7 @@
     "version": "Version",
     "revision": "Revision",
     "drawingNo": "Drawing number",
-    "tags": "Tags",
+    "categories": "Categories",
     "owner": "Owner",
     "file": "File",
     "size": "Size",
@@ -53,8 +49,6 @@
     "storage": "Stored in",
     "path": "Path",
     "hash": "Content hash",
-    "defaultScale": "Default scale",
-    "origin": "Source",
     "format": "Format",
     "fileName": "File name"
   },
@@ -67,12 +61,13 @@
     "delete": "Delete",
     "add": "Add",
     "reload": "Reload",
-    "apply": "Apply"
+    "apply": "Apply",
+    "close": "Close"
   },
   "save": {
     "saving": "Saving",
     "failed": "Your changes could not be saved. Try again, or they will be lost on reload.",
-    "localOnly": "There is no asset server yet, so anything you add or change here is saved in this browser only. Other people and other devices will not see it.",
+    "localOnly": "Adding assets, uploading new versions and deleting are not available in this environment (do them in the development environment and deploy). Changes to names, categories and statuses are saved in this browser only.",
     "conflict": "The library was changed elsewhere, so your last change was not saved. Reload, then make the change again."
   },
   "rail": {
@@ -87,7 +82,7 @@
     "browse": "Browse"
   },
   "browser": {
-    "search": "Search name, tag or file name",
+    "search": "Search name, category or file name",
     "resultCount": "{{count}} of {{total}}",
     "clearFilters": "Clear filters",
     "sort": "Sort",
@@ -126,21 +121,23 @@
   "bulk": {
     "label": "Actions for selected assets",
     "selected": "{{count}} selected",
-    "addTag": "Add tag",
+    "addCategory": "Add category",
     "addToCollection": "Add to collection",
     "clear": "Clear selection",
     "changeStatus": "Change status",
-    "removeTag": "Remove tag",
+    "removeCategory": "Remove category",
     "remove": "Delete ({{count}})",
-    "removeTitle": "Delete {{count}} added assets?",
-    "removeHint": "Their files and history are deleted and cannot be restored. Deployed assets are not deleted.",
+    "removeTitle": "Delete {{count}} assets?",
+    "removeHint": "Files and history are deleted together and cannot be restored. Assets in use are not deleted.",
+    "removeHintBlocked": "Files and history are deleted together and cannot be restored. {{count}} asset(s) in use will be kept.",
+    "removeNone": "Every selected asset is in use, or its usage could not be checked, so none can be deleted.",
     "statusTitle": "{{action}} the selected assets?"
   },
   "form": {
-    "tagPlaceholder": "Type a tag, then Enter",
-    "tagsFull": "An asset can have up to {{max}} tags",
-    "removeTag": "Remove tag {{tag}}",
-    "addSuggestedTag": "Add tag {{tag}}"
+    "categoryPlaceholder": "Type a category, then Enter",
+    "categoriesFull": "An asset can have up to {{max}} categories",
+    "removeCategory": "Remove category {{category}}",
+    "addSuggestedCategory": "Add category {{category}}"
   },
   "import": {
     "title": "Add asset",
@@ -162,8 +159,14 @@
         "bad-magic": "This is not a GLB file. It may be another format with a .glb extension.",
         "bad-version": "This GLB is not glTF 2.0. Export it again as glTF 2.0.",
         "bad-length": "The GLB file is damaged. Its header length does not match the file size, so it may have been cut off in transfer."
+      },
+      "exr": {
+        "bad-magic": "This is not an EXR file. It may be another format with an .exr extension.",
+        "no-size": "The resolution of the EXR could not be read. The file may be damaged.",
+        "too-large": "An EXR wider or taller than {{max}}px renders as a black background. Resize it to 4096×2048 and upload again."
       }
-    }
+    },
+    "unavailable": "Assets cannot be added in this environment. Add them in the development environment and deploy."
   },
   "detail": {
     "backToLibrary": "Back to library",
@@ -173,18 +176,18 @@
       "stats": "Stats",
       "versions": "Versions",
       "usage": "Used in",
-      "activity": "Activity"
+      "activity": "Activity",
+      "placement": "Placement"
     },
     "viewingOldVersion": "Viewing v{{version}}. Show current version v{{current}}",
     "notFound": "Asset not found",
-    "notFoundHint": "It may have been deleted, or it was added in another browser.",
+    "notFoundHint": "It may have been deleted, or the address may be wrong.",
     "fileMissing": "This browser does not have the file",
     "fileMissingHint": "This version's file is stored only in the browser that added it. Once the asset server is ready it will open anywhere.",
     "deleteTitle": "Delete {{name}}?",
     "deleteDescription": "The files and history of {{count}} version(s) will be deleted. This cannot be undone.",
     "previousAsset": "Previous asset (←)",
-    "nextAsset": "Next asset (→)",
-    "deletePlaced": "Placed {{count}} time(s) in scenes. Deleting it removes the model from those scenes."
+    "nextAsset": "Next asset (→)"
   },
   "titleBlock": {
     "size": "Width × depth × height"
@@ -201,8 +204,7 @@
     "noLinkCandidates": "No assets to link",
     "unlink": "Unlink {{name}}",
     "linkedFromOther": "Linked from the other asset",
-    "copyPath": "Copy path",
-    "defaultScaleHint": "Dimensions are in scene units with the default scale applied. In most scenes one unit is 1 m, but the indoor (dock-in) scene uses a different unit."
+    "copyPath": "Copy path"
   },
   "stats": {
     "dimensions": "Dimensions",
@@ -254,28 +256,29 @@
     },
     "kindMismatch": "This file is a different type from the asset. Upload a GLB for 3D assets, an EXR for backgrounds, a PDF, SVG or image for drawings, and a CAD file for CAD.",
     "sameContent": "This file has the same content as a version this asset already has.",
-    "catalogNotice": "Scenes use the deployed file of version 1. To use a new version in scenes, replace the deployed file through the asset pipeline (assets-src → optimize:glb).",
     "revisionShort": "Rev {{revision}}",
-    "paletteNotice": "The 3D editor palette places the current version’s file. Objects already placed keep the version they were placed with.",
-    "environmentNotice": "Scenes use the deployed files in the 3D editor’s background picker. Backgrounds added here and their new versions are not applied to scenes yet.",
     "remove": "Delete version",
     "removeTitle": "Delete version v{{version}}?",
-    "removeHint": "The file for this version is deleted and cannot be restored. Only versions that were never published can be deleted."
+    "removeHint": "The file for this version is deleted and cannot be restored. Only versions that were never published can be deleted.",
+    "sceneNotice": "A scene remembers the version it was placed with. Changing the current version does not change scenes automatically — when the 3D editor reports a new version, update there and save.",
+    "uploadUnavailable": "New versions cannot be uploaded in this environment. Upload in the development environment and deploy."
   },
   "usage": {
     "loading": "Checking scenes",
     "failed": "Scene files could not be read, so usage is unknown.",
     "partial": "Some scenes could not be read, so usage may be incomplete: {{scenes}}",
-    "none": "Not placed in any scene",
-    "noneCatalogHint": "You can place it in a scene from the 3D editor palette.",
-    "noneRuntimeHint": "Screen code loads this asset directly instead of placing it in a scene. Do not delete it even though no scene uses it.",
-    "noneUserHint": "Once published, it appears in the 3D editor palette and can be placed in scenes.",
-    "versionHeading": "Scenes using v{{version}}",
+    "none": "Not used anywhere",
+    "versionHeading": "Where v{{version}} is used",
     "count": "{{count}} placed",
     "openEditor": "Open in the 3D editor",
-    "drawing": "Drawings and CAD files are not placed in scenes. See linked assets on the Info tab.",
-    "environment": "Backgrounds are not placed in scenes. A scene’s background is chosen in the 3D editor’s background picker.",
-    "noneUserMapHint": "Maps added here do not appear in the 3D editor’s Map tab yet."
+    "code": "Used directly by the app code",
+    "noneHint": {
+      "model": "Once published it appears in the Models tab of the 3D editor and can be placed in a scene.",
+      "map": "Once published it appears in the Map tab of the 3D editor and can be added to a scene.",
+      "environment": "Once published it can be chosen as a scene background in the Background tab of the 3D editor.",
+      "drawing": "Drawings are not placed in scenes. See linked assets in the Info tab.",
+      "cad": "CAD sources are not placed in scenes. See linked assets in the Info tab."
+    }
   },
   "activity": {
     "created": "Added the asset",
@@ -285,18 +288,17 @@
     "metadata": "Edited {{fields}}",
     "thumbnail": "Saved a thumbnail",
     "empty": "No activity recorded yet.",
-    "emptyBuiltin": "This is a deployed asset. Changes made on this page are recorded here from now on.",
     "field": {
       "name": "name",
       "description": "description",
       "category": "category",
       "sites": "shipyard",
-      "tags": "tags",
+      "categories": "categories",
       "owner": "owner",
       "kind": "type",
       "drawingNo": "drawing number",
       "relatedAssetIds": "linked assets",
-      "defaultScale": "default scale"
+      "placement": "Placement"
     },
     "versionRemoved": "Deleted version v{{version}}"
   },
@@ -331,7 +333,6 @@
       "right": "Side",
       "top": "Top"
     },
-    "fit": "Fit to view",
     "display": "Display options",
     "panoramaHint": "Drag to look around"
   },
@@ -394,10 +395,12 @@
     "favorite": "Add to favorites",
     "unfavorite": "Remove from favorites",
     "copyLink": "Copy link",
+    "delete": "Delete",
     "more": "More actions for {{name}}"
   },
   "preview": {
     "label": "Preview of {{name}}",
+    "delete": "Delete {{name}}",
     "previous": "Previous asset",
     "next": "Next asset",
     "close": "Close preview",
@@ -413,7 +416,7 @@
     "relatedCount": "Linked assets",
     "lodLevels": "LOD levels",
     "animations": "Animations",
-    "filterByTag": "Show assets tagged {{tag}}",
+    "filterByCategory": "Show assets in category {{category}}",
     "previousHint": "Previous asset (← ↑)",
     "nextHint": "Next asset (→ ↓)",
     "closeHint": "Close preview (Esc)",
@@ -431,7 +434,7 @@
     "confirmTitle": "v{{version}} — {{action}}",
     "confirmHint": {
       "rejected": "A rejected version cannot be used until it is sent for review again.",
-      "withdrawn": "Once withdrawn, this asset can no longer be placed from the 3D editor palette. Objects already placed in scenes stay as they are."
+      "withdrawn": "After withdrawal the asset can no longer be placed from the 3D editor palette. A version used by a scene or the app code cannot be withdrawn."
     }
   },
   "compare": {
@@ -472,15 +475,44 @@
     "path": "Location",
     "expand": "Expand {{name}}",
     "collapse": "Collapse {{name}}",
-    "tagsOf": "{{name}} tags"
+    "categoriesOf": "{{name}} categories"
   },
   "optimize": {
-    "label": "Optimize model",
+    "label": "Optimize",
     "hint": "Shrinks and re-encodes textures and compresses geometry before storing. The uploaded original is kept separately.",
     "result": "Optimized: {{before}} → {{after}}",
-    "skipped": "Optimizing did not make it smaller, so the file was stored as uploaded.",
+    "skipped": "Stored as uploaded.",
     "from": "← {{before}}",
     "stored": "Stored optimized. Left is the stored size, right is the uploaded original.",
-    "original": "Original size"
+    "original": "Original size",
+    "hintMap": "Shrinks textures and simplifies and compresses geometry before storing. Wide terrain is split into tiles and LODs — the method is chosen by measuring the file. The uploaded original is kept separately.",
+    "optimized": "Stored after optimizing."
+  },
+  "placement": {
+    "palette": "Show in the editor palette",
+    "paletteHint": "When off, the asset is left out of the 3D editor palette. Use it for assets that are never placed in a scene, such as parts the app code loads directly.",
+    "mapRole": "Role",
+    "mapRoleOption": {
+      "ground": "Ground",
+      "context": "Surroundings"
+    },
+    "mapRoleHint": {
+      "ground": "The floor that dropped models land on. Adding it also makes it a reference for the camera range.",
+      "context": "Terrain outside the work area. It has many triangles, so it is left out of shadows and sea reflections and is not used as the floor when placing models."
+    },
+    "defaultPosition": "Default position",
+    "defaultPositionHint": "Where the map goes when added from the palette. Use it to line up several maps that share a coordinate system.",
+    "note": "Changes here apply the next time the asset is placed. Anything already in a scene stays as it is."
+  },
+  "protect": {
+    "removeTitle": "{{name}} cannot be deleted",
+    "remove": {
+      "in-use": "A scene or the app code is using it (used in {{count}} places). Remove it from the scene or switch to another asset first.",
+      "usage-unknown": "Not every scene could be read, so it is unknown whether this asset is in use. Read the usage again before deleting."
+    },
+    "openUsage": "Show usage",
+    "removeBlocked": "The asset is in use, so it was not deleted. Check where it is used.",
+    "withdrawBlocked": "The version is in use, so it was not withdrawn. Check where it is used.",
+    "withdrawInUse": "A version used by a scene or the app code cannot be withdrawn."
   }
 }

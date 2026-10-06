@@ -541,6 +541,38 @@ describe('OceanWater.onBeforeRender — 제외 객체', () => {
     expect(renderer.render).toHaveBeenCalledTimes(1);
     expect(water.visible).toBe(true);
   });
+
+  it('게터는 그리는 씬을 받는다', () => {
+    const getter = vi.fn<(scene: Scene) => Object3D[]>(() => []);
+    const { water, scene, gl } = createFixture({
+      water: { excludedObjects: getter },
+    });
+    water.onBeforeRender(gl, scene, cameraAbove());
+    expect(getter).toHaveBeenCalledWith(scene);
+  });
+
+  it('씬 최상위 객체를 전부 돌려주면 미러 패스 동안 씬이 비고 뒤에 복원된다', () => {
+    const crane = new Object3D();
+    const map = new Object3D();
+    const off = new Object3D();
+    off.visible = false;
+    const seen: boolean[][] = [];
+    const { water, scene, renderer, gl } = createFixture({
+      water: { excludedObjects: (s) => s.children },
+      onRender: () =>
+        seen.push([crane.visible, map.visible, off.visible, water.visible]),
+    });
+    // 물도 씬의 자식이다 — 포크가 먼저 숨기므로 게터의 숨김에 적재되지 않는다.
+    scene.add(crane, map, off, water);
+    water.onBeforeRender(gl, scene, cameraAbove());
+    // 미러 패스는 그대로 한 번 돈다(배경만 그려진다).
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual([[false, false, false, false]]);
+    expect(crane.visible).toBe(true);
+    expect(map.visible).toBe(true);
+    expect(off.visible).toBe(false);
+    expect(water.visible).toBe(true);
+  });
 });
 
 describe('OceanWater.onBeforeRender — render 가 throw 해도 원복(try/finally)', () => {
@@ -573,6 +605,22 @@ describe('OceanWater.onBeforeRender — render 가 throw 해도 원복(try/final
     water.onBeforeRender(gl, scene, cameraAbove());
     expect(seen).toEqual([false]);
     expect(a.visible).toBe(true);
+  });
+
+  it('씬 전체를 숨긴 패스에서 render 가 throw 해도 씬이 다시 보인다', () => {
+    const crane = new Object3D();
+    const { water, scene, gl } = createFixture({
+      water: { excludedObjects: (s) => s.children },
+      onRender: () => {
+        throw new Error('boom');
+      },
+    });
+    scene.add(crane, water);
+    expect(() => water.onBeforeRender(gl, scene, cameraAbove())).toThrow(
+      'boom',
+    );
+    expect(crane.visible).toBe(true);
+    expect(water.visible).toBe(true);
   });
 
   it('제외 게터가 throw 해도 물이 다시 보이고 플래그가 원복된다', () => {

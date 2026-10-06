@@ -13,7 +13,7 @@ import type { BvhBuildCounts } from '@crane/domain/3d';
  *     BVH 를 전부 먼저 처리하므로 bvh 뒤에만 보인다
  *  3. collision — 충돌 감지 런타임이 기준선 단계(BVH 완료 직후 몇 틱)
  *  4. assets    — three DefaultLoadingManager 가 활성(다운로드·파싱 중). 가장
- *     낮은 순위인 이유: 편집 화면은 카탈로그 40개를 수십 초 동안 프리로드해
+ *     낮은 순위인 이유: 편집 화면은 팔레트 모델 수십 개를 수십 초 동안 프리로드해
  *     이 신호가 오래 켜져 있고, 그 사이 씬 자체의 준비 상태가 더 중요하다.
  *     모니터링은 불투명 로딩 오버레이가 이 단계를 덮는다.
  *

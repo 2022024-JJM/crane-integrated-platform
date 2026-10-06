@@ -23,7 +23,8 @@ pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` �
 - `pnpm typecheck` — TypeScript check
 - `pnpm test` — vitest
 - `pnpm new-site <slug>` — 새 사이트 plugin scaffold
-- `pnpm optimize:glb`, `pnpm optimize:map`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 절차는 `docs/agents/assets-glb.md`
+- `node scripts/optimize-{glb,map}.mjs --single <입력> <출력>`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 최적화는 자산 등록 화면이 돌린다. 절차는 `docs/agents/assets-glb.md`
+- `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채운다. `docs/agents/asset-library.md`
 - `pnpm assets:stats [--check]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. `docs/agents/asset-library.md`
 
 ### 검증 커맨드의 실제 커버리지 (주의)
@@ -204,8 +205,10 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D 플레이 페이지(리플레이 + 시뮬레이션, 실행 리포트) / 장비 운전 상태 | `packages/features/src/3d/ui/play3d-view.tsx`, `model/play3d-transport.ts`, `lib/play3d-stats.ts`, `lib/model-runtime-status.ts` — `docs/agents/3d-play.md` |
 | 수면 아래 잠김 안개 / 바다 도달 마스크 | `packages/domain/src/3d/lib/{sea-submersion,sea-reach-grid,sea-reach-mask,sea-reach-uniforms}.ts`, `packages/features/src/3d/model/sea-reach-controller.ts`, `ui/scene-sea-reach.tsx` — `docs/agents/rendering-perf.md` |
 | 프레임 거버너 / shadow map 온디맨드 / 바다 미러 반사·스텐실 / 낮·밤 태양 / 워밍업 큐 | `packages/features/src/3d/ui/scene-frame-governor.tsx`, `ui/scene-render-preset.tsx`(`SceneLighting`), `ui/scene-water.tsx`, `lib/ocean-water.ts`, `lib/sky-lighting.ts`, `packages/domain/src/3d/lib/{scene-stencil,bvh-build-queue}.ts` — `docs/agents/rendering-perf.md` |
-| GLB 자산 파이프라인(압축·타일·LOD·KTX2·philly 지도 3장·썸네일) | `assets-src/README.md`, `scripts/*.mjs`, `packages/domain/src/3d/lib/ktx2-loader.ts` — `docs/agents/assets-glb.md` |
-| 3D 자산 라이브러리(모델·지도·배경·도면·CAD, 종류 › 태그 계층·미리보기·상세 뷰어·버전 비교·상태·처리할 일·사용처, 서버 없는 저장) | `packages/domain/src/asset-library/`, `packages/features/src/asset-library/`, `packages/widgets/src/asset-library/`, `apps/shell/public/asset-library/` — `docs/agents/asset-library.md` |
+| GLB 자산 파이프라인(압축·타일·LOD·KTX2·philly 지도 3장) | `assets-src/README.md`, `scripts/*.mjs`, `packages/domain/src/3d/lib/ktx2-loader.ts` — `docs/agents/assets-glb.md` |
+| 3D 자산 라이브러리(모델·지도·배경·도면·CAD 의 단일 원천, 종류 › 카테고리 계층·미리보기·상세 뷰어·버전 비교·상태·배치 속성·처리할 일·사용처, 서버 없는 저장) | `packages/domain/src/asset-library/`, `packages/features/src/asset-library/`, `packages/widgets/src/asset-library/`, `apps/shell/public/asset-library/` — `docs/agents/asset-library.md` |
+| 씬의 자산 참조(자산 id·버전)·편집 팔레트·새 버전 갱신 | 스키마 `SceneAssetRef`(`types.ts`), `packages/domain/src/3d/lib/{scene-asset-ref,scene-asset-update}.ts`, `packages/features/src/asset-library/lib/{scene-palette,scene-asset-updates}.ts`, `packages/widgets/src/3d/ui/palette-asset-updates.tsx` — `docs/agents/asset-library.md` |
+| 코드가 직접 로드하는 자산 표 | `packages/domain/src/3d/model/code-asset-refs.ts`(`CODE_ASSETS`), 도면은 `packages/domain/src/asset-library/model/code-used-assets.ts` — `docs/agents/asset-library.md` |
 | 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
 
 ## packages/ui 구조 (Atomic Design)
@@ -257,11 +260,11 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 영역(zone) 침범·영역 알람·저널·unit 스케일 | `docs/agents/3d-zone.md` |
 | 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태 | `docs/agents/3d-play.md` |
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
-| GLB 반입·압축·타일·LOD·KTX2·지도 배치·썸네일 | `docs/agents/assets-glb.md` |
+| GLB 반입·압축·타일·LOD·KTX2·지도 배치 | `docs/agents/assets-glb.md` |
 | 태그 맵핑·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
 | 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·씬 파일 매핑) | `docs/agents/3d-editor.md` |
 | 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·독·경보 알림) | `docs/agents/monitoring-ui.md` |
-| 3D 자산 라이브러리(자산 스키마·버전·상태·저장소·자산 뷰어·통계 표) | `docs/agents/asset-library.md` |
+| 3D 자산 라이브러리(자산 스키마·버전·상태·배치 속성·저장소·자산 뷰어·통계 표), 씬의 자산 참조·편집 팔레트·새 버전 갱신 | `docs/agents/asset-library.md` |
 
 ### 3D 불변식 체크리스트
 
@@ -271,7 +274,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 씬을 매 프레임 바꾸는 새 경로는 `SceneFrameGovernor` 소스 목록에 넣거나 스스로 `invalidate()`/`requestSceneFrame()` 한다. 캔버스가 전부 `frameloop='demand'` 다 (rendering-perf).
 - `SceneLighting` 에는 `regionId` 를 반드시 넘긴다. 조명·하늘 밝기 기준값은 `lib/sky-lighting.ts` 상수만 고치고 다른 곳에서 같은 값을 세팅하지 않는다 (rendering-perf).
 - 새 GLTF 로드 경로는 `extendGltfLoaderWithKtx2` 를 걸고, 불투명 머티리얼이면 `markSceneOpaqueStencil` 을 켠다. 바다 위에 보여야 하는 불투명 오버레이는 `renderOrder ≥ 0.5` (assets-glb, rendering-perf).
-- 바다 표시 판정은 `resolveSeaVisible(regionId, sceneInfo)` 한 곳이다. `environmentId` 로 바다를 유추하지 않는다 (rendering-perf).
+- 바다 표시 판정은 `resolveSeaVisible(sceneInfo)` 한 곳이다. 배경 유무로 바다를 유추하는 코드를 다른 곳에 두지 않는다 (rendering-perf).
 - 수면 아래 잠김 안개는 바다가 닿는 위치(바다 도달 마스크)에만 낀다. 안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않고, 마스크 유니폼은 `publishSeaReachMask` 로 값만 바꾼다 (rendering-perf).
 - 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
 - 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
@@ -286,9 +289,13 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
-- GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돌린다. 타일·LOD 지도(`philly-terrain.glb`·`okpo-terrain.glb`·`okpo-tree.glb`)에 `pnpm optimize:map` 을 원본 없이 재실행하지 않는다 (assets-glb).
+- 모델·지도·배경의 목록은 자산 라이브러리(`library.json`)가 유일한 원천이다. 코드에 자산 목록을 두지 않는다 (asset-library).
+- 씬에 놓인 모델·지도·배경은 파일 경로와 자산 참조(`asset: { id, version }`)를 함께 든다. 모니터링·3D 플레이는 라이브러리를 읽지 않는다 — 지도의 역할도 씬의 `role` 로 판정한다(`resolveGroundMaps`·`isContextMap`) (asset-library).
+- 자산에 붙이는 라벨은 카테고리(`categories`)다. "태그"·`Tag` 아이콘은 데이터 태그(태그 맵핑·가상 태그)만 가리킨다 (asset-library).
+- 배포 파일을 같은 경로에 덮어쓰지 않는다. 파일이 바뀌면 자산 라이브러리의 새 버전이고, 씬은 에디터에서 갱신해야 그 버전을 쓴다 (asset-library, assets-glb).
+- GLB 경로를 코드에 문자열로 적지 않는다. 코드가 직접 로드하는 모델은 `CODE_ASSETS` 표에 자산 id·버전·경로로 올리고 거기서 꺼내 쓴다 (asset-library).
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 에 "얹힌 표시" 가 없는지 본다. 바닥과 같은 높이로 겹친 표시는 로그 깊이로도 갈리지 않아 깜빡인다 (assets-glb).
-- GLB·배경 EXR 을 반입·교체하거나 카탈로그 밖에서 직접 로드하는 GLB 를 추가하면 `pnpm assets:stats` 를 돌리고, 후자는 `builtin-extra-assets.ts` 에도 올린다. 자산 id(= 카탈로그 id)는 바꾸지 않는다 (asset-library).
+- 배포 경로에 GLB·배경 EXR 이 늘거나 바뀌면 `pnpm assets:stats` 를 돌린다. 자산 id 는 바꾸지 않는다 — 씬과 코드가 그 id 를 가리킨다 (asset-library).
 - GLB·씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 `pnpm perf:scene` 등으로 직접 확인한다. 자동 성능 게이트는 없다 (assets-glb).
 
 ### 다시 시도하지 않는 것
@@ -297,6 +304,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - reverse-Z 깊이 — three 의 `reverseDepthBuffer` 는 WebGPU 전용이고 기본 프레임버퍼에선 정밀도 이득이 없다.
 - DPR 상한 1.25 — 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값을 함께 바꾼다).
+- PC 별 해상도 배율 옵션 — 흐려진 화면이 눈에 피로하다. 픽셀 비용은 픽셀당 계산(그림자·재질)에서 줄인다.
 - 미등록 region 의 기본 씬 파일 fallback — 남의 씬을 덮어쓴 사고의 원인.
 - three `TransformControls` 의 `translationSnap` 류 — local 격자가 객체 회전 프레임에 놓여 저장값이 격자를 벗어난다.
 - 탑뷰용 `camera.up` 변경 — OrbitControls 극점이 틀어지고 `{position, target}` 포즈가 up 을 복원할 수 없다.
@@ -304,6 +312,9 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 그림자 무효화의 벽시계 스로틀 — 배속 재생에서 자기 그림자가 명멸한다. 상한은 거버너 fps 가 정한다.
 - `compileAsync` 셰이더 프리워밍 — 캔버스 언마운트 중 three 내부가 던진다. 동기 `compile` 을 쓴다.
 - Canvas `shadows` 의 PCFSoft(`true`·`'soft'`) — R3F 가 재렌더마다 타입을 되돌려 shadow pass 전 컴파일된 셰이더가 그림자 받는 메시를 못 그린다. `sceneCanvasShadows` 의 PCF 만 쓴다.
+- 코드 카탈로그(모델·지도·배경 목록을 코드에 두기) — 원천이 라이브러리와 둘이 되어 등록한 자산을 에디터에서 쓸 수 없고 버전을 바꿔도 씬이 따라오지 않았다.
+- 씬이 자산의 현재 버전을 자동으로 따라가기 — 새 GLB 는 노드 이름·원점이 달라 태그 맵핑·리그·영역이 조용히 깨질 수 있다. 에디터에서 눌러 갱신한다.
+- 지도 파이프라인의 옵션(타일·격자·양면·겹침 검사 무시)을 사람이 고르기 — 등록하는 사람은 그 값을 모른다. 파이프라인이 파일을 재서 정한다.
 
 ## docs/ 지도
 

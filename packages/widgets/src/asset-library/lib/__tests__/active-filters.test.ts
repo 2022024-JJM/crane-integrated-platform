@@ -19,7 +19,7 @@ const full: AssetQuery = {
   text: '  crane ',
   kinds: ['model', 'map'],
   statuses: ['draft'],
-  tags: ['a', 'b'],
+  categories: ['a', 'b'],
   collectionId: 'yard',
   favoritesOnly: true,
   attention: 'review',
@@ -44,8 +44,8 @@ describe('listActiveFilters', () => {
       'kind:model',
       'kind:map',
       'status:draft',
-      'tag:a',
-      'tag:b',
+      'category:a',
+      'category:b',
       'collection:yard',
       'favorites',
     ]);
@@ -60,21 +60,21 @@ describe('listActiveFilters', () => {
     ).toEqual([]);
   });
 
-  it('계층에서 체크한 태그는 칩이다 — 위치가 아니라 필터다', () => {
+  it('계층에서 체크한 카테고리는 칩이다 — 위치가 아니라 필터다', () => {
     const query: AssetQuery = {
       ...DEFAULT_ASSET_QUERY,
       kinds: ['model'],
-      tags: ['indoor', 'crane'],
+      categories: ['indoor', 'crane'],
     };
     const filters = listActiveFilters(query, collections);
     expect(filters).toEqual([
-      { type: 'tag', value: 'indoor' },
-      { type: 'tag', value: 'crane' },
+      { type: 'category', value: 'indoor' },
+      { type: 'category', value: 'crane' },
     ]);
-    // 칩을 풀면 종류는 그대로고 그 태그만 빠진다.
+    // 칩을 풀면 종류는 그대로고 그 카테고리만 빠진다.
     expect(removeActiveFilter(query, filters[0])).toEqual({
       ...query,
-      tags: ['crane'],
+      categories: ['crane'],
     });
   });
 
@@ -120,13 +120,13 @@ describe('removeActiveFilter', () => {
     expect(
       removeActiveFilter(full, { type: 'kind', value: 'model' }).kinds,
     ).toEqual(['map']);
-    expect(removeActiveFilter(full, { type: 'tag', value: 'b' }).tags).toEqual([
+    expect(removeActiveFilter(full, { type: 'category', value: 'b' }).categories).toEqual([
       'a',
     ]);
   });
 
   it('걸려 있지 않은 값을 풀어도 내용은 그대로다', () => {
-    expect(removeActiveFilter(full, { type: 'tag', value: 'zzz' })).toEqual(
+    expect(removeActiveFilter(full, { type: 'category', value: 'zzz' })).toEqual(
       full,
     );
   });

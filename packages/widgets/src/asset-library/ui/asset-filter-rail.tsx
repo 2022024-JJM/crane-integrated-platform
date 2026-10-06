@@ -5,7 +5,7 @@ import {
   ASSET_ATTENTION_KINDS,
   ASSET_COLLECTION_NAME_MAX,
   getAssetScope,
-  toggleAssetScopeTag,
+  toggleAssetScopeCategory,
   withAssetScope,
   type AssetAttentionKind,
   type AssetCollection,
@@ -19,7 +19,7 @@ import { AssetTree } from './asset-tree';
 
 interface AssetFilterRailProps {
   query: AssetQuery;
-  /** 탐색 계층(종류 › 태그). */
+  /** 탐색 계층(종류 › 카테고리). */
   tree: AssetTreeData;
   /** 이유별로 손이 가야 하는 자산 수. */
   attention: Record<AssetAttentionKind, number>;
@@ -178,10 +178,10 @@ export function AssetFilterRail({
         <AssetTree
           tree={tree}
           scope={getAssetScope(query)}
-          hasTags={query.tags.length > 0}
+          hasCategories={query.categories.length > 0}
           onSelect={(scope) => onChange(withAssetScope(query, scope))}
-          onToggleTag={(kind, tag) =>
-            onChange(toggleAssetScopeTag(query, kind, tag))
+          onToggleCategory={(kind, category) =>
+            onChange(toggleAssetScopeCategory(query, kind, category))
           }
         />
       </RailSection>

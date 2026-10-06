@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadSceneInfoByRegionId, sceneModelCatalog } from '@crane/domain/3d';
+import { loadSceneInfoByRegionId } from '@crane/domain/3d';
 import { getRegionTitleKey, type Region } from '@crane/domain/region';
 import { useSceneInfoStore } from '@crane/features/3d';
 import type { DashboardEquipmentRow } from './types';
@@ -18,11 +18,6 @@ export interface SceneOverview {
   /** 태그 맵핑이 있는 장비만 — 라이브 상태 섹션 대상. */
   equipment: DashboardEquipmentRow[];
 }
-
-/** GLB path → 카탈로그 id — 정적 썸네일(`/previews/{id}.png`) 조회용. */
-const catalogIdByPath = new Map(
-  sceneModelCatalog.map((item) => [item.path, item.id]),
-);
 
 export function useSceneOverview(regions: Region[]): SceneOverview {
   const sceneInfoByRegion = useSceneInfoStore(
@@ -79,7 +74,7 @@ export function useSceneOverview(regions: Region[]): SceneOverview {
           regionId: region.id,
           equipName: model.equipName,
           regionTitleKey: getRegionTitleKey(region.id),
-          previewAssetId: catalogIdByPath.get(model.path) ?? null,
+          previewAssetId: model.asset?.id ?? null,
           tags: tagKeys.map((tagKey) => ({
             tagKey,
             label: tagKey,

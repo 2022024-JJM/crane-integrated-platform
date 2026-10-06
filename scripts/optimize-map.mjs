@@ -1,12 +1,30 @@
-// 지도(maps/) GLB 최적화 파이프라인 (텍스처 + 머티리얼 + 지오메트리).
+// 지도 GLB 최적화 파이프라인 (텍스처 + 머티리얼 + 지오메트리 + 타일·LOD).
 //
-// 운영 절차·튜닝·문제 해결: docs/지도-GLB-최적화-파이프라인.md
+// 절차의 현재 상태: docs/agents/assets-glb.md
+// 스테이지별 튜닝 근거(도입 시점의 기록): docs/지도-GLB-최적화-파이프라인.md
 //
 // 사용법:
-//   pnpm optimize:map                    # 전체 지도
-//   pnpm optimize:map phillyshipyard.glb # 특정 파일만
-//   KEEP_DOUBLE_SIDED=1 pnpm optimize:map ...  # 양면 렌더링 유지(뒷면 구멍 발생 시)
-//   FORCE_MESHOPT=1 pnpm optimize:map ...      # 양자화 안전 가드 무시(아래 참고)
+//   node scripts/optimize-map.mjs --single <입력.glb> <출력.glb> [--report <json>]
+//
+// 파일 하나를 받아 하나를 낸다. 입력은 건드리지 않는다. 자산 라이브러리의 등록·
+// 새 버전 올리기가 "최적화" 를 켰을 때 dev 미들웨어가 이 명령을 돌린다
+// (apps/shell/vite.config.ts devAssetLibraryPlugin). 배포 파일을 제자리에서
+// 덮어쓰는 모드는 없다 — 지도를 바꾸면 항상 라이브러리의 새 버전이 된다.
+//
+// **사람이 고를 옵션이 없다.** 예전에 환경 변수와 별도 명령으로 정하던 것을
+// 파이프라인이 파일을 재서 정하고, 무엇을 골랐는지를 --report 에 적는다:
+//   - 루트 오프셋: 루트 노드 하나에 이동만 실려 있으면 지운다(removeRootOffset).
+//     지운 값은 보고에 실어, 새 지도는 그 자리가 기본 위치가 된다.
+//   - 단색 텍스처: 모든 픽셀이 같은 텍스처를 4×4 로 줄인다(shrink-flat-textures).
+//   - 양면 유지: 불투명 머티리얼만 단면으로 만든다. 알파(MASK·BLEND) 머티리얼은
+//     잎 카드처럼 뒷면이 보여야 하는 것이라 양면 그대로 둔다.
+//   - 지오메트리 압축(meshopt): 항상 건다. 양자화로 층이 붙지 않게, 그리드보다
+//     가깝게 얹힌 평면 표시를 먼저 그리드 정수 배만큼 띄운다. 그래도 겹친 표시가
+//     남으면 원본에 있던 결함이라 고칠 수 없다 — 저장하고 보고에 경고를 남긴다.
+//   - 타일 + LOD: 삼각형이 많고 텍스처 머티리얼이 적은 지형만 나눈다
+//     (pickTileGrid). 나누면 tile-terrain-glb.mjs 를 이어 돌린다.
+//   - 작은 지도: 삼각형이 SURGERY_MIN_TRIANGLES 미만이면 지오메트리를 고치지
+//     않는다(단면화·평면 레이어 보호·데시메이션 생략). 텍스처와 압축만 건다.
 //
 // optimize-glb.mjs(모델용)와 분리한 이유 — 지도는 정책이 3가지 다르다:
 //   - 텍스처 상한 2048px (모델과 동일): 도입 당시 1024 였으나 2026-09-04
@@ -17,7 +35,7 @@
 //   - 노멀/ORM도 손실 압축 (모델은 무손실): 원거리에서 셰이딩 얼룩이 비가시.
 //   - 머티리얼/지오메트리 수술 스테이지 존재: transmission 제거, 단면화,
 //     weld+simplify 데시메이션. 지도 씬 항목은 meshOverrides/valueMapper 를
-//     쓰지 않으므로 (scene-map-catalog.ts 참고) 토폴로지 변경이 안전하다.
+//     쓰지 않으므로 토폴로지 변경이 안전하다.
 //     단 join/prune 금지는 레포 정책 그대로 준수한다.
 //
 // 배경: phillyshipyard.glb 교체(de85396)로 지도가 1.7MB→53.6MB(정점 27배,
@@ -25,18 +43,16 @@
 // 머티리얼은 three.js 가 매 프레임 씬 전체를 별도 렌더 타겟에 한 번 더
 // 그리게 만들어 프레임 비용을 사실상 2배로 만든다 — 여기서 제거한다.
 //
-// 백업 관례는 optimize-glb.mjs 와 동일: assets-src/maps/ 의 백업본이 항상
-// "진짜 원본"이고, 매 실행마다 원본에서 다시 최적화하므로 멱등이다.
-// 새 지도를 반입할 때는 assets-src/maps/<파일> 에 넣고 실행할 것.
-//
 // 파이프라인 (순서가 중요하다):
+//   ⓪ prepare   (in-process) 루트 오프셋 제거 → 단색 텍스처 축소
 //   ① resize    텍스처 최대 2048px
 //   ② webp      전 슬롯 손실 압축(q80) — 노멀/ORM 포함
-//   ③ surgery   (in-process) transmission 제거 → 단면화 → 미사용 UV 제거
-//               → weld → 평면 레이어 보호(아래) → simplify
+//   ③ surgery   (in-process) transmission 제거 → 단면화(불투명만) → 미사용 UV
+//               제거 → weld → 평면 레이어 보호(아래) → simplify
 //               → meshopt 압축  ← meshopt 는 반드시 마지막 (텍스처 커맨드가
 //               EXT_meshopt_compression 을 제거하므로, optimize-glb.mjs 참고)
 //               → 출력 검증(동일 평면 겹침)
+//   ④ tile      (조건부) 공간 타일 + LOD — tile-terrain-glb.mjs
 //
 // 평면 레이어 보호 — 전부 수평면인 프리미티브(아스팔트·차선·횡단보도)는 이
 // 파이프라인의 세 스테이지가 각각 망가뜨린다. okpo.glb 의 횡단보도가 깜빡이고
@@ -49,9 +65,11 @@
 //     → 다른 레이어의 윗면 위 OVERLAY_REACH 안쪽에 놓인 아래 향한 높이는 위로
 //     뒤집는다. 받치는 면이 없는 것(philly 지도에 딸려 온 Sea 평면)은 그대로
 //     가려 둔다 — 런타임 바다(OceanWater)가 그 자리를 그린다.
-//   - 양자화: 바닥에서 수 mm 띄워 얹은 표시는 그리드(수 cm)에 삼켜져 바닥과
-//     완전히 같은 높이가 된다. 간격 0 은 로그 깊이로도 못 가른다. → 다른 레이어
-//     위에 COPLANAR_EPS 안쪽으로 놓인 높이는 OVERLAY_LIFT 이상 띄운다.
+//   - 양자화: 바닥에서 그리드보다 가깝게 얹은 표시는 양자화로 바닥과 같은
+//     칸에 떨어져 완전히 같은 높이가 된다. 간격 0 은 로그 깊이로도 못 가른다.
+//     → 다른 레이어 위에 그리드(최소 COPLANAR_EPS) 안쪽으로 놓인 높이는
+//     OVERLAY_LIFT 이상, 그리드 정수 배만큼 띄운다. 띄운 층이 그 위의 층과
+//     다시 가까워질 수 있어 더 띄울 것이 없을 때까지 되풀이한다(liftOverlays).
 // 판정은 머티리얼 이름이 아니라 지오메트리 실측이다(audit-map-layers.mjs).
 //
 // simplify 튜닝 노브:
@@ -61,38 +79,27 @@
 //   simplify 는 정점을 기존 표면 위로 붕괴시키므로(양자화식 스냅과 다름)
 //   드롭 레이캐스트 착지 높이가 오차 한도 안에서 보존된다.
 //
-// meshopt 양자화는 CLI 가 아니라 in-process 로 돌리고, 적용 여부를 지도별
-// 실측으로 자동 판단한다(quantizationSafety 참고). 양자화 그리드는
+// meshopt 양자화는 CLI 가 아니라 in-process 로 돌린다. 양자화 그리드는
 // "지도 최대 폭 / 65535"(16bit)라 지도가 클수록 거칠어지는데, 그리드가
-// 레이어 간 의도적 높이 차(예: 지면 위 10cm 띄운 도로)보다 거칠면 두 층이
-// 같은 셀로 붕괴해 z-fighting 이 난다. 실제 사고: CLI 기본 14bit(그리드
-// 14.6cm)가 philly 의 지면(3.682m)-도로(3.782m) 10cm 차를 붕괴시켜 도로
-// 전체가 깜빡였다. 그래서 매 실행마다 프리미티브 Y bounds 로 최소 층간
-// 높이 차(minGap)를 재고, 그리드×2 ≤ minGap 일 때만 meshopt 를 적용한다
-// (philly 실측: 그리드 3.65cm, minGap 8.8cm → 적용). 조건을 못 넘으면
-// meshopt 를 생략하고 f32 로 남긴다 — simplify 까지만으로도 대부분 절감되고
-// 나머지는 HTTP 압축이 흡수한다. FORCE_MESHOPT=1 로 가드를 무시할 수 있다
-// (작은 오프셋이 의도가 아님을 사람이 확인한 경우, 또는 그 평면층이 화면에
-// 안 보이는 경우 — philly-terrain.glb(폭 18.9km, 그리드 28.8cm)는 도로·숲
-// 평면이 지형 overlay 아래 묻혀 있어 우회했다. assets-src/README.md 참고).
+// 레이어 간 높이 차보다 거칠면 두 층이 같은 셀로 붕괴해 z-fighting 이 난다.
+// 실제 사고: CLI 기본 14bit(그리드 14.6cm)가 philly 의 지면(3.682m)-도로
+// (3.782m) 10cm 차를 붕괴시켜 도로 전체가 깜빡였다. 폭 18.9km 지형은 그리드가
+// 28.8cm 라 10cm 간격의 도로·숲·지면 평면이 전부 붙는다. 그래서 양자화 전에
+// **그리드를 기준으로** 얹힌 평면 표시를 띄우고(위 "평면 레이어 보호"),
+// 양자화가 끝난 문서에서 겹침을 다시 잰다(출력 검증).
 //
-// 가드가 보지 않는 것 — 5mm 이내 레벨은 같은 층으로 병합해 갭 계산에서
-// 뺀다. 같은 높이의 쌍은 두 경우뿐이고 둘 다 평면 레이어 보호가 맡는다:
-//   - 맞물린 쌍(philly 의 Asphalt↔Road Lines): XZ 로 겹치지 않아 안전하다.
-//     simplify 에서 빼 두면 양자화 뒤에도 맞물림이 유지된다.
-//   - 얹힌 쌍(okpo 의 횡단보도, 아스팔트 5mm 위): 띄우기 스테이지가 그리드
-//     정수 배만큼 올려 가드의 시야(5mm 밖)로 옮긴다.
-// 가드와 보호 스테이지가 놓친 겹침은 출력 검증이 잡는다 — 양자화된 결과에서
-// 얹힌 표시가 남아 있으면 그 파일은 실패한다(FORCE_MESHOPT=1 이면 경고).
+// 출력 검증에 걸리는 것 — 띄우기가 못 고치는 겹침이다: 평면이 아닌 바닥과
+// 맞물린 표시, 인스턴싱된 메시, 원본부터 같은 높이로 겹쳐 온 입체 면.
+// 파이프라인이 만든 결함이 아니라 원본의 결함이므로 저장을 막지 않는다 —
+// 원본을 그대로 저장해도 똑같이 깜빡이고 용량만 열 배다. 보고에 겹친 곳을
+// 적어 검토 단계에서 보게 한다. 배포본은 audit-map-layers.mjs 로 다시 본다.
 import { execFileSync } from 'node:child_process';
 import {
   copyFileSync,
-  existsSync,
-  mkdirSync,
   mkdtempSync,
-  readdirSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -109,6 +116,7 @@ import {
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 
 import {
+  COPLANAR_EPS,
   LEVEL_EPS,
   collectLayers,
   formatOverlap,
@@ -116,11 +124,11 @@ import {
   measureCoplanarOverlaps,
   measureHiddenOverlays,
 } from './audit-map-layers.mjs';
+import { shrinkFlatTextures } from './shrink-flat-textures.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const MAPS_DIR = join(repoRoot, 'apps/shell/public/maps');
-const BACKUP_DIR = join(repoRoot, 'assets-src/maps');
 const CLI = join(repoRoot, 'node_modules/@gltf-transform/cli/bin/cli.js');
+const TILE_SCRIPT = join(repoRoot, 'scripts/tile-terrain-glb.mjs');
 
 const MAX_TEXTURE_SIZE = 2048;
 const LOSSY_QUALITY = 80;
@@ -128,8 +136,6 @@ const SIMPLIFY_RATIO = 0.4;
 const SIMPLIFY_ERROR = 0.0002;
 /** 헤더 주석 참고 — 14bit(CLI 기본값)는 도로-지면 10cm 오프셋을 붕괴시킨다. */
 const QUANTIZE_POSITION_BITS = 16;
-/** 이보다 가까운 Y 레벨은 "의도적 동일 평면"으로 보고 같은 층으로 병합한다. */
-const LAYER_MERGE_EPS = 0.005;
 /**
  * 얹힌 표시를 바닥에서 띄우는 최소 높이(m). 디자이너 지도의 층간 관례(지면
  * 위 도로 10cm)와 같다. 실제로는 양자화 그리드의 정수 배로 올림해, 바닥과
@@ -144,8 +150,25 @@ const OVERLAY_REACH = OVERLAY_LIFT * 2;
 /** [0,1] 밖 UV 가 전부 이 안이면 export 부동소수 노이즈로 보고 클램프한다. */
 const UV_CLAMP_EPS = 1e-4;
 const TRANSMISSION_EXT = 'KHR_materials_transmission';
-const keepDoubleSided = process.env.KEEP_DOUBLE_SIDED === '1';
-const forceMeshopt = process.env.FORCE_MESHOPT === '1';
+/** 얹힌 표시를 띄우는 일을 되풀이하는 상한 — 층이 이보다 깊게 쌓인 지도는 없다. */
+const LIFT_PASSES_MAX = 4;
+/**
+ * 타일 + LOD 로 나누는 기준. 삼각형이 이보다 적으면 통짜로도 가볍고(컬링 이득이
+ * 작다), 타일마다 프리미티브가 머티리얼 수만큼 생기므로 "격자² × 타일당
+ * 프리미티브" 가 예산을 넘지 않는 가장 촘촘한 격자를 고른다. 야드처럼 텍스처
+ * 머티리얼이 수십 개인 지도는 어느 격자도 예산에 들지 않아 나누지 않는다.
+ */
+const TILE_MIN_TRIANGLES = 500_000;
+const TILE_DRAW_CALL_BUDGET = 200;
+const TILE_GRIDS = [8, 4];
+/**
+ * 지오메트리 수술(단면화·평면 레이어 보호·데시메이션)을 거는 최소 삼각형 수.
+ * 이보다 작은 지도(평면 한 장, 도크 하나)는 줄일 것이 없고, 한 장짜리 면은
+ * 단면화하면 뒤에서 사라진다 — 텍스처와 압축만 건다.
+ */
+const SURGERY_MIN_TRIANGLES = 10_000;
+/** 타일 스크립트가 만드는 LOD 단계 수(LOD0~3). 보고에 적는 값이다. */
+const TILE_LOD_LEVELS = 4;
 
 /**
  * 16bit 양자화 그리드 한 변(m). quantizationVolume 'mesh' 기준이라 메시가
@@ -172,54 +195,6 @@ function quantizationGrid(doc) {
     }
   }
   return grid;
-}
-
-/**
- * 양자화 안전성 실측 (헤더 주석 참고).
- *
- * grid   : quantizationGrid 참고.
- * minGap : "지배적 평면 레벨" 간 최소 높이 차(m). 레벨은 프리미티브 정점의
- *          Y 히스토그램(1mm 단위)에서 그 프리미티브 정점의 20% 이상 + 32개
- *          이상이 몰린 값 — 즉 넓은 수평 평면만 층으로 센다. z-fighting 은
- *          넓은 평면끼리 겹칠 때만 문제라, 벽·나무 같은 입체 지오메트리의
- *          bbox 경계가 우연히 가깝다고 가드가 오발되지 않게 하기 위함이다.
- *          5mm 이내 레벨은 의도적 동일 평면으로 보고 병합. 층이 하나뿐이면
- *          Infinity.
- */
-function quantizationSafety(doc) {
-  const levels = [];
-  for (const mesh of doc.getRoot().listMeshes()) {
-    for (const prim of mesh.listPrimitives()) {
-      const position = prim.getAttribute('POSITION');
-      if (!position) continue;
-
-      // 프리미티브별 Y 히스토그램에서 지배적 평면 레벨 추출.
-      const array = position.getArray();
-      const count = position.getCount();
-      const byMm = new Map();
-      for (let v = 0; v < count; v++) {
-        const key = Math.round(array[v * 3 + 1] * 1000);
-        byMm.set(key, (byMm.get(key) ?? 0) + 1);
-      }
-      const threshold = Math.max(32, count * 0.2);
-      for (const [key, n] of byMm) {
-        if (n >= threshold) levels.push(key / 1000);
-      }
-    }
-  }
-
-  levels.sort((a, b) => a - b);
-  const merged = [];
-  for (const level of levels) {
-    if (merged.length === 0 || level - merged[merged.length - 1] > LAYER_MERGE_EPS) {
-      merged.push(level);
-    }
-  }
-  let minGap = Infinity;
-  for (let i = 1; i < merged.length; i++) {
-    minGap = Math.min(minGap, merged[i] - merged[i - 1]);
-  }
-  return { grid: quantizationGrid(doc), minGap };
 }
 
 /**
@@ -413,41 +388,114 @@ function faceOverlaysUp(doc, flatLayers) {
 }
 
 /**
- * 다른 레이어 위에 같은 높이로 얹힌 평면 레이어의 높이를 띄운다 (헤더 "평면
- * 레이어 보호"). 판정은 audit-map-layers.mjs 의 overlay — 그 높이 면적의
- * OVERLAY_MIN_SHARE 이상이 COPLANAR_EPS 안쪽으로 겹칠 때다.
+ * 다른 레이어 위에 가깝게 얹힌 평면 레이어의 높이를 띄운다 (헤더 "평면 레이어
+ * 보호"). 판정은 audit-map-layers.mjs 의 overlay — 그 높이 면적의
+ * OVERLAY_MIN_SHARE 이상이 `eps` 안쪽으로 겹칠 때다. `eps` 는 양자화 그리드와
+ * COPLANAR_EPS 중 큰 값이다: 그리드보다 가까운 두 층은 양자화로 같은 칸에
+ * 떨어질 수 있다.
  *
  * 그 높이의 정점을 **전부** 같은 양만큼 올린다. 겹친 면만 올리면 같은 표시가
  * 바닥 경계에서 꺾인다. 올리는 양은 그리드의 정수 배라 양자화 뒤 바닥과의
  * 칸 수 차가 정확히 그 배수다(round(x + k) = round(x) + k).
  *
- * 반환: 띄운 (프리미티브, 높이) 수와 띄운 양(m).
+ * 한 번 띄운 층이 그 위에 있던 층과 다시 가까워질 수 있다(지면 0 · 숲 0.1 ·
+ * 도로 0.3 에서 숲을 올리면 도로와 붙는다). 더 띄울 것이 없을 때까지
+ * 되풀이하되 LIFT_PASSES_MAX 에서 멈춘다 — 남은 겹침은 출력 검증이 알린다.
+ *
+ * 반환: 띄운 (프리미티브, 높이) 수와 한 번에 띄운 양(m), 되풀이한 횟수.
  */
-function liftOverlays(doc, flatLayers, grid) {
+function liftOverlays(doc, flatLayers) {
+  const grid = quantizationGrid(doc);
   const lift = grid > 0 ? Math.ceil(OVERLAY_LIFT / grid) * grid : OVERLAY_LIFT;
-  const targets = overlayLevels(
-    measureCoplanarOverlaps(collectLayers(doc)),
-    flatLayers,
-  );
+  const eps = Math.max(COPLANAR_EPS, grid);
 
   let lifted = 0;
-  for (const [layer, levels] of targets) {
-    const m = layer.node.getWorldMatrix();
-    const position = ownAccessor(layer.prim, 'POSITION');
-    const el = [0, 0, 0];
-    for (let v = 0; v < position.getCount(); v++) {
-      position.getElement(v, el);
-      const y = m[5] * el[1] + m[13];
-      for (const level of levels) {
-        if (Math.abs(y - level) > LEVEL_EPS * 2) continue;
-        el[1] += lift / m[5];
-        position.setElement(v, el);
-        break;
+  let passes = 0;
+  for (; passes < LIFT_PASSES_MAX; passes++) {
+    const targets = overlayLevels(
+      measureCoplanarOverlaps(collectLayers(doc), eps),
+      flatLayers,
+    );
+    if (targets.size === 0) break;
+    for (const [layer, levels] of targets) {
+      const m = layer.node.getWorldMatrix();
+      const position = ownAccessor(layer.prim, 'POSITION');
+      const el = [0, 0, 0];
+      for (let v = 0; v < position.getCount(); v++) {
+        position.getElement(v, el);
+        const y = m[5] * el[1] + m[13];
+        for (const level of levels) {
+          if (Math.abs(y - level) > LEVEL_EPS * 2) continue;
+          el[1] += lift / m[5];
+          position.setElement(v, el);
+          break;
+        }
       }
+      lifted += levels.size;
     }
-    lifted += levels.size;
   }
-  return { lifted, lift };
+  return { lifted, lift, passes };
+}
+
+/** 문서의 삼각형 수 — 인덱스가 없는 프리미티브는 정점 수로 센다. */
+function countTriangles(doc) {
+  let triangles = 0;
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const prim of mesh.listPrimitives()) {
+      const indices = prim.getIndices();
+      const count = indices
+        ? indices.getCount()
+        : (prim.getAttribute('POSITION')?.getCount() ?? 0);
+      triangles += Math.floor(count / 3);
+    }
+  }
+  return triangles;
+}
+
+/**
+ * ⓪ 루트 오프셋 제거. Blender 씬에 배치된 지도를 그대로 내보내면 루트 노드의
+ * translation 에 월드 좌표가 실려 온다 — 기즈모 피벗이 지도에서 수 km 떨어지고,
+ * 평면 레이어 보호와 타일 스크립트가 전제하는 "루트가 원점" 도 깨진다.
+ *
+ * 지우는 것은 **루트 노드가 하나이고 이동만 실려 있을 때**뿐이다. 회전·스케일이
+ * 섞였거나 루트가 여럿이면 한 값으로 되돌릴 수 없어 그대로 둔다. 지운 값을
+ * 돌려준다(없으면 null) — 그 값을 배치 위치로 쓰면 지도가 원래 자리에 놓인다.
+ * 같은 지도의 새 버전도 같은 오프셋을 달고 오므로, 매번 지워야 버전이 바뀌어도
+ * 씬의 배치가 그대로 맞는다.
+ */
+function removeRootOffset(doc) {
+  const root = doc.getRoot();
+  const scene = root.getDefaultScene() ?? root.listScenes()[0];
+  const roots = scene ? scene.listChildren() : [];
+  if (roots.length !== 1) return null;
+  const [node] = roots;
+  const translation = node.getTranslation();
+  const rotation = node.getRotation();
+  const scale = node.getScale();
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const identityRotation =
+    near(rotation[0], 0) && near(rotation[1], 0) && near(rotation[2], 0) &&
+    near(Math.abs(rotation[3]), 1);
+  const unitScale = scale.every((value) => near(value, 1));
+  if (!identityRotation || !unitScale) return null;
+  if (translation.every((value) => near(value, 0))) return null;
+  node.setTranslation([0, 0, 0]);
+  return translation.map((value) => +value.toFixed(3));
+}
+
+/**
+ * ⓪ prepare: 루트 오프셋 제거 → 단색 텍스처 축소. 바뀐 것이 없으면 입력을
+ * 그대로 다음 단계로 넘긴다(수백 MB 를 헛되이 다시 쓰지 않는다).
+ */
+async function prepare(io, inputPath, outputPath) {
+  const doc = await io.read(inputPath);
+  const rootOffset = removeRootOffset(doc);
+  const { shrunk } = await shrinkFlatTextures(doc);
+  if (rootOffset === null && shrunk === 0) {
+    return { path: inputPath, rootOffset, shrunk };
+  }
+  await io.write(outputPath, doc);
+  return { path: outputPath, rootOffset, shrunk };
 }
 
 /**
@@ -456,23 +504,27 @@ function liftOverlays(doc, flatLayers, grid) {
  * - 미사용 UV 제거: stripUnusedTexcoords 참고. weld 보다 먼저 돈다.
  * - transmission 제거: 굴절 유리를 일반 알파 블렌딩 반투명으로 바꾼다.
  *   유리 삼각형은 소수라 알파 정렬 비용은 미미하다.
- * - 단면화: doubleSided 해제로 래스터/레이캐스트 삼각형 테스트가 절반이 된다.
- *   뒤집힌 면이 구멍으로 보이면 KEEP_DOUBLE_SIDED=1 로 재실행해 복구.
+ * - 단면화: 불투명 머티리얼의 doubleSided 를 풀어 래스터/레이캐스트 삼각형
+ *   테스트를 절반으로 줄인다. 알파(MASK·BLEND) 머티리얼은 양면 그대로다 —
+ *   잎 카드는 한 장짜리 면이라 단면화하면 절반이 사라진다.
  * - weld: 무손실 인덱스 dedup — simplify 가 프리미티브 경계를 넘어 동작하는 전제.
  * - 평면 레이어 보호: 헤더 주석 참고. 뒤집기 → 띄우기 순서이고(뒤집어야
  *   아래 향하던 표시도 겹침 측정에 잡힌다), simplify 는 평면 레이어를 건너뛴다.
  *   단면화 뒤에 돌아야 한다 — 가려진 면은 머티리얼이 단면일 때만 생긴다.
- * - 출력 검증: 양자화까지 끝난 문서에서 동일 평면 겹침을 다시 잰다.
+ * - meshopt: 항상 건다. 양자화로 붙을 층은 띄우기가 이미 벌려 놓았다.
+ * - 출력 검증: 양자화까지 끝난 문서에서 동일 평면 겹침을 다시 잰다. 남은 얹힌
+ *   표시는 돌려줄 뿐 실패시키지 않는다(헤더 "출력 검증에 걸리는 것").
+ *
+ * 작은 지도(SURGERY_MIN_TRIANGLES 미만)는 단면화·평면 레이어 보호·simplify 를
+ * 건너뛴다(`reshaped: false`) — 모양은 올린 그대로이고 압축만 된다.
  */
-async function surgery(inputPath, outputPath) {
-  await Promise.all([MeshoptSimplifier.ready, MeshoptEncoder.ready, MeshoptDecoder.ready]);
-  // EXT_meshopt_compression 인코딩은 io.write 시점에 등록된 의존성으로 수행된다.
-  const io = new NodeIO()
-    .registerExtensions(ALL_EXTENSIONS)
-    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder });
+async function surgery(io, inputPath, outputPath) {
   const doc = await io.read(inputPath);
   const root = doc.getRoot();
+  const trianglesBefore = countTriangles(doc);
+  const reshaped = trianglesBefore >= SURGERY_MIN_TRIANGLES;
 
+  let keptDoubleSided = 0;
   for (const material of root.listMaterials()) {
     if (material.getExtension(TRANSMISSION_EXT)) {
       material.setExtension(TRANSMISSION_EXT, null);
@@ -482,8 +534,11 @@ async function surgery(inputPath, outputPath) {
       material.setRoughnessFactor(0.1);
       material.setMetallicFactor(0);
     }
-    if (!keepDoubleSided) {
+    if (!reshaped) continue;
+    if (material.getAlphaMode() === 'OPAQUE') {
       material.setDoubleSided(false);
+    } else if (material.getDoubleSided()) {
+      keptDoubleSided += 1;
     }
   }
   for (const ext of root.listExtensionsUsed()) {
@@ -495,14 +550,14 @@ async function surgery(inputPath, outputPath) {
 
   await doc.transform(weld());
 
-  // 평면 레이어 보호. KEEP_DOUBLE_SIDED 면 아래 향한 면도 그대로 보이므로
-  // 뒤집지 않는다.
-  const flatLayers = editableFlatLayers(collectLayers(doc));
-  const flipped = keepDoubleSided ? 0 : faceOverlaysUp(doc, flatLayers);
-  const { lifted, lift } = liftOverlays(doc, flatLayers, quantizationGrid(doc));
+  // 평면 레이어 보호. 양면으로 남긴 머티리얼의 면은 가려진 면이 없어 뒤집을
+  // 것이 잡히지 않는다.
+  const flatLayers = reshaped ? editableFlatLayers(collectLayers(doc)) : [];
+  const flipped = faceOverlaysUp(doc, flatLayers);
+  const { lifted, lift, passes } = liftOverlays(doc, flatLayers);
 
   const flatPrims = new Set(flatLayers.map((layer) => layer.prim));
-  for (const mesh of root.listMeshes()) {
+  for (const mesh of reshaped ? root.listMeshes() : []) {
     for (const prim of mesh.listPrimitives()) {
       if (flatPrims.has(prim)) continue;
       simplifyPrimitive(prim, {
@@ -522,130 +577,196 @@ async function surgery(inputPath, outputPath) {
     }
     if (mesh.listPrimitives().length === 0) mesh.dispose();
   }
+  const trianglesAfter = countTriangles(doc);
 
-  // 양자화 자동 가드: 그리드×2 ≤ 최소 층간 높이 차일 때만 meshopt 를 적용한다.
-  const { grid, minGap } = quantizationSafety(doc);
-  const meshoptSafe = grid * 2 <= minGap;
-  if (meshoptSafe || forceMeshopt) {
-    const clamped = clampNoisyTexcoords(doc);
-    if (clamped > 0) console.log(`  UV 노이즈 클램프: accessor ${clamped}개 (허용 ${UV_CLAMP_EPS})`);
-    await doc.transform(
-      meshopt({ encoder: MeshoptEncoder, quantizePosition: QUANTIZE_POSITION_BITS }),
-    );
-  }
+  const grid = quantizationGrid(doc);
+  const clamped = clampNoisyTexcoords(doc);
+  if (clamped > 0) console.log(`  UV 노이즈 클램프: accessor ${clamped}개 (허용 ${UV_CLAMP_EPS})`);
+  await doc.transform(
+    meshopt({ encoder: MeshoptEncoder, quantizePosition: QUANTIZE_POSITION_BITS }),
+  );
 
-  // 출력 검증: 얹힌 표시가 남았으면 배포하지 않는다. 띄우기가 못 고치는
-  // 경우(평면이 아닌 바닥과 맞물린 표시를 simplify 가 깬 경우 등)가 여기 걸린다.
+  // 출력 검증: 띄우기가 못 고친 얹힌 표시(평면이 아닌 바닥과 맞물린 표시 등).
   const overlaps = measureCoplanarOverlaps(collectLayers(doc));
   const overlays = overlaps.filter(isOverlayOverlap);
-  if (overlays.length > 0 && !forceMeshopt) {
-    throw new Error(
-      '출력에 바닥과 같은 높이로 겹친 표시가 남았다 (화면에서 깜빡인다):\n' +
-        overlays.map((overlap) => `        ${formatOverlap(overlap)}`).join('\n') +
-        '\n      그 층이 화면에 안 보이는 것을 확인했다면 FORCE_MESHOPT=1 로 재실행.',
-    );
-  }
 
+  const tileGrid = pickTileGrid(doc, trianglesAfter);
   await io.write(outputPath, doc);
   return {
     grid,
-    minGap,
-    meshoptApplied: meshoptSafe || forceMeshopt,
+    reshaped,
     flat: flatLayers.length,
     flipped,
     lifted,
     lift,
+    passes,
+    keptDoubleSided,
     overlaps,
+    overlays,
+    trianglesBefore,
+    trianglesAfter,
+    tileGrid,
   };
 }
 
-const only = process.argv.slice(2);
-
-const files = readdirSync(MAPS_DIR)
-  .filter((f) => f.endsWith('.glb'))
-  .filter((f) => only.length === 0 || only.includes(f))
-  .sort();
-
-if (files.length === 0) {
-  console.error('대상 .glb 파일이 없습니다:', only.join(', '));
-  process.exit(1);
-}
-
-mkdirSync(BACKUP_DIR, { recursive: true });
-const workDir = mkdtempSync(join(tmpdir(), 'map-optimize-'));
-
-const fmtMB = (bytes) => (bytes / 1024 / 1024).toFixed(2).padStart(7);
-let totalBefore = 0;
-let totalAfter = 0;
-const failures = [];
-
-try {
-  for (const file of files) {
-    const publicPath = join(MAPS_DIR, file);
-    const backupPath = join(BACKUP_DIR, file);
-
-    // 백업이 없을 때만 백업한다. 있으면 그 백업본이 원본이다.
-    if (!existsSync(backupPath)) {
-      copyFileSync(publicPath, backupPath);
+/**
+ * ④ 타일 + LOD 로 나눌지와 격자 수. 나누지 않으면 null.
+ *
+ * 통짜 메시는 frustum 컬링이 걸리지 않아 어느 방위를 보든 전량 렌더된다 —
+ * 삼각형이 많은 지형은 XZ 격자로 쪼개고 타일마다 LOD 를 붙인다. 다만 타일
+ * 스크립트는 무텍스처 머티리얼만 정점색으로 하나로 합치고 텍스처 머티리얼은
+ * 그대로 두므로, 타일당 프리미티브는 "텍스처 머티리얼 수 + (무텍스처가 있으면)
+ * 1" 이다. 그 수에 타일 수를 곱한 것이 드로우콜 상한이라, 예산 안에 드는 가장
+ * 촘촘한 격자를 고른다.
+ */
+function pickTileGrid(doc, triangles) {
+  if (triangles < TILE_MIN_TRIANGLES) return null;
+  const used = new Set();
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const prim of mesh.listPrimitives()) {
+      const material = prim.getMaterial();
+      if (material) used.add(material);
     }
-
-    const before = statSync(backupPath).size;
-    let quantInfo = '';
-
-    try {
-      const resized = join(workDir, `${file}.1.glb`);
-      const webped = join(workDir, `${file}.2.glb`);
-      const cliStages = [
-        ['resize', backupPath, resized, '--width', String(MAX_TEXTURE_SIZE), '--height', String(MAX_TEXTURE_SIZE)],
-        ['webp', resized, webped, '--quality', String(LOSSY_QUALITY)],
-      ];
-      for (const [cmd, input, output, ...args] of cliStages) {
-        execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
-      }
-      const { grid, minGap, meshoptApplied, flat, flipped, lifted, lift, overlaps } =
-        await surgery(webped, publicPath);
-      const fmtCm = (m) => (Number.isFinite(m) ? `${(m * 100).toFixed(1)}cm` : '없음');
-      quantInfo = `  [그리드 ${fmtCm(grid)} / 층간 ${fmtCm(minGap)} → meshopt ${meshoptApplied ? '적용' : '생략'}]`;
-      console.log(
-        `      평면 레이어 ${flat}개: 뒤집은 면 ${flipped}개, 띄운 높이 ${lifted}개` +
-          (lifted > 0 ? `(+${fmtCm(lift)})` : ''),
-      );
-      for (const overlap of overlaps) {
-        console.warn(`      동일 평면 겹침: ${formatOverlap(overlap)}`);
-      }
-      if (!meshoptApplied) {
-        console.warn(
-          `      meshopt 생략: 그리드 ${fmtCm(grid)} × 2 > 최소 층간 높이 차 ${fmtCm(minGap)} — ` +
-            '양자화 시 z-fighting 위험. simplify 까지만 적용(f32, HTTP 압축이 일부 흡수). ' +
-            '갭이 의도가 아니라고 확인했다면 FORCE_MESHOPT=1 로 재실행.',
-        );
-      }
-    } catch (error) {
-      failures.push(file);
-      console.error(`FAIL  ${file}: ${error.stderr?.toString().trim() ?? error.message}`);
-      // 실패 시 public 쪽을 원본으로 복원해 깨진 파일이 남지 않게 한다.
-      copyFileSync(backupPath, publicPath);
-      continue;
-    }
-
-    const after = statSync(publicPath).size;
-    totalBefore += before;
-    totalAfter += after;
-    const ratio = ((1 - after / before) * 100).toFixed(1).padStart(5);
-    console.log(`OK    ${fmtMB(before)}MB -> ${fmtMB(after)}MB  (-${ratio}%)  ${file}${quantInfo}`);
   }
-} finally {
-  rmSync(workDir, { recursive: true, force: true });
-}
-
-console.log('---');
-if (totalBefore > 0) {
-  const pct = ((1 - totalAfter / totalBefore) * 100).toFixed(1);
-  console.log(
-    `합계  ${fmtMB(totalBefore)}MB -> ${fmtMB(totalAfter)}MB  (-${pct}%)  성공 ${files.length - failures.length}/${files.length}`,
+  let textured = 0;
+  let plain = 0;
+  for (const material of used) {
+    if (listTextureInfoByMaterial(material).length > 0) textured += 1;
+    else plain += 1;
+  }
+  const perTile = textured + (plain > 0 ? 1 : 0);
+  if (perTile === 0) return null;
+  return (
+    TILE_GRIDS.find((grid) => grid * grid * perTile <= TILE_DRAW_CALL_BUDGET) ??
+    null
   );
 }
-if (failures.length > 0) {
-  console.error('실패(원본 유지됨):', failures.join(', '));
+
+const fmtCount = (n) =>
+  n >= 10_000 ? `${Math.round(n / 10_000)}만` : n.toLocaleString('ko-KR');
+const fmtCm = (m) => `${(m * 100).toFixed(1)}cm`;
+
+/**
+ * 파일 하나를 최적화한다. 화면이 그대로 알릴 줄들(`lines`)과 지운 루트 오프셋
+ * (`rootOffset`)을 돌려준다. 단계가 던지면 그대로 던진다 — 호출부가 실패로
+ * 알리고 원본을 쓴다.
+ */
+async function optimizeMap(inputPath, outputPath, workDir) {
+  await Promise.all([MeshoptSimplifier.ready, MeshoptEncoder.ready, MeshoptDecoder.ready]);
+  // EXT_meshopt_compression 인코딩은 io.write 시점에 등록된 의존성으로 수행된다.
+  const io = new NodeIO()
+    .registerExtensions(ALL_EXTENSIONS)
+    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder });
+  const lines = [];
+
+  const prepared = await prepare(io, inputPath, join(workDir, 'prepared.glb'));
+  if (prepared.rootOffset) {
+    lines.push(`루트 오프셋 (${prepared.rootOffset.join(', ')}) 제거`);
+  }
+  if (prepared.shrunk > 0) lines.push(`단색 텍스처 ${prepared.shrunk}장 축소`);
+
+  const resized = join(workDir, 'resized.glb');
+  const webped = join(workDir, 'webp.glb');
+  const cliStages = [
+    ['resize', prepared.path, resized, '--width', String(MAX_TEXTURE_SIZE), '--height', String(MAX_TEXTURE_SIZE)],
+    ['webp', resized, webped, '--quality', String(LOSSY_QUALITY)],
+  ];
+  for (const [cmd, input, output, ...args] of cliStages) {
+    execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
+  }
+
+  const compressed = join(workDir, 'compressed.glb');
+  const result = await surgery(io, webped, compressed);
+  console.log(
+    `  평면 레이어 ${result.flat}개: 뒤집은 면 ${result.flipped}개, 띄운 높이 ${result.lifted}개` +
+      (result.lifted > 0 ? `(+${fmtCm(result.lift)} × ${result.passes}회)` : ''),
+  );
+  console.log(`  양자화 그리드 ${fmtCm(result.grid)}`);
+  for (const overlap of result.overlaps) {
+    console.warn(`  동일 평면 겹침: ${formatOverlap(overlap)}`);
+  }
+  lines.push(
+    result.reshaped
+      ? `삼각형 ${fmtCount(result.trianglesBefore)} → ${fmtCount(result.trianglesAfter)}`
+      : `삼각형 ${fmtCount(result.trianglesBefore)}개 — 작은 지도라 모양은 그대로 두고 압축만`,
+  );
+  if (result.keptDoubleSided > 0) {
+    lines.push(`알파 머티리얼 ${result.keptDoubleSided}개 양면 유지`);
+  }
+  if (result.lifted > 0) lines.push(`얹힌 표시 ${result.lifted}곳 띄움`);
+  if (result.overlays.length > 0) {
+    lines.push(
+      `겹친 표시 ${result.overlays.length}곳이 남아 깜빡일 수 있음(원본 확인)`,
+    );
+  }
+
+  let finalPath = compressed;
+  if (result.tileGrid !== null) {
+    const tiled = join(workDir, 'tiled.glb');
+    try {
+      execFileSync(
+        process.execPath,
+        [TILE_SCRIPT, compressed, tiled, `--grid=${result.tileGrid}`, '--lod'],
+        { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
+      );
+      finalPath = tiled;
+      lines.push(
+        `타일 ${result.tileGrid}×${result.tileGrid} + LOD ${TILE_LOD_LEVELS}단계`,
+      );
+    } catch (error) {
+      // 타일로 나누지 못해도 압축까지 한 파일은 쓸 수 있다 — 통짜로 저장한다.
+      console.warn(
+        `  타일 분할 실패: ${error.stderr?.toString().trim() ?? error.message}`,
+      );
+      lines.push('타일 분할 실패 — 통짜 메시로 저장');
+    }
+  }
+
+  copyFileSync(finalPath, outputPath);
+  return { lines, rootOffset: prepared.rootOffset };
+}
+
+const USAGE =
+  '사용법: node scripts/optimize-map.mjs --single <입력.glb> <출력.glb> [--report <json>]';
+
+const argv = process.argv.slice(2);
+if (argv[0] !== '--single') {
+  console.error(USAGE);
+  console.error(
+    '배포 파일을 제자리에서 덮어쓰는 모드는 없다 — 지도는 자산 라이브러리에서 ' +
+      '새 버전으로 올린다(최적화를 켜면 이 스크립트가 돈다).',
+  );
   process.exit(1);
+}
+const [, inputArg, outputArg, ...rest] = argv;
+const reportFlag = rest.indexOf('--report');
+const reportPath = reportFlag >= 0 ? rest[reportFlag + 1] : null;
+if (!inputArg || !outputArg || (reportFlag >= 0 && !reportPath)) {
+  console.error(USAGE);
+  process.exit(1);
+}
+
+/** 화면이 읽는 보고 — `{ lines, rootOffset? }`. 실패해도 이유를 남긴다. */
+function writeReport(report) {
+  if (reportPath) writeFileSync(resolve(reportPath), JSON.stringify(report));
+}
+
+const fmtMB = (bytes) => `${(bytes / 1024 / 1024).toFixed(2)}MB`;
+const workDir = mkdtempSync(join(tmpdir(), 'map-optimize-'));
+try {
+  const inputPath = resolve(inputArg);
+  const outputPath = resolve(outputArg);
+  const { lines, rootOffset } = await optimizeMap(inputPath, outputPath, workDir);
+  writeReport({ lines, ...(rootOffset ? { rootOffset } : {}) });
+  console.log(
+    `OK    ${fmtMB(statSync(inputPath).size)} -> ${fmtMB(statSync(outputPath).size)}`,
+  );
+  for (const line of lines) console.log(`      ${line}`);
+} catch (error) {
+  const message = error.stderr?.toString().trim() || error.message;
+  writeReport({ lines: [`최적화 실패: ${message.split('\n').pop()}`] });
+  console.error(`FAIL  ${message}`);
+  process.exitCode = 1;
+} finally {
+  rmSync(workDir, { recursive: true, force: true });
 }

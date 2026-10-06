@@ -27,12 +27,10 @@ const version = (
 const asset = (versions: AssetVersion[], currentVersion = 1): AssetRecord => ({
   id: 'a',
   kind: 'model',
-  origin: 'user',
   name: 'A',
   description: '',
-  tags: [],
+  categories: [],
   owner: '',
-  defaultScale: [1, 1, 1],
   relatedAssetIds: [],
   versions,
   currentVersion,

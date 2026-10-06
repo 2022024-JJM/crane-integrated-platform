@@ -1,31 +1,45 @@
-import {
-  getSceneMapCatalogItemByPath,
-  type SavedMapInfo,
-} from '@crane/domain/3d';
+import { isContextMap, type SavedMapInfo } from '@crane/domain/3d';
 import type { Object3D } from 'three';
 
 /**
  * 바다 미러 패스에서 뺄 객체 — 판정과 숨김/복원 헬퍼.
  *
  * 컨텍스트 지형(philly-terrain·okpo-terrain·okpo-tree)은 삼각형 수가 커서
- * 반사에 그리지 않는다. 카탈로그 `kind === 'context'` 가 출처이고, 두 캔버스의
- * isContextMap(그림자·Lambert)과 같은 판정이다. ModelMesh 가 지도 루트를
+ * 반사에 그리지 않는다. 지도의 `role === 'context'` 가 출처이고, 두 캔버스의
+ * 그림자·Lambert 와 같은 판정이다(isContextMap). ModelMesh 가 지도 루트를
  * modelObjectRegistry 에 id 로 등록하므로 여기서는 id 만 고르고 객체 조회는
  * SceneWater 의 게터가 매 패스 한다. 돔·스프라이트는 model/
  * scene-reflection-exclusions 로 직접 등록된다.
  *
  * 숨김은 `visible` 토글이다(`layers` 안 씀) — three 는 visible=false 루트의
  * 서브트리를 통째로 건너뛰어 지도 루트 하나로 LOD 타일 전부가 빠진다.
+ *
+ * 씬을 비추지 않는 바다(씬의 `seaMirror: false`, resolveSeaMirror)는 같은
+ * 숨김으로 씬 최상위 객체를 전부 뺀다 — 미러 패스에 배경(하늘)만 남아 씬을
+ * 한 번 더 그리는 비용이 빠지고, 먼 바다는 비추는 씬과 같은 하늘색을 받는다.
  */
 
-/** 씬 지도 중 컨텍스트 지형(카탈로그 kind 'context')의 id. 순서 보존. */
+/**
+ * 미러 패스 동안 숨길 객체를 고른다. 씬을 비추면 제외 목록(`excluded` —
+ * 돔·스프라이트·컨텍스트 지형)만, 비추지 않으면 씬 최상위 객체 전부다.
+ * `excluded` 는 비출 때만 순회된다(게으른 제너레이터를 그대로 받는다).
+ */
+export function selectReflectionHidden(
+  mirror: boolean,
+  scene: Pick<Object3D, 'children'>,
+  excluded: Iterable<Object3D | null | undefined>,
+): Iterable<Object3D | null | undefined> {
+  return mirror ? excluded : scene.children;
+}
+
+/** 씬 지도 중 컨텍스트 지형(role 'context')의 id. 순서 보존. */
 export function resolveReflectionExcludedMapIds(
   maps: readonly SavedMapInfo[] | undefined,
 ): string[] {
   if (!maps) return [];
   const ids: string[] = [];
   for (const map of maps) {
-    if (getSceneMapCatalogItemByPath(map.path)?.kind === 'context') {
+    if (isContextMap(map)) {
       ids.push(map.id);
     }
   }

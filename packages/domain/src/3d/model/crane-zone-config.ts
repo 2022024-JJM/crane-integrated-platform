@@ -1,6 +1,7 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { CraneType } from '../../asset/model/types';
 import type { BomClusterKey } from '../../shared/bom-catalog';
+import { CODE_ASSETS } from './code-asset-refs';
 
 /**
  * 크레인 3D 부품(구역) 선택 설정.
@@ -82,7 +83,7 @@ const GOLIATH_ZONES: CraneZoneConfig = {
       ],
       parts: [
         {
-          url: '/models/goliath_crane_body.glb',
+          url: CODE_ASSETS.goliathCraneBody.path,
           position: [0, 0, 0],
           scale: [0.1, 0.1, 0.1],
         },
@@ -108,7 +109,7 @@ const GOLIATH_ZONES: CraneZoneConfig = {
       clusterKeys: ['dcm-drive', 'motor-starter', 'mech-drive', 'pilot-device'],
       parts: [
         {
-          url: '/models/goliath_crane_trolley.glb',
+          url: CODE_ASSETS.goliathCraneTrolley.path,
           position: [0, 0, 0],
           scale: [0.1, 0.1, 0.1],
         },

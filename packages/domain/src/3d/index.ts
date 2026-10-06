@@ -238,7 +238,7 @@ export {
   sampleMapsSurfaceY,
 } from './lib/map-surface-raycast';
 export { toLambertMaterial, toLambertMaterials } from './lib/lambert-material';
-export { resolveGroundMaps } from './lib/resolve-ground-map';
+export { isContextMap, resolveGroundMaps } from './lib/resolve-ground-map';
 export {
   collectCameraBoundsBox,
   resolveCameraBoundsMaps,
@@ -254,9 +254,13 @@ export {
 export type {
   SavedCameraInfo,
   SavedLightingInfo,
-  SceneModelCatalogItem,
-  SceneModelCategory,
+  SceneAssetRef,
+  SceneMapRole,
   SceneModelPreviewPreset,
+  ScenePlaceableAsset,
+  ScenePlaceableMap,
+  ScenePlaceableModel,
+  SavedEnvironmentInfo,
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
@@ -267,21 +271,9 @@ export type {
   ValueMapItem,
   ValueMapType,
 } from './model/types';
-export {
-  sceneEnvironmentCatalog,
-  getSceneEnvironmentById,
-  type SceneEnvironmentCatalogItem,
-} from './model/scene-environment-catalog';
-export {
-  sceneMapCatalog,
-  getSceneMapCatalogItemByPath,
-  type SceneMapCatalogItem,
-  type SceneMapKind,
-} from './model/scene-map-catalog';
-export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SEA_LEVEL_Y } from './model/sea-level';
 export {
-  SCENE_MODEL_CATEGORIES,
+  SCENE_MAP_ROLES,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
@@ -316,11 +308,15 @@ export {
   getKnownRegionIds,
   isKnownRegionId,
 } from './model/scene-file-registry';
+export { resolveEnvironmentFileUrl } from './lib/scene-environment';
+export { withSceneAssetVersion } from './lib/scene-asset-update';
 export {
-  getEnvironmentFileUrlByRegionId,
-  resolveEnvironmentFileUrl,
-} from './model/scene-environment-registry';
-export { resolveSeaVisible } from './lib/scene-sea';
+  isSceneAssetRefEqual,
+  isSceneEnvironmentEqual,
+  sanitizeSceneAssetRef,
+  sanitizeSceneEnvironment,
+} from './lib/scene-asset-ref';
+export { resolveSeaMirror, resolveSeaVisible } from './lib/scene-sea';
 export { bearingToWorldAzimuth, resolveTrueNorth } from './lib/true-north';
 export {
   buildSeaReachMask,
@@ -336,7 +332,7 @@ export {
   withBaseUrl,
   registerAssetHashManifest,
 } from '@crane/core/lib/asset-url';
-export { getModelPreviewAssetPath } from './lib/preview-asset-path';
+export { CODE_ASSETS, type CodeAssetRef } from './model/code-asset-refs';
 export { CRANE_TYPE_MODEL, getCraneModel } from './model/crane-type-model';
 export type {
   CraneModelConfig,

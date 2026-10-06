@@ -226,7 +226,9 @@
       "local-file": "파일이 이 브라우저에만 있어 씬에 놓을 수 없습니다."
     },
     "blockedSummary": "게시 전인 자산 {{count}}개는 놓을 수 없습니다.",
-    "openLibrary": "자산 라이브러리에서 보기"
+    "openLibrary": "자산 라이브러리에서 보기",
+    "libraryFailed": "자산 라이브러리를 읽지 못해 팔레트가 비어 있습니다. 놓여 있는 것은 그대로 편집할 수 있습니다.",
+    "libraryRetry": "다시 읽기"
   },
   "editor": {
     "exportJson": "JSON 내보내기",
@@ -243,8 +245,10 @@
     "mapAdd": "지도 추가",
     "mapRemove": "지도 제거",
     "mapLockedHint": "잠긴 지도 — 제거하려면 잠금을 해제하세요",
-    "seaSection": "바다",
+    "mapEnvironmentSection": "환경",
     "seaVisible": "바다 표시",
+    "seaMirror": "미러 표시",
+    "seaMirrorHint": "끄면 크레인·지도가 물에 비치지 않고 하늘만 비칩니다. 화면이 느린 씬에서 끕니다.",
     "seaUnsetHint": "이 씬은 바다를 지정하지 않아 배경이 있을 때만 표시됩니다. 스위치를 누르면 씬에 저장됩니다.",
     "trueNorthSection": "방위",
     "trueNorth": "진북",
@@ -309,12 +313,15 @@
       "rightDrag": "우클릭 드래그",
       "pan": "화면 이동"
     },
-    "categoryAssetCount": "에셋 {{count}}개",
-    "noModelsInCategory": "이 카테고리에 등록된 모델이 없습니다.",
-    "modelCategories": {
-      "indoor": "내업",
-      "outdoor": "외업",
-      "none": "분류 없음"
+    "noModels": "등록된 모델이 없습니다.",
+    "noModelsMatch": "조건에 맞는 모델이 없습니다.",
+    "categoryFilter": {
+      "all": "전체",
+      "open": "카테고리 검색",
+      "searchPlaceholder": "카테고리 이름",
+      "empty": "등록된 카테고리가 없습니다.",
+      "noMatch": "맞는 카테고리가 없습니다.",
+      "remove": "{{category}} 카테고리 풀기"
     },
     "paletteTabs": {
       "models": "모델",
@@ -323,7 +330,6 @@
       "view": "뷰"
     },
     "environmentNone": "배경 없음",
-    "environmentUnset": "이 씬은 배경을 지정하지 않아 지역 기본 배경이 적용됩니다. 아래에서 고르면 씬에 저장됩니다.",
     "lightingSection": "조명",
     "lightingShadows": "그림자",
     "lightingSunPosition": "태양 위치",
@@ -371,7 +377,8 @@
       "remove": "삭제",
       "pin": "우상단에 고정",
       "unpin": "고정 해제"
-    }
+    },
+    "environmentUnmanaged": "이 씬의 배경은 자산 라이브러리에 없는 파일입니다. 아래에서 다른 배경을 고르기 전까지 그대로 그려집니다."
   },
   "detectionSettings": {
     "title": "설정",
@@ -674,5 +681,17 @@
       "hold": "정지",
       "offline": "두절"
     }
+  },
+  "assetUpdates": {
+    "title": "새 버전이 있는 자산 {{count}}개",
+    "openAsset": "자산 라이브러리에서 버전 보기",
+    "count": {
+      "model": "이 씬의 {{count}}개",
+      "map": "지도 {{count}}장",
+      "environment": "배경"
+    },
+    "update": "갱신",
+    "hint": "갱신하면 이 씬에 놓인 그 자산이 전부 새 버전으로 바뀝니다. 배치와 태그 맵핑은 그대로이니 화면에서 확인하고, 저장해야 모니터링에 반영됩니다.",
+    "unmanaged": "자산 라이브러리에 없는 파일로 놓인 객체가 {{count}}개 있습니다. 새 버전을 알릴 수 없습니다."
   }
 }

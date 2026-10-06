@@ -7,7 +7,6 @@ import {
   getCurrentAssetVersion,
   resolveVersionSizeBytes,
   resolveVersionStats,
-  toMeterSize,
   type AssetAttentionKind,
   type AssetRecord,
   type AssetStatsTable,
@@ -91,7 +90,7 @@ export function AssetTable({
               {t('asset-library:field.kind')}
             </TableHead>
           ) : null}
-          <TableHead className="w-44">{t('asset-library:field.tags')}</TableHead>
+          <TableHead className="w-44">{t('asset-library:field.categories')}</TableHead>
           <TableHead className="w-40">
             {t('asset-library:field.status')}
           </TableHead>
@@ -208,9 +207,9 @@ export function AssetTable({
               ) : null}
               <TableCell
                 className="text-muted-foreground max-w-44 truncate"
-                title={asset.tags.join(', ')}
+                title={asset.categories.join(', ')}
               >
-                {asset.tags.join(', ') || '—'}
+                {asset.categories.join(', ') || '—'}
               </TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
@@ -262,11 +261,7 @@ export function AssetTable({
                     {stats ? formatCount(stats.triangles) : '—'}
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden text-right tabular-nums 2xl:table-cell">
-                    {stats?.size
-                      ? formatDimensions(
-                          toMeterSize(stats.size, asset.defaultScale),
-                        )
-                      : '—'}
+                    {stats?.size ? formatDimensions(stats.size) : '—'}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-right tabular-nums">
                     {placements.get(asset.id) ?? 0}

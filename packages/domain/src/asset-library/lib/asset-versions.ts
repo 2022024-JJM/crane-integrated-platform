@@ -3,12 +3,14 @@ import {
   ASSET_VERSIONS_MAX,
   type AssetFile,
   type AssetHistoryEntry,
+  type AssetPlacement,
   type AssetRecord,
   type AssetStats,
   type AssetThumbnail,
   type AssetVersion,
   type AssetVersionStatus,
 } from '../model/types';
+import { sanitizeAssetPlacement } from './sanitize-asset-library';
 
 /**
  * 자산 레코드를 바꾸는 순수 함수들 — 버전 추가, 현재 버전 이동, 상태 전이,
@@ -274,14 +276,19 @@ export type AssetMetadataPatch = Partial<
     AssetRecord,
     | 'name'
     | 'description'
-    | 'tags'
+    | 'categories'
     | 'owner'
     | 'kind'
     | 'drawingNo'
     | 'relatedAssetIds'
-    | 'defaultScale'
   >
->;
+> & {
+  /**
+   * 배치 속성 전체를 갈아 끼운다. 종류에 맞지 않는 항목과 기본 동작인 값은
+   * 떨어지고(sanitizeAssetPlacement), 남는 것이 없으면 필드가 사라진다.
+   */
+  placement?: AssetPlacement;
+};
 
 function isSameValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -290,13 +297,23 @@ function isSameValue(a: unknown, b: unknown): boolean {
   return (a ?? '') === (b ?? '');
 }
 
+function isSamePlacement(
+  a: AssetPlacement | undefined,
+  b: AssetPlacement | undefined,
+): boolean {
+  return (
+    a?.paletteHidden === b?.paletteHidden &&
+    a?.mapRole === b?.mapRole &&
+    isSameValue(a?.defaultPosition ?? [], b?.defaultPosition ?? [])
+  );
+}
+
 /** 같은 사람이 이 시간 안에 이어서 고친 메타데이터는 이력 한 줄로 묶는다. */
 export const METADATA_HISTORY_MERGE_MS = 10 * 60 * 1000;
 
 /**
  * 메타데이터를 고친다. 실제로 달라진 필드만 반영하고, 달라진 것이 없으면
- * 그대로 돌려준다. builtin 자산의 종류·기본 스케일은 카탈로그가 정하므로
- * 무시한다.
+ * 그대로 돌려준다. 종류를 바꾸면 그 종류에 맞지 않는 배치 속성은 떨어진다.
  */
 export function updateAssetMetadata(
   asset: AssetRecord,
@@ -305,10 +322,21 @@ export function updateAssetMetadata(
 ): AssetRecord {
   const changed: string[] = [];
   const next: AssetRecord = { ...asset };
-  for (const key of Object.keys(patch) as (keyof AssetMetadataPatch)[]) {
-    if (asset.origin === 'builtin' && (key === 'kind' || key === 'defaultScale')) {
-      continue;
+  const nextKind = patch.kind ?? asset.kind;
+  // 배치 속성은 바뀐 뒤의 종류로 거른다 — 종류만 바꿔도 다시 걸러야 한다.
+  if (patch.placement !== undefined || nextKind !== asset.kind) {
+    const placement = sanitizeAssetPlacement(
+      patch.placement ?? asset.placement,
+      nextKind,
+    );
+    if (!isSamePlacement(asset.placement, placement)) {
+      if (placement) next.placement = placement;
+      else delete next.placement;
+      changed.push('placement');
     }
+  }
+  for (const key of Object.keys(patch) as (keyof AssetMetadataPatch)[]) {
+    if (key === 'placement') continue;
     const value = patch[key];
     if (value === undefined || isSameValue(asset[key], value)) continue;
     if (key === 'drawingNo' && value === '') {
@@ -371,35 +399,37 @@ export function setAssetThumbnail(
   };
 }
 
-export interface CreateUserAssetInput {
+export interface CreateAssetInput {
   id: string;
   kind: AssetRecord['kind'];
   name: string;
   description: string;
-  tags: string[];
+  categories: string[];
   file: AssetFile;
   revision?: string;
   drawingNo?: string;
   stats?: AssetStats;
+  /** 배치 속성의 첫 값 — 종류에 맞지 않거나 기본 동작인 값은 떨어진다. */
+  placement?: AssetPlacement;
 }
 
 /**
- * 이 화면에서 등록한 자산 — 버전 1(draft)과 생성 이력으로 시작한다. 첫 버전은
+ * 새로 등록한 자산 — 버전 1(draft)과 생성 이력으로 시작한다. 첫 버전은
  * 달라진 점이 없어 변경 메모가 비어 있다(버전 탭에서 나중에 적을 수 있다).
  */
-export function createUserAssetRecord(
-  input: CreateUserAssetInput,
+export function createAssetRecord(
+  input: CreateAssetInput,
   context: AssetChangeContext,
 ): AssetRecord {
+  const placement = sanitizeAssetPlacement(input.placement, input.kind);
   return {
     id: input.id,
     kind: input.kind,
-    origin: 'user',
     name: input.name,
     description: input.description,
-    tags: input.tags,
+    categories: input.categories,
     owner: context.actor,
-    defaultScale: [1, 1, 1],
+    ...(placement ? { placement } : {}),
     ...(input.drawingNo ? { drawingNo: input.drawingNo } : {}),
     relatedAssetIds: [],
     versions: [

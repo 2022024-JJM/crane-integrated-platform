@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Gauge } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
-import { getModelPreviewAssetPath, withBaseUrl } from '@crane/domain/3d';
+import { withBaseUrl } from '@crane/domain/3d';
+import { getAssetThumbnailPath } from '@crane/domain/asset-library';
 import { tagLiveValues } from '@crane/features/3d';
 import { Badge } from '@crane/ui/atoms/badge';
 import {
@@ -70,9 +71,10 @@ export function DashboardEquipmentLiveSection({
 }
 
 /**
- * 모델 팔레트와 같은 정적 썸네일(`/previews/{id}.png`, 투명 PNG)을 쓴다.
- * 카탈로그에 없는 모델·파일 부재(404)는 아이콘 폴백 — 대시보드에선 widgets
- * 의 offscreen WebGL 폴백까지 끌어오지 않는다(three 로드 없이 가볍게 유지).
+ * 자산 라이브러리의 썸네일(`/asset-library/thumbnails/{id}.png`, 투명 PNG)을
+ * 쓴다 — 편집 팔레트와 같은 그림이다. 자산 참조가 없는 모델·파일 부재(404)는
+ * 아이콘 폴백 — 대시보드에선 widgets 의 offscreen WebGL 폴백까지 끌어오지
+ * 않는다(three 로드 없이 가볍게 유지).
  */
 function EquipmentThumbnail({
   previewAssetId,
@@ -88,7 +90,7 @@ function EquipmentThumbnail({
     <div className="border-border/60 bg-muted/40 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border">
       {showImage ? (
         <img
-          src={withBaseUrl(getModelPreviewAssetPath(previewAssetId))}
+          src={withBaseUrl(getAssetThumbnailPath(previewAssetId))}
           alt={alt}
           loading="lazy"
           draggable={false}

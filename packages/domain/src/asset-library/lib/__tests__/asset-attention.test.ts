@@ -122,20 +122,23 @@ describe('getAssetAttention', () => {
     );
   });
 
-  it('런타임 자산(카탈로그에 없는 배포 자산)은 놓인 곳이 없어도 미사용이 아니다', () => {
-    // 화면 코드가 직접 불러 쓴다 — 씬에 놓이지 않는 것이 정상이다.
-    expect(getAssetAttention(asset({ origin: 'builtin' }), ctx())).toEqual([]);
-    // 카탈로그 자산은 팔레트로 놓는 자산이다.
+  it('화면 코드가 직접 쓰는 자산은 그 사용이 세어져 있어 미사용이 아니다', () => {
+    // 씬에 놓이지 않아도 placements 에 코드 사용이 들어 있다.
     expect(
-      getAssetAttention(asset({ origin: 'builtin', catalogId: 'x' }), ctx()),
-    ).toEqual(['unused']);
-    // 태그는 판정에 쓰지 않는다 — 사용자가 고칠 수 있는 값이다.
-    expect(getAssetAttention(asset({ tags: ['runtime'] }), ctx())).toEqual([
+      getAssetAttention(
+        asset({ id: 'rt-crane' }),
+        ctx({ placements: new Map([['rt-crane', 1]]) }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('카테고리와 배치 속성은 판정에 쓰지 않는다 — 사용자가 고칠 수 있는 값이다', () => {
+    expect(getAssetAttention(asset({ categories: ['runtime'] }), ctx())).toEqual([
       'unused',
     ]);
     expect(
-      getAssetAttention(asset({ origin: 'builtin', tags: [] }), ctx()),
-    ).toEqual([]);
+      getAssetAttention(asset({ placement: { paletteHidden: true } }), ctx()),
+    ).toEqual(['unused']);
   });
 });
 

@@ -7,19 +7,22 @@ import {
   SCENE_SUN_ELEVATION_MIN,
   SCENE_SUN_MODE_DEFAULT,
   resolveSceneSiteLocation,
-  sceneEnvironmentCatalog,
 } from '@crane/domain/3d';
 import type {
+  SavedEnvironmentInfo,
   SavedLightingInfo,
   SceneSiteLocation,
   SceneSunMode,
 } from '@crane/domain/3d';
 import { SceneClockPanel } from '@crane/features/3d';
+import type { ScenePaletteEnvironment } from '@crane/features/asset-library';
 import { clampToRange, cn } from '@crane/core/lib/utils';
 import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
+import { toPaletteThumbnailUrl } from '../lib/palette-thumbnail';
 import { NUMBER_INPUT, NUMBER_WRAPPER } from './inspector-field-classes';
+import { PaletteTileThumbnail } from './palette-tile-thumbnail';
 
 interface PaletteEnvironmentSectionProps {
   /** 씬이 지역을 지정하지 않았을 때 region 기본 지역을 찾는 키. */
@@ -32,12 +35,12 @@ interface PaletteEnvironmentSectionProps {
    */
   siteLocation: SceneSiteLocation | undefined;
   onSiteLocationChange: (location: SceneSiteLocation) => void;
-  /**
-   * 현재 씬의 배경 선택. 3-상태다 —
-   * 문자열=카탈로그 id, null=배경 없음(명시), undefined=미지정(region 기본).
-   */
-  environmentId: string | null | undefined;
-  onChange: (environmentId: string | null) => void;
+  /** 팔레트 항목 — 자산 라이브러리의 배경(고를 수 없는 것 포함). */
+  entries: ScenePaletteEnvironment[];
+  /** 현재 씬의 배경. 없으면 배경 없음이다. */
+  environment: SavedEnvironmentInfo | undefined;
+  /** 배경을 고른다 — null 이면 배경 없음(setEnvironment). */
+  onChange: (environment: SavedEnvironmentInfo | null) => void;
   /** 진북 방향(도, resolveTrueNorth) — 나침반·태양 방향의 기준. */
   trueNorth: number;
   /** 진북 입력 — [0,360) 로 랩해 저장한다(setTrueNorth). */
@@ -60,13 +63,17 @@ interface PaletteEnvironmentSectionProps {
  * 배경(EXR 파노라마) 선택 + 방위(진북) + 조명(그림자·태양 위치·지역) —
  * Project 패널의 Background 카테고리.
  *
- * 목록은 카탈로그(sceneEnvironmentCatalog)에서 온다. 웹 최적화본만 등록되어
- * 있어 원본 해상도 업로드로 배경이 검게 나오는 사고가 원천 차단된다.
+ * 목록은 자산 라이브러리의 배경이다. 게시된 배경만 고를 수 있고, 나머지는
+ * 흐리게 보이며 상태가 적힌다. 등록할 때 해상도를 검사하므로(GPU 상한을 넘는
+ * 원본은 배경이 검게 나온다) 목록에 있는 것은 그대로 써도 된다.
  *
  * "배경 없음"을 첫 항목으로 둔다. 배경을 끄는 것도 유효한 선택이고(실내 씬,
  * 성능 확보), 목록 안에 있어야 "지금 무엇이 선택되어 있는가"가 한 화면에서
- * 읽힌다. 미지정(undefined) 씬은 아무것도 선택되지 않은 상태로 그린다 —
- * region 기본값이 적용 중이라는 사실을 별도 문구로 알린다.
+ * 읽힌다. 씬의 배경이 목록에 없는 파일이면(라이브러리가 모르는 파일) 그
+ * 사실을 한 줄로 알린다 — 다른 것을 고르기 전까지 그대로 그려진다.
+ *
+ * 선택 표시는 자산 id 로 한다 — 씬에 놓인 버전이 라이브러리의 현재 버전과
+ * 달라도 같은 배경이다. 버전 차이는 새 버전 알림이 따로 알린다.
  *
  * 방위 절은 진북 입력 하나다 — 태양(수동 패드·현장 시각)과 나침반이 같은
  * 북쪽을 보므로 조명 절 바로 위에 둔다. 스테퍼로 359 를 넘기면 세터가 0 으로
@@ -77,7 +84,8 @@ export const PaletteEnvironmentSection = memo(
     regionId,
     siteLocation,
     onSiteLocationChange,
-    environmentId,
+    entries,
+    environment,
     onChange,
     trueNorth,
     onTrueNorthChange,
@@ -89,7 +97,15 @@ export const PaletteEnvironmentSection = memo(
     onSunDragEnd,
   }: PaletteEnvironmentSectionProps) {
     const { t } = useTranslation();
-    const isUnset = environmentId === undefined;
+    const selectedEntry = environment
+      ? entries.find((entry) =>
+          environment.asset
+            ? entry.item.id === environment.asset.id
+            : entry.item.path !== '' && entry.item.path === environment.path,
+        )
+      : undefined;
+    // 씬에 배경이 있는데 목록에서 찾지 못했다 — 라이브러리가 모르는 파일이다.
+    const isUnmanaged = environment !== undefined && !selectedEntry;
     const shadowsEnabled = lighting?.shadows === true;
     const sunMode = lighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT;
     const resolvedLocation = resolveSceneSiteLocation(regionId, {
@@ -119,28 +135,52 @@ export const PaletteEnvironmentSection = memo(
 
     return (
       <div className="flex flex-col gap-2">
-        {isUnset ? (
+        {isUnmanaged ? (
           <p className="text-muted-foreground border-border bg-muted/40 rounded-md border px-2 py-1.5 text-[11px] leading-snug">
-            {t('monitoring:editor.environmentUnset')}
+            {t('monitoring:editor.environmentUnmanaged')}
           </p>
         ) : null}
 
         <div className="grid grid-cols-2 gap-2">
           <EnvironmentTile
             label={t('monitoring:editor.environmentNone')}
-            isSelected={environmentId === null}
+            isSelected={environment === undefined}
             onSelect={() => onChange(null)}
             icon={<Ban className="text-muted-foreground size-5" />}
           />
-          {sceneEnvironmentCatalog.map((item) => (
-            <EnvironmentTile
-              key={item.id}
-              label={item.label}
-              isSelected={environmentId === item.id}
-              onSelect={() => onChange(item.id)}
-              icon={<ImageIcon className="text-muted-foreground size-5" />}
-            />
-          ))}
+          {entries.map((entry) => {
+            const isSelected = entry === selectedEntry;
+            // 이미 고른 배경은 상태와 무관하게 선택된 채로 보인다.
+            const blocked = isSelected ? null : entry.blocked;
+            return (
+              <EnvironmentTile
+                key={entry.item.id}
+                label={entry.item.label}
+                isSelected={isSelected}
+                blockedLabel={
+                  blocked === null
+                    ? null
+                    : blocked === 'unpublished'
+                      ? t(`asset-library:status.${entry.status}`)
+                      : t(`monitoring:palette.blocked.${blocked}`)
+                }
+                title={
+                  blocked
+                    ? t(`monitoring:palette.blockedHint.${blocked}`)
+                    : undefined
+                }
+                onSelect={() => {
+                  if (blocked !== null || isSelected) return;
+                  onChange({
+                    path: entry.item.path,
+                    asset: { id: entry.item.id, version: entry.item.version },
+                  });
+                }}
+                thumbnailUrl={toPaletteThumbnailUrl(entry.thumbnail)}
+                icon={<ImageIcon className="text-muted-foreground size-5" />}
+              />
+            );
+          })}
         </div>
 
         {/* 방위 — 진북 입력(나침반·태양 방향의 기준) */}
@@ -411,21 +451,33 @@ function SunPositionPad({
 function EnvironmentTile({
   label,
   isSelected,
+  blockedLabel = null,
+  title,
   onSelect,
+  thumbnailUrl,
   icon,
 }: {
   label: string;
   isSelected: boolean;
+  /** 고를 수 없는 이유(자산 상태). 고를 수 있으면 null. */
+  blockedLabel?: string | null;
+  title?: string;
   onSelect: () => void;
+  /** 라이브러리에 저장된 썸네일. 없으면(배경 없음 타일 포함) 아이콘. */
+  thumbnailUrl?: string;
   icon: React.ReactNode;
 }) {
+  const blocked = blockedLabel !== null;
   return (
     <button
       type="button"
       aria-pressed={isSelected}
+      aria-disabled={blocked || undefined}
+      title={title}
       onClick={onSelect}
       className={cn(
-        'group relative flex cursor-pointer flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
+        'group relative flex flex-col items-center gap-1 rounded-md border p-1 pb-1.5 transition',
+        blocked ? 'cursor-not-allowed opacity-55' : 'cursor-pointer',
         isSelected
           ? 'border-primary/50 bg-primary/10'
           : 'border-border bg-card hover:border-border hover:bg-muted/60',
@@ -436,7 +488,13 @@ function EnvironmentTile({
           <Check className="size-2.5" />
         </span>
       ) : null}
-      {icon}
+      {/* 배경 썸네일은 화면을 채운 그림이라 받침 위에 띄우지 않고 자리를 채운다. */}
+      <PaletteTileThumbnail
+        url={thumbnailUrl}
+        alt=""
+        fit="cover"
+        fallback={icon}
+      />
       <span
         className={cn(
           'w-full truncate text-center text-[11px] font-medium',
@@ -445,6 +503,11 @@ function EnvironmentTile({
       >
         {label}
       </span>
+      {blocked ? (
+        <span className="text-muted-foreground/80 w-full truncate text-center text-[9px] leading-none">
+          {blockedLabel}
+        </span>
+      ) : null}
     </button>
   );
 }

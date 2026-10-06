@@ -6,13 +6,14 @@ import {
   ASSET_DRAWING_NO_MAX,
   ASSET_NAME_MAX,
   ASSET_REVISION_MAX,
-  ASSET_TAG_MAX,
-  ASSET_TAGS_MAX,
+  ASSET_CATEGORY_MAX,
+  ASSET_CATEGORIES_MAX,
   ASSET_UPLOAD_EXTENSIONS,
   formatBytes,
   humanizeAssetFileName,
   isDocumentAssetKind,
-  listAssetKindTags,
+  isGeometryAssetKind,
+  listAssetKindCategories,
   type AssetKind,
   type AssetRecord,
   type AssetStatsTable,
@@ -29,10 +30,11 @@ import {
 } from '@crane/ui/molecules/alert-dialog';
 import {
   analyzeAssetFile,
+  getAssetFileProblemMessage,
   type AssetFileAnalysis,
 } from '../lib/analyze-asset-file';
 import { AssetKindIcon } from './asset-badges';
-import { FormRow, TagEditor, TextArea } from './asset-form-fields';
+import { FormRow, CategoryEditor, TextArea } from './asset-form-fields';
 import { AssetOptimizeOption } from './asset-optimize-option';
 
 const ACCEPT = ASSET_UPLOAD_EXTENSIONS.map((ext) => `.${ext}`).join(',');
@@ -44,13 +46,13 @@ interface AssetImportDialogProps {
   assets: readonly AssetRecord[];
   statsTable: AssetStatsTable;
   /**
-   * 목록이 보고 있던 종류와 거기서 고른 태그 — 같은 종류의 파일을 등록하면
-   * 그 태그로 시작한다.
+   * 목록이 보고 있던 종류와 거기서 고른 카테고리 — 같은 종류의 파일을 등록하면
+   * 그 카테고리로 시작한다.
    */
   defaultKind: AssetKind | null;
-  defaultTags: readonly string[];
+  defaultCategories: readonly string[];
   localOnly: boolean;
-  /** 등록할 때 모델을 최적화할 수 있는 환경인지. */
+  /** 등록할 때 모델·지도를 최적화할 수 있는 환경인지. */
   canOptimize: boolean;
   onClose: () => void;
   /** 등록을 수행한다. 성공하면 true — 다이얼로그는 호출부가 닫는다. */
@@ -63,7 +65,7 @@ export function AssetImportDialog({
   assets,
   statsTable,
   defaultKind,
-  defaultTags,
+  defaultCategories,
   localOnly,
   canOptimize,
   onClose,
@@ -84,7 +86,7 @@ export function AssetImportDialog({
             assets={assets}
             statsTable={statsTable}
             defaultKind={defaultKind}
-            defaultTags={defaultTags}
+            defaultCategories={defaultCategories}
             localOnly={localOnly}
             canOptimize={canOptimize}
             onClose={onClose}
@@ -101,7 +103,7 @@ function ImportForm({
   assets,
   statsTable,
   defaultKind,
-  defaultTags,
+  defaultCategories,
   localOnly,
   canOptimize,
   onClose,
@@ -119,23 +121,23 @@ function ImportForm({
   const [nameEdited, setNameEdited] = useState(false);
   const [kind, setKind] = useState<AssetKind | null>(null);
   const [optimize, setOptimize] = useState(true);
-  // 손대기 전(null)에는 목록에서 고른 태그를 따른다 — 단, 보고 있던 종류와
-  // 같은 종류의 파일일 때만. 모델의 태그를 도면에 붙이지 않는다.
-  const [editedTags, setEditedTags] = useState<string[] | null>(null);
+  // 손대기 전(null)에는 목록에서 고른 카테고리를 따른다 — 단, 보고 있던 종류와
+  // 같은 종류의 파일일 때만. 모델의 카테고리를 도면에 붙이지 않는다.
+  const [editedCategories, setEditedCategories] = useState<string[] | null>(null);
   const [description, setDescription] = useState('');
   const [drawingNo, setDrawingNo] = useState('');
   const [revision, setRevision] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const tags =
-    editedTags ??
+  const categories =
+    editedCategories ??
     (kind !== null && kind === defaultKind
-      ? defaultTags
-          .slice(0, ASSET_TAGS_MAX)
-          .map((tag) => tag.slice(0, ASSET_TAG_MAX))
+      ? defaultCategories
+          .slice(0, ASSET_CATEGORIES_MAX)
+          .map((category) => category.slice(0, ASSET_CATEGORY_MAX))
       : []);
-  const kindTags = useMemo(
-    () => (kind !== null ? listAssetKindTags(assets, kind) : []),
+  const kindCategories = useMemo(
+    () => (kind !== null ? listAssetKindCategories(assets, kind) : []),
     [assets, kind],
   );
 
@@ -181,8 +183,8 @@ function ImportForm({
       kind,
       name: name.trim(),
       description: description.trim(),
-      optimize: canOptimize && kind === 'model' && optimize,
-      tags,
+      optimize: canOptimize && isGeometryAssetKind(kind) && optimize,
+      categories,
       contentHash: analysis.contentHash,
       ...(kind !== null && isDocumentAssetKind(kind) && drawingNo.trim()
         ? { drawingNo: drawingNo.trim() }
@@ -269,13 +271,10 @@ function ImportForm({
             className="border-destructive/40 bg-destructive/10 text-destructive flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
           >
             <OctagonAlert className="mt-px size-3.5 shrink-0" />
-            {analysis.problem.code === 'glb'
-              ? t(`asset-library:import.problem.glb.${analysis.problem.reason}`)
-              : analysis.problem.code === 'unsupported'
-                ? t('asset-library:import.problem.unsupported', {
-                    format: analysis.problem.format || '?',
-                  })
-                : t('asset-library:import.problem.empty')}
+            {t(
+              getAssetFileProblemMessage(analysis.problem).key,
+              getAssetFileProblemMessage(analysis.problem).values,
+            )}
           </p>
         ) : null}
 
@@ -342,9 +341,14 @@ function ImportForm({
             </div>
           ) : null}
 
-          {/* 모델만 — 지도는 타일·LOD 를 만드는 전용 파이프라인이 따로 있다. */}
-          {canOptimize && kind === 'model' ? (
-            <AssetOptimizeOption checked={optimize} onChange={setOptimize} />
+          {/* 모델과 지도 — 종류마다 다른 파이프라인을 타지만 고를 것은 하나다.
+              지도의 타일·LOD·압축 여부는 파이프라인이 파일을 재서 정한다. */}
+          {canOptimize && kind !== null && isGeometryAssetKind(kind) ? (
+            <AssetOptimizeOption
+              kind={kind}
+              checked={optimize}
+              onChange={setOptimize}
+            />
           ) : null}
 
           {kind !== null && isDocumentAssetKind(kind) ? (
@@ -373,13 +377,13 @@ function ImportForm({
             </div>
           ) : null}
 
-          <FormRow label={t('asset-library:field.tags')}>
+          <FormRow label={t('asset-library:field.categories')}>
             {(id) => (
-              <TagEditor
+              <CategoryEditor
                 id={id}
-                value={tags}
-                suggestions={kindTags}
-                onChange={setEditedTags}
+                value={categories}
+                suggestions={kindCategories}
+                onChange={setEditedCategories}
               />
             )}
           </FormRow>

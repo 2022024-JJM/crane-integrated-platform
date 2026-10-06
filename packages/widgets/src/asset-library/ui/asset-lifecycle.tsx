@@ -1,8 +1,10 @@
 import { Check } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   getAllowedStatusTransitions,
+  isAssetVersionInUse,
   type AssetRecord,
   type AssetVersion,
   type AssetVersionStatus,
@@ -13,7 +15,10 @@ import { Button } from '@crane/ui/atoms/button';
 import { ASSET_STATUS_TONE } from '../lib/asset-presentation';
 import { AssetStatusBadge } from './asset-badges';
 import { AssetConfirmDialog } from './asset-confirm-dialog';
-import { useAssetSaveReport } from '../model/use-asset-save-report';
+import {
+  isAssetSaveFailed,
+  useAssetSaveReport,
+} from '../model/use-asset-save-report';
 
 /** 수명주기의 큰 흐름. 반려·철회는 이 길 위의 한 지점에 멈춰 선 상태다. */
 const LIFECYCLE_STEPS: AssetVersionStatus[] = [
@@ -58,6 +63,10 @@ interface AssetLifecycleProps {
  *
  * 상태를 드롭다운 속에 두면 "지금 무엇을 해야 하는가" 가 보이지 않는다.
  * 길을 펼쳐 놓고 다음 걸음을 버튼으로 꺼내 둔다.
+ *
+ * 씬이나 화면 코드가 쓰고 있는 버전은 철회할 수 없다 — 철회 버튼을 끄고 그
+ * 이유를 한 줄로 적는다. 누르는 순간 스토어가 사용처를 다시 읽어 확인하므로,
+ * 화면이 아직 모르는 사용처가 있어도 철회되지 않는다(그때는 토스트로 알린다).
  */
 export function AssetLifecycle({
   asset,
@@ -80,8 +89,24 @@ export function AssetLifecycle({
   const backwardOnly =
     allowed.length > 0 && allowed.every((next) => BACKWARD.has(next));
   const transitions = backwardOnly ? [] : allowed;
+  const usageIndex = useAssetLibraryStore((state) => state.usageIndex);
+  const inUse = useMemo(
+    () => isAssetVersionInUse(asset, version.version, usageIndex),
+    [asset, usageIndex, version.version],
+  );
+  const isBlocked = (next: AssetVersionStatus) => next === 'withdrawn' && inUse;
   const apply = (next: AssetVersionStatus) =>
-    report(transitionStatus(asset.id, version.version, next, actor));
+    report(
+      transitionStatus(asset.id, version.version, next, actor).then(
+        (changed) => {
+          // 저장은 됐는데 철회되지 않았다 — 그사이 쓰이기 시작한 버전이다.
+          if (!changed && next === 'withdrawn' && !isAssetSaveFailed()) {
+            toast.error(t('asset-library:protect.withdrawBlocked'));
+          }
+          return changed;
+        },
+      ),
+    );
   // 되돌리는 걸음은 한 번 더 묻는다 — 누르는 순간 저장되고 물릴 길이 없다.
   const [pending, setPending] = useState<AssetVersionStatus | null>(null);
   const run = (next: AssetVersionStatus) => {
@@ -106,6 +131,12 @@ export function AssetLifecycle({
                   variant="ghost"
                   size="xs"
                   className="text-muted-foreground"
+                  disabled={isBlocked(next)}
+                  title={
+                    isBlocked(next)
+                      ? t('asset-library:protect.withdrawInUse')
+                      : undefined
+                  }
                   onClick={() => run(next)}
                 >
                   {t(`asset-library:versions.transition.${next}`)}
@@ -119,7 +150,10 @@ export function AssetLifecycle({
         // 상태라, 매번 네 개의 마디를 그리면 정작 진행 중인 것이 묻힌다.
         <p className="text-muted-foreground flex items-center gap-2 text-xs">
           <AssetStatusBadge status={version.status} />
-          {t('asset-library:lifecycle.settled')}
+          {/* 쓰이는 버전은 철회할 수 없다 — 꺼진 버튼의 이유를 여기에 적는다. */}
+          {inUse && !compact
+            ? t('asset-library:protect.withdrawInUse')
+            : t('asset-library:lifecycle.settled')}
         </p>
       ) : (
         <ol
@@ -194,6 +228,7 @@ export function AssetLifecycle({
               className={cn(
                 BACKWARD.has(next) ? 'text-muted-foreground' : 'flex-1',
               )}
+              disabled={isBlocked(next)}
               onClick={() => run(next)}
             >
               {t(`asset-library:versions.transition.${next}`)}

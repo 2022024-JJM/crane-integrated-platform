@@ -41,6 +41,11 @@ export interface AssetCardActions {
   onToggleSelect: (assetId: string, range: boolean) => void;
   onToggleFavorite: (assetId: string) => void;
   onCopyLink: (assetId: string) => void;
+  /**
+   * 지우기를 연다. 파일을 다룰 수 있는 환경(dev)에서만 넘어온다 — 없으면
+   * 메뉴에 내지 않는다.
+   */
+  onDelete?: (assetId: string) => void;
 }
 
 interface AssetGridProps extends AssetCardActions {
@@ -90,6 +95,7 @@ const AssetCard = memo(function AssetCard({
   onToggleSelect,
   onToggleFavorite,
   onCopyLink,
+  onDelete,
 }: AssetCardProps) {
   const { t, i18n } = useTranslation();
   const locale = getFormatLocale(i18n.language);
@@ -279,6 +285,15 @@ const AssetCard = memo(function AssetCard({
         <ContextMenuItem onClick={() => onCopyLink(asset.id)}>
           {t('asset-library:menu.copyLink')}
         </ContextMenuItem>
+        {onDelete ? (
+          // 되돌릴 수 없는 일은 맨 아래에, 다른 항목과 떨어뜨려 둔다.
+          <ContextMenuItem
+            className="border-border text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive mt-1 rounded-t-none border-t pt-2"
+            onClick={() => onDelete(asset.id)}
+          >
+            {t('asset-library:menu.delete')}
+          </ContextMenuItem>
+        ) : null}
       </ContextMenuPopup>
     </ContextMenu>
   );
@@ -298,6 +313,7 @@ export function AssetGrid({
   onToggleSelect,
   onToggleFavorite,
   onCopyLink,
+  onDelete,
 }: AssetGridProps) {
   return (
     <div className={ASSET_CARD_GRID}>
@@ -317,6 +333,7 @@ export function AssetGrid({
           onToggleSelect={onToggleSelect}
           onToggleFavorite={onToggleFavorite}
           onCopyLink={onCopyLink}
+          onDelete={onDelete}
         />
       ))}
     </div>

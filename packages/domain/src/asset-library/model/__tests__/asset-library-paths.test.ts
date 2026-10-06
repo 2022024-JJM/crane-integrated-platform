@@ -3,7 +3,9 @@ import {
   ASSET_ID_PATTERN,
   buildAssetThumbnailKey,
   buildAssetVersionFileKey,
+  getAssetThumbnailPath,
   getFileExtension,
+  isRemovableLegacyAssetPath,
   parseAssetLibraryFileKey,
   sanitizeAssetFileName,
   toAssetLibraryPublicPath,
@@ -151,5 +153,64 @@ describe('hashAssetLibraryText', () => {
     for (const text of ['', 'a', '옥포조선소 크레인', 'x'.repeat(100_000)]) {
       expect(hashAssetLibraryText(text)).toMatch(/^[0-9a-f]{16}$/);
     }
+  });
+});
+
+describe('getAssetThumbnailPath', () => {
+  it('자산 id 로 썸네일의 public 절대 경로를 만든다', () => {
+    expect(getAssetThumbnailPath('okpo-ttc')).toBe(
+      '/asset-library/thumbnails/okpo-ttc.png',
+    );
+  });
+});
+
+describe('isRemovableLegacyAssetPath', () => {
+  it('옛 배포 디렉터리 아래의 자산 파일은 지울 수 있다', () => {
+    for (const path of [
+      '/models/okpo_ttc.glb',
+      '/models/sub/dir/a.glb',
+      '/maps/okpo.glb',
+      '/scenes/sky-blue-open-water-web.exr',
+      '/drawings/equipment-layout/bos2.webp',
+    ]) {
+      expect(isRemovableLegacyAssetPath(path)).toBe(true);
+    }
+  });
+
+  it('같은 디렉터리의 자산이 아닌 파일은 지울 수 없다 — 씬 JSON 을 지우는 길이 되지 않는다', () => {
+    expect(isRemovableLegacyAssetPath('/scenes/okpo.json')).toBe(false);
+    expect(isRemovableLegacyAssetPath('/models/2540_281.bin')).toBe(false);
+    expect(isRemovableLegacyAssetPath('/models/README')).toBe(false);
+  });
+
+  it('정해진 디렉터리 밖은 지울 수 없다 — 라이브러리 디렉터리도 여기서는 아니다', () => {
+    for (const path of [
+      '/asset-library/files/a/v1/a.glb',
+      '/simulation/a.glb',
+      '/a.glb',
+      '/index.html',
+    ]) {
+      expect(isRemovableLegacyAssetPath(path)).toBe(false);
+    }
+  });
+
+  it('상위 탈출·빈 조각·역슬래시·상대 경로는 거부한다', () => {
+    for (const path of [
+      '/models/../scenes/okpo.glb',
+      '/models/./a.glb',
+      '/models//a.glb',
+      '/models/',
+      '/models',
+      'models/a.glb',
+      '/models\\a.glb',
+      '/models/..\\a.glb',
+      '',
+    ]) {
+      expect(isRemovableLegacyAssetPath(path)).toBe(false);
+    }
+  });
+
+  it('확장자는 대소문자를 가리지 않는다', () => {
+    expect(isRemovableLegacyAssetPath('/models/Crane.GLB')).toBe(true);
   });
 });

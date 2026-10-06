@@ -5,6 +5,10 @@
       "id": "49fb6e30-bc93-4dbd-a86c-51110cb519a3",
       "equipName": "",
       "path": "/models/1p_3bay.glb",
+      "asset": {
+        "id": "1p-3bay",
+        "version": 1
+      },
       "opacity": 0.7,
       "position": [
         22,
@@ -27,6 +31,10 @@
       "id": "58c98310-fea9-4e77-8f19-9a3dc5c3a152",
       "equipName": "",
       "path": "/models/3p.glb",
+      "asset": {
+        "id": "3p",
+        "version": 1
+      },
       "opacity": 0.7,
       "position": [
         102,
@@ -49,6 +57,10 @@
       "id": "63b712a6-d5cb-4bfe-b231-14622a3a5535",
       "equipName": "",
       "path": "/models/5p_1bay.glb",
+      "asset": {
+        "id": "5p-1bay",
+        "version": 1
+      },
       "opacity": 0.7,
       "position": [
         182,
@@ -71,6 +83,10 @@
       "id": "bbf269d9-4ad3-4b10-87a7-a294f8689c2f",
       "equipName": "",
       "path": "/models/5p_2bay.glb",
+      "asset": {
+        "id": "5p-2bay",
+        "version": 1
+      },
       "opacity": 0.7,
       "position": [
         262,
@@ -94,6 +110,10 @@
       "equipName": "C-171",
       "craneId": "C_171",
       "path": "/models/c_171.glb",
+      "asset": {
+        "id": "c-171",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         21,
@@ -124,6 +144,10 @@
       "equipName": "C-172",
       "craneId": "C_172",
       "path": "/models/c_172.glb",
+      "asset": {
+        "id": "c-172",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         21,
@@ -154,6 +178,10 @@
       "equipName": "C-173",
       "craneId": "C_173",
       "path": "/models/c_173.glb",
+      "asset": {
+        "id": "c-173",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         21,
@@ -184,6 +212,10 @@
       "equipName": "C-800",
       "craneId": "C_800",
       "path": "/models/c_800.glb",
+      "asset": {
+        "id": "c-800",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         20,
@@ -214,6 +246,10 @@
       "equipName": "C-801",
       "craneId": "C_801",
       "path": "/models/c_801.glb",
+      "asset": {
+        "id": "c-801",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         21.5,
@@ -244,6 +280,10 @@
       "equipName": "C-810",
       "craneId": "C_810",
       "path": "/models/c_810.glb",
+      "asset": {
+        "id": "c-810",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         102,
@@ -274,6 +314,10 @@
       "equipName": "C-811",
       "craneId": "C_811",
       "path": "/models/c_811.glb",
+      "asset": {
+        "id": "c-811",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         100,
@@ -304,6 +348,10 @@
       "equipName": "C-812",
       "craneId": "C_812",
       "path": "/models/c_811.glb",
+      "asset": {
+        "id": "c-811",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         100,
@@ -334,6 +382,10 @@
       "equipName": "C-1806",
       "craneId": "C_1806",
       "path": "/models/c_1806.glb",
+      "asset": {
+        "id": "c-1806",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         180.833,
@@ -364,6 +416,10 @@
       "equipName": "C-865",
       "craneId": "C_865",
       "path": "/models/c_865.glb",
+      "asset": {
+        "id": "c-865",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         181.22,
@@ -394,6 +450,10 @@
       "equipName": "C-866",
       "craneId": "C_866",
       "path": "/models/c_866.glb",
+      "asset": {
+        "id": "c-866",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         180.773,
@@ -424,6 +484,10 @@
       "equipName": "C-863",
       "craneId": "C_863",
       "path": "/models/c_863.glb",
+      "asset": {
+        "id": "c-863",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         175,
@@ -454,6 +518,10 @@
       "equipName": "C-867",
       "craneId": "C_867",
       "path": "/models/c_867.glb",
+      "asset": {
+        "id": "c-867",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         181,
@@ -484,6 +552,10 @@
       "equipName": "C-864",
       "craneId": "C_864",
       "path": "/models/c_864.glb",
+      "asset": {
+        "id": "c-864",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         175,
@@ -514,6 +586,10 @@
       "equipName": "C-870",
       "craneId": "C_870",
       "path": "/models/c_870.glb",
+      "asset": {
+        "id": "c-870",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         261,
@@ -544,6 +620,10 @@
       "equipName": "C-869",
       "craneId": "C_869",
       "path": "/models/c_869.glb",
+      "asset": {
+        "id": "c-869",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         260,
@@ -574,6 +654,10 @@
       "equipName": "C-868",
       "craneId": "C_868",
       "path": "/models/c_868.glb",
+      "asset": {
+        "id": "c-868",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         256,
@@ -604,6 +688,10 @@
       "equipName": "C-871",
       "craneId": "C_871",
       "path": "/models/c_871.glb",
+      "asset": {
+        "id": "c-871",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         262,
@@ -634,6 +722,10 @@
       "equipName": "C-862",
       "craneId": "C_862",
       "path": "/models/c_862.glb",
+      "asset": {
+        "id": "c-862",
+        "version": 1
+      },
       "opacity": 1,
       "position": [
         254.5,

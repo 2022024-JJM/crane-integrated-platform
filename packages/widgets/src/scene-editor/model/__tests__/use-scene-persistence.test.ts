@@ -46,7 +46,7 @@ function storedScene(): SavedSceneInfo {
     models: [],
     texts: [],
     camera: CAMERA,
-    environmentId: 'env-1',
+    environment: { path: 'env-1' },
   };
 }
 
@@ -181,10 +181,10 @@ describe('isLoading (진입 로딩 커버의 준비 신호)', () => {
     expect(result.current.history.sceneInfo).toBeNull();
 
     await act(async () =>
-      second.resolve({ ...storedScene(), environmentId: 'env-2' }),
+      second.resolve({ ...storedScene(), environment: { path: 'env-2' } }),
     );
     expect(result.current.persistence.isLoading).toBe(false);
-    expect(result.current.history.sceneInfo?.environmentId).toBe('env-2');
+    expect(result.current.history.sceneInfo?.environment?.path).toBe('env-2');
   });
 
   it('로드가 끝난 뒤 저장해도 false 그대로다', async () => {
@@ -212,7 +212,7 @@ describe('dirty 판정', () => {
     act(() =>
       result.current.history.updateScene((prev) => ({
         ...prev!,
-        environmentId: 'env-2',
+        environment: { path: 'env-2' },
       })),
     );
     expect(result.current.persistence.isDirty).toBe(true);
@@ -236,7 +236,7 @@ describe('저장', () => {
     act(() =>
       result.current.history.updateScene((prev) => ({
         ...prev!,
-        environmentId: 'env-2',
+        environment: { path: 'env-2' },
       })),
     );
 
@@ -249,7 +249,7 @@ describe('저장', () => {
     expect(saveMock).toHaveBeenCalledTimes(1);
     const [regionId, sentScene] = saveMock.mock.calls[0];
     expect(regionId).toBe('dock-1');
-    expect(sentScene.environmentId).toBe('env-2');
+    expect(sentScene.environment?.path).toBe('env-2');
     // getCameraState의 현재 카메라가 로드 카메라를 대체한다.
     expect(sentScene.camera).toEqual({
       position: [1, 1, 1],
@@ -282,7 +282,7 @@ describe('저장', () => {
     act(() =>
       result.current.history.updateScene((prev) => ({
         ...prev!,
-        environmentId: 'env-2',
+        environment: { path: 'env-2' },
       })),
     );
     await act(async () => {

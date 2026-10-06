@@ -17,6 +17,7 @@ import {
   zoneCenterWorld,
   resolveCameraBoundsMaps,
   resolveSceneHomeCamera,
+  resolveSeaMirror,
   resolveSeaVisible,
   resolveSplitLayout,
   resolveTrueNorth,
@@ -225,7 +226,7 @@ export function Monitoring3dView({
   // (resolveSeaVisible — 판정은 이 한 곳)은 파도·미러 패스가 상시
   // 애니메이션이라 거버너에 알려 30fps 를 유지한다 — 예전 demand 모달에서
   // 파도가 얼어붙던 문제의 해법이다.
-  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
+  const seaVisible = resolveSeaVisible(sceneInfo);
   const trueNorth = resolveTrueNorth(sceneInfo);
   const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
@@ -638,9 +639,9 @@ export function Monitoring3dView({
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
           <Suspense fallback={null}>
             <SceneEnvironment
-              regionId={regionId}
-              environmentId={sceneInfo?.environmentId}
+              environment={sceneInfo?.environment}
               seaVisible={seaVisible}
+              seaMirror={resolveSeaMirror(sceneInfo)}
               maps={sceneInfo?.maps}
             />
           </Suspense>

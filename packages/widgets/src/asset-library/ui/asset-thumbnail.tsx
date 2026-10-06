@@ -1,5 +1,4 @@
 import { memo, useState } from 'react';
-import { withBaseUrl } from '@crane/core/lib/asset-url';
 import { cn } from '@crane/core/lib/utils';
 import type { AssetRecord } from '@crane/domain/asset-library';
 import { useAssetFileUrl } from '@crane/features/asset-library';
@@ -31,9 +30,7 @@ export const AssetThumbnail = memo(function AssetThumbnail({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   let url: string | null = null;
-  if (source.kind === 'static') {
-    url = withBaseUrl(source.path);
-  } else if (source.kind === 'file' && file.status === 'ready') {
+  if (source.kind === 'file' && file.status === 'ready') {
     url = withCacheStamp(file.url, source.stamp);
   } else if (source.kind === 'image' && file.status === 'ready') {
     url = file.url;

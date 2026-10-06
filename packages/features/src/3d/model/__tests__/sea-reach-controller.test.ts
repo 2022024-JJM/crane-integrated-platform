@@ -12,10 +12,15 @@ import {
   type SeaReachStore,
 } from '../sea-reach-controller';
 
-const GROUND: SavedMapInfo = { id: 'ground', path: '/maps/okpo.glb' };
+const GROUND: SavedMapInfo = {
+  id: 'ground',
+  path: '/maps/okpo.glb',
+  role: 'ground',
+};
 const CONTEXT: SavedMapInfo = {
   id: 'context',
   path: '/maps/okpo-terrain.glb',
+  role: 'context',
 };
 
 function maskOf(tag: number): SeaReachMask {
@@ -260,7 +265,7 @@ describe('createSeaReachController', () => {
     expect(store.publish).toHaveBeenCalledTimes(1);
   });
 
-  it('범위 지도는 카탈로그의 바닥(ground) 지도다', () => {
+  it('범위 지도는 역할이 바닥(ground)인 지도다', () => {
     const { controller, builds, scheduler } = setup({
       roots: { ground: new Group(), context: new Group() },
     });

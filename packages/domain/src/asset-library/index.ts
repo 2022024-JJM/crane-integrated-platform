@@ -6,7 +6,8 @@ export type {
   AssetHistoryEntry,
   AssetKind,
   AssetLibraryDocument,
-  AssetOrigin,
+  AssetMapRole,
+  AssetPlacement,
   AssetRecord,
   AssetStats,
   AssetStatsTable,
@@ -14,7 +15,6 @@ export type {
   AssetThumbnail,
   AssetVersion,
   AssetVersionStatus,
-  BuiltinAssetSource,
 } from './model/types';
 export {
   ASSET_COLLECTION_NAME_MAX,
@@ -23,16 +23,18 @@ export {
   ASSET_DRAWING_NO_MAX,
   ASSET_KINDS,
   ASSET_LIBRARY_SCHEMA_VERSION,
+  ASSET_MAP_ROLES,
   ASSET_NAME_MAX,
   ASSET_NOTE_MAX,
   ASSET_OWNER_MAX,
   ASSET_REVISION_MAX,
-  ASSET_TAG_MAX,
-  ASSET_TAGS_MAX,
+  ASSET_CATEGORY_MAX,
+  ASSET_CATEGORIES_MAX,
   ASSET_VERSION_STATUSES,
   ASSET_VERSIONS_MAX,
   isDocumentAssetKind,
   isGeometryAssetKind,
+  isSceneAssetKind,
 } from './model/types';
 export {
   ASSET_CAD_EXTENSIONS,
@@ -43,39 +45,35 @@ export {
   ASSET_LIBRARY_STATS_PATH,
   ASSET_MODEL_EXTENSIONS,
   ASSET_UPLOAD_EXTENSIONS,
+  getAssetThumbnailPath,
   getFileExtension,
+  isRemovableLegacyAssetPath,
   sanitizeAssetFileName,
 } from './model/asset-library-paths';
-export {
-  builtinDrawingSources,
-  builtinRuntimeModelSources,
-} from './model/builtin-extra-assets';
+export type { CodeUsedAsset } from './model/code-used-assets';
+export { CODE_USED_DRAWINGS } from './model/code-used-assets';
 export {
   assertReadableAssetLibraryDocument,
   collectUnreadableAssetRecords,
   createEmptyAssetLibraryDocument,
   sanitizeAssetLibraryDocument,
+  sanitizeAssetPlacement,
   sanitizeAssetStats,
   sanitizeAssetStatsTable,
-  sanitizeAssetTags,
+  sanitizeAssetCategories,
 } from './lib/sanitize-asset-library';
-export {
-  BUILTIN_ASSET_ACTOR,
-  buildBuiltinAssetRecord,
-  mergeAssetLibrary,
-} from './lib/builtin-assets';
 export type {
   AddAssetVersionInput,
   AssetChangeContext,
   AssetMetadataPatch,
   AssetStatsDelta,
-  CreateUserAssetInput,
+  CreateAssetInput,
 } from './lib/asset-versions';
 export {
   addAssetVersion,
   canRemoveAssetVersion,
   canTransitionStatus,
-  createUserAssetRecord,
+  createAssetRecord,
   diffAssetStats,
   getAllowedStatusTransitions,
   getAssetVersion,
@@ -118,22 +116,31 @@ export type {
   AssetTree,
   AssetTreeKindNode,
   AssetTreeSelection,
-  AssetTreeTagNode,
+  AssetTreeCategoryNode,
 } from './lib/asset-tree';
 export {
+  buildAssetCategoryNodes,
   buildAssetTree,
   countAssetScope,
   getAssetScope,
-  listAssetKindTags,
-  toggleAssetScopeTag,
+  hasAllAssetCategories,
+  listAssetKindCategories,
+  toggleAssetScopeCategory,
   withAssetScope,
 } from './lib/asset-tree';
-export type { AssetPreviewMode, GlbHeaderError } from './lib/asset-file';
+export type {
+  AssetPreviewMode,
+  ExrHeaderError,
+  GlbHeaderError,
+} from './lib/asset-file';
 export {
+  ASSET_ENVIRONMENT_MAX_SIZE,
   createAssetId,
   getAllowedAssetKinds,
   getAssetPreviewMode,
   humanizeAssetFileName,
+  readExrSize,
+  validateExrHeader,
   validateGlbHeader,
 } from './lib/asset-file';
 export type { AssetBudgetMetric, AssetBudgetWarning } from './lib/asset-format';
@@ -146,24 +153,32 @@ export {
   formatMeters,
   formatSignedCount,
   pickGridStep,
-  toMeterSize,
 } from './lib/asset-format';
 export type {
   AssetUsage,
+  AssetUsageBlock,
   AssetUsageIndex,
+  AssetUsageRef,
+  AssetUsageSource,
+  AssetUsageState,
   AssetVersionUsage,
-  SceneAssetSource,
 } from './lib/asset-usage';
 export {
   buildAssetUsageIndex,
   countAssetPlacements,
+  getAssetRemoveBlock,
   getAssetUsage,
+  getAssetVersionUsage,
+  getAssetWithdrawBlock,
+  isAssetInUse,
+  isAssetVersionInUse,
 } from './lib/asset-usage';
 export { hashBytes } from './lib/content-hash';
 export type { AssetBlobStore } from './lib/asset-blob-store';
 export { createMemoryBlobStore } from './lib/asset-blob-store';
 export type {
   AssetLibraryRepository,
+  AssetOptimizeKind,
   AssetStoredFile,
 } from './lib/asset-library-storage';
 export {

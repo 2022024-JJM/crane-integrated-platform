@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -21,7 +22,6 @@ import {
   isGeometryAssetKind,
   resolveVersionSizeBytes,
   resolveVersionStats,
-  toMeterSize,
   type AssetAttentionKind,
   type AssetBudgetMetric,
   type AssetRecord,
@@ -41,6 +41,11 @@ import {
   pickPreviewVersion,
   resolveAttentionTarget,
 } from '../lib/attention-target';
+import {
+  PREVIEW_MODES,
+  resolvePreviewStage,
+  type PreviewMode,
+} from '../lib/preview-stage';
 import { useAssetSaveReport } from '../model/use-asset-save-report';
 import { useSettled } from '../model/use-settled';
 import { AssetAttentionList } from './asset-attention';
@@ -57,13 +62,11 @@ import { AssetThumbnail } from './asset-thumbnail';
  */
 const AUTO_3D_MAX_BYTES = 6 * 1024 * 1024;
 const PREVIEW_MODE_STORAGE_KEY = 'crane:asset-library:preview-mode';
-type PreviewMode = 'image' | '3d';
-const PREVIEW_MODES: PreviewMode[] = ['image', '3d'];
 
 function readPreviewMode(): PreviewMode {
   return getStorageItem(PREVIEW_MODE_STORAGE_KEY) === 'image' ? 'image' : '3d';
 }
-/** 자산을 올리고 이만큼 머물러야 3D 를 연다 — 지나치는 자산은 썸네일만 본다. */
+/** 자산을 올리고 이만큼 머물러야 3D 파일을 받는다 — 지나치는 자산은 받지 않는다. */
 const OPEN_3D_DELAY_MS = 350;
 
 interface AssetPreviewPanelProps {
@@ -85,8 +88,13 @@ interface AssetPreviewPanelProps {
   onToggleFavorite: () => void;
   /** 경로의 마디를 누름 — 목록을 그 위치로 옮긴다. */
   onSelectScope: (scope: AssetScope) => void;
-  /** 태그를 누름 — 그 태그를 가진 자산만 본다. */
-  onSelectTag: (tag: string) => void;
+  /** 카테고리를 누름 — 그 카테고리를 가진 자산만 본다. */
+  onSelectCategory: (category: string) => void;
+  /**
+   * 지우기를 연다. 파일을 다룰 수 있는 환경(dev)에서만 넘어온다 — 없으면
+   * 버튼을 내지 않는다.
+   */
+  onDelete?: () => void;
 }
 
 /** 묶음 하나 — 작은 제목 아래 값들이 세 칸 격자로 놓인다. */
@@ -153,7 +161,8 @@ export function AssetPreviewPanel({
   onClose,
   onToggleFavorite,
   onSelectScope,
-  onSelectTag,
+  onSelectCategory,
+  onDelete,
 }: AssetPreviewPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = getFormatLocale(i18n.language);
@@ -194,7 +203,7 @@ export function AssetPreviewPanel({
   const mode = getAssetPreviewMode(version.file.format);
   const sizeBytes = resolveVersionSizeBytes(version, statsTable);
   const stats = resolveVersionStats(version, statsTable);
-  const meters = stats?.size ? toMeterSize(stats.size, asset.defaultScale) : null;
+  const meters = stats?.size ?? null;
   const document = isDocumentAssetKind(asset.kind);
   const overBudget = new Set<AssetBudgetMetric>(
     stats ? evaluateAssetBudget(asset.kind, stats).map((w) => w.metric) : [],
@@ -213,12 +222,15 @@ export function AssetPreviewPanel({
   const wants3d = small || opened3dFor === asset.id;
   // 돌려 볼 수 있는 자산 — 모델·지도(GLB)와 배경(파노라마).
   const interactive = mode === 'model' || mode === 'environment';
-  const show3d =
-    previewMode === '3d' &&
-    interactive &&
-    file.status === 'ready' &&
-    wants3d &&
-    settled;
+  const stage = resolvePreviewStage({
+    previewMode,
+    interactive,
+    fileStatus: file.status,
+    wants3d,
+    settled,
+  });
+  // 뷰어는 열기로 정해지면 바로 올리고, 파일 주소는 받아도 될 때 넘긴다.
+  const viewerUrl = stage === 'viewer' ? file.url : null;
 
   return (
     <aside
@@ -300,28 +312,25 @@ export function AssetPreviewPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="border-border relative aspect-[16/10] w-full border-b">
-          {show3d ? (
-            // 자산마다 새로 마운트한다 — 앞 자산의 표시 상태·카메라가 남지 않게.
+          {stage === 'opening' || stage === 'viewer' ? (
+            // 자산마다 새로 마운트한다 — 앞 자산의 카메라가 남지 않게.
+            // 표시 상태는 탭이 기억해 둔 값으로 다시 시작한다.
             mode === 'environment' ? (
               <AssetEnvironmentViewer
                 key={`${asset.id}@${version.version}`}
-                url={file.url}
+                url={viewerUrl}
               />
             ) : (
               <AssetModelViewer
                 key={`${asset.id}@${version.version}`}
-                url={file.url}
-                defaultScale={asset.defaultScale}
+                url={viewerUrl}
                 toolbar="compact"
               />
             )
           ) : (
             <>
               <AssetThumbnail asset={asset} className="absolute inset-0" />
-              {previewMode === '3d' &&
-              interactive &&
-              file.status === 'ready' &&
-              !wants3d ? (
+              {stage === 'ask' ? (
                 <div className="absolute inset-x-0 bottom-3 flex justify-center">
                   <Button
                     variant="secondary"
@@ -515,31 +524,31 @@ export function AssetPreviewPanel({
           </FactGroup>
         ) : null}
 
-        {asset.tags.length > 0 || asset.description ? (
+        {asset.categories.length > 0 || asset.description ? (
           <section className="px-4 py-4">
             {asset.description ? (
               <p className="text-foreground/85 text-[13px] leading-relaxed">
                 {asset.description}
               </p>
             ) : null}
-            {asset.tags.length > 0 ? (
+            {asset.categories.length > 0 ? (
               <ul
                 className={cn(
                   'flex flex-wrap gap-1.5',
                   asset.description && 'mt-3',
                 )}
               >
-                {asset.tags.map((tag) => (
-                  <li key={tag}>
+                {asset.categories.map((category) => (
+                  <li key={category}>
                     <button
                       type="button"
-                      aria-label={t('asset-library:preview.filterByTag', {
-                        tag,
+                      aria-label={t('asset-library:preview.filterByCategory', {
+                        category,
                       })}
-                      onClick={() => onSelectTag(tag)}
+                      onClick={() => onSelectCategory(category)}
                       className="border-border text-foreground/80 hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 cursor-pointer rounded-full border px-2.5 py-1 text-xs leading-none outline-none focus-visible:ring-2"
                     >
-                      {tag}
+                      {category}
                     </button>
                   </li>
                 ))}
@@ -580,6 +589,18 @@ export function AssetPreviewPanel({
             className={cn(favorite && 'fill-current text-(--hanwha-orange-100)')}
           />
         </Button>
+        {onDelete ? (
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-destructive"
+            aria-label={t('asset-library:preview.delete', { name: asset.name })}
+            title={t('asset-library:action.delete')}
+            onClick={onDelete}
+          >
+            <Trash2 />
+          </Button>
+        ) : null}
       </footer>
     </aside>
   );

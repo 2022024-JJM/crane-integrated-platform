@@ -13,14 +13,14 @@ import {
  *
  * 계층의 위치(종류)는 탐색의 범위라 칩이 아니라 경로 표기가 맡는다. 다만
  * 계층으로 나타낼 수 없는 상태(종류를 여럿 고름 — 손으로 고친 링크)는 보이지
- * 않는 필터가 되지 않게 칩으로 낸다. 계층에서 체크한 태그는 필터라 칩이 있다.
+ * 않는 필터가 되지 않게 칩으로 낸다. 계층에서 체크한 카테고리는 필터라 칩이 있다.
  */
 export type ActiveFilter =
   | { type: 'text'; value: string }
   | { type: 'attention'; value: AssetAttentionKind }
   | { type: 'kind'; value: AssetKind }
   | { type: 'status'; value: AssetVersionStatus }
-  | { type: 'tag'; value: string }
+  | { type: 'category'; value: string }
   | { type: 'collection'; value: string; name: string }
   | { type: 'favorites' };
 
@@ -41,7 +41,7 @@ export function listActiveFilters(
   for (const status of query.statuses) {
     filters.push({ type: 'status', value: status });
   }
-  for (const tag of query.tags) filters.push({ type: 'tag', value: tag });
+  for (const category of query.categories) filters.push({ type: 'category', value: category });
   if (query.collectionId) {
     const collection = collections.find(
       (item) => item.id === query.collectionId,
@@ -76,8 +76,8 @@ export function removeActiveFilter(
         ...query,
         statuses: query.statuses.filter((status) => status !== filter.value),
       };
-    case 'tag':
-      return { ...query, tags: query.tags.filter((tag) => tag !== filter.value) };
+    case 'category':
+      return { ...query, categories: query.categories.filter((category) => category !== filter.value) };
     case 'collection':
       return { ...query, collectionId: null };
     case 'favorites':

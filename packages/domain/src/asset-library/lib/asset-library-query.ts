@@ -15,6 +15,7 @@ import {
   getAssetAttention,
   type AssetAttentionKind,
 } from './asset-attention';
+import { hasAllAssetCategories } from './asset-tree';
 import { getCurrentAssetVersion } from './asset-versions';
 
 /**
@@ -31,8 +32,8 @@ export interface AssetQuery {
   text: string;
   kinds: AssetKind[];
   statuses: AssetVersionStatus[];
-  /** 고른 태그를 **모두** 가진 자산만. 대소문자를 가리지 않는다. */
-  tags: string[];
+  /** 고른 카테고리를 **모두** 가진 자산만. 대소문자를 가리지 않는다. */
+  categories: string[];
   collectionId: string | null;
   favoritesOnly: boolean;
   /** "처리할 일" 보기 — 그 이유에 해당하는 자산만. */
@@ -46,7 +47,7 @@ export const DEFAULT_ASSET_QUERY: AssetQuery = {
   text: '',
   kinds: [],
   statuses: [],
-  tags: [],
+  categories: [],
   collectionId: null,
   favoritesOnly: false,
   attention: null,
@@ -112,7 +113,7 @@ function matchesText(asset: AssetRecord, text: string): boolean {
     asset.description,
     asset.drawingNo ?? '',
     current.file.fileName,
-    ...asset.tags,
+    ...asset.categories,
   ];
   return haystack.some((value) => value.toLowerCase().includes(needle));
 }
@@ -135,7 +136,6 @@ export function queryAssets(
       ? null
       : (context.collections.find((c) => c.id === query.collectionId) ?? null);
   const collectionIds = collection ? new Set(collection.assetIds) : null;
-  const tagSet = query.tags.map((tag) => tag.toLowerCase());
   const attentionContext = {
     statsTable: context.statsTable,
     placements: context.placements ?? EMPTY_PLACEMENTS,
@@ -152,11 +152,8 @@ export function queryAssets(
     ) {
       return false;
     }
-    if (tagSet.length > 0) {
-      const own = asset.tags.map((tag) => tag.toLowerCase());
-      // 고른 태그를 모두 가진 자산만 — 태그를 더할수록 좁혀진다.
-      if (!tagSet.every((tag) => own.includes(tag))) return false;
-    }
+    // 고른 카테고리를 모두 가진 자산만 — 카테고리를 더할수록 좁혀진다.
+    if (!hasAllAssetCategories(asset.categories, query.categories)) return false;
     // 없는 컬렉션 id 는 "아무것도 속하지 않는다" 로 본다.
     if (query.collectionId !== null && !collectionIds?.has(asset.id)) {
       return false;
@@ -232,7 +229,7 @@ export interface AssetFacets {
   kinds: Record<AssetKind, number>;
   statuses: Record<AssetVersionStatus, number>;
   /** 많이 쓰인 순. */
-  tags: { tag: string; count: number }[];
+  categories: { category: string; count: number }[];
 }
 
 /** 필터 레일의 개수 표시용 집계 — 필터를 걸기 전 전체 기준이다. */
@@ -244,18 +241,18 @@ export function countAssetFacets(assets: readonly AssetRecord[]): AssetFacets {
   const statuses = Object.fromEntries(
     ASSET_VERSION_STATUSES.map((s) => [s, 0]),
   ) as Record<AssetVersionStatus, number>;
-  // 태그 필터가 대소문자를 가리지 않으므로 집계도 그렇게 묶는다. 표기는 먼저
+  // 카테고리 필터가 대소문자를 가리지 않으므로 집계도 그렇게 묶는다. 표기는 먼저
   // 나온 것을 쓴다.
-  const tagCounts = new Map<string, { tag: string; count: number }>();
+  const categoryCounts = new Map<string, { category: string; count: number }>();
 
   for (const asset of assets) {
     kinds[asset.kind] += 1;
     statuses[getCurrentAssetVersion(asset).status] += 1;
-    for (const tag of asset.tags) {
-      const key = tag.toLowerCase();
-      const entry = tagCounts.get(key);
+    for (const category of asset.categories) {
+      const key = category.toLowerCase();
+      const entry = categoryCounts.get(key);
       if (entry) entry.count += 1;
-      else tagCounts.set(key, { tag, count: 1 });
+      else categoryCounts.set(key, { category, count: 1 });
     }
   }
 
@@ -263,8 +260,8 @@ export function countAssetFacets(assets: readonly AssetRecord[]): AssetFacets {
     total: assets.length,
     kinds,
     statuses,
-    tags: [...tagCounts.values()].sort(
-      (a, b) => b.count - a.count || a.tag.localeCompare(b.tag),
+    categories: [...categoryCounts.values()].sort(
+      (a, b) => b.count - a.count || a.category.localeCompare(b.category),
     ),
   };
 }
