@@ -47,8 +47,9 @@ export const ko = {
     needsCheck: '점검 필요 {{count}}',
     allHealthy: '이상 없음',
     birdviewTitle: '설비 배치',
-    birdviewHint: '심볼을 누르면 아래 목록이 따라옵니다 · 베이를 누르면 그 구획으로',
+    birdviewHint: '심볼을 누르면 아래 목록이 따라옵니다 · 베이를 누르면 그 구획으로 · 휠·핀치로 확대',
     birdviewEmpty: '이 공장은 표시할 설비 좌표가 없습니다',
+    birdviewResetZoom: '원래대로',
     empty: '표시할 설비가 없습니다.',
   },
   /* 설비 그리드(shared/features/equipment-grid) — 세 공정이 함께 쓰는 셀 문법 */

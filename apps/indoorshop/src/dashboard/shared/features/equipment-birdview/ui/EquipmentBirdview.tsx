@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { STATUS_SHAPE, STATUS_STYLE, type StatusMeaning, type StatusShape } from '../../../ui/statusPalette'
@@ -13,6 +13,15 @@ import type { LatLon } from '../../../entities/yard-parcels'
 import { fitProjection, pathOf } from '../lib/projection'
 import { birdviewRotationOf } from '../lib/orientation'
 import { bayFrameOf, layoutBlueprint } from '../lib/blueprint'
+import {
+  PAN_ZOOM_IDENTITY,
+  applyPanZoom,
+  clampPanZoom,
+  panBy,
+  wheelZoomFactor,
+  zoomAt,
+  type PanZoom,
+} from '../lib/panZoom'
 import type { BirdviewBay, BirdviewCard, BirdviewPoint } from '../model/types'
 
 /*
@@ -168,6 +177,8 @@ export interface EquipmentBirdviewProps {
   className?: string
   /** 빈 상태 문구 (좌표가 없는 공장) */
   emptyLabel: string
+  /** 확대·이동한 그림을 처음 모습으로 되돌리는 손잡이의 글자 — 없으면 세우지 않는다 */
+  resetZoomLabel?: string
 }
 
 /**
@@ -252,6 +263,14 @@ function BirdviewLegend({
 /** 그릇을 재기 전에 쓰는 기본 뷰박스 — 서버·테스트처럼 크기를 알 수 없는 곳의 값 */
 const FALLBACK_VIEW = { width: 1000, height: 420 }
 /**
+ * 그림을 짜는 최소 뷰박스 — 그릇이 이보다 작으면 **이 크기로 짜고 통째로 줄인다.**
+ *
+ * 심볼·간격·번호패는 픽셀로 정해져 있어서, 그릇에 맞춰 짜기만 하면 그림이 작아질수록
+ * 심볼은 그대로인 채 서로 밀어내며 자리가 바뀐다. 이 아래로는 배치를 다시 짜지 않고
+ * 축소만 하므로 심볼도 간격도 함께 작아지고 자리는 그대로 남는다.
+ */
+const MIN_VIEW = { width: 560, height: 420 }
+/**
  * 심볼 판 한 변 — 정상은 물러나고 이상은 한 치수 크다(크기도 위계를 진다).
  *
  * 12px 이었다. 그 크기에서는 판 안의 글리프가 8px 라 종류가 갈리지 않았고, 종류색을
@@ -281,6 +300,7 @@ export function EquipmentBirdview({
   colorByType = false,
   className,
   emptyLabel,
+  resetZoomLabel,
 }: EquipmentBirdviewProps) {
   const glass = tone === 'glass'
   /* 범례에서 고른 종류 — 그림이 그 종류만 남긴다("판넬이 어디 있나") */
@@ -298,7 +318,8 @@ export function EquipmentBirdview({
   /* 그림자 필터의 id — 한 화면에 버드뷰가 둘 서도 서로의 필터를 훔치지 않게 */
   const shadowId = `birdview-shadow-${useId().replace(/[:]/g, '')}`
   /*
-   * 뷰박스를 **그릇 크기에 맞춘다** — 그래야 1 뷰박스 단위 = 1 화면 픽셀이 된다.
+   * 뷰박스를 **그릇 크기에 맞춘다** — 그래야 1 뷰박스 단위 = 1 화면 픽셀이 된다
+   * (그릇이 `MIN_VIEW` 보다 작을 때만 `zoom` 배로 통째 축소).
    *
    * 고정 뷰박스(1000×420)를 쓰면 letterbox 가 두 번 걸린다: 투영이 데이터를 그 상자에
    * 맞추고, 다시 SVG 가 그 상자를 그릇에 맞춘다. 낮고 넓은 패널에서는 그림이 절반
@@ -307,20 +328,128 @@ export function EquipmentBirdview({
    */
   const rootRef = useRef<HTMLDivElement | null>(null)
   const frameRef = useRef<HTMLDivElement | null>(null)
-  const [view, setView] = useState(FALLBACK_VIEW)
+  const [frame, setFrame] = useState(FALLBACK_VIEW)
   useEffect(() => {
     const node = frameRef.current
     if (!node || typeof ResizeObserver === 'undefined') return
     const sync = () => {
       const width = Math.round(node.clientWidth)
       const height = Math.round(node.clientHeight)
-      if (width > 0 && height > 0) setView({ width, height })
+      if (width > 0 && height > 0) setFrame({ width, height })
     }
     sync()
     const observer = new ResizeObserver(sync)
     observer.observe(node)
     return () => observer.disconnect()
   }, [])
+  /* 그릇에 맞춘 축소율 — 그릇이 MIN_VIEW 이상이면 1, 작으면 그만큼 통째로 줄인다 */
+  const fitZoom = Math.min(1, frame.width / MIN_VIEW.width, frame.height / MIN_VIEW.height)
+  /* 뷰박스는 축소율로만 정한다 — 원래 크기로 키워 봐도 배치는 그대로다 */
+  const view = useMemo(
+    () => ({ width: frame.width / fitZoom, height: frame.height / fitZoom }),
+    [frame, fitZoom]
+  )
+  /* 화면 픽셀 ÷ 뷰박스 단위 */
+  const zoom = fitZoom
+
+  /*
+   * 확대·이동 — 휠(트랙패드 핀치 포함)·두 손가락 핀치로 **커서 아래 자리**를 키우고,
+   * 키운 상태에서 끌면 옮긴다. 그림이 작아진 화면에서 심볼을 읽으려면 그 자리를
+   * 당겨 볼 수 있어야 한다.
+   *
+   * 값은 그린 공장(`bays`)에 묶어 둔다 — 공장을 갈아타면 처음 모습으로 선다(남의 공장의
+   * 확대 자리를 이어받을 이유가 없다). 그릇 크기가 바뀌면 이동량만 다시 가둔다.
+   */
+  const [panZoomState, setPanZoomState] = useState({ bays, value: PAN_ZOOM_IDENTITY })
+  const panZoom = clampPanZoom(
+    panZoomState.bays === bays ? panZoomState.value : PAN_ZOOM_IDENTITY,
+    view
+  )
+  const updatePanZoom = useCallback(
+    (next: (current: PanZoom) => PanZoom) =>
+      setPanZoomState((prev) => ({
+        bays,
+        value: next(prev.bays === bays ? prev.value : PAN_ZOOM_IDENTITY),
+      })),
+    [bays]
+  )
+  const zoomed = panZoom.k > 1.001
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  /* 화면 좌표 → 뷰박스 단위 (svg 는 그릇과 같은 비율이라 한 배율로 충분하다) */
+  const toViewPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = svgRef.current?.getBoundingClientRect()
+      if (!rect || rect.width === 0 || rect.height === 0) return null
+      return {
+        x: ((clientX - rect.left) / rect.width) * view.width,
+        y: ((clientY - rect.top) / rect.height) * view.height,
+      }
+    },
+    [view]
+  )
+  /* 휠은 passive 가 아니어야 페이지 스크롤을 막을 수 있다 — React onWheel 은 passive 다 */
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const onWheel = (event: WheelEvent) => {
+      const factor = wheelZoomFactor(event.deltaY)
+      /* 처음 모습에서 더 줄이려는 휠은 페이지에 돌려준다 — 그림이 스크롤을 가두지 않게 */
+      if (factor < 1 && !zoomed) return
+      const point = toViewPoint(event.clientX, event.clientY)
+      if (!point) return
+      event.preventDefault()
+      updatePanZoom((current) => zoomAt(current, point, factor, view))
+    }
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [toViewPoint, updatePanZoom, view, zoomed])
+
+  /* 끌기·핀치 — 손가락(포인터)마다 마지막 자리를 쥐고, 움직인 양만큼 옮기거나 키운다 */
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>())
+  const dragRef = useRef({ moved: 0, suppressClick: false })
+  const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    if (pointersRef.current.size === 1) dragRef.current.moved = 0
+  }
+  const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+    const pointers = pointersRef.current
+    const last = pointers.get(event.pointerId)
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (!last || !rect || rect.width === 0) return
+    const unit = view.width / rect.width
+    const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)?.[1]
+    if (other) {
+      const a = other
+      const before = Math.hypot(a.x - last.x, a.y - last.y)
+      const after = Math.hypot(a.x - event.clientX, a.y - event.clientY)
+      const mid = toViewPoint((a.x + event.clientX) / 2, (a.y + event.clientY) / 2)
+      if (before > 0 && mid) updatePanZoom((current) => zoomAt(current, mid, after / before, view))
+      dragRef.current.moved += Math.abs(after - before)
+    } else if (zoomed) {
+      const dx = event.clientX - last.x
+      const dy = event.clientY - last.y
+      dragRef.current.moved += Math.abs(dx) + Math.abs(dy)
+      /* 몇 px 은 손떨림 — 그 안에서는 클릭으로 남긴다 */
+      if (dragRef.current.moved > 4) {
+        if (!svgRef.current?.hasPointerCapture(event.pointerId)) {
+          svgRef.current?.setPointerCapture(event.pointerId)
+        }
+        updatePanZoom((current) => panBy(current, dx * unit, dy * unit, view))
+      }
+    }
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+  }
+  const onPointerEnd = (event: React.PointerEvent<SVGSVGElement>) => {
+    pointersRef.current.delete(event.pointerId)
+    /* 끌었던 손을 떼면 따라오는 클릭은 선택이 아니다 */
+    if (dragRef.current.moved > 4) dragRef.current.suppressClick = true
+  }
+  const onClickCapture = (event: React.MouseEvent) => {
+    if (!dragRef.current.suppressClick) return
+    dragRef.current.suppressClick = false
+    event.stopPropagation()
+    event.preventDefault()
+  }
 
   const projection = useMemo(() => {
     const all: LatLon[] = [
@@ -433,6 +562,9 @@ export function EquipmentBirdview({
   /* 태그는 **고른 것**을 따라간다 — 알람 딥링크(?equip=)로 들어와도 카드가 서 있다 */
   const tagged = points.find((point) => point.id === active) ?? null
   const tagAt = tagged ? (placed.get(tagged.id) ?? projection.project(tagged.position)) : null
+  /* 태그는 HTML 이라 확대·이동을 거친 화면 자리에 단다 */
+  const tagScreen = tagAt ? applyPanZoom(panZoom, tagAt) : null
+  const tagGap = SYMBOL_ISSUE * panZoom.k
   const card = tagged && cardOf ? cardOf(tagged.id) : null
 
   /** 설비 한 점 — 정상 층과 이상 층이 같은 그림을 쓴다(층만 다르다) */
@@ -521,10 +653,34 @@ export function EquipmentBirdview({
   return (
     <div ref={rootRef} className={cn('flex flex-col', className)}>
       <div ref={frameRef} className="relative min-h-0 flex-1">
+      {resetZoomLabel && zoomed && (
+        <button
+          type="button"
+          onClick={() => updatePanZoom(() => PAN_ZOOM_IDENTITY)}
+          className={cn(
+            'absolute right-1 top-1 z-20 rounded-inshop-md border px-1.5 py-0.5 text-2xs shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+            glass
+              ? 'border-white/15 bg-[#0b0e12]/90 text-white/75 hover:text-white'
+              : 'border-border bg-surface text-foreground/70 hover:text-foreground'
+          )}
+        >
+          {resetZoomLabel}
+        </button>
+      )}
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${view.width} ${view.height}`}
         preserveAspectRatio="xMidYMid meet"
-        className={cn('h-full w-full', chrome)}
+        className={cn(
+          'h-full w-full touch-none select-none',
+          zoomed && 'cursor-grab active:cursor-grabbing',
+          chrome
+        )}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onClickCapture={onClickCapture}
         role="img"
         aria-label={emptyLabel}
       >
@@ -559,6 +715,7 @@ export function EquipmentBirdview({
             setIsolatedType(null)
           }}
         />
+        <g transform={`translate(${panZoom.x} ${panZoom.y}) scale(${panZoom.k})`}>
         {/*
           ① 베이 — 이 그림의 주인공이자 유일한 뼈대다 (R41).
 
@@ -651,9 +808,10 @@ export function EquipmentBirdview({
         <g filter={`url(#${shadowId})`}>
           {points.filter((point) => isIssue(point.severity)).map(renderPoint)}
         </g>
+        </g>
       </svg>
 
-      {tagged && tagAt && (
+      {tagged && tagScreen && (
         <div
           role="tooltip"
           className={cn(
@@ -662,11 +820,15 @@ export function EquipmentBirdview({
               ? 'bg-[#0b0e12]/95 text-white ring-1 ring-white/15'
               : 'bg-surface text-foreground ring-1 ring-border',
             /* 위쪽 설비는 카드가 그림 밖으로 넘쳐 머리글을 덮는다 — 그럴 때는 아래로 편다 */
-            tagAt.y > TAG_FLIP_Y && '-translate-y-full'
+            tagScreen.y * zoom > TAG_FLIP_Y && '-translate-y-full'
           )}
           style={{
-            left: Math.min(Math.max(tagAt.x, 96), Math.max(96, view.width - 96)),
-            top: tagAt.y > TAG_FLIP_Y ? tagAt.y - SYMBOL_ISSUE : tagAt.y + SYMBOL_ISSUE,
+            /* 태그는 HTML 이라 뷰박스 단위를 화면 픽셀로 되돌려 단다 */
+            left: Math.min(Math.max(tagScreen.x * zoom, 96), Math.max(96, frame.width - 96)),
+            top:
+              tagScreen.y * zoom > TAG_FLIP_Y
+                ? (tagScreen.y - tagGap) * zoom
+                : (tagScreen.y + tagGap) * zoom,
           }}
         >
           {/* 머리 — 무엇인가 · 지금 어떤가 */}

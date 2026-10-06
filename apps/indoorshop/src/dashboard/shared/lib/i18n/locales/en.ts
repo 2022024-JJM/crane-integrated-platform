@@ -46,8 +46,9 @@ export const en: Resources = {
     needsCheck: '{{count}} need attention',
     allHealthy: 'All healthy',
     birdviewTitle: 'Equipment layout',
-    birdviewHint: 'Click a symbol to follow it below · click a bay to jump',
+    birdviewHint: 'Click a symbol to follow it below · click a bay to jump · wheel or pinch to zoom',
     birdviewEmpty: 'No equipment coordinates for this shop',
+    birdviewResetZoom: 'Reset view',
     empty: 'No equipment to show.',
   },
   /* Equipment grid (shared/features/equipment-grid) — shared cell grammar */
