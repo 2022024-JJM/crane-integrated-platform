@@ -747,17 +747,14 @@ export default defineConfig(({ mode, command }) => {
   const proxyHttpTarget = env.VITE_DEV_PROXY_TARGET_HTTP;
   const proxyWsTarget = env.VITE_DEV_PROXY_TARGET_WS;
   const proxyLidarTarget = env.VITE_DEV_PROXY_TARGET_LIDAR;
-  const proxyCabinTarget = env.VITE_DEV_PROXY_TARGET_CABIN;
   const baseUrl = normalizeBaseUrl(env.VITE_BASE_URL || DEFAULT_BASE_URL);
   const basePrefix = baseUrl.replace(/\/$/, ''); // '' | '/crane_rnd'
   const apiProxyKey = `${basePrefix}/api`;
   const wsProxyKey = `${basePrefix}/ws`;
   const lidarProxyKey = `${basePrefix}/lidar`;
-  const cabinProxyKey = `${basePrefix}/cabin-bridge`;
   const apiProxyPattern = new RegExp(`^${basePrefix}/api`);
   const wsProxyPattern = new RegExp(`^${basePrefix}/ws`);
   const lidarProxyPattern = new RegExp(`^${basePrefix}/lidar`);
-  const cabinProxyPattern = new RegExp(`^${basePrefix}/cabin-bridge`);
 
   if (!proxyHttpTarget || !proxyWsTarget) {
     console.warn(
@@ -769,12 +766,6 @@ export default defineConfig(({ mode, command }) => {
     console.warn(
       '[vite] VITE_DEV_PROXY_TARGET_LIDAR is not set. ' +
         'LiDAR dev proxy will not work until it is defined in apps/shell/.env.local.',
-    );
-  }
-  if (!proxyCabinTarget) {
-    console.warn(
-      '[vite] VITE_DEV_PROXY_TARGET_CABIN is not set. ' +
-        'Cabin bridge dev proxy will not work until it is defined in apps/shell/.env.local.',
     );
   }
 
@@ -844,16 +835,6 @@ export default defineConfig(({ mode, command }) => {
               },
             }
           : {}),
-        ...(basePrefix && proxyCabinTarget
-          ? {
-              [cabinProxyKey]: {
-                target: proxyCabinTarget,
-                changeOrigin: true,
-                ws: true,
-                rewrite: (p: string) => p.replace(cabinProxyPattern, ''),
-              },
-            }
-          : {}),
         // 레거시/직접 접근 호환용 (dev 에서 BASE_URL 을 '/' 로 임시 변경해
         // 테스트 하는 경우에도 동작).
         ...(proxyHttpTarget
@@ -880,16 +861,6 @@ export default defineConfig(({ mode, command }) => {
                 changeOrigin: true,
                 ws: true,
                 rewrite: (p: string) => p.replace(/^\/lidar/, ''),
-              },
-            }
-          : {}),
-        ...(proxyCabinTarget
-          ? {
-              '/cabin-bridge': {
-                target: proxyCabinTarget,
-                changeOrigin: true,
-                ws: true,
-                rewrite: (p: string) => p.replace(/^\/cabin-bridge/, ''),
               },
             }
           : {}),

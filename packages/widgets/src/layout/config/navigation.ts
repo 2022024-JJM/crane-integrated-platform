@@ -22,7 +22,6 @@ import {
   Camera,
   CalendarDays,
   CalendarRange,
-  Cctv,
   FileText,
   DatabaseZap,
   Boxes,
@@ -196,17 +195,7 @@ function buildGoliathWorkGroup(title: string, base: string): NavGroup {
     path: `${base}/vision`,
     icon: Camera,
   };
-  const cabinMonitoringItem = {
-    label: i18n.t('common:nav.cabinMonitoring'),
-    path: `${base}/cabin-monitoring`,
-    icon: Cctv,
-  };
-  const items = [
-    baseGroup.items[0],
-    visionItem,
-    cabinMonitoringItem,
-    ...baseGroup.items.slice(1),
-  ];
+  const items = [baseGroup.items[0], visionItem, ...baseGroup.items.slice(1)];
   return { ...baseGroup, items };
 }
 
