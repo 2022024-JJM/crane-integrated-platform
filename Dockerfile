@@ -40,8 +40,8 @@ COPY tsconfig.json tsconfig.base.json turbo.json ./
 # Google Cloud Console 에서 HTTP referrer 제한을 반드시 적용한다.
 ARG VITE_GOOGLE_MAPS_API_KEY=""
 ARG VITE_GOOGLE_MAPS_MAP_ID=""
-# crane · indoor 주소 분리. INDOOR_PATH 가 비면 나누지 않는다(main 과 같음). 예) /crane_rnd/indoor/
-ARG INDOOR_PATH=""
+# crane · indoor 주소 분리. 기본은 /crane_rnd/indoor/ 로 나눈다. 빈 값을 주면 나누지 않는다(main 과 같음).
+ARG INDOOR_PATH=/crane_rnd/indoor/
 # [환경별(dev · stage · prod) 배포 — 지금은 주석] 켜려면 '# >' 를 지우고 아래 ENV 의 '# >' 두 줄도 함께 푼다.
 #   BASE_PATH  → crane 주소(Vite base, 예: /crane_rnd/dev/). 주석인 동안은 /crane_rnd/ 고정
 #   DEPLOY_ENV → 헤더 환경 표시. 주석인 동안은 prod(표시 없음)
