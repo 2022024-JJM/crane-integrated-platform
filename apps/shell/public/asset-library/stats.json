@@ -924,27 +924,6 @@
       "animations": 0
     }
   },
-  "/models/car.glb": {
-    "hash": "e4132d55",
-    "bytes": 4282012,
-    "stats": {
-      "triangles": 12134,
-      "vertices": 9148,
-      "meshes": 3,
-      "materials": 3,
-      "textures": 12,
-      "drawCalls": 3,
-      "nodes": 8,
-      "textureMemoryBytes": 66941092,
-      "size": [
-        6.295,
-        4.236,
-        15.198
-      ],
-      "lodLevels": 1,
-      "animations": 0
-    }
-  },
   "/models/crane.glb": {
     "hash": "39f98e98",
     "bytes": 1880168,
@@ -963,27 +942,6 @@
         1.15
       ],
       "lodLevels": 3,
-      "animations": 0
-    }
-  },
-  "/models/fork_lift.glb": {
-    "hash": "6cbf719c",
-    "bytes": 41072,
-    "stats": {
-      "triangles": 2440,
-      "vertices": 2571,
-      "meshes": 7,
-      "materials": 7,
-      "textures": 0,
-      "drawCalls": 7,
-      "nodes": 9,
-      "textureMemoryBytes": 0,
-      "size": [
-        0.48,
-        0.841,
-        1.41
-      ],
-      "lodLevels": 1,
       "animations": 0
     }
   },
@@ -1111,27 +1069,6 @@
       ],
       "lodLevels": 1,
       "animations": 0
-    }
-  },
-  "/models/man.glb": {
-    "hash": "4405f7b3",
-    "bytes": 53172,
-    "stats": {
-      "triangles": 2076,
-      "vertices": 6228,
-      "meshes": 1,
-      "materials": 1,
-      "textures": 0,
-      "drawCalls": 1,
-      "nodes": 11,
-      "textureMemoryBytes": 0,
-      "size": [
-        0.462,
-        1.714,
-        0.243
-      ],
-      "lodLevels": 1,
-      "animations": 3
     }
   },
   "/models/okpo_goliath.glb": {
