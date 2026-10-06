@@ -83,19 +83,6 @@
     "windSpeed": "Ventus",
     "hoistHeight": "Altitudo Tollenonis"
   },
-  "equipment": {
-    "title": "Status Instrumenti",
-    "hoistMotor": "Motor Tollenonis",
-    "trolleyMotor": "Motor Currus",
-    "travelMotor": "Motor Itineris",
-    "wireRope": "Funis Ferreus",
-    "brake": "Sufflamen",
-    "brakeStatus": {
-      "normal": "Normalis",
-      "warning": "Inspectio",
-      "fault": "Vitium"
-    }
-  },
   "dashboard": {
     "liveStatus": "Status Vivus"
   },

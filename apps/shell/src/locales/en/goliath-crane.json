@@ -83,19 +83,6 @@
     "windSpeed": "Wind Speed",
     "hoistHeight": "Hoist Height"
   },
-  "equipment": {
-    "title": "Equipment Status",
-    "hoistMotor": "Hoist Motor",
-    "trolleyMotor": "Trolley Motor",
-    "travelMotor": "Travel Motor",
-    "wireRope": "Wire Rope",
-    "brake": "Brake",
-    "brakeStatus": {
-      "normal": "Normal",
-      "warning": "Check Required",
-      "fault": "Fault"
-    }
-  },
   "dashboard": {
     "liveStatus": "Live Status"
   },

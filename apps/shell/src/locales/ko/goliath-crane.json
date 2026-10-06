@@ -83,19 +83,6 @@
     "windSpeed": "풍속",
     "hoistHeight": "호이스트 높이"
   },
-  "equipment": {
-    "title": "장비 상태",
-    "hoistMotor": "호이스트 모터",
-    "trolleyMotor": "트롤리 모터",
-    "travelMotor": "주행 모터",
-    "wireRope": "와이어 로프",
-    "brake": "브레이크",
-    "brakeStatus": {
-      "normal": "정상",
-      "warning": "점검 필요",
-      "fault": "이상"
-    }
-  },
   "dashboard": {
     "liveStatus": "실시간 현황"
   },
