@@ -4,11 +4,15 @@ import {
   type BoundsLike,
 } from '@crane/core/lib/top-view-pose';
 import {
+  CAMERA_GROUND_CLEARANCE,
   CAMERA_MAX_DISTANCE,
   CAMERA_MAX_DISTANCE_RATIO,
+  CAMERA_MAX_POLAR_ANGLE,
+  CAMERA_MIN_SURFACE_DISTANCE,
   clampToBoundsXZ,
   maxDistanceForBounds,
   maxPolarAngleForMinY,
+  surfaceDollyAdvance,
 } from '../camera-limits';
 
 /** three Box3.setFromCenterAndSize 와 같은 박스를 three 없이 만든다. */
@@ -174,5 +178,103 @@ describe('maxDistanceForBounds', () => {
     expect(maxDistanceForBounds(b, NaN, FOV)).toBe(
       maxDistanceForBounds(b, 1, FOV),
     );
+  });
+});
+
+describe('CAMERA_GROUND_CLEARANCE', () => {
+  it('양수·유한 — 바다 평면 아래로 내려가지 않는다', () => {
+    expect(CAMERA_GROUND_CLEARANCE).toBeGreaterThan(0);
+    expect(Number.isFinite(CAMERA_GROUND_CLEARANCE)).toBe(true);
+  });
+
+  it('지면에 선 사람 키(약 1.8m)보다 낮아 눈높이 시점이 가능하다', () => {
+    expect(CAMERA_GROUND_CLEARANCE).toBeLessThan(1.8);
+  });
+});
+
+describe('CAMERA_MIN_SURFACE_DISTANCE', () => {
+  it('양수이고 최대 거리 상한보다 작다', () => {
+    expect(CAMERA_MIN_SURFACE_DISTANCE).toBeGreaterThan(0);
+    expect(CAMERA_MIN_SURFACE_DISTANCE).toBeLessThan(CAMERA_MAX_DISTANCE);
+  });
+
+  it('최대 기울기에서 지면 피벗에 다가갈 수 있는 최소 반경 = 바닥 여유 / cos(극각 상한) — 특성화', () => {
+    // 바닥 여유·극각 상한은 확대 하한과 별개로 걸린다. 지면(y=0) 위 피벗을
+    // 극각 상한 그대로 보면 카메라 y 가 바닥 여유에 닿는 반경이 이 값이고,
+    // 그보다 가까우면 동적 상한이 극각을 더 세운다.
+    const r = CAMERA_GROUND_CLEARANCE / Math.cos(CAMERA_MAX_POLAR_ANGLE);
+    expect(maxPolarAngleForMinY(0, r, CAMERA_GROUND_CLEARANCE)).toBeCloseTo(
+      CAMERA_MAX_POLAR_ANGLE,
+      12,
+    );
+    expect(
+      maxPolarAngleForMinY(0, r / 2, CAMERA_GROUND_CLEARANCE),
+    ).toBeLessThan(CAMERA_MAX_POLAR_ANGLE);
+    // 확대 하한보다 훨씬 멀다 — 비스듬히 볼수록 지면 위 객체에서 멀리 멈춘다.
+    expect(r).toBeGreaterThan(CAMERA_MIN_SURFACE_DISTANCE);
+  });
+});
+
+describe('surfaceDollyAdvance', () => {
+  const MIN = CAMERA_MIN_SURFACE_DISTANCE;
+  const MAX = 1000;
+
+  it('줌인: 유효 거리 × (1 − 배율) 만큼 표면 쪽(+)', () => {
+    expect(surfaceDollyAdvance(100, 0, 0.9, MAX)).toBeCloseTo(10, 12);
+  });
+
+  it('줌아웃: 음수(표면 반대쪽)', () => {
+    expect(surfaceDollyAdvance(100, 0, 1.25, MAX)).toBeCloseTo(-25, 12);
+  });
+
+  it('pending 을 뺀 유효 거리에서 비율을 잡는다 — 연속 휠에서 틱당 비율 동일', () => {
+    // 100 에서 10 줌인(pending 10) 뒤 한 번 더: 90 × 0.1 = 9
+    const first = surfaceDollyAdvance(100, 0, 0.9, MAX);
+    expect(surfaceDollyAdvance(100, first, 0.9, MAX)).toBeCloseTo(9, 12);
+  });
+
+  it('하한 정확값에서 줌인은 0(멈춤), 하한 바로 위에서는 하한까지만', () => {
+    expect(surfaceDollyAdvance(MIN, 0, 0.5, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(MIN + 1, 0, 0.5, MAX)).toBe(1);
+  });
+
+  it('하한보다 가까이 있으면(모델 안) 줌인 0, 줌아웃은 하한 기준', () => {
+    expect(surfaceDollyAdvance(MIN / 2, 0, 0.9, MAX)).toBe(0);
+    // 유효 거리 = 하한 → 하한 × 2 까지 물러난다
+    expect(surfaceDollyAdvance(MIN / 2, 0, 2, MAX)).toBeCloseTo(-MIN, 12);
+  });
+
+  it('pending 이 거리를 넘어서면 유효 거리는 하한 — 줌인 0', () => {
+    expect(surfaceDollyAdvance(100, 200, 0.9, MAX)).toBe(0);
+  });
+
+  it('상한 정확값에서 줌아웃은 0, 상한 바로 아래에서는 상한까지만', () => {
+    expect(surfaceDollyAdvance(MAX, 0, 2, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(MAX - 1, 0, 2, MAX)).toBe(-1);
+  });
+
+  it('상한이 하한보다 작으면 하한을 상한으로 쓴다 — 줌아웃도 하한으로 모인다(특성화)', () => {
+    // 지도 탑뷰 fit 거리가 상한이라 실제로는 닿지 않는 조합이다. 옛 휠
+    // 핸들러의 clamp 결과를 그대로 고정한다.
+    expect(surfaceDollyAdvance(100, 0, 2, MIN / 2)).toBe(100 - MIN);
+  });
+
+  it('상한이 유한하지 않으면 CAMERA_MAX_DISTANCE', () => {
+    expect(surfaceDollyAdvance(CAMERA_MAX_DISTANCE, 0, 2, Infinity)).toBe(0);
+    expect(surfaceDollyAdvance(CAMERA_MAX_DISTANCE, 0, 2, NaN)).toBe(0);
+    expect(surfaceDollyAdvance(100, 0, 2, Infinity)).toBeCloseTo(-100, 12);
+  });
+
+  it('거리·pending·배율이 유한하지 않으면 0(이동 없음)', () => {
+    expect(surfaceDollyAdvance(NaN, 0, 0.9, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(Infinity, 0, 0.9, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(100, NaN, 0.9, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(100, 0, NaN, MAX)).toBe(0);
+  });
+
+  it('배율 1 은 어디서든 0', () => {
+    expect(surfaceDollyAdvance(100, 0, 1, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(MIN, 0, 1, MAX)).toBe(0);
+    expect(surfaceDollyAdvance(MAX, 0, 1, MAX)).toBe(0);
   });
 });

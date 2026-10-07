@@ -13,11 +13,14 @@ import {
  */
 
 /**
- * 카메라 y 하한의 지면 위 여유(m). 옛 CameraAboveSea 는 1m(바다 평면 아래로
- * 내려가면 단면 컬링으로 바다 뒷면이 투명해지는 것만 막았다)였는데 지면에
- * 붙어 보이는 시점이 너무 낮아 5m 로 올렸다(2026-09-09).
+ * 카메라 y 하한의 지면 위 여유(m). 사람 눈높이 아래로는 내려가지 않는 값이다
+ * — 지면에 선 사람(키 약 1.8m)을 확대 하한(CAMERA_MIN_SURFACE_DISTANCE)까지
+ * 다가가 볼 수 있어야 한다. 0 보다 커야 한다 — 바다 평면 아래로 내려가면
+ * 단면 컬링으로 바다 뒷면이 투명해진다. 낮은 시점은 극각 상한
+ * (CAMERA_MAX_POLAR_ANGLE)과 맞물려 피벗이 가까울 때만 나온다 — 멀리서는
+ * 카메라가 높이 머물러 지면에 붙은 시점이 되지 않는다.
  */
-export const CAMERA_GROUND_CLEARANCE = 5;
+export const CAMERA_GROUND_CLEARANCE = 1.5;
 /**
  * 극각(수직에서 잰 각) 고정 상한. 바닥 기준 동적 상한(maxPolarAngleForMinY)과
  * 함께 min 으로 건다 — 동적 상한만으로는 바닥 바로 위에서 수평에 가까운
@@ -46,6 +49,22 @@ export const CAMERA_MAX_DISTANCE_RATIO = 1.0;
  * far 에 닿는데, 파도 페이드가 10000 에서 배경색으로 수렴해 티가 안 난다.
  */
 export const CAMERA_MAX_DISTANCE = 30000;
+/**
+ * 휠 줌·툴바 확대가 표면(커서 아래 지점, 확대 버튼은 화면 중앙 표면)에
+ * 다가갈 수 있는 최소 거리(m). 사람 모델(키 약 1.8m)을 화면 높이의 절반
+ * 이상으로 볼 수 있는 값이다. 표면 레이캐스트의 near(scene-surface-camera.tsx
+ * RAYCAST_NEAR)보다 커야 커서 아래 히트를 놓치지 않는다.
+ *
+ * 같은 값을 읽는 곳: 에디터 F 포커스·탑뷰의 최소 거리(FOCUS_MIN_DISTANCE),
+ * 뷰어(ThreeSceneViewer, @crane/ui) 확대 버튼의 MIN_CAMERA_DISTANCE 리터럴
+ * (ui 는 features 를 import 하지 못한다 — 바꿀 때 함께 바꾼다). OrbitControls
+ * minDistance 는 회전·팬 반경 clamp 일 뿐이라 이보다 작게 둔다 — 표면 피벗이
+ * 이 거리보다 가까워도 드래그 시작에 튕기지 않게.
+ *
+ * 바닥 여유(CAMERA_GROUND_CLEARANCE)·극각 상한은 그대로 걸리므로 지면 위
+ * 객체에는 비스듬히 볼수록 더 멀리서 멈춘다.
+ */
+export const CAMERA_MIN_SURFACE_DISTANCE = 2;
 
 function isEmptyBounds(bounds: BoundsLike): boolean {
   return (
@@ -120,4 +139,40 @@ export function maxDistanceForBounds(
   const fit = Math.sqrt(dx * dx + dy * dy + dz * dz);
   if (!Number.isFinite(fit) || fit <= 0) return CAMERA_MAX_DISTANCE;
   return Math.min(fit * CAMERA_MAX_DISTANCE_RATIO, CAMERA_MAX_DISTANCE);
+}
+
+/**
+ * 휠 한 이벤트가 표면 기준 dolly 의 누적 이동(pending)에 더할 거리(m, +면
+ * 표면 쪽). `dist` 는 커서 레이로 잰 표면까지 거리, `factor` 는 이벤트의
+ * 배율(<1 줌인), `maxDistance` 는 줌아웃 상한(controls.maxDistance).
+ *
+ * 아직 적용 안 된 pending 을 뺀 유효 거리에서 목표를 잡아야 연속 휠에서도
+ * 한 틱당 비율이 같다. 목표는 [CAMERA_MIN_SURFACE_DISTANCE, 상한] 으로
+ * 자르고, 상한이 하한보다 작으면 하한을 상한으로 쓴다(SceneCameraLimits 가
+ * 정한 maxDistance 는 지도 탑뷰 fit 거리라 실제로는 그보다 훨씬 크다).
+ * 상한이 유한하지 않으면 CAMERA_MAX_DISTANCE. dist·pending·factor 가 유한하지
+ * 않으면 0(이동 없음).
+ */
+export function surfaceDollyAdvance(
+  dist: number,
+  pending: number,
+  factor: number,
+  maxDistance: number,
+): number {
+  if (
+    !Number.isFinite(dist) ||
+    !Number.isFinite(pending) ||
+    !Number.isFinite(factor)
+  ) {
+    return 0;
+  }
+  const upper = Number.isFinite(maxDistance)
+    ? Math.max(CAMERA_MIN_SURFACE_DISTANCE, maxDistance)
+    : CAMERA_MAX_DISTANCE;
+  const effective = Math.max(CAMERA_MIN_SURFACE_DISTANCE, dist - pending);
+  const goal = Math.min(
+    Math.max(effective * factor, CAMERA_MIN_SURFACE_DISTANCE),
+    upper,
+  );
+  return effective - goal;
 }

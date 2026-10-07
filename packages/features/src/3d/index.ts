@@ -184,11 +184,9 @@ export {
   worldToMinimap,
   type MinimapFrame,
 } from './lib/minimap';
-export {
-  MIN_SURFACE_DISTANCE,
-  SceneSurfaceCamera,
-} from './ui/scene-surface-camera';
+export { SceneSurfaceCamera } from './ui/scene-surface-camera';
 export { SceneCameraLimits } from './ui/scene-camera-limits';
+export { CAMERA_MIN_SURFACE_DISTANCE } from './lib/camera-limits';
 export { SceneTerrainLod } from './ui/scene-terrain-lod';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export { SceneTransformPivotMenu } from './ui/scene-transform-pivot-menu';

@@ -119,11 +119,11 @@ interface SceneControlsBridgeProps {
 const ZOOM_STEP = 1.2;
 /**
  * 툴바 줌 버튼의 카메라-타깃 최소 거리. 타깃은 SceneSurfaceCamera(features)가
- * 화면 중앙 표면에 붙여 두므로 "표면까지 60m"가 된다 — 휠 줌의 표면 최소
- * 거리(MIN_SURFACE_DISTANCE)와 같은 값. 크레인 50~100m 씬에서 5·20은 트롤리
- * 안까지 파고들어 60으로 올렸다.
+ * 화면 중앙 표면에 붙여 두므로 "표면까지의 거리"가 된다 — 휠 줌의 표면 최소
+ * 거리(features camera-limits.ts CAMERA_MIN_SURFACE_DISTANCE)와 같은 값.
+ * ui 는 features 를 import 하지 못해 리터럴로 둔다. 바꿀 때 둘을 함께 바꾼다.
  */
-const MIN_CAMERA_DISTANCE = 60;
+const MIN_CAMERA_DISTANCE = 2;
 
 /**
  * 브라우저가 WebGL을 지원하는지 검사. 모듈 스코프에서 1회만 평가하고
@@ -370,9 +370,11 @@ function SceneControlsBridge({
       // zoomToCursor는 추상 타깃 반경 기준이라 타깃이 지하일 때 지오메트리를
       // 뚫고 들어갔다. 그래서 여기선 줌을 끈다.
       enableZoom={false}
-      // 회전/팬 반경 clamp만 — 표면 피벗이 60m보다 가까울 때(경사면·크레인
-      // 상부) 튕겨 나가지 않게 낮게 둔다. 확대 하한은 SceneSurfaceCamera가 지킨다.
-      minDistance={5}
+      // 회전/팬 반경 clamp만 — 표면 피벗이 확대 하한(MIN_CAMERA_DISTANCE)보다
+      // 가까울 때(경사면·크레인 상부) 튕겨 나가지 않게 그보다 작게, 표면
+      // 레이캐스트 near 와 같은 값으로 둔다. 확대 하한은 SceneSurfaceCamera가
+      // 지킨다.
+      minDistance={1}
       // 무한 줌 아웃 방지 상한(camera far보다 작게). SceneCameraLimits 가 없는
       // 작은 뷰어(far 기본 5000)의 안전값이며, features 의 SceneCameraLimits
       // 가 마운트된 화면에선 첫 프레임부터 지도 크기(상한 CAMERA_MAX_DISTANCE

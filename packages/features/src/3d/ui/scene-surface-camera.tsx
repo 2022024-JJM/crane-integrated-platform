@@ -9,6 +9,7 @@ import {
   type Object3D,
 } from 'three';
 import { SEA_LEVEL_Y, modelObjectRegistry } from '@crane/domain/3d';
+import { surfaceDollyAdvance } from '../lib/camera-limits';
 
 /**
  * 구글 어스식 카메라 줌 — 표면 기준 dolly + 표면 피벗.
@@ -23,7 +24,8 @@ import { SEA_LEVEL_Y, modelObjectRegistry } from '@crane/domain/3d';
  * 1. 줌은 **커서 아래 표면 지점**을 향한다 — 카메라가 커서 레이를 따라 이동.
  * 2. 한 틱의 이동량은 **그 지점까지 거리의 일정 비율** — 멀면 크게, 가까우면
  *    작게(로그 스케일 체감). 마우스 1노치 ≈ 10%.
- * 3. 표면과의 **최소 거리**를 지킨다 — 표면을 뚫거나 안으로 들어가지 않는다.
+ * 3. 표면과의 **최소 거리**(lib/camera-limits.ts CAMERA_MIN_SURFACE_DISTANCE)
+ *    를 지킨다 — 표면을 뚫거나 안으로 들어가지 않는다.
  * 4. 이동이 **부드럽게 감속**한다(지수 easing).
  * 5. 회전의 피벗은 **화면 중앙의 표면 지점**이다 — 타깃을 forward 축 위 표면
  *    거리로 옮기므로 화면은 변하지 않고 궤도 중심·툴바 줌 버튼 기준만 바뀐다.
@@ -40,12 +42,6 @@ import { SEA_LEVEL_Y, modelObjectRegistry } from '@crane/domain/3d';
  */
 
 /**
- * 표면(커서 아래 지점)에서 이만큼까지만 다가간다. 크레인 50~100m 씬 기준.
- * 에디터 F 포커스의 최소 거리도 이 값을 쓴다 — 더 가깝게 잡으면 첫 휠에서
- * 여기까지 튕겨 나간다.
- */
-export const MIN_SURFACE_DISTANCE = 60;
-/**
  * deltaY → 배율. 휠 위(deltaY ≈ −100) 1노치가 ×0.9(10% 줌인), 아래가 ×1.11.
  * 부호 관례는 OrbitControls와 같다(deltaY < 0 → dollyIn).
  */
@@ -59,7 +55,11 @@ const ZOOM_EASE_TAU = 0.12;
 const ZOOM_SETTLE_EPS = 0.01;
 /** deltaMode=1(줄 단위) 휠을 픽셀로 환산. */
 const WHEEL_LINE_PX = 16;
-/** 이보다 가까운 히트는 피벗으로 쓰지 않는다(카메라가 모델 안에 있을 때). */
+/**
+ * 이보다 가까운 히트는 피벗으로 쓰지 않는다(카메라가 모델 안에 있을 때).
+ * 확대 하한(CAMERA_MIN_SURFACE_DISTANCE)은 이보다 커야 하고, OrbitControls
+ * minDistance 는 이 값과 같다.
+ */
 const RAYCAST_NEAR = 1;
 
 interface OrbitControlsLike {
@@ -212,18 +212,16 @@ export function SceneSurfaceCamera({
         ZOOM_FACTOR_MAX,
       );
 
-      // 아직 적용 안 된 이동(pending)을 반영한 거리에서 목표를 잡아야 연속
-      // 휠에서도 한 틱당 비율이 같다.
-      // 상한은 OrbitControls maxDistance 와 같은 값 — SceneCameraLimits 가
-      // 지도 크기(탑뷰 fit 거리 × 배수)로 정해 두는 단일 소스다.
-      const effective = Math.max(MIN_SURFACE_DISTANCE, dist - state.pending);
-      const goal = clamp(
-        effective * factor,
-        MIN_SURFACE_DISTANCE,
-        Math.max(MIN_SURFACE_DISTANCE, controls.maxDistance),
-      );
+      // 하한은 CAMERA_MIN_SURFACE_DISTANCE, 상한은 OrbitControls maxDistance
+      // — SceneCameraLimits 가 지도 크기(탑뷰 fit 거리 × 배수)로 정해 두는
+      // 단일 소스다. pending 반영·clamp 는 lib 의 순수 함수가 맡는다.
       state.dir.copy(cursorDir);
-      state.pending += effective - goal;
+      state.pending += surfaceDollyAdvance(
+        dist,
+        state.pending,
+        factor,
+        controls.maxDistance,
+      );
       // frameloop='demand' 캔버스(대시보드 미리보기 모달)에서 첫 휠이
       // 무반응이 되지 않게 프레임을 깨운다 — 이후 easing 은 useFrame 의
       // controls.update() 가 발행하는 change → drei invalidate 체인이 잇는다.

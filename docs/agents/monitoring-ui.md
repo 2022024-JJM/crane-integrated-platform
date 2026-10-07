@@ -39,13 +39,15 @@
 - 팔레트로 ground 지도를 추가하면 `addSceneMap` 이 체크된 채 넣는다. `resolveGroundMaps` 는 드롭 raycast 바닥면에만 쓴다 — 카메라 기준과 다른 축이다.
 - 뷰어·리플레이의 `getTopViewBounds` 와 에디터 `topView` 도 같은 합집합을 본다. 여유·여백 비율은 두지 않는다.
 
-**바닥** — 카메라 아래 지도 표면(씬의 모든 지도에 `raycastMapSurfaceY`, 카메라 XZ 가 일정 거리 움직였을 때만 재측정, 히트 없으면 `SEA_LEVEL_Y`) + `CAMERA_GROUND_CLEARANCE`. EXR 유무와 무관하다. 회전은 `maxPolarAngle` 을 매 프레임 갱신해 막는다 — 바닥 기준 동적 상한과 `CAMERA_MAX_POLAR_ANGLE` 중 작은 쪽. `minPolarAngle` 은 0(정수직 탑뷰 허용).
+**바닥** — 카메라 아래 지도 표면(씬의 모든 지도에 `raycastMapSurfaceY`, 카메라 XZ 가 일정 거리 움직였을 때만 재측정, 히트 없으면 `SEA_LEVEL_Y`) + `CAMERA_GROUND_CLEARANCE`. EXR 유무와 무관하다. 여유는 지면에 선 사람을 확대 하한까지 다가가 볼 수 있게 사람 키보다 낮고, 낮은 시점은 극각 상한과 맞물려 피벗이 가까울 때만 나온다. 회전은 `maxPolarAngle` 을 매 프레임 갱신해 막는다 — 바닥 기준 동적 상한과 `CAMERA_MAX_POLAR_ANGLE` 중 작은 쪽. `minPolarAngle` 은 0(정수직 탑뷰 허용).
 
 **이동** — 타깃이 아니라 **카메라 XZ** 를 합집합 안으로 제한한다. 표면 피벗이 타깃을 지도 밖 지형·바다에 놓으므로 타깃 기준이면 드래그마다 튄다.
 
 **위반 처리** — 되밀기가 아니라 **그 프레임의 평행이동 취소**다. 카메라·타깃 델타가 같으면 팬·dolly 로 보고 update 직전 자세로 복원해 경계에서 그냥 멈춘다. 그래도 밖이면(회전·프레임 밖 명령·로드 직후) 경계로 투영한다.
 
 **최대 거리** — `controls.maxDistance` = 합집합의 탑뷰 fit 거리 × `CAMERA_MAX_DISTANCE_RATIO`, 상한 `CAMERA_MAX_DISTANCE`(지도 없으면 상한값). 휠 dolly 상한, 표면 피벗 거리 cap(`scene-surface-camera.tsx` 의 `placePivot`), 뷰어·에디터 탑뷰 상한(반높이 차감)이 전부 이 값을 읽는다.
+
+**최소 거리** — 휠 줌은 커서 아래 표면(모델 자체 포함), 독 확대 버튼은 화면 중앙 표면(타깃)에서 `CAMERA_MIN_SURFACE_DISTANCE`(`lib/camera-limits.ts`)까지만 다가간다. 휠 한 이벤트의 이동량은 `surfaceDollyAdvance` 가 정한다(미적용 pending 반영, 하한·`controls.maxDistance` 로 clamp). 에디터 F 포커스·탑뷰의 최소 거리가 같은 상수를 읽고, 뷰어 확대 버튼의 `MIN_CAMERA_DISTANCE`(`three-scene-viewer.tsx`)는 ui 가 features 를 import 하지 못해 같은 값의 리터럴이다. OrbitControls `minDistance` 는 회전·팬 반경 clamp 일 뿐이라 이보다 작게(표면 레이캐스트 near 와 같게) 둔다. 바닥·극각 제한은 그대로 걸리므로 지면 위 객체에는 비스듬히 볼수록 멀리서 멈춘다.
 
 제한 뒤에는 `controls.update()` 를 부르지 않고 `change` 이벤트만 발행해 에디터 카메라 상태가 따라오게 한다.
 
@@ -111,6 +113,7 @@
 - 카메라 제한 뒤 `controls.update()` 금지 — damping 이 이중 적용된다. `change` 이벤트만 발행한다.
 - 카메라 범위·탑뷰·미니맵 캡처의 기준 지도는 `resolveCameraBoundsMaps` 하나다. 바닥 raycast 기준(`resolveGroundMaps`)과 섞지 않는다.
 - 카메라 최대 거리를 읽는 곳(휠 dolly·표면 피벗 cap·탑뷰 상한)은 `SceneCameraLimits` 가 정한 `controls.maxDistance` 를 읽는다. 따로 계산하지 않는다.
+- 확대 하한은 `CAMERA_MIN_SURFACE_DISTANCE` 하나다. 뷰어 확대 버튼의 리터럴은 같은 값으로 맞추고, OrbitControls `minDistance` 는 그보다 작게 둔다.
 - 미니맵 캡처 렌더 타깃은 `FloatType`(EXT_color_buffer_float·EXT_float_blend 가 없으면 `UnsignedByteType` 폴백) + `stencilBuffer: true`(실루엣 마스크·헐). 캡처는 `applyCanonicalCaptureLighting` 으로 조명을 수동 모드 기준값으로 바꾸고(renderer `shadowMap.autoUpdate`/`needsUpdate` 도 캡처 동안 끔) `OceanWater` 는 `applyCanonicalWaterUniforms` 로 반사 0·기준 태양으로 둔 채 보이게, 반사 제외 객체만 숨긴 채 찍는다. clear color 는 바꾸지 않는다. 캡처에서 조명·그림자·노출을 씬의 시각 상태에 의존시키지 않고, 톤매핑은 three 의 ACESFilmic 과 같은 식(`acesFilmicToneMap`)만 쓴다.
 - 미니맵 표시는 setState 없이 2D 캔버스에 직접 그린다. 팬은 컨트롤러 `moveTo` 로 보내 카메라 제한을 통과시킨다.
 - 전체화면 주인이 언마운트되면 전체화면을 끝낸다. 한 시점에 주인은 하나다.

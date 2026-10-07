@@ -57,7 +57,7 @@ import {
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   SCENE_RAYCASTER_OPTIONS,
-  MIN_SURFACE_DISTANCE,
+  CAMERA_MIN_SURFACE_DISTANCE,
   SceneEnvironment,
   SceneFrameGovernor,
   SceneLighting,
@@ -108,11 +108,11 @@ const INITIAL_PRELOAD_COUNT = 6;
 /** F 포커스 시 바운딩 스피어 주변 여유 비율. */
 const FOCUS_PADDING = 1.15;
 /**
- * F 포커스 최소 거리 — SceneSurfaceCamera 휠 줌의 최소 표면 거리와 같다.
- * 텍스트처럼 작은 객체를 더 가깝게 잡으면 첫 휠 조작에서 그 거리로 튕겨
- * 나가므로 여기서 미리 맞춘다.
+ * F 포커스 최소 거리 — 휠 줌의 표면 최소 거리(features camera-limits.ts)와
+ * 같다. 더 가깝게 잡으면 첫 휠 조작에서 그 거리로 튕겨 나가므로 여기서 미리
+ * 맞춘다.
  */
-const FOCUS_MIN_DISTANCE = MIN_SURFACE_DISTANCE;
+const FOCUS_MIN_DISTANCE = CAMERA_MIN_SURFACE_DISTANCE;
 const PRELOAD_BATCH_SIZE = 4;
 
 /**
@@ -1086,9 +1086,11 @@ export function SceneObjectsEditCanvas({
           onChange={handleOrbitChange}
           // 뷰어(ThreeSceneViewer)와 동일한 규칙 — 휠 줌은 SceneSurfaceCamera
           // (표면 기준 dolly)가 맡으므로 여기선 끈다. minDistance는 회전/팬 반경
-          // clamp일 뿐이라 낮게 둔다(표면 피벗이 가까울 때 튕기지 않게).
+          // clamp일 뿐이라 확대 하한(CAMERA_MIN_SURFACE_DISTANCE)보다 작게,
+          // 표면 레이캐스트 near 와 같은 값으로 둔다(표면 피벗이 가까울 때
+          // 튕기지 않게).
           enableZoom={false}
-          minDistance={5}
+          minDistance={1}
           // 초기값(features CAMERA_MAX_DISTANCE 와 같은 값) — SceneCameraLimits
           // 가 지도 크기로 매 프레임 갱신한다.
           maxDistance={30000}
