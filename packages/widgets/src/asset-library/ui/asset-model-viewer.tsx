@@ -970,18 +970,18 @@ export function AssetModelViewer({
                   className={cn(VIEWER_GLASS_BAR, 'pointer-events-auto')}
                 >
                   <ViewerIconButton
-                    label={t('asset-library:viewer.rotateLeft', {
+                    label={t('asset-library:viewer.rotateCcw', {
                       degrees: VIEWER_ORBIT_STEP_DEG,
                     })}
-                    onClick={() => rigRef.current?.orbit('left')}
+                    onClick={() => rigRef.current?.orbit('ccw')}
                   >
                     <RotateCcw />
                   </ViewerIconButton>
                   <ViewerIconButton
-                    label={t('asset-library:viewer.rotateRight', {
+                    label={t('asset-library:viewer.rotateCw', {
                       degrees: VIEWER_ORBIT_STEP_DEG,
                     })}
-                    onClick={() => rigRef.current?.orbit('right')}
+                    onClick={() => rigRef.current?.orbit('cw')}
                   >
                     <RotateCw />
                   </ViewerIconButton>

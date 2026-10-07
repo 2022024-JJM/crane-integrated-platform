@@ -26,13 +26,23 @@ function screenRight(pose: { position: Tuple; target: Tuple }): Tuple {
   return [-forward[2], 0, forward[0]];
 }
 
+/**
+ * 위에서 내려다본 카메라의 방위각(수직축 둘레, 반시계가 양수). 카메라가
+ * 물체 둘레로 어느 쪽으로 돌았는지 판정하는 데 쓴다.
+ */
+const azimuth = (pose: { position: Tuple; target: Tuple }) =>
+  Math.atan2(
+    pose.position[0] - pose.target[0],
+    pose.position[2] - pose.target[2],
+  );
+
 describe('orbitCameraPose', () => {
   it('카메라-대상 거리와 높이는 그대로이고 대상은 움직이지 않는다', () => {
     const pose = {
       position: [3, 4, 5] as Tuple,
       target: [10, -2, 7] as Tuple,
     };
-    for (const direction of ['left', 'right'] as const) {
+    for (const direction of ['ccw', 'cw'] as const) {
       const next = orbitCameraPose(pose, direction);
       expect(distanceBetween(next.position, next.target)).toBeCloseTo(
         distanceBetween(pose.position, pose.target),
@@ -42,24 +52,27 @@ describe('orbitCameraPose', () => {
     }
   });
 
-  it('오른쪽으로 돌리면 물체의 앞면이 화면 오른쪽으로 간다', () => {
-    const next = orbitCameraPose(front, 'right');
+  it('반시계로 돌리면 물체가 위에서 보아 반시계로 돈 것처럼 앞면이 화면 오른쪽으로 간다', () => {
+    const next = orbitCameraPose(front, 'ccw');
     const right = screenRight(next);
     // 앞면(+Z)을 오른쪽 벡터에 투영한 값이 양수면 화면 오른쪽에 있다.
     expect(right[2]).toBeGreaterThan(0);
-    // 카메라는 앞에서 왼쪽(-X)으로 물러난다.
+    // 카메라는 반대인 시계 방향으로 돌아 앞에서 왼쪽(-X)으로 물러난다.
+    expect(azimuth(next)).toBeLessThan(azimuth(front));
     expect(next.position[0]).toBeLessThan(0);
     expect(next.position[2]).toBeGreaterThan(0);
   });
 
-  it('왼쪽으로 돌리면 물체의 앞면이 화면 왼쪽으로 간다', () => {
-    const next = orbitCameraPose(front, 'left');
+  it('시계로 돌리면 물체가 위에서 보아 시계로 돈 것처럼 앞면이 화면 왼쪽으로 간다', () => {
+    const next = orbitCameraPose(front, 'cw');
     expect(screenRight(next)[2]).toBeLessThan(0);
+    // 카메라는 반대인 반시계 방향으로 돌아 앞에서 오른쪽(+X)으로 물러난다.
+    expect(azimuth(next)).toBeGreaterThan(azimuth(front));
     expect(next.position[0]).toBeGreaterThan(0);
   });
 
   it('한 걸음은 정확히 기본 각도다', () => {
-    const next = orbitCameraPose(front, 'right');
+    const next = orbitCameraPose(front, 'ccw');
     const radius = Math.hypot(front.position[0], front.position[2]);
     const angle = Math.atan2(next.position[0], next.position[2]);
     expect(Math.abs(angle)).toBeCloseTo(
@@ -68,8 +81,8 @@ describe('orbitCameraPose', () => {
     expect(Math.hypot(next.position[0], next.position[2])).toBeCloseTo(radius);
   });
 
-  it('왼쪽과 오른쪽은 서로 되돌린다', () => {
-    const back = orbitCameraPose(orbitCameraPose(front, 'right'), 'left');
+  it('시계와 반시계는 서로 되돌린다', () => {
+    const back = orbitCameraPose(orbitCameraPose(front, 'ccw'), 'cw');
     back.position.forEach((v, i) => expect(v).toBeCloseTo(front.position[i]));
   });
 
@@ -77,24 +90,24 @@ describe('orbitCameraPose', () => {
     const steps = 360 / VIEWER_ORBIT_STEP_DEG;
     expect(Number.isInteger(steps)).toBe(true);
     let pose = front;
-    for (let i = 0; i < steps; i += 1) pose = orbitCameraPose(pose, 'right');
+    for (let i = 0; i < steps; i += 1) pose = orbitCameraPose(pose, 'ccw');
     pose.position.forEach((v, i) => expect(v).toBeCloseTo(front.position[i]));
   });
 
   it('각도 0 은 자세를 바꾸지 않는다', () => {
-    const next = orbitCameraPose(front, 'left', 0);
+    const next = orbitCameraPose(front, 'cw', 0);
     next.position.forEach((v, i) => expect(v).toBeCloseTo(front.position[i]));
   });
 
   it('카메라가 대상과 겹쳐 있으면 그대로다', () => {
     const pose = { position: [1, 2, 3] as Tuple, target: [1, 2, 3] as Tuple };
-    expect(orbitCameraPose(pose, 'right')).toEqual(pose);
+    expect(orbitCameraPose(pose, 'ccw')).toEqual(pose);
   });
 
   it('대상 바로 위(탑뷰)에서도 유한한 자세를 낸다', () => {
     const next = orbitCameraPose(
       { position: [0, 10, 0.01], target: [0, 0, 0] },
-      'right',
+      'ccw',
     );
     expect(next.position.every(Number.isFinite)).toBe(true);
     expect(next.position[1]).toBeCloseTo(10);

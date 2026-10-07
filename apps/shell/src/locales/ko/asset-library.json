@@ -327,8 +327,8 @@
     },
     "saveThumbnail": "지금 화면을 썸네일로 저장",
     "camera": "시점",
-    "rotateLeft": "왼쪽으로 {{degrees}}° 돌리기",
-    "rotateRight": "오른쪽으로 {{degrees}}° 돌리기",
+    "rotateCcw": "반시계 방향으로 {{degrees}}° 돌리기",
+    "rotateCw": "시계 방향으로 {{degrees}}° 돌리기",
     "preset": {
       "iso": "입체",
       "front": "정면",
