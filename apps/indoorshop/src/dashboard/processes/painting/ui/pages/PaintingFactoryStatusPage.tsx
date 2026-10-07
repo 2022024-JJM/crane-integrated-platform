@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
@@ -22,7 +22,6 @@ import {
   PAINTING_FACTORY_ROUTE_IDS,
 } from '../../lib/factoryRoutes'
 import { PaintingStatusTab } from '../PaintingStatusTab'
-import { Spinner } from '../../../../shared/ui/atoms/Spinner'
 import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /*
@@ -45,23 +44,16 @@ import { useBaseDate } from '../../../../shared/lib/useBaseDate'
  */
 
 /*
- * 축 탭 — 조립·의장 워크스페이스와 같은 세 칸이다(P4).
+ * 축 탭 — ①현황 / ②공장 현황.
  *
- * 가운데 칸이 **가동 뷰**다 (R24). 조립·의장이 그 자리에 3D 점군을 세우는 것과 같은
- * 축이며, 도장에서는 그릴 물체가 없으므로 대신 **설비가 만드는 공기**를 그린다(P5).
- * 세 공정의 가운데 칸이 모두 "저 자리를 자세히 본다"는 같은 질문에 답하는 셈이다.
- *
- * 뷰어는 three 를 끌고 오므로 **탭을 열 때 받는다** — 처음 서는 화면은 ①현황이고,
- * 거기만 보는 사람에게까지 3D 의 무게를 지우지 않는다(모듈 lazy 규칙과 같은 이유).
+ * 한때 가운데에 **가동 뷰**(3D) 탭이 따로 있었다. 지금 그 3D 는 ①현황의 설비 배치
+ * **그 자리에서** 뒤집혀 선다(R45) — 배치도와 3D 가 같은 액자를 쓰므로, 탭을 하나 더
+ * 두면 같은 그림으로 가는 문이 둘이 되고 둘 중 어느 쪽이 '지금 보는 것'인지 흐려진다.
+ * 그래서 문을 하나로 줄였다: 배치 옆의 손잡이.
  */
-const PaintingAirTab = lazy(() =>
-  import('../PaintingAirTab').then((m) => ({ default: m.PaintingAirTab }))
-)
-
-type FactoryTab = 'status' | 'view' | 'factory'
+type FactoryTab = 'status' | 'factory'
 const FACTORY_TABS: { key: FactoryTab; labelKey: InshopKey }[] = [
   { key: 'status', labelKey: 'painting.factoryStatus.tabStatus' },
-  { key: 'view', labelKey: 'painting.factoryStatus.tabView' },
   { key: 'factory', labelKey: 'painting.factoryStatus.tabFactory' },
 ]
 
@@ -290,17 +282,6 @@ export function PaintingFactoryStatusPage() {
             if (id) navigate(`/indoorshop/zones/painting/${id}`)
           }}
         />
-      ) : tab === 'view' ? (
-        /* ② 가동 뷰 — 이 공장 베이별 대기(히터·제습기가 만드는 공기)를 3D 로 */
-        <Suspense
-          fallback={
-            <div className="flex min-h-[40vh] items-center justify-center rounded-inshop-lg border border-dashed border-border">
-              <Spinner size={24} label={t('common.loading')} className="text-accent" />
-            </div>
-          }
-        >
-          <PaintingAirTab factory={factory} />
-        </Suspense>
       ) : (
         /* ③ 공장 현황 — 문서형 카드라 여기만 스스로 흐른다 */
         <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">

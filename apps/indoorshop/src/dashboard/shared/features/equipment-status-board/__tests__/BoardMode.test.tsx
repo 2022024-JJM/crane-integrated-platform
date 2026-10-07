@@ -99,8 +99,14 @@ describe('현황 보드 보기 모드 (R40)', () => {
     await user.click(screen.getByRole('radio', { name: '배치 전용' }))
     const full = heightClassOf()
 
+    /*
+     * 절반절반은 화면 높이의 일부를 떼어 쓰고(그 아래로 목록이 흐른다), 배치 전용은
+     * **남는 높이를 통째로** 받는다. 한때 배치 전용도 `64vh` 로 못 박아 두었는데,
+     * 뷰포트에 고정된 화면에서는 그 높이가 판을 밖으로 밀어 아래가 잘렸다 (R45).
+     */
     expect(half).toContain('30vh')
-    expect(full).toContain('64vh')
+    expect(full).toContain('flex-1')
+    expect(full).not.toContain('vh')
     expect(full).not.toContain('max-h-')
   })
 

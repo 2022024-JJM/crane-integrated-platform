@@ -13,6 +13,7 @@ import {
 import { EquipmentGrid, isIssueCell, type EquipmentCell } from '../../equipment-grid'
 import {
   EquipmentBirdview,
+  type EquipmentBirdviewProps,
   type BirdviewBay,
   type BirdviewCard,
   type BirdviewPoint,
@@ -99,6 +100,36 @@ export interface EquipmentStatusBoardProps {
   /** 버드뷰 위 오른쪽 (링크 등) */
   headerExtra?: React.ReactNode
   /**
+   * **'설비 배치' 제목 옆**에 서는 것 — 그 그림에서 곧장 나가는 문 (R45).
+   *
+   * 요약 스트립(`headerExtra`)과 자리를 나눈 이유는 가리키는 대상이 다르기 때문이다:
+   * 저쪽은 공장 전체를 두고 하는 말이고, 여기는 **이 도면**을 두고 하는 말이다
+   * (도장의 '3D 가동 뷰' 처럼 지금 보는 배치를 그대로 이어받는 문).
+   */
+  birdviewActions?: React.ReactNode
+  /** 도면 위에 겹치는 공정 몫의 한 겹 — 그대로 버드뷰에 넘긴다 */
+  birdviewOverlay?: EquipmentBirdviewProps['overlay']
+  /** 설비 자리를 공정이 정한다 — 그대로 버드뷰에 넘긴다 (R45) */
+  birdviewPlacement?: EquipmentBirdviewProps['placementOf']
+  /**
+   * 도면 **자리에 대신 서는 것** — 같은 액자, 다른 그림 (R45).
+   *
+   * 도장의 배치도는 그 자리에서 3D 로 뒤집힌다. 탭을 옮겨 다른 화면을 여는 것과는 다른
+   * 일이다: 제목도 높이도 여백도 그대로고 **안의 그림만** 바뀌어야, 방금 보던 도면이
+   * 일어선 것으로 읽힌다. 그래서 새 자리를 만들지 않고 이 자리를 내준다.
+   *
+   * 주면 버드뷰(SVG) 대신 이것이 선다. **링킹은 끊기지 않는다** — 고른 칸(`activeGroupKey`)
+   * 과 고르는 손(`onSelectBay`)을 그대로 건네므로, 3D 에서 칸을 눌러도 옆 목록이 따라오고
+   * 목록에서 칸을 눌러도 3D 가 그리로 간다(도면이 하던 일과 같다).
+   */
+  birdviewReplacement?: (link: {
+    activeGroupKey: string | null
+    onSelectBay: (groupKey: string | null) => void
+    /** 고른 설비 — 도면이 심볼을 키우듯, 대신 선 그림도 그 대를 짚어야 한다 */
+    selectedId: string | null
+    onSelectPoint: (id: string | null) => void
+  }) => React.ReactNode
+  /**
    * 밖에서 데려온 초점 설비 — 알람 딥링크(`?equip=`)의 당사자.
    * 그 칸을 골라 둔 상태로 세우고 시야로 데려온다(`EquipmentGrid` 의 링킹과 같은 길).
    */
@@ -130,6 +161,10 @@ export function EquipmentStatusBoard({
   sideBySide = false,
   factoryAside,
   headerExtra,
+  birdviewActions,
+  birdviewOverlay,
+  birdviewPlacement,
+  birdviewReplacement,
   focusEquipmentId = null,
   focusGroupKey = null,
   className,
@@ -238,6 +273,26 @@ export function EquipmentStatusBoard({
     [cellIndex, selectedFactory]
   )
 
+  /*
+   * **밝히는 구획은 하나다** — 고른 설비가 속한 칸 (R45).
+   *
+   * 두 값이 따로 놀았다: 칸을 눌러 정한 `activeGroup` 과, 심볼을 눌러 정한 `selectedId`.
+   * 3BAY 를 보다가 도면에서 1BAY 의 라이다를 누르면 목록은 1BAY 의 그 셀을 밝히는데
+   * **테두리는 여전히 3BAY** 에 남아, 화면이 서로 다른 두 칸을 동시에 가리켰다.
+   *
+   * 설비를 골랐다면 그 설비가 선 칸이 곧 지금 보는 칸이다 — 그쪽이 이긴다.
+   */
+  const highlightGroup = (selectedId ? cellIndex.get(selectedId)?.group.key : null) ?? activeGroup
+
+  /* 밝힌 구획을 시야로 — 순서는 그대로 두고 그 자리로 데려간다 (위 주석) */
+  useEffect(() => {
+    if (!highlightGroup) return
+    const root = rootRef.current
+    if (!root) return
+    const node = root.querySelector(`[data-group="${cssEscape(highlightGroup)}"]`)
+    node?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [highlightGroup])
+
   /* 요약 스트립 — 아래에 흐르는 것의 합계다. 그리드가 스크롤로 사라져도 이 줄은 남는다 */
   const cells = groups.flatMap((group) => group.cells)
   const issues = cells.filter(isIssueCell).length
@@ -254,7 +309,8 @@ export function EquipmentStatusBoard({
          * 올라간다 — 스크롤을 굴릴 때마다 도면이 흠칫하는 그 움직임이 "고정되지 않았다"로
          * 읽힌다. 아예 스크롤될 것을 목록 열에만 주면 그림은 처음부터 끝까지 한 자리다.
          */
-        columns && 'md:h-full md:min-h-0',
+        /* 배치 전용도 그릇을 그대로 채운다 — 아래 참조(`birdviewHeight`) */
+        (columns || birdviewOnly) && 'md:h-full md:min-h-0',
         className
       )}
     >
@@ -321,7 +377,9 @@ export function EquipmentStatusBoard({
           'min-w-0 gap-3',
           columns
             ? 'grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch'
-            : 'flex flex-col'
+            : 'flex flex-col',
+          /* 배치 전용 — 그림 하나뿐이니 남는 높이를 통째로 준다(잘리지 않게) */
+          birdviewOnly && 'md:min-h-0'
         )}
       >
         {/*
@@ -335,7 +393,8 @@ export function EquipmentStatusBoard({
           className={cn(
             'z-20 -mx-1 flex flex-col gap-2 bg-surface-secondary/95 px-1 pb-2 pt-1 backdrop-blur-sm',
             /* 쌓았을 때만 붙인다 — 두 열에서는 흐르는 것이 목록뿐이라 붙일 것이 없다 */
-            columns ? 'min-h-0' : 'sticky top-0'
+            columns ? 'min-h-0' : 'sticky top-0',
+            birdviewOnly && 'md:min-h-0 md:flex-1'
           )}
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-inshop-lg border border-border bg-surface px-3 py-1.5">
@@ -382,17 +441,40 @@ export function EquipmentStatusBoard({
             <section
               className={cn(
                 'rounded-inshop-lg border border-border bg-surface p-2',
-                columns && 'flex min-h-0 flex-1 flex-col'
+                (columns || birdviewOnly) && 'flex min-h-0 flex-1 flex-col'
               )}
             >
               <div className="mb-1 flex shrink-0 items-center justify-between gap-2 px-1">
-                <h3 className="text-inshop-xs font-semibold text-foreground">
-                  {t('equipmentBoard.birdviewTitle')}
-                </h3>
-                <span className="text-2xs text-foreground/45">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h3 className="shrink-0 text-inshop-xs font-semibold text-foreground">
+                    {t('equipmentBoard.birdviewTitle')}
+                  </h3>
+                  {birdviewActions}
+                </div>
+                <span className="truncate text-2xs text-foreground/45">
                   {t('equipmentBoard.birdviewHint')}
                 </span>
               </div>
+              {birdviewReplacement ? (
+                /* 도면 자리에 선 다른 그림 — 액자(높이·여백)는 도면의 것을 그대로 쓴다 */
+                <div
+                  className={cn(
+                    'relative overflow-hidden rounded-inshop-md',
+                    birdviewHeight(birdviewOnly, colorByType, columns),
+                    columns && 'min-h-0 flex-1'
+                  )}
+                >
+                  {birdviewReplacement({
+                    activeGroupKey: highlightGroup,
+                    onSelectBay: (groupKey) => {
+                      setSelectedId(null)
+                      setActiveGroup(groupKey)
+                    },
+                    selectedId,
+                    onSelectPoint: setSelectedId,
+                  })}
+                </div>
+              ) : (
               <EquipmentBirdview
                 bays={bays}
                 points={points}
@@ -411,9 +493,11 @@ export function EquipmentStatusBoard({
                   setSelectedId(null)
                   setActiveGroup(groupKey)
                 }}
-                activeGroupKey={activeGroup}
+                activeGroupKey={highlightGroup}
                 cardOf={cardOf}
                 colorByType={colorByType}
+                overlay={birdviewOverlay}
+                placementOf={birdviewPlacement}
                 emptyLabel={t('equipmentBoard.birdviewEmpty')}
                 resetZoomLabel={t('equipmentBoard.birdviewResetZoom')}
                 /*
@@ -429,6 +513,7 @@ export function EquipmentStatusBoard({
                  */
                 className={cn('w-full', birdviewHeight(birdviewOnly, colorByType, columns))}
               />
+              )}
             </section>
           )}
         </div>
@@ -452,13 +537,15 @@ export function EquipmentStatusBoard({
               {t('equipmentBoard.empty')}
             </p>
           ) : (
-            orderGroups(groups, activeGroup).map((group) => (
+            groups.map((group) => (
               <section
                 key={group.key}
                 data-group={group.key}
+                /* 붙어 있는 머리 뒤로 숨지 않게 — 시야로 데려올 때 그만큼 비켜 세운다 */
+                style={{ scrollMarginTop: 'var(--board-head)' }}
                 className={cn(
                   'rounded-inshop-lg border bg-surface p-2',
-                  activeGroup === group.key ? 'border-accent' : 'border-border'
+                  highlightGroup === group.key ? 'border-accent' : 'border-border'
                 )}
               >
                 {/*
@@ -467,7 +554,22 @@ export function EquipmentStatusBoard({
                   일일이 훑어야 한다. 목록이 길어질수록 그 훑기가 전부이고, 머리 한 줄이
                   답하면 훑을 이유가 있는 구획만 훑게 된다.
                 */}
-                <div className="mb-1.5 flex items-center gap-2 px-1">
+                {/*
+                  구획 머리는 **그 칸으로 가는 문**이다 (R45).
+                  지금까지 링킹은 한 방향뿐이었다 — 그림에서 칸을 누르면 목록이 따라왔지만,
+                  목록에서 "B1 이 어디냐"를 물을 길이 없어 그림을 눈으로 훑어야 했다.
+                  이제 머리를 누르면 도면은 그 칸을 밝히고, 3D 는 그 자리로 날아간다.
+                  다시 누르면 놓는다(한 번 더 누르는 것이 곧 해제라는 이 앱의 관례).
+                */}
+                <button
+                  type="button"
+                  aria-pressed={highlightGroup === group.key}
+                  onClick={() => {
+                    setSelectedId(null)
+                    setActiveGroup((current) => (current === group.key ? null : group.key))
+                  }}
+                  className="mb-1.5 flex w-full items-center gap-2 rounded-inshop-md px-1 py-0.5 text-left transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
                   <h4 className="text-inshop-sm font-semibold tracking-tight text-foreground">
                     {group.title}
                   </h4>
@@ -477,7 +579,7 @@ export function EquipmentStatusBoard({
                   <span className="ml-auto">
                     <GroupVerdict cells={group.cells} />
                   </span>
-                </div>
+                </button>
                 <EquipmentGrid
                   cells={group.cells}
                   showControls={false}
@@ -493,6 +595,14 @@ export function EquipmentStatusBoard({
       </div>
     </div>
   )
+}
+
+/** 선택자에 넣을 수 있게 다듬는다 — 베이명에 따옴표·공백이 섞여도 안전하게 */
+function cssEscape(value: string): string {
+  const api = globalThis.CSS
+  if (api && typeof api.escape === 'function') return api.escape(value)
+  /* CSS.escape 가 없는 환경(구형 jsdom)의 최소한 — 따옴표와 역슬래시만 막는다 */
+  return [...value].map((ch) => (ch === '"' || ch === String.fromCharCode(92) ? String.fromCharCode(92) + ch : ch)).join('')
 }
 
 /**
@@ -511,9 +621,15 @@ function birdviewHeight(
   colorByType: boolean,
   columns: boolean
 ): string {
-  if (birdviewOnly) {
-    return colorByType ? 'h-[calc(64vh+1.75rem)] min-h-[388px]' : 'h-[64vh] min-h-[360px]'
-  }
+  /*
+   * 배치 전용 — **그릇이 남긴 높이를 그대로** 쓴다.
+   *
+   * 한때 `64vh` 로 못 박아 두었다. 이 화면은 뷰포트에 딱 맞춰 고정돼 있는데(공장 레일·
+   * 제목·탭이 그 위에 선다), 거기에 화면 높이의 64% 를 더하면 판이 화면 밖으로 밀려
+   * **아래가 잘렸다** — 범례가 잘리고 확대 손잡이가 사라졌다. 남는 높이를 받으면 어떤
+   * 화면에서도 정확히 맞고, 좁은 화면(세로로 쌓이는 배치)에서는 최소 높이가 받쳐 준다.
+   */
+  if (birdviewOnly) return 'min-h-[360px] md:min-h-0 md:flex-1'
   /* 나란히 세우면 높이를 **열이 정한다** — 그릇을 채우므로 vh 를 따로 셀 것이 없다 */
   if (columns) return 'min-h-0 flex-1'
   return colorByType
@@ -561,11 +677,15 @@ function SummaryStat({ label, value, tone }: { label: string; value: string; ton
  * 스크롤로 데려가는 대신 순서를 바꾸는 이유는, 베이 클릭의 뜻이 "저기를 보겠다" 이지
  * "저기까지 스크롤하겠다" 가 아니기 때문이다. 나머지 순서는 그대로라 자리를 잃지 않는다.
  */
-export function orderGroups(
-  groups: readonly BoardGroup[],
-  activeKey: string | null
-): BoardGroup[] {
-  if (!activeKey) return [...groups]
-  const active = groups.filter((group) => group.key === activeKey)
-  return [...active, ...groups.filter((group) => group.key !== activeKey)]
-}
+/*
+ * ── 고른 구획은 **제자리에서** 밝아진다 (R45) ──
+ *
+ * 한때 고른 구획을 목록 맨 앞으로 끌어올렸다(`orderGroups`). 찾기는 쉬워지지만 대가가
+ * 컸다: 칸 하나를 누를 때마다 목록 전체가 위아래로 뒤바뀌어, 방금 보던 줄이 어디로
+ * 갔는지 다시 찾아야 했다 — 누른 것은 한 칸인데 화면은 전부가 움직인다. 게다가 끌어올린
+ * 구획이 붙어 있는 머리 뒤로 반쯤 숨어 잘려 보였다.
+ *
+ * 지금은 순서를 건드리지 않고 **그 자리로 데려간다**: 테두리로 밝히고, 화면 밖이면
+ * 가장 가까운 만큼만 굴린다(`block: 'nearest'`). 머리 높이는 `--board-head` 가 알고
+ * 있으므로 그만큼 비켜 세워 잘리지 않는다.
+ */

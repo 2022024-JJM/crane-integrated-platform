@@ -61,6 +61,24 @@ describe('실형상 배치 — 껍질을 미터로 옮긴다', () => {
     for (const bay of plan!.bays) expect(Math.abs(bay.rotationDeg)).toBeLessThan(1)
   })
 
+  it('정사각에 가까운 베이는 축을 흔들지 못한다 — 도면과 같은 각으로 선다', () => {
+    /*
+     * 도장 베이는 한 면이 58×56m 로 정사각에 가깝다. 최소면적 직사각형은 그런 칸에서
+     * 두 직각 방향 중 아무 쪽이나 고르므로, 넓이만으로 축을 평균하면 그 아무 쪽이 표를
+     * 얻어 공장이 90° 옆으로 앉는다(2DOCK 도장공장이 그랬다). 축은 도면과 같은 규칙으로
+     * 정해지므로(`birdviewRotationOf` — 넓이 × 길쭉함) 정사각 칸은 표를 잃는다.
+     */
+    const plan = floorPlanFromHulls('테스트 공장', [
+      rectBay('A1', 40, 60),
+      rectBay('A2', 40, 60, 60),
+      /* 90° 돌아앉은 정사각 칸 둘 — 넓이만 세면 이쪽이 이긴다(56×56 > 40×60) */
+      rectBay('S1', 56, 56, 0, 120),
+      rectBay('S2', 56, 56, 70, 120),
+    ])
+    for (const bay of plan!.bays.filter((b) => b.bay.startsWith('A')))
+      expect(Math.abs(bay.rotationDeg)).toBeLessThan(1)
+  })
+
   it('베이 사이 거리가 실측 그대로다 — 배치가 뭉개지지 않는다', () => {
     const plan = floorPlanFromHulls('테스트 공장', [
       rectBay('A1', 40, 60),

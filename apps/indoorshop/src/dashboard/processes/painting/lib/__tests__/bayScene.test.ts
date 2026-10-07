@@ -73,6 +73,16 @@ describe('성능 계약 — draw call 은 베이 수에 비례해 폭증하지 �
     expect(estimateDrawCalls(many)).toBe(estimateDrawCalls(few))
   })
 
+  it('기류·바닥장은 베이 수에 비례하지 않는다 — 공장 전체가 종류당 한 벌이다 (R44)', () => {
+    const scene = (n: number) =>
+      buildBayScene({
+        floor: gridFloorPlan('T', Array.from({ length: n }, (_, i) => `B${i + 1}`)),
+        air: Array.from({ length: n }, (_, i) => airState(`B${i + 1}`, [heater(`GH${i}`), { ...heater(`DH${i}`), kind: '제습기' }])),
+      })
+    /* 베이가 8면 늘면 늘어나는 콜은 헤이즈 8개뿐이다 */
+    expect(estimateDrawCalls(scene(10)) - estimateDrawCalls(scene(2))).toBe(8)
+  })
+
   it('빈 베이는 콜을 만들지 않는다 — 바닥·구획선에 합쳐진다', () => {
     const one = buildBayScene({ floor: gridFloorPlan('T', ['B1']), air: [] })
     const twenty = buildBayScene({

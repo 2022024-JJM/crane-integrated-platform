@@ -74,23 +74,21 @@ describe('뷰포트 껍데기', () => {
 
   it('그릴 수 없어도 범례는 남는다 — 이 뷰가 무엇인지는 여전히 말한다', () => {
     renderWithProviders(<PaintingAirViewer scene={scene([bay()])} />)
-    expect(screen.getByText('가스히터 가동 — 열 헤이즈')).toBeInTheDocument()
+    expect(screen.getByText('가열 기류')).toBeInTheDocument()
   })
 })
 
 describe('범례 — 색만으로 말하지 않는다', () => {
   it('세 상태를 글자로 적는다', () => {
     renderWithProviders(<PaintingAirViewer scene={scene([bay()])} />)
-    expect(screen.getByText('가스히터 가동 — 열 헤이즈')).toBeInTheDocument()
-    expect(screen.getByText('제습기 가동 — 제습 기류')).toBeInTheDocument()
-    expect(screen.getByText('정지 — 자리만 남김')).toBeInTheDocument()
+    expect(screen.getByText('가열 기류')).toBeInTheDocument()
+    expect(screen.getByText('제습 기류')).toBeInTheDocument()
+    expect(screen.getByText('정지')).toBeInTheDocument()
   })
 
   it('세기가 무엇을 뜻하는지 적는다 — 진하기가 값이라는 사실', () => {
     renderWithProviders(<PaintingAirViewer scene={scene([bay()])} />)
-    expect(
-      screen.getByText('진하기·속도 = 목표와의 차이 (온도 미달·습도 초과)')
-    ).toBeInTheDocument()
+    expect(screen.getByText('세기 = 목표와의 차이')).toBeInTheDocument()
   })
 })
 

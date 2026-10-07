@@ -62,30 +62,36 @@ function modeText(mode: BayAirMode | null, t: TFunction): string {
   return t('painting.airView.bayMode.none')
 }
 
-/** 환경 한 줄 — 값이 없으면 0 을 적지 않고 '값 없음' 이라 말한다 */
+/**
+ * 환경 한 줄 — `21.5°C/26 · 58%/45` 처럼 **실측/목표** 를 붙여 적는다. 값이 없으면 0 을
+ * 적지 않고 '값 없음' 이라 말한다. 한 줄이 짧아야 카드가 그림을 덮지 않는다(R44).
+ */
 function envText(data: BayLabelData, t: TFunction): string {
   if (data.unitCount === 0) return t('painting.airView.bayMode.none')
   const parts: string[] = []
   if (data.env.tempC != null) {
     const set =
       data.env.tempSetpoint != null
-        ? ` (${t('painting.airView.bayEnvSet', { value: data.env.tempSetpoint })})`
+        ? t('painting.airView.bayEnvSet', { value: data.env.tempSetpoint })
         : ''
     parts.push(`${t('painting.airView.bayEnvTemp', { value: data.env.tempC })}${set}`)
   }
   if (data.env.humidityRh != null) {
     const set =
       data.env.humiditySetpoint != null
-        ? ` (${t('painting.airView.bayEnvSet', { value: data.env.humiditySetpoint })})`
+        ? t('painting.airView.bayEnvSet', { value: data.env.humiditySetpoint })
         : ''
     parts.push(`${t('painting.airView.bayEnvHumidity', { value: data.env.humidityRh })}${set}`)
   }
   return parts.length > 0 ? parts.join(' · ') : t('painting.airView.bayEnvNone')
 }
 
-/** 재실 블록 한 줄 — 한 장이면 그 블록을, 여럿이면 장수를 적는다 */
+/**
+ * 재실 블록 한 줄 — 한 장이면 그 블록을, 여럿이면 장수를 적는다.
+ * 없으면 **비운다** — '재실 없음' 은 상세 패널이 말한다(카드 줄 하나가 곧 겹침이다).
+ */
 function occupantText(data: BayLabelData, t: TFunction): string {
-  if (data.occupants.length === 0) return t('painting.airView.bayNoBlock')
+  if (data.occupants.length === 0) return ''
   if (data.occupants.length === 1) {
     const one = data.occupants[0]
     const arrived = one.justArrived ? ` · ${t('painting.airView.bayArrived')}` : ''
@@ -95,7 +101,7 @@ function occupantText(data: BayLabelData, t: TFunction): string {
 }
 
 const CARD_BASE =
-  'flex flex-col items-stretch gap-0.5 whitespace-nowrap rounded-md glass-panel px-2 py-1 text-left transition-colors hover:bg-glass-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent'
+  'flex flex-col items-stretch whitespace-nowrap rounded-inshop-md glass-panel px-1.5 py-0.5 text-left leading-tight transition-colors hover:bg-glass-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent'
 
 /**
  * 라벨 카드 하나. `onClick` 을 주면 카드가 `<button>` 이 되어 **키보드로도** 베이를 고를
@@ -129,16 +135,16 @@ export function createBayLabelCard(
   dot.setAttribute('aria-hidden', 'true')
   dot.className = 'h-1.5 w-1.5 shrink-0 rounded-full'
   const name = document.createElement('span')
-  name.className = 'max-w-28 truncate text-xs font-semibold text-glass-foreground'
+  name.className = 'max-w-28 truncate text-2xs font-semibold text-glass-foreground'
   const running = document.createElement('span')
-  running.className = 'font-mono text-2xs tabular-nums text-glass-foreground/63'
+  running.className = 'text-2xs tabular-nums text-glass-foreground/60'
   head.append(dot, name, running)
 
   const env = document.createElement('span')
-  env.className = 'pl-3 text-2xs tabular-nums text-glass-foreground/75'
+  env.className = 'pl-3 text-2xs tabular-nums text-glass-foreground/70'
 
   const blocks = document.createElement('span')
-  blocks.className = 'pl-3 text-2xs text-glass-foreground/63'
+  blocks.className = 'pl-3 text-2xs text-glass-foreground/55 empty:hidden'
 
   card.append(head, env, blocks)
 
@@ -157,7 +163,8 @@ export function createBayLabelCard(
     env.textContent = envText(next, tr)
     blocks.textContent = occupantText(next, tr)
     /* 이 카드가 무엇인지 한 문장으로 — 마우스를 얹거나 스크린리더로 들을 때 */
-    card.title = `${next.label} · ${modeText(next.mode, tr)} · ${envText(next, tr)} · ${occupantText(next, tr)}`
+    const blockLine = occupantText(next, tr) || tr('painting.airView.bayNoBlock')
+    card.title = `${next.label} · ${modeText(next.mode, tr)} · ${envText(next, tr)} · ${blockLine}`
     card.className = next.selected
       ? `${CARD_BASE} ring-1 ring-glass-accent`
       : CARD_BASE

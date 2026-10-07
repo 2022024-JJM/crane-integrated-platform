@@ -1155,6 +1155,48 @@
       "animations": 0
     }
   },
+  "/models/painting/dehumidifier.glb": {
+    "hash": "c940e79d",
+    "bytes": 1516432,
+    "stats": {
+      "triangles": 31014,
+      "vertices": 30925,
+      "meshes": 318,
+      "materials": 16,
+      "textures": 1,
+      "drawCalls": 318,
+      "nodes": 320,
+      "textureMemoryBytes": 87163,
+      "size": [
+        5.46,
+        3.309,
+        1.37
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/models/painting/gas-heater.glb": {
+    "hash": "e2b0c549",
+    "bytes": 1021780,
+    "stats": {
+      "triangles": 23116,
+      "vertices": 19013,
+      "meshes": 181,
+      "materials": 9,
+      "textures": 0,
+      "drawCalls": 181,
+      "nodes": 183,
+      "textureMemoryBytes": 0,
+      "size": [
+        0.922,
+        2.06,
+        0.831
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/models/TTC-27.glb": {
     "hash": "f14ca764",
     "bytes": 1509392,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../lib/testing/renderWithProviders'
-import { EquipmentStatusBoard, orderGroups } from '../ui/EquipmentStatusBoard'
+import { EquipmentStatusBoard } from '../ui/EquipmentStatusBoard'
 import type { BirdviewBay, BirdviewPoint } from '../../equipment-birdview'
 import type { EquipmentCell } from '../../equipment-grid'
 import type { StatusMeaning } from '../../../ui/statusPalette'
@@ -127,7 +127,7 @@ describe('EquipmentStatusBoard', () => {
     expect(tip.textContent).toContain('2 BAY')
   })
 
-  it('베이를 누르면 그리드가 그 구획으로 점프한다 (맨 위로)', async () => {
+  it('베이를 누르면 그리드가 그 구획을 밝힌다 — 순서는 흔들지 않는다 (R45)', async () => {
     const user = userEvent.setup()
     const { container } = renderBoard()
 
@@ -136,8 +136,10 @@ describe('EquipmentStatusBoard', () => {
 
     await user.click(container.querySelector('[data-bay="2"]')!)
 
+    /* 자리는 그대로고, 고른 칸만 테두리로 밝아진다 */
     const titlesAfter = [...container.querySelectorAll('[data-group] h4')].map((h) => h.textContent)
-    expect(titlesAfter).toEqual(['2 BAY', '1 BAY'])
+    expect(titlesAfter).toEqual(['1 BAY', '2 BAY'])
+    expect(container.querySelector('[data-group="2"]')?.className).toContain('border-accent')
   })
 
   /*
@@ -145,14 +147,15 @@ describe('EquipmentStatusBoard', () => {
    *
    * 이 화면은 공장 전체를 펴지만, 전 베이가 똑같이 서 있으면 들어온 사람이 자기 자리를
    * 목록에서 다시 찾아야 한다. 밖에서 실어 온 구획은 **칸을 직접 누른 것과 같은 상태**로
-   * 들어가야 하므로(그림 강조 + 목록 맨 앞), 두 층 모두를 여기서 못 박는다.
+   * 들어가야 하므로(그림 강조 + 목록에서 밝아짐), 두 층 모두를 여기서 못 박는다.
    */
   it('초점 구획을 실어 주면 그 베이를 고른 채로 선다 (베이 → 현황 승계)', () => {
     const { container } = renderBoard({ focusGroupKey: '2' })
 
-    /* 목록은 그 구획을 맨 앞에 세우고 */
+    /* 목록은 순서를 지키되 그 구획을 밝히고 */
     const titles = [...container.querySelectorAll('[data-group] h4')].map((h) => h.textContent)
-    expect(titles).toEqual(['2 BAY', '1 BAY'])
+    expect(titles).toEqual(['1 BAY', '2 BAY'])
+    expect(container.querySelector('[data-group="2"]')?.className).toContain('border-accent')
     /* 그림은 그 칸을 고른 것으로 표시한다 (칸을 직접 누른 것과 같은 상태) */
     expect(container.querySelector('[data-bay="2"]')?.getAttribute('data-active')).toBe('true')
     expect(container.querySelector('[data-bay="1"]')?.getAttribute('data-active')).not.toBe('true')
@@ -221,19 +224,31 @@ describe('EquipmentStatusBoard — 붙어 있는 머리 (R29)', () => {
   })
 })
 
-describe('orderGroups', () => {
-  const groups = [
-    { key: 'a', title: 'A', cells: [] },
-    { key: 'b', title: 'B', cells: [] },
-    { key: 'c', title: 'C', cells: [] },
-  ]
+/*
+ * 고른 구획은 **제자리에서** 밝아진다 (R45).
+ *
+ * 한때 고른 구획을 목록 맨 앞으로 끌어올렸다. 칸 하나를 누를 때마다 목록 전체가 뒤바뀌어
+ * 방금 보던 줄을 다시 찾아야 했고, 끌어올린 구획은 붙어 있는 머리 뒤로 반쯤 숨어 잘려
+ * 보였다 — 누른 것은 한 칸인데 화면은 전부가 움직인 셈이다.
+ */
+describe('현황 보드 — 고른 구획의 자리', () => {
+  it('구획을 골라도 목록 순서는 그대로다', async () => {
+    const user = userEvent.setup()
+    const { container } = renderBoard()
+    const keysOf = () =>
+      [...container.querySelectorAll('[data-group]')].map((node) => node.getAttribute('data-group'))
+    const before = keysOf()
 
-  it('고른 구획만 앞으로 오고 나머지 순서는 그대로다', () => {
-    expect(orderGroups(groups, 'b').map((g) => g.key)).toEqual(['b', 'a', 'c'])
+    await user.click(screen.getByRole('button', { name: /2 BAY/ }))
+
+    expect(keysOf()).toEqual(before)
+    expect(container.querySelector('[data-group="2"]')?.className).toContain('border-accent')
   })
 
-  it('고른 것이 없으면 원래 순서다', () => {
-    expect(orderGroups(groups, null).map((g) => g.key)).toEqual(['a', 'b', 'c'])
+  it('머리 뒤로 숨지 않게 비켜 세운다 — 데려온 구획이 잘리지 않도록', () => {
+    const { container } = renderBoard()
+    const section = container.querySelector('[data-group]')
+    expect(section?.getAttribute('style')).toContain('--board-head')
   })
 })
 

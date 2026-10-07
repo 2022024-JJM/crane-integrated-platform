@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { cn } from '../../../lib/utils'
 import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { STATUS_SHAPE, STATUS_STYLE, type StatusMeaning, type StatusShape } from '../../../ui/statusPalette'
@@ -179,6 +187,43 @@ export interface EquipmentBirdviewProps {
   emptyLabel: string
   /** 확대·이동한 그림을 처음 모습으로 되돌리는 손잡이의 글자 — 없으면 세우지 않는다 */
   resetZoomLabel?: string
+  /**
+   * 도면 **위에 겹치는 한 겹** — 공정이 제 어휘로 그리는 층.
+   *
+   * 이 그림은 공정을 모른다(모델 주석 참조). 그런데 도장의 배치도에는 "지금 이 칸의
+   * 공기가 어떻게 도는가"가 함께 서야 하고, 그건 도장만의 낱말이다. 그래서 자리는
+   * 여기가 내주고 내용은 공정이 채운다 — 3D 뷰어가 `topRight` 슬롯을 내주는 것과 같다.
+   *
+   * 확대·이동 변환 **안쪽**에 그려지므로, 받은 좌표를 그대로 쓰면 확대해도 칸에 붙어
+   * 있는다. 층은 베이 바닥 바로 위·설비 심볼 아래다(그림의 주인공은 여전히 설비다).
+   */
+  overlay?: (context: BirdviewOverlayContext) => ReactNode
+  /**
+   * 이 설비를 **어디에 놓을지 공정이 직접 정한다**.
+   *
+   * 기본 배치는 공용 청사진(`lib/blueprint`)이다. 도장의 3D 는 도장의 관례 자리(벽·코너)를
+   * 쓰므로, 표에 담긴 설비는 청사진 배치에서 빠지고 그 좌표에 선다(투영 좌표계 = 뷰박스
+   * 픽셀). 표에 없는 설비는 지금까지처럼 청사진이 놓는다.
+   *
+   * 자리를 풀려면 베이 껍질의 화면 좌표가 필요한데 그 투영은 여기 안에서 정해지므로,
+   * 투영이 선 뒤에 재료를 한 번에 건네고 표를 받는다.
+   */
+  placementOf?: (context: {
+    view: { width: number; height: number }
+    bays: { groupKey: string; points: { x: number; y: number }[] }[]
+  }) => ReadonlyMap<string, { x: number; y: number }>
+}
+
+/** 오버레이가 그리는 데 필요한 것 — 좌표는 전부 **도면(확대 전) 좌표**다 */
+export interface BirdviewOverlayContext {
+  /** 그릇 크기 (뷰박스) */
+  view: { width: number; height: number }
+  /** 베이 껍질 — 투영된 폴리곤 */
+  bays: { groupKey: string; label: string; points: { x: number; y: number }[] }[]
+  /** 설비 id → 도면 위 자리 (실좌표가 아니라 배치 결과, R35) */
+  placed: ReadonlyMap<string, { x: number; y: number }>
+  /** 지금 배율 — 선 굵기를 배율에 맞춰 되돌릴 때 쓴다 */
+  scale: number
 }
 
 /**
@@ -301,6 +346,8 @@ export function EquipmentBirdview({
   className,
   emptyLabel,
   resetZoomLabel,
+  overlay,
+  placementOf,
 }: EquipmentBirdviewProps) {
   const glass = tone === 'glass'
   /* 범례에서 고른 종류 — 그림이 그 종류만 남긴다("판넬이 어디 있나") */
@@ -472,20 +519,34 @@ export function EquipmentBirdview({
     })
   }, [bays, points, view])
 
-  /* 도면 배치 — 베이의 줄 위에 세운다(실좌표가 아니다, R35) */
+  /*
+   * 도면 배치 — 베이의 줄 위에 세운다(실좌표가 아니다, R35).
+   *
+   * 공정이 제 자리를 알고 있으면(`placementOf`) 그 설비는 청사진에서 빼고 받은 좌표에
+   * 세운다. 빼는 것이 요점이다 — 남겨 두면 청사진이 그 자리까지 계산에 넣어 나머지 줄의
+   * 간격이 밀린다.
+   */
   const placed = useMemo(() => {
     if (!projection) return new Map<string, { x: number; y: number }>()
-    return layoutBlueprint(
-      points.map((point) => ({
+    const projectedBays = bays.map((bay) => ({
+      groupKey: bay.groupKey,
+      points: bay.hull.map(projection.project),
+    }))
+    const fixed = placementOf?.({ view, bays: projectedBays }) ?? new Map()
+    const rest = points.filter((point) => !fixed.has(point.id))
+    const laid = layoutBlueprint(
+      rest.map((point) => ({
         id: point.id,
         typeId: point.typeId,
         bay: point.bay,
         ...projection.project(point.position),
       })),
-      bays.map((bay) => ({ groupKey: bay.groupKey, hull: bay.hull.map(projection.project) })),
+      projectedBays.map((bay) => ({ groupKey: bay.groupKey, hull: bay.points })),
       { minGap: MIN_GAP }
     )
-  }, [bays, points, projection])
+    for (const [id, at] of fixed) laid.set(id, at)
+    return laid
+  }, [bays, points, projection, placementOf, view])
 
   if (!projection) {
     return (
@@ -566,6 +627,24 @@ export function EquipmentBirdview({
   const tagScreen = tagAt ? applyPanZoom(panZoom, tagAt) : null
   const tagGap = SYMBOL_ISSUE * panZoom.k
   const card = tagged && cardOf ? cardOf(tagged.id) : null
+
+  /*
+   * 공정이 채우는 층 — 재료는 **도면 좌표**로 넘긴다(확대 변환 안쪽에 그려진다).
+   * 배율까지 함께 주는 이유는, 선 굵기·글자만은 확대에 끌려가지 않게 되돌릴 수 있어야
+   * 하기 때문이다(3배로 키운 도면에서 3배 굵은 선은 그림을 덮는다).
+   */
+  const overlayLayer = overlay
+    ? overlay({
+        view,
+        bays: bays.map((bay) => ({
+          groupKey: bay.groupKey,
+          label: bay.label,
+          points: bay.hull.map((point) => projection.project(point)),
+        })),
+        placed,
+        scale: panZoom.k,
+      })
+    : null
 
   /** 설비 한 점 — 정상 층과 이상 층이 같은 그림을 쓴다(층만 다르다) */
   const renderPoint = (point: BirdviewPoint) => {
@@ -747,6 +826,13 @@ export function EquipmentBirdview({
             />
           )
         })}
+
+        {/*
+          ①-b 공정이 채우는 한 겹 — 베이 바닥 위, 설비 아래.
+          도장의 기류처럼 "이 칸이 지금 무엇을 하고 있나"를 그리는 자리다. 설비 심볼보다
+          아래에 두는 이유는, 이 그림의 주인공이 여전히 설비이기 때문이다.
+        */}
+        {overlayLayer}
 
         {/*
           ② 설비 — **그리는 순서가 곧 의미 순서다**(R25-1).

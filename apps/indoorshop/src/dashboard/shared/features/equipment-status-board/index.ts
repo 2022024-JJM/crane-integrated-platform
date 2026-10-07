@@ -4,7 +4,6 @@
  */
 export {
   EquipmentStatusBoard,
-  orderGroups,
   type BoardFactory,
   type BoardGroup,
   type EquipmentStatusBoardProps,

@@ -225,11 +225,15 @@ export function bayAirStatesOf(
  *
  * 세기가 높다고 파티클을 무한정 늘리지 않는다. 도장 5개 공장 중 가장 큰 곳이 베이 9개인데,
  * 베이마다 수백 개를 뿌리면 노는 화면에서도 GPU 가 돈다(그리기 루프가 유휴에 멈추는
- * 규칙과 정면으로 어긋난다). 세기는 **개수가 아니라 밝기·속도**로 표현하고, 개수는
+ * 규칙과 정면으로 어긋난다). 세기는 **개수만이 아니라 밝기·속도**로 표현하고, 개수는
  * 여기 상한 안에서만 움직인다.
+ *
+ * R44 에서 상한을 넉 배로 올렸다 — 입자의 움직임이 CPU 루프에서 정점 셰이더로 옮겨가
+ * (`ui/airMaterials`) 개수가 프레임 시간에 실리지 않게 되었다. 상한이 남는 이유는 여전히
+ * 가산 혼합의 겹침(fill) 과 유휴 규칙이다.
  */
-export const PARTICLES_PER_BAY_MAX = 24
-export const PARTICLES_TOTAL_MAX = 180
+export const PARTICLES_PER_BAY_MAX = 96
+export const PARTICLES_TOTAL_MAX = 720
 
 /** 이 베이에 뿌릴 파티클 수 — 세기에 비례하되 상한을 넘지 않는다 */
 export function particleCountOf(intensity: number, max = PARTICLES_PER_BAY_MAX): number {

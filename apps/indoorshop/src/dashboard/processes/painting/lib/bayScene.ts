@@ -139,23 +139,22 @@ export function buildBayScene({ floor, air, occupants }: BuildBaySceneInput): Ba
  * 이 장면이 요구하는 **그리기 콜(draw call) 어림수.**
  *
  * P0 에서 잠근 성능 계약("draw call 폭증 금지")을 테스트가 붙들 수 있게 수식으로 적는다.
- * 뷰어의 실제 구성과 1:1 이다:
- *  · 바닥판·구획선·벽 골조 — 베이마다 따로 그리지 않고 **하나로 합쳐** 3콜
- *  · 설비 — 종류마다 InstancedMesh 하나씩 2콜 (대수와 무관)
- *  · 헤이즈 — 베이마다 투명도가 달라 합칠 수 없다(설비가 선 베이만)
- *  · 파티클 — 가동 중인 베이만, 열·기류 각 1콜
+ * 뷰어의 실제 구성과 1:1 이다(R44):
+ *  · 바닥판·구획선·바깥 바닥 — 베이마다 따로 그리지 않고 **하나로 합쳐** 3콜
+ *  · 벽 골조(선)·모서리 기둥 — 설비가 선 베이가 있을 때만, 합쳐서 2콜
+ *  · 설비 — 종류마다 InstancedMesh **둘**(몸통·표시등), 대수와 무관
+ *  · 기류 — 종류마다 유선 리본 하나·입자 하나, 공장 전체를 합쳐서
+ *  · 바닥장 — 설비 앞 바닥의 파문, 전체가 인스턴스 하나
+ *  · 헤이즈 — 베이마다 세기가 달라 합칠 수 없다(설비가 선 베이만). 베이 수에 비례하는
+ *    유일한 항목이다
  */
 export function estimateDrawCalls(scene: BayScene): number {
-  const statics = 3
-  const instanced = (scene.heaterCount > 0 ? 1 : 0) + (scene.dryerCount > 0 ? 1 : 0)
+  const statics = 3 + (scene.activeBays > 0 ? 2 : 0)
+  const hasHeater = scene.heaterCount > 0
+  const hasDryer = scene.dryerCount > 0
+  const instanced = (hasHeater ? 2 : 0) + (hasDryer ? 2 : 0)
+  const flows = (hasHeater ? 2 : 0) + (hasDryer ? 2 : 0)
+  const field = hasHeater || hasDryer ? 1 : 0
   const haze = scene.activeBays
-  /* 파티클 버퍼는 **설비가 있으면** 잡아 둔다(가동 여부로 씬을 다시 세우지 않기 위해).
-   * 그리는 개수는 예산이 정하고, 0이면 보이지 않게 두므로 이 값은 상한이다. */
-  const particles = scene.items.reduce((sum, item) => {
-    if (!item.air) return sum
-    const heat = item.stations.some((s) => s.kind === '가스히터') ? 1 : 0
-    const dry = item.stations.some((s) => s.kind === '제습기') ? 1 : 0
-    return sum + heat + dry
-  }, 0)
-  return statics + instanced + haze + particles
+  return statics + instanced + flows + field + haze
 }

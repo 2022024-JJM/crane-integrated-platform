@@ -23,7 +23,8 @@ const CSS = readFileSync('src/dashboard/shared/styles/globals.css', 'utf8')
 const FULLSCREEN_SCREENS = [
   ['조립 워크스페이스', 'src/dashboard/processes/assembly/ui/pages/AssemblyWorkspace.tsx'],
   ['의장 워크스페이스', 'src/dashboard/processes/outfitting/ui/pages/OutfittingWorkspace.tsx'],
-  ['도장 가동 뷰', 'src/dashboard/processes/painting/ui/PaintingAirTab.tsx'],
+  /* 도장의 3D 는 탭이 아니라 현황 탭의 배치 자리에서 선다 (R45) — 액자도 그 자리다 */
+  ['도장 현황(제자리 3D)', 'src/dashboard/processes/painting/ui/PaintingStatusTab.tsx'],
 ] as const
 
 /** 그 안에서 가장자리에 붙어 사는 오버레이들 */

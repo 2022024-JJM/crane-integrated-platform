@@ -1,5 +1,6 @@
 import { loadYardParcels, type LatLon } from '../../../shared/entities/yard-parcels'
 import { obbFrame, type Pt2 } from '../../../shared/features/bay-viewer/lib/realScanAnchor'
+import { birdviewRotationOf } from '../../../shared/features/equipment-birdview/lib/orientation'
 
 /*
  * 도장 공장의 **바닥 배치** — 가동 뷰가 세우는 베이의 실형상 (R38).
@@ -16,10 +17,11 @@ import { obbFrame, type Pt2 } from '../../../shared/features/bay-viewer/lib/real
  * 실측 껍질을 공장 로컬 미터로 옮기기만 한다.
  *
  * 프레임 규약은 조립 공장 뷰(`shared/features/bay-viewer/lib/bayLayout`)와 같다:
- *  · 베이 OBB 긴 축들의 넓이 가중 평균(축 각은 π 주기라 2θ 벡터 평균)을 +z 로,
+ *  · 공장 장변을 +z 로 (그 각은 **도면이 정한다** — 아래 `factoryTheta` 주석),
  *  · 베이 중심들의 도심을 원점으로,
  *  · 베이 로컬은 중심 원점·회전 제거(뷰어가 group 회전으로 되살린다).
- * 세 공정의 3D 가 같은 프레임 규약을 쓰면 화면을 옮길 때 눈이 다시 배우지 않는다.
+ * 세 공정의 3D 가 같은 프레임 규약을 쓰면 화면을 옮길 때 눈이 다시 배우지 않는다 —
+ * 카메라가 그 규약(+z = 장변)을 믿고 한 각으로 선다(`bay-viewer/lib/viewpoint`).
  *
  * ⚠️ 이 파일은 **fixture 를 읽기만** 한다(조립 `buildYardFactoryLayout` 을 그대로 쓸 수
  *    없는 이유는 그쪽이 정반 id `{공장id}-b{숫자}` 에서 베이 번호를 캐기 때문이다 —
@@ -102,16 +104,23 @@ export function floorPlanFromHulls(
     .filter((f): f is NonNullable<typeof f> => f != null)
   if (framed.length === 0) return null
 
-  /* 공장 축 — 베이 긴 축의 넓이 가중 원형 평균(2θ) */
-  let sx = 0
-  let sy = 0
-  for (const f of framed) {
-    const w = f.frame.long * f.frame.short
-    const theta = Math.atan2(f.frame.axis.y, f.frame.axis.x)
-    sx += Math.cos(2 * theta) * w
-    sy += Math.sin(2 * theta) * w
-  }
-  const factoryTheta = Math.atan2(sy, sx) / 2
+  /*
+   * 공장 축 — **도면이 정한 각을 그대로 받는다** (R42 · `equipment-birdview/lib/orientation`).
+   *
+   * 한때 여기서 축을 따로 구했다(베이 긴 축의 **넓이** 가중 원형 평균). 그런데 도장 베이는
+   * 한 면이 58×56m 로 정사각에 가까워, 최소면적 직사각형이 두 직각 방향 중 아무 쪽이나
+   * 고른다 — 넓이만으로 평균하면 그 아무 쪽이 표를 얻어 축이 90° 옆으로 앉는다. 실제로
+   * 2DOCK 도장공장이 그랬다: 도면과 3D 의 베이 순서가 어긋났다(현황 탭에서 위에 있던 줄이
+   * 가동 뷰에서는 아래에 섰다).
+   *
+   * 도면(`birdviewRotationOf`)은 그 문제를 이미 푼다 — 넓이에 **길쭉함**을 곱해, 자세를
+   * 말할 자격이 있는 칸만 말하게 한다. 같은 답을 두 곳에서 따로 구하면 언젠가 갈라지므로
+   * 아예 도면의 답을 받아 쓴다. 두 그림이 한 각을 쓰면 어긋날 자리가 없다.
+   *
+   * 프레임만 뒤집어 준다: 도면의 평면은 화면과 같은 방향(y = -lat)이고 여기는 미터
+   * (y = +lat)이라, 같은 축이 부호 반대의 각으로 적힌다.
+   */
+  const factoryTheta = -birdviewRotationOf(usable)
   const u = { x: Math.cos(factoryTheta), y: Math.sin(factoryTheta) } // 로컬 +z
   const origin = {
     x: framed.reduce((s, f) => s + f.frame.center.x, 0) / framed.length,

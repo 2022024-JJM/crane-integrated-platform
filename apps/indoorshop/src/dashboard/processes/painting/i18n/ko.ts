@@ -112,7 +112,6 @@ export const paintingKo = {
     factoryStatus: {
       tabAria: '화면 축 선택',
       tabStatus: '현황',
-      tabView: '가동 뷰',
       tabFactory: '공장 현황',
       /* 공장 레일 — 맵 진입 화면을 대신해 공장을 갈아타는 자리 (R22) */
       factoryRail: '도장공장 고르기',
@@ -135,12 +134,18 @@ export const paintingKo = {
      * 세기는 SCADA 값을 따라간다(규칙은 `lib/airEffect`).
      */
     airView: {
+      /* 도면(현황 탭) 옆의 문 — 지금 보는 배치를 그대로 3D 로 잇는다 (R45) */
+      preparing: '3D 화 진행 중…',
+      openFromPlan: '3D 가동 뷰',
+      openFromPlanHint: '이 배치를 3D 로 이어서 봅니다',
+      backToPlan: '2D 도면',
+      backToPlanHint: '설비 배치 도면으로 돌아갑니다',
       title: '가동 뷰',
       subtitle: '설비가 만드는 공기 — 히터는 데우고 제습기는 말린다. 세기가 SCADA 값을 따라갑니다.',
-      legendHeat: '가스히터 가동 — 열 헤이즈',
-      legendDry: '제습기 가동 — 제습 기류',
-      legendIdle: '정지 — 자리만 남김',
-      intensityNote: '진하기·속도 = 목표와의 차이 (온도 미달·습도 초과)',
+      legendHeat: '가열 기류',
+      legendDry: '제습 기류',
+      legendIdle: '정지',
+      intensityNote: '세기 = 목표와의 차이',
       noWebgl: '이 환경에서는 3D 를 그릴 수 없습니다 (WebGL 없음) — 설비 상태는 배치 지도에서 볼 수 있습니다.',
       empty: '이 공장에 표시할 설비가 없습니다.',
       loading: '공장 배치를 불러오는 중…',
@@ -157,9 +162,9 @@ export const paintingKo = {
         none: '설비 없음',
       },
       bayRunning: '가동 {{running}}/{{total}}',
-      bayEnvTemp: '온 {{value}}°C',
-      bayEnvHumidity: '습 {{value}}%RH',
-      bayEnvSet: '목표 {{value}}',
+      bayEnvTemp: '{{value}}°C',
+      bayEnvHumidity: '{{value}}%',
+      bayEnvSet: '/{{value}}',
       bayEnvNone: '값 없음',
       bayNoBlock: '재실 없음',
       bayBlockOne: '블록 {{key}}',

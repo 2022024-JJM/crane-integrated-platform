@@ -28,15 +28,15 @@ export function PaintingBayDetail({
 
   return (
     <aside
-      className="absolute left-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+4.25rem)] z-10 flex max-h-[70%] w-64 flex-col gap-2 overflow-y-auto rounded-inshop-md bg-black/70 px-3 py-2.5 text-2xs text-white/80 backdrop-blur-sm"
+      className="absolute left-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.25rem)] z-10 flex max-h-[70%] w-60 flex-col gap-2 overflow-y-auto rounded-inshop-md glass-panel px-3 py-2.5 text-2xs text-glass-foreground/80"
       aria-label={t('painting.airView.bayDetailTitle', { bay: item.label })}
     >
       <header className="flex items-start justify-between gap-2">
-        <span className="text-inshop-xs font-semibold text-white">{item.label}</span>
+        <span className="text-inshop-xs font-semibold text-glass-foreground">{item.label}</span>
         <button
           type="button"
           onClick={onClose}
-          className="rounded px-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+          className="rounded px-1 text-glass-foreground/50 transition-colors hover:bg-glass-hover hover:text-glass-foreground"
         >
           {t('painting.airView.close')}
         </button>
@@ -44,19 +44,19 @@ export function PaintingBayDetail({
 
       {/* 환경 — 값이 없으면 0 을 적지 않는다(끊긴 설비의 마지막 값은 지금 값이 아니다) */}
       <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 tabular-nums">
-        <dt className="text-white/45">{t('painting.airView.detailTemp')}</dt>
+        <dt className="text-glass-foreground/45">{t('painting.airView.detailTemp')}</dt>
         <dd>
           {env?.tempC != null
             ? `${env.tempC}°C${env.tempSetpoint != null ? ` / ${env.tempSetpoint}` : ''}`
             : t('painting.airView.bayEnvNone')}
         </dd>
-        <dt className="text-white/45">{t('painting.airView.detailHumidity')}</dt>
+        <dt className="text-glass-foreground/45">{t('painting.airView.detailHumidity')}</dt>
         <dd>
           {env?.humidityRh != null
             ? `${env.humidityRh}%RH${env.humiditySetpoint != null ? ` / ${env.humiditySetpoint}` : ''}`
             : t('painting.airView.bayEnvNone')}
         </dd>
-        <dt className="text-white/45">{t('painting.airView.detailRunning')}</dt>
+        <dt className="text-glass-foreground/45">{t('painting.airView.detailRunning')}</dt>
         <dd>
           {t('painting.airView.bayRunning', {
             running: item.runningCount,
@@ -68,18 +68,18 @@ export function PaintingBayDetail({
       {/* 설비 — 한 대씩. 자리(벽면·코너)는 배치 규칙이 정한 것이라 여기서 말하지 않는다 */}
       {units.length > 0 && (
         <section className="flex flex-col gap-1">
-          <h3 className="text-white/45">{t('painting.airView.detailUnits')}</h3>
+          <h3 className="text-glass-foreground/45">{t('painting.airView.detailUnits')}</h3>
           <ul className="flex flex-col gap-1">
             {units.map((unit) => (
               <li key={unit.id} className="flex items-center gap-1.5">
                 <EquipmentChip kind={unit.kind} size={14} />
-                <span className="font-mono text-white/70">{unit.id}</span>
-                <span className="ml-auto tabular-nums text-white/60">
+                <span className="font-mono text-glass-foreground/70">{unit.id}</span>
+                <span className="ml-auto tabular-nums text-glass-foreground/60">
                   {unit.value != null
                     ? `${unit.value}${statusUnit(unit.kind)}${unit.setpoint != null ? ` / ${unit.setpoint}` : ''}`
                     : t('painting.airView.bayEnvNone')}
                 </span>
-                <span className={unit.running ? 'text-white/80' : 'text-white/35'}>
+                <span className={unit.running ? 'text-glass-foreground/80' : 'text-glass-foreground/35'}>
                   {unit.running
                     ? t('painting.airView.unitRunning')
                     : t('painting.airView.unitStopped')}
@@ -92,16 +92,16 @@ export function PaintingBayDetail({
 
       {/* 재실 블록 — BTS 귀속(로스터)이 근거다 */}
       <section className="flex flex-col gap-1">
-        <h3 className="text-white/45">{t('painting.airView.detailBlocks')}</h3>
+        <h3 className="text-glass-foreground/45">{t('painting.airView.detailBlocks')}</h3>
         {item.occupants.length === 0 ? (
-          <p className="text-white/40">{t('painting.airView.bayNoBlock')}</p>
+          <p className="text-glass-foreground/40">{t('painting.airView.bayNoBlock')}</p>
         ) : (
           <ul className="flex flex-col gap-0.5">
             {item.occupants.map((block) => (
               <li key={block.key} className="flex items-center gap-1.5">
-                <span className="font-mono text-white/75">{block.key}</span>
+                <span className="font-mono text-glass-foreground/75">{block.key}</span>
                 {block.justArrived && (
-                  <span className="rounded bg-white/10 px-1 text-white/60">
+                  <span className="rounded bg-glass-foreground/10 px-1 text-glass-foreground/60">
                     {t('painting.airView.bayArrived')}
                   </span>
                 )}
