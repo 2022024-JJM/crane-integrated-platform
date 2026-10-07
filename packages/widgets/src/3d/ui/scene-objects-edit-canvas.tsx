@@ -984,7 +984,7 @@ export function SceneObjectsEditCanvas({
     <div
       ref={combinedRootRef}
       tabIndex={0}
-      className={`border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background) ${rulerDrawing ? 'cursor-crosshair' : ''}`}
+      className={`border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background) outline-none ${rulerDrawing ? 'cursor-crosshair' : ''}`}
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
         lastPointerEventRef.current = event.nativeEvent;

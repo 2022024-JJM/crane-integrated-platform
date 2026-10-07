@@ -767,7 +767,7 @@ export function AssetModelViewer({
           tabIndex={playbackControls ? 0 : undefined}
           onKeyDown={playbackControls ? handleSurfaceKeyDown : undefined}
           className={cn(
-            'absolute inset-0 transition-opacity duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-inset',
+            'absolute inset-0 transition-opacity duration-200 outline-none',
             framedUrl === url ? 'opacity-100' : 'opacity-0',
           )}
         >

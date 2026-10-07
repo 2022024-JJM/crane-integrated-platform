@@ -160,7 +160,7 @@ export function SceneSplitOverlay({
                 title={openLabel}
                 onClick={() => onSelectTile(view)}
                 onKeyDown={(event) => handleKeyDown(event, view)}
-                className="pointer-events-auto absolute cursor-pointer overflow-hidden ring-1 ring-white/40 outline-none ring-inset focus-visible:ring-2 focus-visible:ring-white/80"
+                className="pointer-events-auto absolute cursor-pointer overflow-hidden ring-1 ring-white/40 outline-none ring-inset"
                 style={{
                   left: rect.left,
                   top: rect.top,
