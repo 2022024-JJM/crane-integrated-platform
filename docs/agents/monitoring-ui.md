@@ -11,6 +11,7 @@
 | 전체화면 | `packages/core/src/lib/use-fullscreen.ts` (`useIsFullscreenActive`), 소비 `packages/widgets/src/layout/ui/app-layout.tsx`, `packages/ui/src/organisms/three-scene-viewer.tsx` |
 | 카메라 이동 범위 제한 | 적용 `packages/features/src/3d/ui/scene-camera-limits.tsx` (`SceneCameraLimits`), 수식 `lib/camera-limits.ts`, 기준 지도 `packages/domain/src/3d/lib/camera-bounds-maps.ts` |
 | 지도 표면 raycast | `packages/domain/src/3d/lib/map-surface-raycast.ts` (`raycastMapSurfaceY`) |
+| 캔버스 위 오버레이(라벨·눈금)의 휠·드래그 넘김 | 수식 `packages/domain/src/3d/lib/overlay-pointer-forwarding.ts`, 훅 `packages/domain/src/3d/model/use-overlay-pointer-forwarding.ts`, 적용 `packages/domain/src/3d/ui/{model-label,scene-ruler}.tsx` |
 | 관제 요약 HUD | `packages/features/src/3d/ui/scene-status-hud.tsx`, 날씨 `model/use-scene-weather.ts`, 권고 `lib/wind-advisory.ts`, 연결 `model/use-realtime-connection-state.ts` |
 | 경보 알림 채널 | `packages/core/src/lib/alert-notifications.ts` (`notifyAlert`, `useAlertNotificationSettings`) |
 | 알림 발신자 | `packages/features/src/3d/ui/scene-alert-notifier.tsx`, `packages/features/src/alarm/model/use-critical-alarm-banner.ts` |
@@ -48,6 +49,8 @@
 **최대 거리** — `controls.maxDistance` = 합집합의 탑뷰 fit 거리 × `CAMERA_MAX_DISTANCE_RATIO`, 상한 `CAMERA_MAX_DISTANCE`(지도 없으면 상한값). 휠 dolly 상한, 표면 피벗 거리 cap(`scene-surface-camera.tsx` 의 `placePivot`), 뷰어·에디터 탑뷰 상한(반높이 차감)이 전부 이 값을 읽는다.
 
 **최소 거리** — 휠 줌은 커서 아래 표면(모델 자체 포함), 독 확대 버튼은 화면 중앙 표면(타깃)에서 `CAMERA_MIN_SURFACE_DISTANCE`(`lib/camera-limits.ts`)까지만 다가간다. 휠 한 이벤트의 이동량은 `surfaceDollyAdvance` 가 정한다(미적용 pending 반영, 하한·`controls.maxDistance` 로 clamp). 에디터 F 포커스·탑뷰의 최소 거리가 같은 상수를 읽고, 뷰어 확대 버튼의 `MIN_CAMERA_DISTANCE`(`three-scene-viewer.tsx`)는 ui 가 features 를 import 하지 못해 같은 값의 리터럴이다. OrbitControls `minDistance` 는 회전·팬 반경 clamp 일 뿐이라 이보다 작게(표면 레이캐스트 near 와 같게) 둔다. 바닥·극각 제한은 그대로 걸리므로 지면 위 객체에는 비스듬히 볼수록 멀리서 멈춘다.
+
+**라벨 위 조작** — 모델 라벨·눈금 점/숫자는 클릭을 받는 DOM 오버레이(drei `Html`)라 그 위의 휠·드래그는 카메라 조작에 닿지 않는다(휠 줌은 캔버스 요소의 리스너, OrbitControls·R3F 이벤트는 R3F 가 연결한 Canvas 래퍼 div 의 리스너). 그래서 `useOverlayPointerForwarding` 이 휠과 pointerdown 을 같은 좌표·버튼으로 캔버스에서 난 것처럼 다시 발행(bubbles)하고 원본의 전파는 끊는다 — 라벨 위에서도 휠 줌·회전이 되고 어느 리스너도 두 번 받지 않는다. OrbitControls 는 pointermove·pointerup 을 document 에서 받으므로 pointerdown 만 넘기면 드래그가 이어진다. 눌린 자리에서 `OVERLAY_CLICK_SLOP_PX` 넘게 움직인 뒤의 click 은 선택·포커스로 치지 않는다.
 
 제한 뒤에는 `controls.update()` 를 부르지 않고 `change` 이벤트만 발행해 에디터 카메라 상태가 따라오게 한다.
 
@@ -114,6 +117,7 @@
 - 카메라 범위·탑뷰·미니맵 캡처의 기준 지도는 `resolveCameraBoundsMaps` 하나다. 바닥 raycast 기준(`resolveGroundMaps`)과 섞지 않는다.
 - 카메라 최대 거리를 읽는 곳(휠 dolly·표면 피벗 cap·탑뷰 상한)은 `SceneCameraLimits` 가 정한 `controls.maxDistance` 를 읽는다. 따로 계산하지 않는다.
 - 확대 하한은 `CAMERA_MIN_SURFACE_DISTANCE` 하나다. 뷰어 확대 버튼의 리터럴은 같은 값으로 맞추고, OrbitControls `minDistance` 는 그보다 작게 둔다.
+- 캔버스 위에서 pointer-events 를 받는 DOM 오버레이는 `useOverlayPointerForwarding` 으로 휠·pointerdown 을 캔버스에 넘긴다. 오버레이를 카메라 조작의 사각지대로 두지 않는다.
 - 미니맵 캡처 렌더 타깃은 `FloatType`(EXT_color_buffer_float·EXT_float_blend 가 없으면 `UnsignedByteType` 폴백) + `stencilBuffer: true`(실루엣 마스크·헐). 캡처는 `applyCanonicalCaptureLighting` 으로 조명을 수동 모드 기준값으로 바꾸고(renderer `shadowMap.autoUpdate`/`needsUpdate` 도 캡처 동안 끔) `OceanWater` 는 `applyCanonicalWaterUniforms` 로 반사 0·기준 태양으로 둔 채 보이게, 반사 제외 객체만 숨긴 채 찍는다. clear color 는 바꾸지 않는다. 캡처에서 조명·그림자·노출을 씬의 시각 상태에 의존시키지 않고, 톤매핑은 three 의 ACESFilmic 과 같은 식(`acesFilmicToneMap`)만 쓴다.
 - 미니맵 표시는 setState 없이 2D 캔버스에 직접 그린다. 팬은 컨트롤러 `moveTo` 로 보내 카메라 제한을 통과시킨다.
 - 전체화면 주인이 언마운트되면 전체화면을 끝낸다. 한 시점에 주인은 하나다.

@@ -45,6 +45,7 @@ import {
   type SavedRulerGuide,
   type SceneRulerSize,
 } from '../model/ruler-types';
+import { useOverlayPointerForwarding } from '../model/use-overlay-pointer-forwarding';
 import { PerViewport } from './scene-viewports';
 
 /**
@@ -183,6 +184,12 @@ function RulerLabels({
   portal,
 }: RulerLabelsProps) {
   const labelRefs = useRef<Array<HTMLDivElement | null>>([]);
+  // 클릭을 받는 점·숫자(에디터) 위의 휠·드래그를 캔버스로 넘긴다.
+  const {
+    wheelRef,
+    onPointerDown: forwardPointerDown,
+    shouldIgnoreClick,
+  } = useOverlayPointerForwarding();
 
   useFrame(({ camera, size }) => {
     if (!scaled) return;
@@ -239,17 +246,26 @@ function RulerLabels({
                   Number.isFinite(lastScale) && lastScale > 0 ? lastScale : 1,
                   dotCenterPx,
                 );
+                // 클릭을 받는 점·숫자는 휠을 캔버스로 넘긴다. 정리 함수를
+                // 돌려주므로 React 19 는 언마운트 때 null 호출 대신 이걸 부른다
+                // — 참조 비우기도 여기서 한다.
+                const detachWheel = onSelect ? wheelRef(element) : undefined;
+                return () => {
+                  detachWheel?.();
+                  labelRefs.current[i] = null;
+                };
               }}
               className={`flex flex-col items-center gap-0.5 whitespace-nowrap select-none ${onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
               style={{ transformOrigin: `50% ${dotCenterPx}px` }}
-              onPointerDown={
+              onPointerDown={onSelect ? forwardPointerDown : undefined}
+              onClick={
                 onSelect
                   ? (event) => {
-                      event.stopPropagation();
+                      if (shouldIgnoreClick(event)) return;
+                      onClick(event);
                     }
                   : undefined
               }
-              onClick={onSelect ? onClick : undefined}
             >
               <span
                 aria-hidden

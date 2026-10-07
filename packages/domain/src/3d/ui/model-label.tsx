@@ -15,6 +15,7 @@ import {
   type ModelLabelValueReader,
 } from '../lib/label-reading';
 import { isLabelInRange, labelScaleAtDistance } from '../lib/label-scale';
+import { useOverlayPointerForwarding } from '../model/use-overlay-pointer-forwarding';
 
 /**
  * 거리에 따른 숨김·축소는 lib/label-scale.ts 의 규칙이다(눈금의 점·숫자와
@@ -167,6 +168,13 @@ export function ModelLabel({
   const lastVisibleRef = useRef(true);
   const lastScaleRef = useRef(1);
   const { tone, bypass, freeSwing } = state;
+  // 상자 위의 휠·드래그를 캔버스로 넘긴다 — 라벨이 카메라 조작의 사각지대가
+  // 되지 않게. 드래그 끝의 click 은 선택으로 치지 않는다.
+  const {
+    wheelRef,
+    onPointerDown: forwardPointerDown,
+    shouldIgnoreClick,
+  } = useOverlayPointerForwarding();
 
   // 태그 값 줄 — 보이는 라벨만, 표기가 바뀔 때만 쓴다(값은 초당 수십 번 온다).
   const writeReadings = () => {
@@ -238,18 +246,14 @@ export function ModelLabel({
       >
         {/* 숨김·축소는 상자와 값 줄을 함께 감싼 이 요소에 건다. 감싼 요소의
             크기는 상자 하나다 — 값 줄은 흐름 밖(absolute)에서 상자 위로 쌓여,
-            값 줄이 몇 개든 상자는 제자리에 있다. 포인터는 상자만 받는다. */}
+            값 줄이 몇 개든 상자는 제자리에 있다. 포인터는 상자만 받고, 상자
+            위의 휠·pointerdown 은 캔버스로 넘긴다. */}
         <div ref={divRef} className="pointer-events-none relative">
           <div
+            ref={wheelRef}
             title={titles?.tone[tone]}
             className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${dimmed ? 'opacity-30' : tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
-            onPointerDown={
-              inert
-                ? undefined
-                : (event) => {
-                    event.stopPropagation();
-                  }
-            }
+            onPointerDown={inert ? undefined : forwardPointerDown}
             onPointerEnter={
               inert
                 ? undefined
@@ -279,6 +283,7 @@ export function ModelLabel({
                 ? undefined
                 : (event) => {
                     event.stopPropagation();
+                    if (shouldIgnoreClick(event)) return;
                     onSelect?.(id);
                   }
             }
