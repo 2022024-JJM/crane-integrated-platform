@@ -56,6 +56,8 @@ export {
   fromRelativeCameraPose,
   toRelativeCameraPose,
 } from './lib/viewer-camera-sync';
+export type { OrbitDirection } from './lib/viewer-orbit';
+export { orbitCameraPose, VIEWER_ORBIT_STEP_DEG } from './lib/viewer-orbit';
 export type {
   ScenePaletteBlockReason,
   ScenePaletteEntry,

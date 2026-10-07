@@ -327,6 +327,8 @@
     },
     "saveThumbnail": "Save this view as the thumbnail",
     "camera": "Viewpoint",
+    "rotateLeft": "Rotate left {{degrees}}°",
+    "rotateRight": "Rotate right {{degrees}}°",
     "preset": {
       "iso": "Iso",
       "front": "Front",

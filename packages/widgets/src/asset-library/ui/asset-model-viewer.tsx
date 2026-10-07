@@ -5,6 +5,8 @@ import {
   Camera,
   Grid3x3,
   Rotate3d,
+  RotateCcw,
+  RotateCw,
   Ruler,
   SunMoon,
 } from 'lucide-react';
@@ -59,10 +61,13 @@ import {
   createViewModeMaterials,
   disposeViewModeMaterials,
   fromRelativeCameraPose,
+  orbitCameraPose,
   toRelativeCameraPose,
   VIEW_PRESETS,
+  VIEWER_ORBIT_STEP_DEG,
   type AssetViewMode,
   type FramingBounds,
+  type OrbitDirection,
   type OriginalMaterialMap,
   type ViewerCameraSync,
   type ViewPreset,
@@ -240,6 +245,20 @@ function ViewerModel({
 
 interface ViewerRigHandle extends AssetViewerHandle {
   frame: (preset: ViewPreset) => void;
+  /** 대상 둘레로 카메라를 한 걸음 돌린다 — 물체가 그쪽으로 도는 것처럼 보인다. */
+  orbit: (direction: OrbitDirection) => void;
+}
+
+/**
+ * 바깥에서 정한 카메라 자세를 컨트롤에 반영한다. 감쇠를 잠시 끄고 update —
+ * 켠 채면 직전 드래그의 관성이 방금 맞춘 포즈를 흘려 보낸다(ThreeSceneViewer
+ * 와 같은 이유).
+ */
+function settleControls(controls: OrbitControlsImpl) {
+  const damping = controls.enableDamping;
+  controls.enableDamping = false;
+  controls.update();
+  controls.enableDamping = damping;
 }
 
 function ViewerRig({
@@ -286,15 +305,30 @@ function ViewerRig({
       controls.target.fromArray(pose.target);
       controls.minDistance = pose.radius * 0.05;
       controls.maxDistance = pose.distance * 6;
-      // 감쇠를 잠시 끄고 update — 켠 채면 직전 드래그의 관성이 방금 맞춘
-      // 포즈를 흘려 보낸다(ThreeSceneViewer 와 같은 이유).
-      const damping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = damping;
+      settleControls(controls);
       invalidate();
     },
     [bounds, getState, invalidate],
+  );
+
+  const orbit = useCallback(
+    (direction: OrbitDirection) => {
+      const controls = controlsRef.current;
+      if (!controls) return;
+      const camera = getState().camera;
+      const pose = orbitCameraPose(
+        {
+          position: camera.position.toArray() as Vector3Tuple,
+          target: controls.target.toArray() as Vector3Tuple,
+        },
+        direction,
+      );
+      camera.position.fromArray(pose.position);
+      // update 가 change 를 내보내므로 맞물린 다른 뷰어도 따라온다.
+      settleControls(controls);
+      invalidate();
+    },
+    [getState, invalidate],
   );
 
   // 새 모델이 준비되면 전체가 보이게 맞춘다. 캔버스 안은 별도의 React 루트라
@@ -339,10 +373,7 @@ function ViewerRig({
       applying = true;
       getState().camera.position.fromArray(pose.position);
       controls.target.fromArray(pose.target);
-      const damping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = damping;
+      settleControls(controls);
       applying = false;
       invalidate();
     });
@@ -356,6 +387,7 @@ function ViewerRig({
     handleRef,
     () => ({
       frame,
+      orbit,
       captureThumbnail: () => {
         const { camera, gl, scene } = getState();
         const helpers = scene.getObjectByName(HELPERS_GROUP_NAME);
@@ -373,7 +405,7 @@ function ViewerRig({
         });
       },
     }),
-    [frame, getState, invalidate],
+    [frame, getState, invalidate, orbit],
   );
 
   return (
@@ -804,6 +836,23 @@ export function AssetModelViewer({
                   aria-label={t('asset-library:viewer.camera')}
                   className={cn(VIEWER_GLASS_BAR, 'pointer-events-auto')}
                 >
+                  <ViewerIconButton
+                    label={t('asset-library:viewer.rotateLeft', {
+                      degrees: VIEWER_ORBIT_STEP_DEG,
+                    })}
+                    onClick={() => rigRef.current?.orbit('left')}
+                  >
+                    <RotateCcw />
+                  </ViewerIconButton>
+                  <ViewerIconButton
+                    label={t('asset-library:viewer.rotateRight', {
+                      degrees: VIEWER_ORBIT_STEP_DEG,
+                    })}
+                    onClick={() => rigRef.current?.orbit('right')}
+                  >
+                    <RotateCw />
+                  </ViewerIconButton>
+                  <span aria-hidden className="mx-0.5 h-4 w-px bg-white/20" />
                   {VIEW_PRESETS.map((preset) => (
                     <button
                       key={preset}

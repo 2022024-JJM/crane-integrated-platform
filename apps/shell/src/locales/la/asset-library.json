@@ -327,6 +327,8 @@
     },
     "saveThumbnail": "Hunc aspectum ut imagunculam serva",
     "camera": "Prospectus",
+    "rotateLeft": "Sinistrorsum {{degrees}}° verte",
+    "rotateRight": "Dextrorsum {{degrees}}° verte",
     "preset": {
       "iso": "Obliquus",
       "front": "A fronte",
