@@ -58,6 +58,23 @@ export {
 } from './lib/viewer-camera-sync';
 export type { OrbitDirection } from './lib/viewer-orbit';
 export { orbitCameraPose, VIEWER_ORBIT_STEP_DEG } from './lib/viewer-orbit';
+export type { PlaybackClip, PlaybackClock } from './lib/viewer-playback';
+export {
+  clampPlaybackSpeed,
+  createPlaybackClock,
+  DEFAULT_PLAYBACK_SPEED,
+  formatClipTime,
+  isPlaybackSpeed,
+  listPlaybackClips,
+  matchPlaybackClip,
+  PLAYBACK_MAX_FRAME_DELTA_SEC,
+  PLAYBACK_SPEED_MAX,
+  PLAYBACK_SPEED_MIN,
+  PLAYBACK_SPEED_STEP,
+  resolvePlaybackClip,
+  REST_POSE_CLIP,
+  wrapPlaybackTime,
+} from './lib/viewer-playback';
 export type {
   ScenePaletteBlockReason,
   ScenePaletteEntry,

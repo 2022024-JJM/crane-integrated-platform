@@ -22,6 +22,9 @@ describe('useViewerDisplay', () => {
       showGrid: true,
       showDimensions: true,
       turntable: true,
+      animationPlaying: true,
+      animationSpeed: 1,
+      animationClip: null,
     });
   });
 

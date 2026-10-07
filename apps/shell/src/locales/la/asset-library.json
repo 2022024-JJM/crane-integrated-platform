@@ -336,7 +336,13 @@
       "top": "Desuper"
     },
     "display": "Optiones ostensionis",
-    "panoramaHint": "Trahe ut circumspicias"
+    "panoramaHint": "Trahe ut circumspicias",
+    "playback": "Cursus motuum",
+    "clip": "Motus",
+    "restPose": "Sine motu (habitus quietus)",
+    "seek": "Locus cursus",
+    "speedReset": "Celeritatem ad 1× redde",
+    "clipMissing": "Haec versio motum '{{name}}' non habet"
   },
   "drawing": {
     "noPreview": "Haec forma hic praevideri non potest",

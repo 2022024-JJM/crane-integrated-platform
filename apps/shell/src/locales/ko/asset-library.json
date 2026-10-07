@@ -336,7 +336,13 @@
       "top": "평면"
     },
     "display": "표시 옵션",
-    "panoramaHint": "끌어서 둘러보기"
+    "panoramaHint": "끌어서 둘러보기",
+    "playback": "애니메이션 재생",
+    "clip": "클립",
+    "restPose": "애니메이션 없음 (기본 자세)",
+    "seek": "재생 위치",
+    "speedReset": "배속을 1×로 되돌리기",
+    "clipMissing": "이 버전에는 '{{name}}' 클립이 없습니다"
   },
   "drawing": {
     "noPreview": "이 형식은 화면에서 미리 볼 수 없습니다",

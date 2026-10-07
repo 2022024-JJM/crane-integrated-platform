@@ -27,8 +27,8 @@
 | 등록할 파일 검사(GLB 헤더·EXR 해상도·중복) | `lib/asset-file.ts`(`validateExrHeader`), `packages/widgets/src/asset-library/lib/analyze-asset-file.ts` |
 | 저장소 인터페이스·구현 | `lib/asset-library-storage.ts`(`AssetLibraryRepository`), 브라우저 바이너리 `lib/asset-blob-store.ts` |
 | 스토어(자동 저장) | `packages/features/src/asset-library/model/use-asset-library-store.ts` |
-| 뷰어 계산(통계·뷰 모드·LOD·프레이밍·카메라 맞물림) | `packages/features/src/asset-library/lib/{model-geometry-stats,viewer-display,viewer-framing,viewer-camera-sync}.ts` |
-| 화면 | `packages/widgets/src/asset-library/ui/`(`asset-library-page`, `asset-preview-panel`, `asset-detail-page`, `asset-compare-view`, `asset-lifecycle`, `asset-delete-dialog`, `asset-model-viewer`, `asset-environment-viewer`, `asset-drawing-viewer`, 뷰어 공용 조각 `asset-viewer-chrome`, 탭 6개) |
+| 뷰어 계산(통계·뷰 모드·LOD·프레이밍·카메라 맞물림·애니메이션 클립/배속/시계) | `packages/features/src/asset-library/lib/{model-geometry-stats,viewer-display,viewer-framing,viewer-camera-sync,viewer-playback}.ts` |
+| 화면 | `packages/widgets/src/asset-library/ui/`(`asset-library-page`, `asset-preview-panel`, `asset-detail-page`, `asset-compare-view`, `asset-lifecycle`, `asset-delete-dialog`, `asset-model-viewer`, `asset-environment-viewer`, `asset-drawing-viewer`, 뷰어 공용 조각 `asset-viewer-chrome`, 애니메이션 재생 줄 `asset-playback-bar`, 탭 6개) |
 | 탐색 상태 ↔ URL, 걸린 필터 칩 | `packages/widgets/src/asset-library/lib/{asset-library-url,active-filters}.ts` |
 | 결과 순서 위 이동(미리보기 이전/다음·범위 선택·상세 이전/다음) | `packages/widgets/src/asset-library/lib/result-navigation.ts` |
 | 버전 수치 비교 | `packages/widgets/src/asset-library/lib/version-compare.ts` |
@@ -140,7 +140,7 @@
 
 ### 뷰어
 
-- 모니터링 씬 뷰어(`ThreeSceneViewer`)를 쓰지 않는다 — 그쪽은 지도 위를 나는 카메라고 여기는 물체 하나를 돌려 보는 카메라다. 캔버스는 `frameloop="demand"` 이고 자동 회전을 켠 동안만 계속 그린다.
+- 모니터링 씬 뷰어(`ThreeSceneViewer`)를 쓰지 않는다 — 그쪽은 지도 위를 나는 카메라고 여기는 물체 하나를 돌려 보는 카메라다. 캔버스는 `frameloop="demand"` 이고 자동 회전이나 애니메이션을 돌리는 동안만 계속 그린다.
 - 조명은 방향광 + 절차적 반사 환경(three `RoomEnvironment`)이다. 금속·도장면은 비칠 것이 있어야 재질로 읽히고, 폐쇄망이라 HDRI 프리셋을 받을 수 없다.
 - 바닥 격자는 멀어질수록 흐려지는 무한 격자(drei `Grid`)다. 칸 크기는 물체 크기에서 고른다(`pickGridStep`).
 - 뷰어 위 조작은 배경·테마와 무관한 어두운 유리판 위에 놓고, 켜진 상태는 흰 판으로 나타낸다. 브랜드 주황은 탭 밑줄·선택 표시에만 쓴다.
@@ -149,14 +149,18 @@
 - 치수선·라벨은 배경과 대비되는 무채색이다. 조선소 크레인은 주황·노랑 도장이 많아 브랜드 주황은 물체와 섞인다.
 - 뷰 모드는 메쉬의 material 슬롯만 바꿨다가 되돌린다(원본 머티리얼은 캐시와 공유).
 - LOD 단계 미리보기는 최상위 캐리어만 켜고 끈다(`docs/agents/assets-glb.md` 와 같은 계약).
+- 클립이 든 모델은 애니메이션을 돌린다(`viewer-playback.ts`). mixer 는 캐시 원본이 아니라 사본에 걸고(클립은 노드 이름으로 바인딩되니 원본 클립을 그대로 쓴다), 통계·경계를 잰 **뒤에** 자세를 바꾸므로 치수·격자는 rest 자세 기준이다. 썸네일은 지금 보이는 자세 그대로 찍힌다 — 멈추거나 위치를 옮겨 원하는 자세를 고른다.
+- 재생 시각은 React 상태가 아니라 작은 시계(`createPlaybackClock`)에 있다. 매 프레임 `mixer.setTime(clock.getTime())` 으로 자세를 놓고 미는 쪽만 시계를 민다 — 미는 쪽과 따라가는 쪽이 같은 코드라 두 캔버스가 같은 자세를 그린다. 배속은 시계가 곱하고 한 프레임 상한(`PLAYBACK_MAX_FRAME_DELTA_SEC`)이 있다(demand 에서 always 로 바뀌는 첫 프레임의 delta 는 멈춰 있던 시간 전체다). 멈춘 채 위치를 옮기면 시계의 구독으로 한 프레임 다시 그린다. 재생 줄은 시계를 폴링해 읽는다(3D 플레이 트랜스포트 바와 같다).
+- 재생 줄(`asset-playback-bar.tsx`)은 캔버스 아래 별도 행(오버레이가 아님)이고 조작이 전부인 뷰어에서 클립이 있을 때만 나온다 — ▶/⏸ · 클립(맨 위는 "애니메이션 없음(기본 자세)", 그 아래 파일 속 이름 + 길이, 빈 이름은 순번, 겹치는 이름은 번호) · 위치 스크럽 · 배속 슬라이더(`PLAYBACK_SPEED_MIN`~`PLAYBACK_SPEED_MAX`, 라벨을 누르면 1×). 뷰어에 초점이 있으면 Space 가 멈춤·재생이다. 좁은 자리용 뷰어는 조작 없이 첫 클립을 1× 로 반복한다(기억한 멈춤·배속·기본 자세를 무시한다 — 되돌릴 버튼이 없다).
+- 기본 자세(`REST_POSE_CLIP`)는 액션을 멈춰서 만든다 — three 가 바인딩할 때 저장해 둔 원래 값으로 뼈대를 되돌리므로 따로 자세를 적어 두지 않는다. 비교의 따라가는 쪽도 같은 값을 받아 함께 멈춘다.
 - 배경은 따로 둔 파노라마 뷰어(`asset-environment-viewer.tsx`)로 본다. 씬과 같은 방식으로 EXR 을 `scene.background` 에 걸고 렌더러의 톤매핑을 거치며, 카메라는 제자리에서 돌기만 한다(끌면 그림이 손을 따라온다). 시작 시점은 파노라마의 한가운데(+X)다. 화면을 떠나면 그 파일의 로더 캐시를 놓는다.
 - 배경의 썸네일은 처음 보이는 시점의 가운데를 가로로 긴 비율로 자른 불투명 그림이고(`centerCropRect`), 목록에서는 받침 위에 띄우지 않고 자리를 채운다.
 - 썸네일은 투명 배경 PNG 이고, 물체가 차지한 영역만 잘라 정사각에 채운다(`lib/thumbnail-crop.ts`) — 가는 물체도 목록에서 같은 크기로 보인다. 원천 순서는 저장된 썸네일 → 그림 도면은 파일 자체 → 종류 아이콘. 썸네일이 없는 자산은 처음 열렸을 때 한 번 자동으로 찍는다. 편집 팔레트와 대시보드도 이 썸네일을 쓴다(`getAssetThumbnailPath`).
 - 뷰어 아래 표제란은 지금 올라온 파일(파일명·버전·크기·치수·삼각형)만 적는다. 이름과 상태는 머리말과 진행 단계가 말한다.
 - 화면을 떠나면 그 파일의 GLTF 캐시를 놓는다.
-- 표시 상태(뷰 모드·배경·격자·치수·자동 회전)는 뷰어가 직접 들거나 바깥이 넘긴다(`display`). 조작 도구는 `toolbar` 로 전부·좁은 자리용(표시 토글과 배경만)·없음을 고른다.
+- 표시 상태(뷰 모드·배경·격자·치수·자동 회전·애니메이션 재생/배속/클립)는 뷰어가 직접 들거나 바깥이 넘긴다(`display`). 조작 도구는 `toolbar` 로 전부·좁은 자리용(표시 토글과 배경만)·없음을 고른다.
 - 시점 묶음(프리셋 옆)의 좌우 회전 버튼은 물체가 아니라 **카메라**를 대상을 지나는 수직축 둘레로 한 걸음(`VIEWER_ORBIT_STEP_DEG`, `viewer-orbit.ts`) 돌린다 — 치수·격자·카메라 맞물림이 그대로다. 방향은 마우스로 그쪽으로 끌었을 때와 같다(오른쪽 = 앞면이 화면 오른쪽으로).
-- 격자·치수·자동 회전은 모두 켠 채, 배경은 앱 테마를 따라 시작한다. 사용자가 바꾼 표시 상태는 탭이 열려 있는 동안 기억해 다음에 여는 뷰어(미리보기·상세·비교)가 이어받는다(`lib/viewer-display-state.ts`, sessionStorage) — 배경은 한 번 고르면 테마가 바뀌어도 고른 값이다. 좁은 자리용 뷰어는 기억한 뷰 모드를 쓰지 않고 기본 방식으로만 보인다(되돌릴 버튼이 없다).
+- 격자·치수·자동 회전·애니메이션 재생은 모두 켠 채, 배경은 앱 테마를 따라 시작한다. 사용자가 바꾼 표시 상태는 탭이 열려 있는 동안 기억해 다음에 여는 뷰어(미리보기·상세·비교)가 이어받는다(`lib/viewer-display-state.ts`, sessionStorage) — 배경은 한 번 고르면 테마가 바뀌어도 고른 값이다. 클립 이름은 자산마다 다르니 기억하지 않고 새 파일이 올라오면 첫 클립으로 돌아가지만, "애니메이션 없음" 은 자산과 무관한 취향이라 기억한다(실제 클립을 고르면 지운다). 좁은 자리용 뷰어는 기억한 뷰 모드를 쓰지 않고 기본 방식으로만 보인다(되돌릴 버튼이 없다).
 - 도우미(격자·경계 상자)를 켜고 끄는 경로는 스스로 `invalidate()` 한다. R3F 는 객체를 붙일 때만 프레임을 요청하고 뗄 때는 요청하지 않아, 빼먹으면 꺼진 도우미가 카메라를 움직일 때까지 남는다.
 - 캔버스는 이벤트를 걸 요소를 직접 받는다(`eventSource`). R3F 는 만들어진 뒤 비동기로 이벤트를 거는데, 그 사이 뷰어가 사라지면 없는 요소에 걸다 던진다.
 
@@ -166,6 +170,7 @@
 
 - 두 뷰어는 표시 상태 한 벌을 같이 쓰고 조작 도구는 왼쪽에만 있다.
 - 카메라는 맞물린다(끌 수 있다). 자세를 그대로 복사하지 않고 물체 경계에 대한 상대 자세로 주고받는다(`viewer-camera-sync.ts`) — 두 버전의 크기가 달라도 구도가 같다. 맞물린 동안 자동 회전은 왼쪽만 돌고 오른쪽은 따라온다.
+- 애니메이션은 같은 클립을 같은 시각으로 양쪽이 돈다 — 비교 뷰가 시계 하나를 만들어 양쪽에 넘기고(`playbackSync`) 왼쪽이 밀고 오른쪽은 읽는다. 카메라 맞물림을 꺼도 그대로다. 오른쪽에 고른 이름의 클립이 없으면 다른 클립으로 대신 돌지 않고 멈춘 채 그 사실만 적는다(`matchPlaybackClip`).
 - 수치 차이 표는 버전 탭 위에 놓인다. 무거워진 값과 가벼워진 값을 색으로 가르고, 치수는 좋고 나쁨이 없어 색을 입히지 않는다. 어느 한쪽 값을 모르면 차이를 말하지 않는다.
 
 ### 화면 구성

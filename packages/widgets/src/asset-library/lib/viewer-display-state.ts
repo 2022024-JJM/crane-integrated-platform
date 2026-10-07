@@ -1,6 +1,9 @@
 import { getStorageJson, setStorageJson } from '@crane/core/lib/safe-storage';
 import {
   ASSET_VIEW_MODES,
+  DEFAULT_PLAYBACK_SPEED,
+  isPlaybackSpeed,
+  REST_POSE_CLIP,
   type AssetViewMode,
 } from '@crane/features/asset-library';
 
@@ -19,6 +22,14 @@ export interface ViewerDisplay {
   showGrid: boolean;
   showDimensions: boolean;
   turntable: boolean;
+  /** 애니메이션을 돌리는 중인가. 클립이 없는 모델에는 뜻이 없다. */
+  animationPlaying: boolean;
+  animationSpeed: number;
+  /**
+   * 고른 클립 이름. null 이면 첫 클립, `REST_POSE_CLIP` 이면 애니메이션 없이
+   * 기본 자세. 클립 이름은 자산마다 다르니 기억하지 않고 기본 자세만 기억한다.
+   */
+  animationClip: string | null;
 }
 
 export const DEFAULT_VIEW_MODE: AssetViewMode = 'lit';
@@ -30,6 +41,9 @@ export function createViewerDisplay(theme: string): ViewerDisplay {
     showGrid: true,
     showDimensions: true,
     turntable: true,
+    animationPlaying: true,
+    animationSpeed: DEFAULT_PLAYBACK_SPEED,
+    animationClip: null,
   };
 }
 
@@ -45,6 +59,7 @@ const VIEWER_DISPLAY_TOGGLE_KEYS = [
   'showGrid',
   'showDimensions',
   'turntable',
+  'animationPlaying',
 ] as const;
 
 /**
@@ -68,6 +83,14 @@ function pickViewerDisplay(
     (name) => name === source.background,
   );
   if (background) picked.background = background;
+  if (isPlaybackSpeed(source.animationSpeed)) {
+    picked.animationSpeed = source.animationSpeed;
+  }
+  // 클립 이름은 고르지 않는다 — 자산마다 다른 값이라 기억하면 다른 자산에서
+  // 엉뚱한 클립을 가리킨다. 자산과 무관한 "애니메이션 없음" 만 기억한다.
+  if (source.animationClip === REST_POSE_CLIP) {
+    picked.animationClip = REST_POSE_CLIP;
+  }
   return picked;
 }
 
@@ -81,13 +104,19 @@ export function readRememberedViewerDisplay(): Partial<ViewerDisplay> {
   return pickViewerDisplay(stored);
 }
 
-/** 바뀐 항목만 기억해 둔 값 위에 덮어쓴다. 온전한 값이 없으면 쓰지 않는다. */
+/**
+ * 바뀐 항목만 기억해 둔 값 위에 덮어쓴다. 온전한 값이 없으면 쓰지 않는다.
+ * 기본 자세에서 클립(또는 첫 클립)으로 돌아오면 기억한 기본 자세를 지운다.
+ */
 export function rememberViewerDisplay(patch: Partial<ViewerDisplay>): void {
+  const remembered = readRememberedViewerDisplay();
   const changed = pickViewerDisplay({ ...patch });
-  if (Object.keys(changed).length === 0) return;
-  setStorageJson(
-    VIEWER_DISPLAY_STORAGE_KEY,
-    { ...readRememberedViewerDisplay(), ...changed },
-    'session',
-  );
+  const forgetRest =
+    'animationClip' in patch &&
+    patch.animationClip !== REST_POSE_CLIP &&
+    remembered.animationClip === REST_POSE_CLIP;
+  if (Object.keys(changed).length === 0 && !forgetRest) return;
+  const next = { ...remembered, ...changed };
+  if (forgetRest) delete next.animationClip;
+  setStorageJson(VIEWER_DISPLAY_STORAGE_KEY, next, 'session');
 }

@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ASSET_VIEW_MODES } from '@crane/features/asset-library';
+import {
+  ASSET_VIEW_MODES,
+  DEFAULT_PLAYBACK_SPEED,
+  PLAYBACK_SPEED_MAX,
+  PLAYBACK_SPEED_MIN,
+  REST_POSE_CLIP,
+} from '@crane/features/asset-library';
 import {
   createViewerDisplay,
   DEFAULT_VIEW_MODE,
@@ -29,6 +35,97 @@ describe('createViewerDisplay', () => {
       viewMode: DEFAULT_VIEW_MODE,
       showGrid: true,
       showDimensions: true,
+      turntable: true,
+    });
+  });
+
+  it('애니메이션은 첫 클립을 기본 배속으로 돌리며 시작한다', () => {
+    expect(createViewerDisplay('dark')).toMatchObject({
+      animationPlaying: true,
+      animationSpeed: DEFAULT_PLAYBACK_SPEED,
+      animationClip: null,
+    });
+  });
+});
+
+describe('애니메이션 재생 상태 기억', () => {
+  const store = (value: unknown) =>
+    window.sessionStorage.setItem(
+      VIEWER_DISPLAY_STORAGE_KEY,
+      JSON.stringify(value),
+    );
+
+  beforeEach(() => window.sessionStorage.clear());
+
+  it('멈춤·재생은 기억한다', () => {
+    rememberViewerDisplay({ animationPlaying: false });
+    expect(readRememberedViewerDisplay()).toEqual({ animationPlaying: false });
+    rememberViewerDisplay({ animationPlaying: true });
+    expect(readRememberedViewerDisplay()).toEqual({ animationPlaying: true });
+  });
+
+  it('배속은 범위 안 숫자만 기억한다', () => {
+    for (const speed of [PLAYBACK_SPEED_MIN, 0.5, 1, PLAYBACK_SPEED_MAX]) {
+      rememberViewerDisplay({ animationSpeed: speed });
+      expect(readRememberedViewerDisplay()).toEqual({ animationSpeed: speed });
+    }
+  });
+
+  it('범위 밖·오염된 배속은 버린다', () => {
+    for (const animationSpeed of [
+      PLAYBACK_SPEED_MIN - 0.01,
+      PLAYBACK_SPEED_MAX + 0.01,
+      0,
+      -1,
+      Number.NaN,
+      '1',
+      null,
+      true,
+    ]) {
+      store({ animationSpeed });
+      expect(readRememberedViewerDisplay()).toEqual({});
+    }
+  });
+
+  it('클립 이름은 기억하지 않는다 — 자산마다 다른 값이다', () => {
+    rememberViewerDisplay({ animationClip: 'Walk' });
+    expect(readRememberedViewerDisplay()).toEqual({});
+    store({ animationClip: 'Walk', animationPlaying: false });
+    expect(readRememberedViewerDisplay()).toEqual({ animationPlaying: false });
+  });
+
+  it('"애니메이션 없음"(기본 자세)은 자산과 무관하니 기억한다', () => {
+    rememberViewerDisplay({ animationClip: REST_POSE_CLIP });
+    expect(readRememberedViewerDisplay()).toEqual({
+      animationClip: REST_POSE_CLIP,
+    });
+  });
+
+  it('기본 자세에서 클립이나 첫 클립으로 돌아오면 기억한 기본 자세를 지운다', () => {
+    rememberViewerDisplay({ showGrid: false, animationClip: REST_POSE_CLIP });
+    rememberViewerDisplay({ animationClip: 'Walk' });
+    expect(readRememberedViewerDisplay()).toEqual({ showGrid: false });
+
+    rememberViewerDisplay({ animationClip: REST_POSE_CLIP });
+    rememberViewerDisplay({ animationClip: null });
+    expect(readRememberedViewerDisplay()).toEqual({ showGrid: false });
+  });
+
+  it('기본 자세가 기억돼 있지 않으면 클립 선택은 저장소를 건드리지 않는다', () => {
+    rememberViewerDisplay({ animationClip: 'Walk' });
+    expect(
+      window.sessionStorage.getItem(VIEWER_DISPLAY_STORAGE_KEY),
+    ).toBeNull();
+    rememberViewerDisplay({ animationClip: null });
+    expect(
+      window.sessionStorage.getItem(VIEWER_DISPLAY_STORAGE_KEY),
+    ).toBeNull();
+  });
+
+  it('재생 항목이 없는 옛 저장값은 그대로 읽힌다', () => {
+    store({ showGrid: false, turntable: true });
+    expect(readRememberedViewerDisplay()).toEqual({
+      showGrid: false,
       turntable: true,
     });
   });

@@ -8,8 +8,10 @@ import {
   type AssetVersion,
 } from '@crane/domain/asset-library';
 import {
+  createPlaybackClock,
   createViewerCameraSync,
   useAssetFileUrl,
+  type PlaybackClock,
   type ViewerCameraSync,
 } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
@@ -33,6 +35,8 @@ interface ComparePaneProps {
   display: ViewerDisplay;
   onDisplayChange: (patch: Partial<ViewerDisplay>) => void;
   cameraSync: ViewerCameraSync | null;
+  /** 양쪽이 같이 읽는 애니메이션 시계. 기준 쪽이 민다. */
+  playbackClock: PlaybackClock;
   onMeasured: (version: number, stats: AssetStats) => void;
 }
 
@@ -42,6 +46,7 @@ function ComparePane({
   display,
   onDisplayChange,
   cameraSync,
+  playbackClock,
   onMeasured,
 }: ComparePaneProps) {
   const { t } = useTranslation();
@@ -58,7 +63,9 @@ function ComparePane({
     >
       v{version.version}
       <span className="ml-1.5 text-xs font-medium opacity-80">
-        {t(base ? 'asset-library:compare.base' : 'asset-library:compare.target')}
+        {t(
+          base ? 'asset-library:compare.base' : 'asset-library:compare.target',
+        )}
       </span>
     </span>
   );
@@ -87,6 +94,7 @@ function ComparePane({
               ? { bus: cameraSync, id: base ? 'base' : 'target' }
               : undefined
           }
+          playbackSync={{ clock: playbackClock, drive: base }}
           cornerLabel={label}
           onLoaded={({ stats }) => onMeasured(version.version, stats)}
         />
@@ -123,7 +131,9 @@ interface AssetCompareViewProps {
  * 두 버전 나란히 보기. 어느 쪽을 보고 있었든 왼쪽이 옛 버전(기준), 오른쪽이
  * 새 버전(변경)이다 — "무엇이 달라졌나" 는 늘 옛것에서 새것으로 읽는다.
  * 표시 방식은 한 벌을 양쪽이 같이 쓰고, 카메라는 맞물려 한쪽을 돌리면 다른 쪽도 같은
- * 구도로 따라온다 — 맞물림은 끌 수 있다.
+ * 구도로 따라온다 — 맞물림은 끌 수 있다. 애니메이션은 같은 클립을 같은 시각으로
+ * 양쪽이 돈다(기준 쪽이 시계를 밀고 변경 쪽은 읽는다) — 카메라 맞물림을 꺼도
+ * 그대로다.
  */
 export function AssetCompareView({
   asset,
@@ -139,6 +149,7 @@ export function AssetCompareView({
   const { display, setDisplay } = useViewerDisplay();
   const [linked, setLinked] = useState(true);
   const bus = useMemo(() => createViewerCameraSync(), []);
+  const playbackClock = useMemo(() => createPlaybackClock(), []);
   const candidates = asset.versions
     .filter((item) => item.version !== viewed.version)
     .sort((a, b) => b.version - a.version);
@@ -201,6 +212,7 @@ export function AssetCompareView({
           display={display}
           onDisplayChange={setDisplay}
           cameraSync={linked ? bus : null}
+          playbackClock={playbackClock}
           onMeasured={onMeasured}
         />
         <ComparePane
@@ -209,6 +221,7 @@ export function AssetCompareView({
           display={followerDisplay}
           onDisplayChange={setDisplay}
           cameraSync={linked ? bus : null}
+          playbackClock={playbackClock}
           onMeasured={onMeasured}
         />
       </div>

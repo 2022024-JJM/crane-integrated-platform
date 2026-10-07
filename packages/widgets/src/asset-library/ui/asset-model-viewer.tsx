@@ -1,5 +1,5 @@
 import { Grid, Html, OrbitControls, useGLTF } from '@react-three/drei';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   Box as BoxIcon,
   Camera,
@@ -18,20 +18,19 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
   type ReactNode,
   type Ref,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AnimationMixer,
   Box3,
   PMREMGenerator,
   type Object3D,
   type PerspectiveCamera,
 } from 'three';
-import {
-  RoomEnvironment,
-  SkeletonUtils,
-} from 'three/examples/jsm/Addons.js';
+import { RoomEnvironment, SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
@@ -58,10 +57,16 @@ import {
   computeObjectStats,
   computeRenderBounds,
   countLodLevels,
+  createPlaybackClock,
   createViewModeMaterials,
+  DEFAULT_PLAYBACK_SPEED,
   disposeViewModeMaterials,
   fromRelativeCameraPose,
+  listPlaybackClips,
+  matchPlaybackClip,
   orbitCameraPose,
+  resolvePlaybackClip,
+  REST_POSE_CLIP,
   toRelativeCameraPose,
   VIEW_PRESETS,
   VIEWER_ORBIT_STEP_DEG,
@@ -69,6 +74,8 @@ import {
   type FramingBounds,
   type OrbitDirection,
   type OriginalMaterialMap,
+  type PlaybackClip,
+  type PlaybackClock,
   type ViewerCameraSync,
   type ViewPreset,
 } from '@crane/features/asset-library';
@@ -79,6 +86,7 @@ import {
   SelectTrigger,
 } from '@crane/ui/molecules/select';
 import { TooltipProvider } from '@crane/ui/molecules/tooltip';
+import { AssetPlaybackBar } from './asset-playback-bar';
 import {
   ViewerErrorBoundary,
   ViewerIconButton,
@@ -90,8 +98,8 @@ import {
  *
  * 모니터링 씬 뷰어(ThreeSceneViewer)와 따로 둔 이유: 그쪽은 지도 위를 날아
  * 다니는 카메라(표면 기준 줌·이동 범위 제한)이고, 여기는 물체 하나를 돌려
- * 보는 카메라다. 캔버스는 `frameloop="demand"` 이고 턴테이블을 켠 동안만
- * 계속 그린다.
+ * 보는 카메라다. 캔버스는 `frameloop="demand"` 이고 턴테이블이나 애니메이션을
+ * 돌리는 동안만 계속 그린다.
  *
  * GLB 로드는 다른 화면과 같은 구성(`extendGltfLoaderWithKtx2`)을 쓴다 —
  * KTX2 텍스처가 든 GLB 는 이 배선이 없으면 파스 단계에서 던진다. 바다가
@@ -178,6 +186,11 @@ interface AssetModelViewerProps {
   onDisplayChange?: (patch: Partial<ViewerDisplay>) => void;
   /** 다른 뷰어와 카메라를 맞물린다. `id` 는 통로 안에서 이 뷰어의 이름. */
   cameraSync?: { bus: ViewerCameraSync; id: string };
+  /**
+   * 다른 뷰어와 애니메이션 시계를 같이 쓴다(나란히 보기). `drive` 가 미는
+   * 쪽이고 아닌 쪽은 읽기만 한다. 없으면 뷰어가 시계를 직접 든다.
+   */
+  playbackSync?: { clock: PlaybackClock; drive: boolean };
   /** 뷰어 왼쪽 아래에 놓이는 꼬리표(어느 버전인지 등). */
   cornerLabel?: ReactNode;
 }
@@ -186,19 +199,34 @@ interface ModelInfo {
   stats: AssetStats;
   bounds: Box3;
   lodLevels: number;
+  clips: PlaybackClip[];
 }
+
+/** 모델 쪽에 넘기는 재생 상태. 시계는 바깥(또는 비교 뷰)이 든다. */
+interface ViewerPlayback {
+  clip: PlaybackClip | null;
+  playing: boolean;
+  speed: number;
+  clock: PlaybackClock;
+  /** 시계를 미는 쪽인가. 따라가는 쪽(비교의 새 버전)은 읽기만 한다. */
+  drive: boolean;
+}
+
+const EMPTY_CLIPS: PlaybackClip[] = [];
 
 function ViewerModel({
   url,
   viewMode,
   lodLevel,
   wireColor,
+  playback,
   onInfo,
 }: {
   url: string;
   viewMode: AssetViewMode;
   lodLevel: number;
   wireColor: string;
+  playback: ViewerPlayback;
   onInfo: (info: ModelInfo) => void;
 }) {
   const gltf = useGLTF(url, true, true, extendGltfLoaderWithKtx2);
@@ -211,14 +239,16 @@ function ViewerModel({
   const materials = useMemo(() => createViewModeMaterials('#ffffff'), []);
 
   // 통계는 뷰 모드·LOD 를 적용하기 **전에** 잰다(effect 는 선언 순서로 돈다).
-  // 뒤에 재면 교체된 머티리얼과 숨겨진 LOD 가 수치에 섞인다.
+  // 뒤에 재면 교체된 머티리얼과 숨겨진 LOD 가 수치에 섞인다. 애니메이션도
+  // 아직 자세를 바꾸기 전이라 경계(치수·격자)는 rest 자세 기준이다.
   useEffect(() => {
     onInfo({
       stats: computeObjectStats(object, gltf.animations.length),
       bounds: computeRenderBounds(object),
       lodLevels: countLodLevels(object),
+      clips: listPlaybackClips(gltf.animations),
     });
-  }, [gltf.animations.length, object, onInfo]);
+  }, [gltf.animations, object, onInfo]);
 
   useEffect(() => {
     applyLodLevel(object, lodLevel);
@@ -239,6 +269,47 @@ function ViewerModel({
       disposeViewModeMaterials(materials);
     };
   }, [materials]);
+
+  // 애니메이션은 사본에 건다 — 클립은 노드 이름으로 바인딩되므로 캐시의 원본
+  // 클립을 그대로 쓴다. 화면을 떠나면 바인딩을 풀어 사본이 캐시에 남지 않게.
+  const mixer = useMemo(() => new AnimationMixer(object), [object]);
+  useEffect(
+    () => () => {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(object);
+    },
+    [mixer, object],
+  );
+
+  const { clip, playing, speed, clock, drive } = playback;
+  const animation = clip ? (gltf.animations[clip.index] ?? null) : null;
+  useEffect(() => {
+    // 클립을 떼면(앞 effect 의 정리) three 가 바인딩할 때 저장해 둔 원래 값으로
+    // 뼈대가 돌아간다 — 그 기본 자세를 한 프레임 그린다.
+    if (!animation) {
+      invalidate();
+      return;
+    }
+    const action = mixer.clipAction(animation);
+    action.reset().play();
+    mixer.setTime(clock.getTime());
+    invalidate();
+    return () => {
+      action.stop();
+      mixer.uncacheAction(animation);
+    };
+  }, [animation, clock, invalidate, mixer]);
+
+  // 멈춘 채 위치를 옮기면(demand 루프) 옮긴 자세를 한 프레임 다시 그린다.
+  useEffect(() => clock.subscribe(invalidate), [clock, invalidate]);
+
+  // 매 프레임 시계의 시각을 그대로 자세에 놓는다 — 미는 쪽과 따라가는 쪽이
+  // 같은 코드라 두 캔버스가 같은 자세를 그린다. 배속은 시계가 곱한다.
+  useFrame((_, delta) => {
+    if (!animation || !clip) return;
+    if (drive && playing) clock.advance(delta, speed, clip.durationSec);
+    mixer.setTime(clock.getTime());
+  });
 
   return <primitive object={object} />;
 }
@@ -501,10 +572,7 @@ function ViewerHelpers({
       ) : null}
       {showDimensions ? (
         <>
-          <box3Helper
-            key={background}
-            args={[dimensionBox, tone.dimension]}
-          />
+          <box3Helper key={background} args={[dimensionBox, tone.dimension]} />
           <DimensionLabel
             className={tone.dimensionLabel}
             axis="W"
@@ -572,6 +640,7 @@ export function AssetModelViewer({
   display: controlledDisplay,
   onDisplayChange,
   cameraSync,
+  playbackSync,
   cornerLabel,
 }: AssetModelViewerProps) {
   const { t } = useTranslation();
@@ -585,9 +654,10 @@ export function AssetModelViewer({
   const display = controlledDisplay ?? own.display;
   const setDisplay = onDisplayChange ?? own.setDisplay;
   const { background, showGrid, showDimensions, turntable } = display;
+  const compact = toolbar === 'compact';
   // 좁은 자리에는 표시 방식 버튼이 없다 — 다른 화면에서 고른 방식을 여기서
   // 되돌릴 길이 없으므로 기본 방식으로만 보인다.
-  const viewMode = toolbar === 'compact' ? DEFAULT_VIEW_MODE : display.viewMode;
+  const viewMode = compact ? DEFAULT_VIEW_MODE : display.viewMode;
   const [lodLevel, setLodLevel] = useState(0);
   // 로드 결과는 URL 에 묶어 둔다 — 다른 파일로 바뀌면 옛 결과가 한 프레임도
   // 보이지 않는다.
@@ -598,6 +668,28 @@ export function AssetModelViewer({
 
   const info = url !== null && loaded?.url === url ? loaded.info : null;
   const failed = url !== null && failedUrl === url;
+
+  // 애니메이션 — 시계는 나란히 보기가 넘기면 그것을, 아니면 내 것을 쓴다.
+  const ownClock = useMemo(() => createPlaybackClock(), []);
+  const clock = playbackSync?.clock ?? ownClock;
+  const drive = playbackSync?.drive ?? true;
+  const clips = info?.clips ?? EMPTY_CLIPS;
+  // 좁은 자리에는 재생 조작이 없다 — 기억한 멈춤·배속을 되돌릴 길이 없으므로
+  // 첫 클립을 1× 로 돌린다. 따라가는 쪽은 고른 이름의 클립만 돌고 없으면 멈춘다
+  // (다른 클립으로 대신 돌면 비교가 되지 않는다).
+  const clip = compact
+    ? resolvePlaybackClip(clips, null)
+    : drive
+      ? resolvePlaybackClip(clips, display.animationClip)
+      : matchPlaybackClip(clips, display.animationClip);
+  const playing = compact ? true : display.animationPlaying;
+  const speed = compact ? DEFAULT_PLAYBACK_SPEED : display.animationSpeed;
+  const playback = useMemo<ViewerPlayback>(
+    () => ({ clip, playing, speed, clock, drive }),
+    [clip, clock, drive, playing, speed],
+  );
+  const animating = playing && clip !== null;
+  const playbackControls = toolbar === 'full' && clips.length > 0;
 
   useImperativeHandle(
     handleRef,
@@ -612,10 +704,14 @@ export function AssetModelViewer({
   // 다시 돌지 않는다(다시 돌면 통계 보고 → 리렌더가 되풀이된다).
   const onLoadedRef = useRef(onLoaded);
   const onReadyRef = useRef(onReady);
+  const setDisplayRef = useRef(setDisplay);
+  const restPoseRef = useRef(display.animationClip === REST_POSE_CLIP);
   useEffect(() => {
     onLoadedRef.current = onLoaded;
     onReadyRef.current = onReady;
-  }, [onLoaded, onReady]);
+    setDisplayRef.current = setDisplay;
+    restPoseRef.current = display.animationClip === REST_POSE_CLIP;
+  }, [display.animationClip, onLoaded, onReady, setDisplay]);
   // 카메라를 맞추기 전의 한 프레임(모델이 화면 가득 크게 그려진다)을 보이지
   // 않게, 맞춘 뒤에야 캔버스를 드러낸다.
   const [framedUrl, setFramedUrl] = useState<string | null>(null);
@@ -628,10 +724,24 @@ export function AssetModelViewer({
       if (url === null) return;
       setLoaded({ url, info: next });
       setLodLevel(0);
+      // 클립 이름은 자산마다 다르다 — 새 파일이 올라오면 첫 클립부터. "애니메이션
+      // 없음" 은 자산과 무관한 취향이라 그대로 두고, 따라가는 쪽은 미는 쪽이
+      // 고른 이름을 그대로 둔다.
+      if (drive && !restPoseRef.current) {
+        setDisplayRef.current({ animationClip: null });
+      }
       onLoadedRef.current?.({ stats: next.stats });
     },
-    [url],
+    [drive, url],
   );
+
+  // 뷰어에 초점이 있을 때 Space 로 멈추고 다시 돌린다. 목록의 Space(미리보기
+  // 열기)와 겹치지 않게 조작이 있는 뷰어에서만 받는다.
+  const handleSurfaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== ' ' || !playbackControls || clip === null) return;
+    event.preventDefault();
+    setDisplay({ animationPlaying: !playing });
+  };
 
   // 화면을 떠나면 이 파일의 파싱 결과를 캐시에서 놓는다 — 자산을 여러 개
   // 열어 볼수록 수십 MB 씩 쌓이는 것을 막는다.
@@ -654,8 +764,10 @@ export function AssetModelViewer({
       <div className={cn('relative min-h-0 flex-1', tone.surface)}>
         <div
           ref={setSurface}
+          tabIndex={playbackControls ? 0 : undefined}
+          onKeyDown={playbackControls ? handleSurfaceKeyDown : undefined}
           className={cn(
-            'absolute inset-0 transition-opacity duration-200',
+            'absolute inset-0 transition-opacity duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-inset',
             framedUrl === url ? 'opacity-100' : 'opacity-0',
           )}
         >
@@ -663,10 +775,15 @@ export function AssetModelViewer({
             <Canvas
               key={url}
               eventSource={surface}
-              frameloop={turntable ? 'always' : 'demand'}
+              frameloop={turntable || animating ? 'always' : 'demand'}
               dpr={[1, 1.5]}
               gl={{ alpha: true, antialias: true }}
-              camera={{ fov: FOV_DEG, near: 0.1, far: 5000, position: [6, 4, 6] }}
+              camera={{
+                fov: FOV_DEG,
+                near: 0.1,
+                far: 5000,
+                position: [6, 4, 6],
+              }}
             >
               <ViewerEnvironment />
               <hemisphereLight args={['#ffffff', '#59616e', 0.55]} />
@@ -679,6 +796,7 @@ export function AssetModelViewer({
                     viewMode={viewMode}
                     lodLevel={lodLevel}
                     wireColor={tone.wire}
+                    playback={playback}
                     onInfo={handleInfo}
                   />
                 </Suspense>
@@ -725,6 +843,21 @@ export function AssetModelViewer({
         {cornerLabel ? (
           <div className="pointer-events-none absolute bottom-3 left-3 z-10">
             {cornerLabel}
+          </div>
+        ) : null}
+
+        {/* 따라가는 쪽에 고른 이름의 클립이 없으면 멈춘 채 그 사실만 적는다. */}
+        {!drive &&
+        clip === null &&
+        clips.length > 0 &&
+        display.animationClip !== null &&
+        display.animationClip !== REST_POSE_CLIP ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+            <span className="rounded-md bg-black/55 px-2 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-md">
+              {t('asset-library:viewer.clipMissing', {
+                name: display.animationClip,
+              })}
+            </span>
           </div>
         ) : null}
 
@@ -869,6 +1002,23 @@ export function AssetModelViewer({
           </TooltipProvider>
         )}
       </div>
+      {playbackControls ? (
+        <AssetPlaybackBar
+          clips={clips}
+          clip={clip}
+          playing={playing}
+          speed={speed}
+          clock={clock}
+          onPlayingChange={(next) => setDisplay({ animationPlaying: next })}
+          onClipChange={(name) => {
+            // 새 클립은 처음부터 — 시계를 먼저 놓아야 바뀐 클립의 effect 가 0 을 읽는다.
+            clock.setTime(0);
+            setDisplay({ animationClip: name });
+          }}
+          onSpeedChange={(next) => setDisplay({ animationSpeed: next })}
+          onSeek={(time) => clock.setTime(time)}
+        />
+      ) : null}
       {titleBlock}
     </div>
   );

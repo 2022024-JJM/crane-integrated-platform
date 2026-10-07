@@ -336,7 +336,13 @@
       "top": "Top"
     },
     "display": "Display options",
-    "panoramaHint": "Drag to look around"
+    "panoramaHint": "Drag to look around",
+    "playback": "Animation playback",
+    "clip": "Clip",
+    "restPose": "No animation (rest pose)",
+    "seek": "Playback position",
+    "speedReset": "Reset speed to 1×",
+    "clipMissing": "This version has no '{{name}}' clip"
   },
   "drawing": {
     "noPreview": "This format cannot be previewed here",
