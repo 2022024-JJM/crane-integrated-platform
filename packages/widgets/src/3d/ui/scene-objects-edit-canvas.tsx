@@ -10,6 +10,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   type RefObject,
@@ -334,9 +335,13 @@ export function SceneObjectsEditCanvas({
   const seaVisible = resolveSeaVisible(sceneInfo);
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
-  // 의존성에 넣지 않고 여기서 최신값을 따라간다.
+  // 의존성에 넣지 않고 커밋마다 최신값을 따라간다. layout effect 인 이유:
+  // 같은 커밋에서 프리로드 effect 의 cleanup 이 읽기 전에 써 두려는 것이다
+  // (passive effect 의 cleanup 보다 먼저 돈다).
   const sceneInfoRef = useRef(sceneInfo);
-  sceneInfoRef.current = sceneInfo;
+  useLayoutEffect(() => {
+    sceneInfoRef.current = sceneInfo;
+  });
 
   // 팔레트에서 놓을 수 있는 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
   // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
