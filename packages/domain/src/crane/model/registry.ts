@@ -121,12 +121,6 @@ const craneRegistry: CraneRegistryEntry[] = [
     craneNo: 'C-1806',
     regionId: 'dock-in',
   },
-  {
-    craneId: 'GC_04',
-    craneName: 'GC-04',
-    craneNo: 'GC-04',
-    regionId: 'goliath',
-  },
 ];
 
 const craneRegistryById = new Map(
@@ -167,7 +161,6 @@ const craneIdsByRegion: Record<string, string[]> = {
     'C_870',
     'C_1806',
   ],
-  goliath: ['GC_04'],
   'philly-dock-2': ['C_864', 'C_865', 'C_866', 'C_867', 'C_868', 'C_869'],
 };
 

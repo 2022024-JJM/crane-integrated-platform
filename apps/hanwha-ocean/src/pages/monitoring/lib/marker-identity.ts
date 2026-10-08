@@ -56,7 +56,6 @@ const REGION_IDENTITY_INDEX: Record<string, number> = {
   'dock-1': 0, // sky
   'dock-2': 1, // indigo
   'dock-in': 2, // fuchsia — 내업
-  goliath: 3, // cyan
   'philly-dock-2': 4, // violet
 };
 

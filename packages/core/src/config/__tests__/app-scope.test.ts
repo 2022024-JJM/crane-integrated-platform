@@ -24,7 +24,7 @@ describe('resolveAppScope', () => {
   });
 
   it('dev 환경도 같은 규칙', () => {
-    expect(dev('/crane_rnd/dev/goliath-work/goliath/vision').basename).toBe(
+    expect(dev('/crane_rnd/dev/outdoor-work/philly-dock-2/3d-monitoring').basename).toBe(
       '/crane_rnd/dev',
     );
     expect(dev('/crane_rnd/indoor/dev/indoorshop').basename).toBe(

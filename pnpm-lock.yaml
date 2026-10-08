@@ -108,60 +108,6 @@ importers:
         specifier: ^7.13.1
         version: 7.14.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
 
-  apps/goliath-crane:
-    dependencies:
-      '@crane/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@crane/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
-      '@crane/features':
-        specifier: workspace:*
-        version: link:../../packages/features
-      '@crane/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@crane/widgets':
-        specifier: workspace:*
-        version: link:../../packages/widgets
-      '@react-three/drei':
-        specifier: ^10.7.7
-        version: 10.7.7(@react-three/fiber@9.5.0(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(@types/react@19.2.14)(@types/three@0.183.1)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
-      '@react-three/fiber':
-        specifier: ^9.5.0
-        version: 9.5.0(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
-      i18next:
-        specifier: ^25.6.2
-        version: 25.10.10(typescript@5.9.3)
-      lucide-react:
-        specifier: ^0.575.0
-        version: 0.575.0(react@19.2.4)
-      protobufjs:
-        specifier: ^8.0.1
-        version: 8.0.3
-      react:
-        specifier: ^19.2.0
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.2.0
-        version: 19.2.4(react@19.2.4)
-      react-i18next:
-        specifier: ^16.3.5
-        version: 16.6.6(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
-      react-router-dom:
-        specifier: ^7.13.1
-        version: 7.14.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      sonner:
-        specifier: ^2.0.3
-        version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      three:
-        specifier: ^0.183.2
-        version: 0.183.2
-      zustand:
-        specifier: ^5.0.11
-        version: 5.0.12(@types/react@19.2.14)(immer@11.1.4)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
-
   apps/hanwha-ocean:
     dependencies:
       '@crane/core':
@@ -416,9 +362,6 @@ importers:
       '@crane/features':
         specifier: workspace:*
         version: link:../../packages/features
-      '@crane/goliath-crane':
-        specifier: workspace:*
-        version: link:../goliath-crane
       '@crane/hanwha-ocean':
         specifier: workspace:*
         version: link:../hanwha-ocean
@@ -3472,9 +3415,6 @@ packages:
     resolution: {integrity: sha512-TFYA4jnP7PVbmlBIfhlSe+WKxs9dklXMTEGcBCIvLhE/Tn3H6Gk1norupVW7m5Cnd4bLcr08AytbyV/xj7f/kQ==}
     engines: {node: '>= 12.0.0'}
 
-  long@5.3.2:
-    resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
-
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
 
@@ -4012,10 +3952,6 @@ packages:
 
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
-
-  protobufjs@8.0.3:
-    resolution: {integrity: sha512-LBYnMWkKLB8fE/ljROPDbCl7mgLSlI+oBe1fAAr5MTqFg4TIi0tYrVVurJvQggOjnUYMQtEZBjrej59ojMNTHQ==}
-    engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
@@ -7590,8 +7526,6 @@ snapshots:
       safe-stable-stringify: 2.5.0
       triple-beam: 1.4.1
 
-  long@5.3.2: {}
-
   longest-streak@3.1.0: {}
 
   lru-cache@10.4.3: {}
@@ -8275,11 +8209,6 @@ snapshots:
   property-graph@4.1.0: {}
 
   property-information@7.2.0: {}
-
-  protobufjs@8.0.3:
-    dependencies:
-      '@types/node': 24.12.0
-      long: 5.3.2
 
   proxy-addr@2.0.7:
     dependencies:

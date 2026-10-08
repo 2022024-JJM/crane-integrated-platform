@@ -40,7 +40,6 @@
   },
   "siteType": {
     "hanwha-ocean": "Hanwha Ocean",
-    "goliath-crane": "Goliath Crane",
     "philly-shipyard": "Philly Shipyard"
   },
   "sites": {
@@ -65,14 +64,11 @@
     "outdoorWork": "Outdoor Work",
     "indoorWork": "Indoor Work",
     "realTimeMonitoring": "Real-time 3D Monitoring",
-    "vision": "Vision Monitoring",
     "threeViewerEdit": "3D Viewer Edit",
     "craneStatus": "Crane Status",
     "workHistory": "Work History",
     "alarmHistory": "Alarm History",
     "replayMonitoring": "3D Play",
-    "goliathCrane": "Goliath Crane",
-    "goliathCraneMonitoring": "GC-04 Monitoring",
     "craneDetail": "Crane Detail",
     "mro": "MRO",
     "mroDashboard": "MRO Dashboard",
@@ -261,10 +257,6 @@
     "dockin": {
       "title": "Indoor Work",
       "subtitle": "Overhead 4 cranes"
-    },
-    "goliath": {
-      "title": "Goliath Crane",
-      "subtitle": "GC-04"
     }
   },
   "from": "From",

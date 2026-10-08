@@ -227,12 +227,6 @@ const IndoorWorkPage = lazy(() =>
   })),
 );
 
-const GoliathWorkPage = lazy(() =>
-  import('@crane/goliath-crane/pages/goliath-crane').then((m) => ({
-    default: m.GoliathWorkPage,
-  })),
-);
-
 const CraneDetailListPage = lazy(() =>
   import('@crane/hanwha-ocean/pages/crane-detail').then((m) => ({
     default: m.CraneDetailListPage,
@@ -589,16 +583,6 @@ const craneRoutes = (
         <LazyRoute>
           <RegionGuard>
             <IndoorWorkPage />
-          </RegionGuard>
-        </LazyRoute>
-      }
-    />
-    <Route
-      path="goliath-work/:regionId/*"
-      element={
-        <LazyRoute>
-          <RegionGuard>
-            <GoliathWorkPage />
           </RegionGuard>
         </LazyRoute>
       }

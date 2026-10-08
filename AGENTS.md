@@ -118,7 +118,7 @@ Import 방향: `core`/`ui` → `domain` → `features` → `widgets` → `apps/{
 
 - `apps/shell` — 라우팅, 인증 가드, 전역 layout, i18n 초기화, 전역 스타일. 모든 사이트별 페이지는 `lazy()` 로 plugin 에서 동적 로드한다. **사이트 전용 비즈니스 로직을 shell 안에 두지 않는다.**
 - `apps/{site}` — 사이트 전용 page slice 모음. 다른 plugin 을 import 하지 않는다.
-  현재: `hanwha-ocean`, `goliath-crane`, `philly-shipyard`, `mro2`, `indoorshop`, `crane-hmi`
+  현재: `hanwha-ocean`, `philly-shipyard`, `mro2`, `indoorshop`, `crane-hmi`. 필리 조선소의 현장 작업 화면(`outdoor-work`)은 `hanwha-ocean` 의 페이지를 함께 쓴다 — philly 전용 차이는 그 페이지 안에서 region 의 `siteType` 으로 가른다
 
 `apps/shell/src` 구조:
 
@@ -155,8 +155,8 @@ apps/{site}/src/pages/{page}/
 
 - 모든 route element 는 `lazy()` + `LazyRoute`(Suspense + `RouteErrorBoundary`) 로 감싼다.
 - `login` 을 제외한 전부가 `ProtectedRoute` 하위이고, 그 안에 `AppLayout` 이 있다.
-- 현장 작업 화면은 `outdoor-work` / `indoor-work` / `goliath-work` 세 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
-- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `virtual-tags`, `detection-settings`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision` 을 더 가진다. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다.
+- 현장 작업 화면은 `outdoor-work` / `indoor-work` 두 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
+- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `virtual-tags`, `detection-settings`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다. 필리 조선소 region 의 `3d-monitoring` 에는 충돌 감지 표시(LiDAR 근접 존) 토글이 더 있다(`docs/agents/monitoring-ui.md`).
 - `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를, `virtual-tags` 는 `@crane/widgets/virtual-tags` 의 가상 태그 관리 페이지를, `detection-settings` 는 `@crane/widgets/detection-settings` 의 감지 설정 페이지를 쓰며 세 화면이 공유한다. 가상 태그 목록과 감지 설정 값은 region 무관 전역이다.
 - `asset-library`, `asset-library/:assetId` 는 3D 자산 라이브러리(`@crane/widgets/asset-library`)다. 조선소·region 과 무관한 전사 공용 화면이라 region 하위가 아닌 최상위 경로다 — `docs/agents/asset-library.md`.
 - `BrowserRouter` 의 basename 은 `@crane/core/config/app-scope` 의 `resolveAppScope` 가 주소로 정한다. `VITE_INDOOR_BASE_URL` 이 있으면 crane 주소(`BASE_URL`)와 indoor 주소로 나뉘어 각자 자기 라우트(`craneRoutes` · `indoorRoutes`)와 계정(`SCOPE_ROLES`)만 받고, 없으면 한 주소가 전부 받는다. crane · indoor · stage · dev 를 최상위 라우트 이름으로 쓰지 않는다(주소 접두어와 겹침).
@@ -166,7 +166,7 @@ apps/{site}/src/pages/{page}/
 다음은 문서 권고가 아니라 `eslint.config.js` 의 `no-restricted-imports` 로 **실제 강제**되는 규칙이다.
 
 - 레이어 경계: `@crane/core`·`@crane/ui` 는 상위 레이어를 import 할 수 없고, `@crane/domain` 은 core/ui 만, `@crane/features` 는 domain/core/ui 까지, `@crane/widgets` 는 features 까지 import 할 수 있다. 어느 패키지도 `apps/*` 를 import 하지 않는다.
-- 다만 "패키지 → app" 금지 목록에 실제로 적혀 있는 app 은 `@crane/hanwha-ocean` 과 `@crane/goliath-crane` 둘뿐이다. `@crane/{philly-shipyard,mro2,indoorshop,crane-hmi,shell}` 을 패키지에서 import 하면 **ESLint 는 잡지 못한다.** 규칙 위반인 것은 같으니 손으로 지킨다.
+- 다만 "패키지 → app" 금지 목록에 실제로 적혀 있는 app 은 `@crane/hanwha-ocean` 하나뿐이다. `@crane/{philly-shipyard,mro2,indoorshop,crane-hmi,shell}` 을 패키지에서 import 하면 **ESLint 는 잡지 못한다.** 규칙 위반인 것은 같으니 손으로 지킨다.
 - Public API 강제: `@crane/{domain,features,widgets}/*/{ui,model,lib,config}/*` 형태의 deep import 는 금지다. 슬라이스의 `index.ts` public API 를 통한다. 실제로 막는 것은 각 패키지 `package.json` 의 `exports` 맵이다 — `eslint.config.js` 의 deep import 패턴은 중괄호 확장이 되지 않아 매칭되지 않으며, 패키지 내부의 상대 경로 deep import(`../../3d/model/...`)는 어느 쪽도 잡지 못하므로 손으로 지킨다.
 - 외부에서 소비되는 슬라이스는 `index.ts` 를 제공해야 한다.
 - 레이어 규칙을 우회하는 편의성 import 를 만들지 않는다.
@@ -210,6 +210,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 씬의 자산 참조(자산 id·버전)·편집 팔레트·새 버전 갱신 | 스키마 `SceneAssetRef`(`types.ts`), `packages/domain/src/3d/lib/{scene-asset-ref,scene-asset-update}.ts`, `packages/features/src/asset-library/lib/{scene-palette,scene-asset-updates}.ts`, `packages/widgets/src/3d/ui/palette-asset-updates.tsx` — `docs/agents/asset-library.md` |
 | 코드가 직접 로드하는 자산 표 | `packages/domain/src/3d/model/code-asset-refs.ts`(`CODE_ASSETS`), 도면은 `packages/domain/src/asset-library/model/code-used-assets.ts` — `docs/agents/asset-library.md` |
 | 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
+| 충돌 감지 표시(골리앗 LiDAR 근접 존 — 토글·존 링·감지 객체 시뮬레이션·HUD·도움말, 필리 실외 화면만) | `packages/features/src/3d/ui/collision-guard{,-scene-layer,-toggle,-hud,-help}.tsx`, 존 빌더 `lib/goliath-collision-zone.ts`, 존 파생 `model/use-goliath-collision-zones.ts`, 스토어·시뮬레이션 `model/use-collision-guard-{store,simulation}.ts`, 배선 `apps/hanwha-ocean/src/pages/outdoor-work/ui/realtime-monitoring-view.tsx` — `docs/agents/monitoring-ui.md` |
 
 ## packages/ui 구조 (Atomic Design)
 

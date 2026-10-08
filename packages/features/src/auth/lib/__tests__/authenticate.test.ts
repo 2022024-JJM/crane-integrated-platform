@@ -10,7 +10,7 @@ describe('authenticate', () => {
   });
 
   it('SC-02 · crane 계정은 indoor 범위에서 scope-denied, 계정 범위를 알려 준다', () => {
-    expect(authenticate('crane.goliath', '1', 'indoor')).toEqual({
+    expect(authenticate('crane.ocean', '1', 'indoor')).toEqual({
       ok: false,
       reason: 'scope-denied',
       accountScope: 'crane',
@@ -31,7 +31,7 @@ describe('authenticate', () => {
   });
 
   it('비밀번호가 틀리면 범위와 무관하게 invalid (계정 존재를 흘리지 않음)', () => {
-    expect(authenticate('crane.goliath', 'x', 'indoor')).toEqual({
+    expect(authenticate('crane.ocean', 'x', 'indoor')).toEqual({
       ok: false,
       reason: 'invalid',
     });

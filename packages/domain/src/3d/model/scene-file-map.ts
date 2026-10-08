@@ -23,7 +23,6 @@ export const SCENE_FILE_NAME_BY_REGION_ID: Record<string, string> = {
   'dock-1': 'okpo.json',
   'dock-2': 'okpo.json',
   'dock-in': 'dock-in.json',
-  goliath: 'goliath.json',
   'philly-dock-2': 'philly-2dock.json',
 };
 

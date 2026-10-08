@@ -56,8 +56,6 @@ export const SCENE_SITE_LOCATION_BY_REGION_ID: Record<
   'dock-1': 'asia-seoul',
   'dock-2': 'asia-seoul',
   'dock-in': 'asia-seoul',
-  // goliath.json 도 philly 지도를 쓰는 씬이라 같은 현장이다.
-  goliath: 'america-new-york',
   'philly-dock-2': 'america-new-york',
 };
 

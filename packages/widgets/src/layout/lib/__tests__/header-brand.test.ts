@@ -27,7 +27,6 @@ describe('getHeaderBrandKeys', () => {
   it.each<UserRole>([
     'philly',
     'ocean',
-    'goliath',
     'mro',
     'mro2',
     'hmi',

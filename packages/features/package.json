@@ -12,7 +12,6 @@
     "./weather": "./src/weather/index.ts",
     "./3d": "./src/3d/index.ts",
     "./page-settings": "./src/page-settings/index.ts",
-    "./goliath-crane": "./src/goliath-crane/index.ts",
     "./asset": "./src/asset/index.ts",
     "./asset-library": "./src/asset-library/index.ts",
     "./inspection": "./src/inspection/index.ts",

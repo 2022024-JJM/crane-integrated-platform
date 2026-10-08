@@ -103,9 +103,9 @@ GLB 는 압축본만 배포되고, 압축 전 원본은 `assets-src/` 에 보관
 
 에셋 변환은 `node scripts/encode-ktx2.mjs <입력> <출력> [--srgb-only]`(UASTC+zstd, 슬롯별 sRGB/normal 프리셋). UASTC 는 고품질이지만 무손실이 아니고 파일이 커진다(실측 VRAM 은 크게 줄고 파일은 늘었다) — 실 운영 장비에서 육안 A/B·BC7 지원 확인 전에 배포 GLB 를 일괄 전환하지 않는다.
 
-### philly 두 씬의 지도 3장
+### philly 씬의 지도 3장
 
-`goliath.json`·`philly-2dock.json` 은 지도가 3장이다. 조선소 두 장(`philly-area-1.glb`·`philly-area-2.glb`, 옛 단일 지도를 분할한 것으로 좌표계가 같아 옛 배치값을 공유)과 주변 지형(`philly-terrain.glb`, 조선소 자리가 구멍으로 잘린 시 전역 OSM 지형).
+`philly-2dock.json` 은 지도가 3장이다. 조선소 두 장(`philly-area-1.glb`·`philly-area-2.glb`, 옛 단일 지도를 분할한 것으로 좌표계가 같아 옛 배치값을 공유)과 주변 지형(`philly-terrain.glb`, 조선소 자리가 구멍으로 잘린 시 전역 OSM 지형).
 
 - 에디터 팔레트 "맵" 탭은 타일별 **추가/제거 토글**이라 지도를 여러 장 놓을 수 있다(`addSceneMap` append, 제거는 `deletePlacedMap`, 같은 자산은 한 장). 터레인은 자산의 배치 속성이 주변 지형 + 기본 위치(goliath 기준 오프셋)다. 타일 상태 파생은 `map-palette-tiles.ts`. 잠긴 지도 타일은 클릭을 무시하고 계층 목록·타일 자물쇠로 해제한다.
 - 드롭 raycast 의 바닥 지도는 배열 인덱스가 아니라 씬 지도의 `role` 로 판정한다(`resolveGroundMaps`: `ground` 전부 — 분할 지도 대응, 없으면 `maps[0]` 한 장 폴백). `use-scene-drop.ts` 가 그 전부를 `intersectObjects` 해 최근접 표면을 쓴다.

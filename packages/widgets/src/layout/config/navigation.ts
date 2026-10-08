@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Bell,
   MonitorCog,
-  Camera,
   CalendarDays,
   CalendarRange,
   FileText,
@@ -186,17 +185,6 @@ function buildWorkGroup(title: string, base: string): NavGroup {
       },
     ],
   };
-}
-
-function buildGoliathWorkGroup(title: string, base: string): NavGroup {
-  const baseGroup = buildWorkGroup(title, base);
-  const visionItem = {
-    label: i18n.t('common:nav.vision'),
-    path: `${base}/vision`,
-    icon: Camera,
-  };
-  const items = [baseGroup.items[0], visionItem, ...baseGroup.items.slice(1)];
-  return { ...baseGroup, items };
 }
 
 function getHmiGroup(): NavGroup {
@@ -436,19 +424,11 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
       `/indoor-work/${regionId}`,
     );
   },
-  '/goliath-work': (pathname) => {
-    const regionId = pathname.split('/')[2] || '';
-    return buildGoliathWorkGroup(
-      i18n.t('common:nav.goliathCrane'),
-      `/goliath-work/${regionId}`,
-    );
-  },
 };
 
 // role 별로 허용된 systemGroup prefix
 const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   ocean: ['/crane-detail', '/outdoor-work', '/indoor-work'],
-  goliath: ['/goliath-work'],
   philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
   mro: [],
   mro2: [],

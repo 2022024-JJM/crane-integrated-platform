@@ -16,7 +16,7 @@ import { surfaceDollyAdvance } from '../lib/camera-limits';
  *
  * OrbitControls의 zoomToCursor는 휠 한 틱에 **추상 타깃까지의 반경**을 5%
  * 줄이고 그만큼 카메라를 커서 방향으로 옮긴다. minDistance도 그 반경 기준이다.
- * 씬 JSON 타깃이 지하(philly y=-235, goliath y=-343)라 크레인 근처에선 타깃이
+ * 씬 JSON 타깃이 지하(philly y=-235 등)라 크레인 근처에선 타깃이
  * 크레인 뒤 수백 m에 있어 카메라가 크레인 안까지 들어가도 안 멈추고, 반경이
  * 팬·회전·줌마다 바뀌어 틱당 체감 비율이 제멋대로였다.
  *

@@ -7,11 +7,11 @@ import type { SavedCameraInfo, SavedSceneInfo } from '../../model/types';
 
 /**
  * scene-file-map 의 실제 표를 전제로 한다: dock-1·dock-2 는 okpo.json 을
- * 공유하고 goliath 는 단독 파일이다.
+ * 공유하고 philly-dock-2 는 단독 파일이다.
  */
 const SHARED_A = 'dock-1';
 const SHARED_B = 'dock-2';
-const SOLO = 'goliath';
+const SOLO = 'philly-dock-2';
 
 const cam = (n: number): SavedCameraInfo => ({
   position: [n, n, n],

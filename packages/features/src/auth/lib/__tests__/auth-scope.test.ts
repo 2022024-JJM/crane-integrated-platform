@@ -21,13 +21,13 @@ function memoryStore(init: Record<string, string> = {}) {
   return store;
 }
 
-const crane = JSON.stringify({ id: 'crane.goliath', role: 'goliath' });
+const crane = JSON.stringify({ id: 'crane.ocean', role: 'ocean' });
 const indoor = JSON.stringify({ id: 'Indoorshop.OT', role: 'indoorshop-ot' });
 
 describe('isRoleAllowedInScope', () => {
-  it('role 10개가 정확히 한 범위에만 속한다', () => {
+  it('role 9개가 정확히 한 범위에만 속한다', () => {
     const all = [...SCOPE_ROLES.crane, ...SCOPE_ROLES.indoor];
-    expect(all).toHaveLength(10);
+    expect(all).toHaveLength(9);
     for (const role of all) {
       expect(
         isRoleAllowedInScope(role, 'crane') !== isRoleAllowedInScope(role, 'indoor'),
@@ -37,7 +37,7 @@ describe('isRoleAllowedInScope', () => {
 
   it('범위를 나누지 않으면(null) 모두 허용', () => {
     expect(isRoleAllowedInScope('keyin', null)).toBe(true);
-    expect(isRoleAllowedInScope('goliath', null)).toBe(true);
+    expect(isRoleAllowedInScope('ocean', null)).toBe(true);
   });
 
   it('목록에 없는 role 은 어느 범위에도 없다', () => {
@@ -80,7 +80,7 @@ describe('readStoredUser', () => {
 
   it('옛 키의 사용자가 이 범위 소속이면 범위 키로 옮기고 옛 키를 지운다', () => {
     const s = memoryStore({ [AUTH_STORAGE_KEY]: crane });
-    expect(readStoredUser(s, 'crane')?.id).toBe('crane.goliath');
+    expect(readStoredUser(s, 'crane')?.id).toBe('crane.ocean');
     expect(s.data.get('crane-auth-user:crane')).toBe(crane);
     expect(s.data.has(AUTH_STORAGE_KEY)).toBe(false);
   });
@@ -101,7 +101,7 @@ describe('readStoredUser', () => {
     ['손상된 JSON', '{oops'],
     ['배열', '[]'],
     ['null 문자열', 'null'],
-    ['id 누락', JSON.stringify({ role: 'goliath' })],
+    ['id 누락', JSON.stringify({ role: 'ocean' })],
     ['role 타입 오염', JSON.stringify({ id: 'x', role: 1 })],
     ['모르는 role', JSON.stringify({ id: 'x', role: 'admin' })],
   ])('%s 이면 null', (_, raw) => {
@@ -141,7 +141,7 @@ describe('writeStoredUser', () => {
       removeItem: () => {},
     };
     expect(() =>
-      writeStoredUser(s, 'crane', { id: 'a', role: 'goliath' }),
+      writeStoredUser(s, 'crane', { id: 'a', role: 'ocean' }),
     ).not.toThrow();
   });
 });

@@ -12,9 +12,6 @@ import laMonitoring from './locales/la/monitoring.json';
 import koMonitoringOverview from './locales/ko/monitoring-overview.json';
 import enMonitoringOverview from './locales/en/monitoring-overview.json';
 import laMonitoringOverview from './locales/la/monitoring-overview.json';
-import koGoliathCrane from './locales/ko/goliath-crane.json';
-import enGoliathCrane from './locales/en/goliath-crane.json';
-import laGoliathCrane from './locales/la/goliath-crane.json';
 import koCmms from './locales/ko/cmms.json';
 import enCmms from './locales/en/cmms.json';
 import laCmms from './locales/la/cmms.json';
@@ -58,7 +55,6 @@ const resources = {
     dashboard: koDashboard,
     monitoring: koMonitoring,
     'monitoring-overview': koMonitoringOverview,
-    'goliath-crane': koGoliathCrane,
     cmms: koCmms,
     'asset-management': koAssetManagement,
     inspection: koInspection,
@@ -77,7 +73,6 @@ const resources = {
     dashboard: enDashboard,
     monitoring: enMonitoring,
     'monitoring-overview': enMonitoringOverview,
-    'goliath-crane': enGoliathCrane,
     cmms: enCmms,
     'asset-management': enAssetManagement,
     inspection: enInspection,
@@ -96,7 +91,6 @@ const resources = {
     dashboard: laDashboard,
     monitoring: laMonitoring,
     'monitoring-overview': laMonitoringOverview,
-    'goliath-crane': laGoliathCrane,
     cmms: laCmms,
     'asset-management': laAssetManagement,
     inspection: laInspection,
@@ -117,7 +111,6 @@ initI18n(resources, [
   'dashboard',
   'monitoring',
   'monitoring-overview',
-  'goliath-crane',
   'cmms',
   'asset-management',
   'inspection',

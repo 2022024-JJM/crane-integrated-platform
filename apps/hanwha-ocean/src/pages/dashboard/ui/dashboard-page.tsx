@@ -3,10 +3,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getFormatLocale } from '@crane/core/config/i18n';
-import { useSiteType } from '@crane/core/lib/site-type-context';
 import { useTheme } from '@crane/core/lib/theme-context';
 import { useCollisionDashboard, type DashboardRegionStatusDatum } from '../model';
-import { DashboardGoliathCraneStatus } from './dashboard-goliath-crane-status';
 import { MetricCard } from './dashboard-parts';
 import {
   getDashboardPreviewDefaultPosition,
@@ -28,8 +26,6 @@ import { DashboardTrendSection } from './dashboard-trend-section';
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
-  const { siteType } = useSiteType();
-  const isGoliath = siteType === 'goliath-crane';
   const { summary, equipment } = useCollisionDashboard();
   const [selectedPreviewRegion, setSelectedPreviewRegion] =
     useState<DashboardRegionStatusDatum | null>(null);
@@ -116,8 +112,6 @@ export function DashboardPage() {
           />
         ))}
       </section>
-
-      {isGoliath && <DashboardGoliathCraneStatus />}
 
       <section
         aria-labelledby="dashboard-overview-title"

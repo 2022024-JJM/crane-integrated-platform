@@ -271,10 +271,10 @@ describe('저장', () => {
     );
   });
 
-  it('단독 씬 파일(goliath)은 camera 만 보내고 cameraByRegion 은 없다', async () => {
+  it('단독 씬 파일(philly-dock-2)은 camera 만 보내고 cameraByRegion 은 없다', async () => {
     const { result } = setup(
       () => ({ position: [1, 1, 1], target: [2, 2, 2] }),
-      'goliath',
+      'philly-dock-2',
     );
     await waitFor(() =>
       expect(result.current.history.sceneInfo).not.toBeNull(),
@@ -289,7 +289,7 @@ describe('저장', () => {
       await result.current.persistence.saveCurrentScene();
     });
     const [regionId, sentScene] = saveMock.mock.calls[0];
-    expect(regionId).toBe('goliath');
+    expect(regionId).toBe('philly-dock-2');
     expect(sentScene.camera).toEqual({
       position: [1, 1, 1],
       target: [2, 2, 2],

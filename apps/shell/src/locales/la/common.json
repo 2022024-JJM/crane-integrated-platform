@@ -40,7 +40,6 @@
   },
   "siteType": {
     "hanwha-ocean": "Hanwha Oceanus",
-    "goliath-crane": "Gruis Goliath",
     "philly-shipyard": "Navalia Philadelphiae"
   },
   "sites": {
@@ -65,14 +64,11 @@
     "outdoorWork": "Opera Foris",
     "indoorWork": "Opera Intus",
     "realTimeMonitoring": "Monitoratio 3D Temporis Veri",
-    "vision": "Monitoratio Visus",
     "threeViewerEdit": "Editor Visoris 3D",
     "craneStatus": "Status Gruium",
     "workHistory": "Historia Operum",
     "alarmHistory": "Historia Monitorum",
     "replayMonitoring": "Lusus 3D",
-    "goliathCrane": "Gruis Goliath",
-    "goliathCraneMonitoring": "GC-04 Monitio",
     "craneDetail": "Gruis Singulatim",
     "mro": "MRO",
     "mroDashboard": "MRO Tabula",
@@ -261,10 +257,6 @@
     "dockin": {
       "title": "Opera Intus",
       "subtitle": "Grues supremae IV"
-    },
-    "goliath": {
-      "title": "Gruis Goliath",
-      "subtitle": "GC-04"
     }
   },
   "from": "Ex",

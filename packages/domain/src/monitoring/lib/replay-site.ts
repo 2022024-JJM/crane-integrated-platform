@@ -7,7 +7,6 @@ const REGION_REPLAY_SITE_ID_MAP: Record<string, MonitoringReplaySiteId> = {
   'dock-1': 'external',
   'dock-2': 'external',
   'dock-in': 'internal',
-  goliath: 'external',
   'philly-dock-2': 'external',
 };
 

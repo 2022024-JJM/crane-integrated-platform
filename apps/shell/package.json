@@ -18,7 +18,6 @@
     "@crane/crane-hmi": "workspace:*",
     "@crane/domain": "workspace:*",
     "@crane/features": "workspace:*",
-    "@crane/goliath-crane": "workspace:*",
     "@crane/hanwha-ocean": "workspace:*",
     "@crane/indoorshop": "workspace:*",
     "@crane/mro2": "workspace:*",

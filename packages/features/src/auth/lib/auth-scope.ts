@@ -6,7 +6,7 @@ import type { AuthUser, UserRole } from './types';
  * 여기 없는 role 은 범위를 나눴을 때 어느 주소에서도 로그인되지 않는다(닫힌 쪽이 기본).
  */
 export const SCOPE_ROLES: Record<AppScope, readonly UserRole[]> = {
-  crane: ['philly', 'ocean', 'goliath', 'mro', 'mro2', 'hmi', 'hmi2'],
+  crane: ['philly', 'ocean', 'mro', 'mro2', 'hmi', 'hmi2'],
   indoor: ['indoorshop', 'indoorshop-ot', 'keyin'],
 };
 

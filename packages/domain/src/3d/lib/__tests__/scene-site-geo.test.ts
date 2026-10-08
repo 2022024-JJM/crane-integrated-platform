@@ -57,9 +57,6 @@ describe('scene-site-geo', () => {
     expect(resolveSceneSiteGeo('philly-dock-2', {})?.timeZone).toBe(
       'America/New_York',
     );
-    expect(resolveSceneSiteGeo('goliath', undefined)?.timeZone).toBe(
-      'America/New_York',
-    );
   });
 
   describe('resolveSceneSiteLocation', () => {

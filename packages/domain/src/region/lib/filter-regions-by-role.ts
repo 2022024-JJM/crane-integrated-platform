@@ -4,7 +4,6 @@ import type { Region } from '../model/types';
 type RegionUserRole =
   | 'philly'
   | 'ocean'
-  | 'goliath'
   | 'mro'
   | 'mro2'
   | 'hmi'
@@ -20,14 +19,8 @@ export function filterRegionsByRole(
   switch (role) {
     case 'philly':
       return regions.filter((r) => r.siteType === 'philly-shipyard');
-    case 'goliath':
-      return regions.filter((r) => r.navigateTo.startsWith('/goliath-work'));
     case 'ocean':
-      return regions.filter(
-        (r) =>
-          !r.navigateTo.startsWith('/goliath-work') &&
-          r.siteType !== 'philly-shipyard',
-      );
+      return regions.filter((r) => r.siteType !== 'philly-shipyard');
     case 'mro':
       return [];
     case 'mro2':

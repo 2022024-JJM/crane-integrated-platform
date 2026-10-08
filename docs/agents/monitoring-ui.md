@@ -17,6 +17,7 @@
 | 알림 발신자 | `packages/features/src/3d/ui/scene-alert-notifier.tsx`, `packages/features/src/alarm/model/use-critical-alarm-banner.ts` |
 | 미니맵 | 계산 `packages/features/src/3d/lib/minimap.ts`, 픽셀 후처리 `lib/minimap-image.ts`, 스토어 `model/use-scene-minimap-store.ts` |
 | 미니맵 UI | `packages/features/src/3d/ui/scene-minimap-capture.tsx`, `ui/scene-minimap.tsx`, `ui/scene-minimap-toggle.tsx` |
+| 충돌 감지 표시(LiDAR 근접 존) | 씬 레이어 `packages/features/src/3d/ui/collision-guard-scene-layer.tsx`(`CollisionGuard` + 에고 카메라 리그), 토글 `ui/collision-guard-toggle.tsx`, HUD `ui/collision-guard-hud.tsx`, 도움말 `ui/collision-guard-help.tsx`, 존 빌더 `lib/goliath-collision-zone.ts`, 존 파생 `model/use-goliath-collision-zones.ts`, 스토어 `model/use-collision-guard-store.ts`, 감지 객체 시뮬레이션 `model/use-collision-guard-simulation.ts` |
 | 씬 독 | 껍데기 `packages/ui/src/organisms/scene-dock.tsx` (`SceneDockRail`, `SceneDockRailSeparator`), 상태 `packages/features/src/3d/model/use-scene-dock.ts`, 리듀서·영속화 `lib/dock-hover-state.ts`, `lib/dock-storage.ts` |
 | 워밍업 표시 | 단계 선택 `packages/features/src/3d/lib/scene-warmup-step.ts`, 훅 `model/use-scene-warmup-step.ts`, 표시 `ui/scene-warmup-indicator.tsx` |
 
@@ -69,6 +70,16 @@
 - 충돌 상태 — 활성일 때만(`docs/agents/3d-collision.md`).
 - 연결 — `use-realtime-connection-state.ts`. 시뮬레이션은 재생/정지(라벨에 `×배속 mm:ss`, `lib/sim-clock.ts`), 실시간은 cranes-lite WebSocket `subscribeState` 상태에 화면 반영 보류를 덧입힘, 3D 플레이는 `play3dPlaying` / `play3dPaused`.
 
+### 충돌 감지 표시 (LiDAR 근접 존, 필리 실외 화면만)
+
+골리앗 크레인 양쪽 다리의 LiDAR 감지 원과 감지 객체(사람·작업자·차량·지게차)를 그리는 표시 모드. 씬 객체 충돌 감지(`docs/agents/3d-collision.md`)와 별개다.
+
+- 켜는 곳은 `outdoor-work` 실시간 뷰가 `Monitoring3dView` 세 슬롯(`sceneExtras`·`toolbarExtras`·`overlayExtras`)에 넣는 `CollisionGuardSceneLayer`·`CollisionGuardToggle`·`CollisionGuardHud`/`CollisionGuardHelp` 다. region 의 `siteType === 'philly-shipyard'` 일 때만 넣는다 — 옥포 씬에도 같은 자산의 골리앗이 있어 씬 내용으로는 가르지 못한다.
+- 존은 그 region 씬에서 자산 `CODE_ASSETS.goliathCrane.id` 인 첫 모델의 배치(position·rotation Y)에서 `useGoliathCollisionZones` 가 파생한다. 크레인이 없으면 null 이고 토글·HUD·도움말·씬 레이어 모두 그리지 않는다. 존 높이는 `groundMaps`(바닥 지도) raycast 가 정하고 크레인 y 는 폴백이다.
+- 토글 ON 은 `CollisionGuardCameraRig` 가 에고 포즈(크레인 중심 부감)로 날아가고 OFF 에 진입 직전 시점으로 돌아온다. 분할 화면 중엔 토글이 비활성이다(가드 카메라가 기본 카메라를 움직이는데 분할에선 그 카메라가 보이지 않는다).
+- 감지 객체는 아직 시뮬레이션(`use-collision-guard-simulation.ts`)이 만든다. 훅 언마운트가 스토어 트랙과 `enabled` 를 함께 내린다 — 켠 채로 화면을 떠나면 다음 진입이 복귀 지점 없이 ON 으로 시작하기 때문이다.
+- 번역 키는 `monitoring:collisionGuard.*`.
+
 ### 경보 알림 채널
 
 `notifyAlert({ id, severity, title, description, toast? })` 가 설정에 따라 세 채널로 내보낸다.
@@ -99,7 +110,7 @@
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
-- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·골리앗 가드·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
+- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
 - `toolbarTrailing` 을 카메라 묶음 안에 끼우는 것은 dock 배치뿐이다. 가로 툴바는 앞에 붙는다.
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
 

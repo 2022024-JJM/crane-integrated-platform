@@ -27,13 +27,6 @@ export const regions: Region[] = [
     center: { lat: 34.865481, lng: 128.70622 },
   },
   {
-    id: 'goliath',
-    siteType: 'goliath-crane',
-    status: 'normal',
-    statusSummary: { normal: 1, warning: 0, critical: 0 },
-    navigateTo: '/goliath-work/goliath',
-  },
-  {
     id: 'philly-dock-2',
     siteType: 'philly-shipyard',
     status: 'warning',
