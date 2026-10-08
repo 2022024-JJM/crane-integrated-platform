@@ -12,6 +12,7 @@ import {
   sanitizeAssetStats,
   sanitizeAssetStatsTable,
   sanitizeAssetCategories,
+  sanitizeAssetViewPose,
   assertReadableAssetLibraryDocument,
   collectUnreadableAssetRecords,
 } from '../sanitize-asset-library';
@@ -648,5 +649,80 @@ describe('원본 크기(최적화 기록)', () => {
     for (const value of [0, -5, '100', Number.NaN, null, undefined]) {
       expect(withOriginal(value)).not.toHaveProperty('originalSizeBytes');
     }
+  });
+});
+
+describe('썸네일의 촬영 시점(thumbnail.view)', () => {
+  const ref = { storage: 'public', path: '/asset-library/thumbnails/a.png' };
+  const thumbnailWith = (view: unknown) =>
+    sanitizeAssetLibraryDocument({
+      assets: [
+        asset({
+          thumbnail: {
+            ref,
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            view,
+          } as never,
+        }),
+      ],
+    }).assets[0].thumbnail;
+  const view = {
+    direction: [0, 0, 1],
+    distance: 3.2,
+    targetOffset: [0.1, -0.2, 0],
+  };
+
+  it('온전한 자세는 그대로 남는다', () => {
+    expect(thumbnailWith(view)?.view).toEqual(view);
+  });
+
+  it('방향은 단위 벡터로 정규화해 남긴다', () => {
+    const result = thumbnailWith({ ...view, direction: [0, 0, 5] })?.view;
+    expect(result?.direction).toEqual([0, 0, 1]);
+    expect(result?.distance).toBe(3.2);
+  });
+
+  it('방향이 0 벡터·NaN·세 성분이 아니면 자세를 버리고 그림은 살린다', () => {
+    for (const direction of [
+      [0, 0, 0],
+      [Number.NaN, 0, 1],
+      [0, Number.POSITIVE_INFINITY, 0],
+      [1, 0],
+      ['1', '0', '0'],
+      null,
+    ]) {
+      const result = thumbnailWith({ ...view, direction });
+      expect(result?.ref).toEqual(ref);
+      expect(result).not.toHaveProperty('view');
+    }
+  });
+
+  it('거리가 0·음수·유한하지 않은 값이면 자세를 버린다', () => {
+    for (const distance of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, '3']) {
+      expect(thumbnailWith({ ...view, distance })).not.toHaveProperty('view');
+    }
+  });
+
+  it('대상 오프셋이 결손이거나 깨지면 자세를 버린다', () => {
+    for (const targetOffset of [undefined, [0, 0], [0, Number.NaN, 0], 'x']) {
+      expect(thumbnailWith({ ...view, targetOffset })).not.toHaveProperty(
+        'view',
+      );
+    }
+  });
+
+  it('view 가 없거나 객체가 아니면 필드를 두지 않는다(옛 문서)', () => {
+    for (const value of [undefined, null, 'iso', 3, []]) {
+      const result = thumbnailWith(value);
+      expect(result?.ref).toEqual(ref);
+      expect(result).not.toHaveProperty('view');
+    }
+  });
+
+  it('sanitizeAssetViewPose 는 객체가 아닌 입력에 null 을 돌려준다', () => {
+    for (const value of [null, undefined, 1, 'x', [1, 2, 3]]) {
+      expect(sanitizeAssetViewPose(value)).toBeNull();
+    }
+    expect(sanitizeAssetViewPose(view)).toEqual(view);
   });
 });

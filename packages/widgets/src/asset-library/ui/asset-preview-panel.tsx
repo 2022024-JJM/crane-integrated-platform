@@ -1,6 +1,5 @@
 import {
   ArrowUpRight,
-  Box as BoxIcon,
   ChevronLeft,
   ChevronRight,
   Star,
@@ -55,18 +54,16 @@ import { AssetLifecycle } from './asset-lifecycle';
 import { AssetModelViewer } from './asset-model-viewer';
 import { AssetThumbnail } from './asset-thumbnail';
 
-/**
- * 이보다 큰 3D 파일은 미리보기에서 바로 열지 않는다. 목록을 훑는 중에 수십 MB
- * 지도가 선택할 때마다 내려오면 훑기가 멈춘다 — 썸네일을 보이고, 원할 때
- * 3D 로 연다.
- */
-const AUTO_3D_MAX_BYTES = 6 * 1024 * 1024;
 const PREVIEW_MODE_STORAGE_KEY = 'crane:asset-library:preview-mode';
 
 function readPreviewMode(): PreviewMode {
   return getStorageItem(PREVIEW_MODE_STORAGE_KEY) === 'image' ? 'image' : '3d';
 }
-/** 자산을 올리고 이만큼 머물러야 3D 파일을 받는다 — 지나치는 자산은 받지 않는다. */
+/**
+ * 자산을 올리고 이만큼 머물러야 3D 파일을 받는다 — 지나치는 자산은 받지
+ * 않는다. 크기와 무관하게 모든 3D 자산이 같은 길을 탄다. 수십 MB 지도를 받기
+ * 싫으면 미리보기 방식을 이미지로 둔다.
+ */
 const OPEN_3D_DELAY_MS = 350;
 
 interface AssetPreviewPanelProps {
@@ -212,21 +209,16 @@ export function AssetPreviewPanel({
     .map((id) => allAssets.find((item) => item.id === id))
     .filter((item): item is AssetRecord => item !== undefined);
 
-  // 큰 파일을 3D 로 열겠다고 고른 자산. 다른 자산으로 넘어가면 다시 묻는다.
-  const [opened3dFor, setOpened3dFor] = useState<string | null>(null);
   // 이미지로 볼지 3D 로 볼지 — 브라우저마다 기억한다. 이미지로 두면 자산을
   // 넘길 때 파일을 받지 않는다.
   const [previewMode, setPreviewMode] = useState(readPreviewMode);
-  const small = sizeBytes !== null && sizeBytes <= AUTO_3D_MAX_BYTES;
   const settled = useSettled(asset.id, OPEN_3D_DELAY_MS);
-  const wants3d = small || opened3dFor === asset.id;
   // 돌려 볼 수 있는 자산 — 모델·지도(GLB)와 배경(파노라마).
   const interactive = mode === 'model' || mode === 'environment';
   const stage = resolvePreviewStage({
     previewMode,
     interactive,
     fileStatus: file.status,
-    wants3d,
     settled,
   });
   // 뷰어는 열기로 정해지면 바로 올리고, 파일 주소는 받아도 될 때 넘긴다.
@@ -314,7 +306,8 @@ export function AssetPreviewPanel({
         <div className="border-border relative aspect-[16/10] w-full border-b">
           {stage === 'opening' || stage === 'viewer' ? (
             // 자산마다 새로 마운트한다 — 앞 자산의 카메라가 남지 않게.
-            // 표시 상태는 탭이 기억해 둔 값으로 다시 시작한다.
+            // 표시 상태는 탭이 기억해 둔 값으로 다시 시작한다. 카메라는 썸네일을
+            // 찍은 각도에서 시작해 그림 → 3D 로 바뀔 때 구도가 튀지 않는다.
             mode === 'environment' ? (
               <AssetEnvironmentViewer
                 key={`${asset.id}@${version.version}`}
@@ -325,27 +318,11 @@ export function AssetPreviewPanel({
                 key={`${asset.id}@${version.version}`}
                 url={viewerUrl}
                 toolbar="compact"
+                initialView={asset.thumbnail?.view ?? null}
               />
             )
           ) : (
-            <>
-              <AssetThumbnail asset={asset} className="absolute inset-0" />
-              {stage === 'ask' ? (
-                <div className="absolute inset-x-0 bottom-3 flex justify-center">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="shadow-sm"
-                    onClick={() => setOpened3dFor(asset.id)}
-                  >
-                    <BoxIcon />
-                    {t('asset-library:preview.open3d', {
-                      size: formatBytes(sizeBytes),
-                    })}
-                  </Button>
-                </div>
-              ) : null}
-            </>
+            <AssetThumbnail asset={asset} className="absolute inset-0" />
           )}
           {/* 이미지 ↔ 3D — Unity Asset Manager 의 미리보기 띠처럼 그림 아래쪽에
               둔다. 돌려 볼 수 있는 자산에만 있다. */}

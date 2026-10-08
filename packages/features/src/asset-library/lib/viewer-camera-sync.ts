@@ -1,4 +1,5 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { AssetViewPose } from '@crane/domain/asset-library';
 import type { FramingBounds } from './viewer-framing';
 
 /**
@@ -15,15 +16,11 @@ export interface CameraPose {
   target: Vector3Tuple;
 }
 
-/** 경계에 대한 상대 자세. 길이는 전부 경계 구 반지름의 배수다. */
-export interface RelativeCameraPose {
-  /** 대상 → 카메라 방향(단위 벡터). */
-  direction: Vector3Tuple;
-  /** 카메라-대상 거리 / 반지름. */
-  distance: number;
-  /** (대상 − 경계 중심) / 반지름. */
-  targetOffset: Vector3Tuple;
-}
+/**
+ * 경계에 대한 상대 자세. 길이는 전부 경계 구 반지름의 배수다. 썸네일에
+ * 저장되는 촬영 시점(`AssetThumbnail.view`)과 같은 모양이다.
+ */
+export type RelativeCameraPose = AssetViewPose;
 
 interface Sphere {
   center: Vector3Tuple;

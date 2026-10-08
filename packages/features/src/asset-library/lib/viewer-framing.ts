@@ -1,4 +1,5 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { AssetViewPose } from '@crane/domain/asset-library';
 
 /**
  * 자산 뷰어의 카메라 프레이밍 — 경계 상자를 화면에 꽉 차게 담는 포즈를
@@ -70,6 +71,47 @@ export function computeFramingPose(
   const distance = (radius / Math.sin(narrow / 2)) * padding;
 
   const direction = normalize(PRESET_DIRECTIONS[preset]);
+  return {
+    position: [
+      target[0] + direction[0] * distance,
+      target[1] + direction[1] * distance,
+      target[2] + direction[2] * distance,
+    ],
+    target,
+    distance,
+    radius,
+  };
+}
+
+/**
+ * 저장된 상대 자세(썸네일의 촬영 시점)를 이 경계에 되돌린 포즈. 프리셋
+ * 프레이밍과 같은 모양을 돌려주므로 뷰어가 두 경로를 한 함수로 적용한다 —
+ * near/far·줌 범위에 쓰는 거리·반지름도 함께 나온다. 퇴화한 상자(크기 0)는
+ * 반지름 1 로 본다.
+ */
+export function computeViewFramingPose(
+  bounds: FramingBounds,
+  view: AssetViewPose,
+): FramingPose {
+  const center: Vector3Tuple = [
+    (bounds.min[0] + bounds.max[0]) / 2,
+    (bounds.min[1] + bounds.max[1]) / 2,
+    (bounds.min[2] + bounds.max[2]) / 2,
+  ];
+  const radius =
+    0.5 *
+      Math.hypot(
+        bounds.max[0] - bounds.min[0],
+        bounds.max[1] - bounds.min[1],
+        bounds.max[2] - bounds.min[2],
+      ) || 1;
+  const target: Vector3Tuple = [
+    center[0] + view.targetOffset[0] * radius,
+    center[1] + view.targetOffset[1] * radius,
+    center[2] + view.targetOffset[2] * radius,
+  ];
+  const distance = view.distance * radius;
+  const direction = normalize(view.direction);
   return {
     position: [
       target[0] + direction[0] * distance,

@@ -396,19 +396,23 @@ function AssetDetailView({
     if (!needsThumbnail || !isCurrentVersion) return;
     if (autoThumbnailTriedRef.current) return;
     autoThumbnailTriedRef.current = true;
-    void viewerRef.current?.captureThumbnail().then((blob) => {
+    void viewerRef.current?.captureThumbnail().then((capture) => {
       // 자동 생성은 이력에 남기지 않는다(행위자 null).
-      if (blob) void saveThumbnail(asset.id, blob, null);
+      if (capture) {
+        void saveThumbnail(asset.id, capture.blob, null, capture.view);
+      }
     });
   }, [asset.id, isCurrentVersion, needsThumbnail, saveThumbnail]);
 
+  // 그림과 함께 찍은 순간의 카메라 자세를 저장한다 — 다음에 이 자산을 열면
+  // 썸네일과 같은 각도로 시작한다.
   const handleSaveThumbnail = async () => {
-    const blob = await viewerRef.current?.captureThumbnail();
-    if (!blob) {
+    const capture = await viewerRef.current?.captureThumbnail();
+    if (!capture) {
       toast.error(t('asset-library:toast.thumbnailFailed'));
       return;
     }
-    const ok = await saveThumbnail(asset.id, blob, actor);
+    const ok = await saveThumbnail(asset.id, capture.blob, actor, capture.view);
     if (ok) toast.success(t('asset-library:toast.thumbnailSaved'));
     else toast.error(t('asset-library:toast.thumbnailFailed'));
   };
@@ -625,6 +629,7 @@ function AssetDetailView({
               url={file.url}
               titleBlock={titleBlock}
               handleRef={viewerRef}
+              initialView={asset.thumbnail?.view ?? null}
               onLoaded={handleLoaded}
               onReady={handleReady}
               onSaveThumbnail={() => void handleSaveThumbnail()}

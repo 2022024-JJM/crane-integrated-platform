@@ -325,7 +325,7 @@
       "light": "Clarum",
       "blueprint": "Caeruleum"
     },
-    "saveThumbnail": "Hunc aspectum ut imagunculam serva",
+    "saveThumbnail": "Hunc aspectum ut imagunculam serva — proximo hinc aperietur",
     "camera": "Prospectus",
     "rotateCcw": "Contra horologii morem {{degrees}}° verte",
     "rotateCw": "Horologii more {{degrees}}° verte",
@@ -412,7 +412,6 @@
     "previous": "Res prior",
     "next": "Res sequens",
     "close": "Praevisionem claude",
-    "open3d": "In 3D specta ({{size}})",
     "placements": "In scaenis",
     "notPlaced": "Nusquam posita",
     "openDetail": "Singula aperi",

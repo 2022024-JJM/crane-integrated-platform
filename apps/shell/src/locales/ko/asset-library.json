@@ -325,7 +325,7 @@
       "light": "밝음",
       "blueprint": "청사진"
     },
-    "saveThumbnail": "지금 화면을 썸네일로 저장",
+    "saveThumbnail": "지금 화면을 썸네일로 저장 — 다음에 열 때 이 시점에서 시작",
     "camera": "시점",
     "rotateCcw": "반시계 방향으로 {{degrees}}° 돌리기",
     "rotateCw": "시계 방향으로 {{degrees}}° 돌리기",
@@ -412,7 +412,6 @@
     "previous": "이전 자산",
     "next": "다음 자산",
     "close": "미리보기 닫기",
-    "open3d": "3D로 보기 ({{size}})",
     "placements": "씬 배치",
     "notPlaced": "놓인 곳 없음",
     "openDetail": "상세 열기",

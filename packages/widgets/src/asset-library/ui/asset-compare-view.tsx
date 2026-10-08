@@ -6,6 +6,7 @@ import {
   type AssetRecord,
   type AssetStats,
   type AssetVersion,
+  type AssetViewPose,
 } from '@crane/domain/asset-library';
 import {
   createPlaybackClock,
@@ -37,6 +38,8 @@ interface ComparePaneProps {
   cameraSync: ViewerCameraSync | null;
   /** 양쪽이 같이 읽는 애니메이션 시계. 기준 쪽이 민다. */
   playbackClock: PlaybackClock;
+  /** 처음 열 때의 카메라 자세(자산 썸네일의 촬영 시점). 양쪽이 같은 값이다. */
+  initialView: AssetViewPose | null;
   onMeasured: (version: number, stats: AssetStats) => void;
 }
 
@@ -47,6 +50,7 @@ function ComparePane({
   onDisplayChange,
   cameraSync,
   playbackClock,
+  initialView,
   onMeasured,
 }: ComparePaneProps) {
   const { t } = useTranslation();
@@ -95,6 +99,7 @@ function ComparePane({
               : undefined
           }
           playbackSync={{ clock: playbackClock, drive: base }}
+          initialView={initialView}
           cornerLabel={label}
           onLoaded={({ stats }) => onMeasured(version.version, stats)}
         />
@@ -157,6 +162,9 @@ export function AssetCompareView({
   // 맞물린 채 자동 회전을 양쪽에서 돌리면 서로 자세를 주고받으며 겹친다 —
   // 기준 쪽만 돌리고 다른 쪽은 따라오게 한다.
   const followerDisplay = linked ? { ...display, turntable: false } : display;
+  // 두 버전 다 썸네일을 찍은 각도에서 시작한다 — 상대 자세라 크기가 달라도
+  // 같은 구도다.
+  const initialView = asset.thumbnail?.view ?? null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -213,6 +221,7 @@ export function AssetCompareView({
           onDisplayChange={setDisplay}
           cameraSync={linked ? bus : null}
           playbackClock={playbackClock}
+          initialView={initialView}
           onMeasured={onMeasured}
         />
         <ComparePane
@@ -222,6 +231,7 @@ export function AssetCompareView({
           onDisplayChange={setDisplay}
           cameraSync={linked ? bus : null}
           playbackClock={playbackClock}
+          initialView={initialView}
           onMeasured={onMeasured}
         />
       </div>

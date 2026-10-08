@@ -38,6 +38,7 @@ import {
   type AssetThumbnail,
   type AssetVersion,
   type AssetVersionStatus,
+  type AssetViewPose,
 } from '../model/types';
 
 /**
@@ -239,11 +240,41 @@ function sanitizeHistory(value: unknown): AssetHistoryEntry[] {
   return entries.slice(-ASSET_HISTORY_MAX);
 }
 
+/**
+ * 촬영 시점의 카메라 자세. 방향은 길이 0 이 아닌 유한 벡터만 받아 정규화하고,
+ * 거리는 유한한 양수만 받는다. 하나라도 틀리면 자세 전체를 버린다 — 반쯤 맞는
+ * 자세로 열면 카메라가 물체 속이나 화면 밖에 놓인다.
+ */
+export function sanitizeAssetViewPose(value: unknown): AssetViewPose | null {
+  if (!isObject(value)) return null;
+  const direction = toVector3(value.direction);
+  const targetOffset = toVector3(value.targetOffset);
+  if (!direction || !targetOffset) return null;
+  if (!isFiniteNumber(value.distance) || value.distance <= 0) return null;
+  const length = Math.hypot(direction[0], direction[1], direction[2]);
+  if (!(length > 0)) return null;
+  return {
+    direction: [
+      direction[0] / length,
+      direction[1] / length,
+      direction[2] / length,
+    ],
+    distance: value.distance,
+    targetOffset,
+  };
+}
+
 function sanitizeThumbnail(value: unknown): AssetThumbnail | undefined {
   if (!isObject(value)) return undefined;
   const ref = sanitizeFileRef(value.ref);
   if (!ref) return undefined;
-  return { ref, updatedAt: toTimestamp(value.updatedAt) };
+  // 자세가 깨져도 그림은 살린다 — 기본 프레이밍으로 열릴 뿐이다.
+  const view = sanitizeAssetViewPose(value.view);
+  return {
+    ref,
+    updatedAt: toTimestamp(value.updatedAt),
+    ...(view ? { view } : {}),
+  };
 }
 
 function sanitizeIdList(value: unknown, max: number): string[] {

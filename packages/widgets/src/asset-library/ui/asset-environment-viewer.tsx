@@ -22,7 +22,10 @@ import { cn } from '@crane/core/lib/utils';
 import { TooltipProvider } from '@crane/ui/molecules/tooltip';
 import { VIEWER_GLASS_BAR } from '../lib/asset-presentation';
 import { renderCoverThumbnail } from '../lib/thumbnail-crop';
-import type { AssetViewerHandle } from './asset-model-viewer';
+import type {
+  AssetThumbnailCapture,
+  AssetViewerHandle,
+} from './asset-model-viewer';
 import {
   ViewerErrorBoundary,
   ViewerIconButton,
@@ -116,9 +119,15 @@ function Panorama({
           THUMBNAIL_WIDTH,
           THUMBNAIL_HEIGHT,
         );
-        return new Promise<Blob | null>((resolve) => {
+        // 배경에는 물체가 없어 경계 기준 자세가 없다 — 그림만 저장한다.
+        return new Promise<AssetThumbnailCapture | null>((resolve) => {
           if (!canvas) resolve(null);
-          else canvas.toBlob(resolve, 'image/png');
+          else {
+            canvas.toBlob(
+              (blob) => resolve(blob ? { blob, view: null } : null),
+              'image/png',
+            );
+          }
         });
       },
     }),

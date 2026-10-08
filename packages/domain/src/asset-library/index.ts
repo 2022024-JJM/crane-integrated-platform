@@ -15,6 +15,7 @@ export type {
   AssetThumbnail,
   AssetVersion,
   AssetVersionStatus,
+  AssetViewPose,
 } from './model/types';
 export {
   ASSET_COLLECTION_NAME_MAX,
@@ -61,6 +62,7 @@ export {
   sanitizeAssetStats,
   sanitizeAssetStatsTable,
   sanitizeAssetCategories,
+  sanitizeAssetViewPose,
 } from './lib/sanitize-asset-library';
 export type {
   AddAssetVersionInput,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { computeFramingPose, VIEW_PRESETS } from '../viewer-framing';
+import { toRelativeCameraPose } from '../viewer-camera-sync';
+import {
+  computeFramingPose,
+  computeViewFramingPose,
+  VIEW_PRESETS,
+} from '../viewer-framing';
 
 const cube = { min: [-1, -1, -1], max: [1, 1, 1] } as const;
 const bounds = { min: [...cube.min], max: [...cube.max] } as {
@@ -69,5 +74,87 @@ describe('computeFramingPose', () => {
       expect(pose.position.every(Number.isFinite)).toBe(true);
       expect(pose.distance).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('computeViewFramingPose', () => {
+  const box = { min: [0, 0, 0], max: [4, 2, 6] } as typeof bounds;
+  const radius = 0.5 * Math.hypot(4, 2, 6);
+
+  it('대상은 중심 + 오프셋×반지름, 거리는 배수×반지름, 카메라는 그 방향에 선다', () => {
+    const pose = computeViewFramingPose(box, {
+      direction: [0, 0, 1],
+      distance: 3,
+      targetOffset: [0.5, 0, 0],
+    });
+    expect(pose.radius).toBeCloseTo(radius);
+    expect(pose.distance).toBeCloseTo(3 * radius);
+    expect(pose.target[0]).toBeCloseTo(2 + 0.5 * radius);
+    expect(pose.target[1]).toBeCloseTo(1);
+    expect(pose.target[2]).toBeCloseTo(3);
+    expect(pose.position[0]).toBeCloseTo(pose.target[0]);
+    expect(pose.position[2]).toBeCloseTo(3 + 3 * radius);
+    expect(distanceBetween(pose.position, pose.target)).toBeCloseTo(
+      pose.distance,
+    );
+  });
+
+  it('찍은 자세(toRelativeCameraPose)를 같은 경계에 되돌리면 원래 카메라다', () => {
+    const camera = {
+      position: [7, 5, -3] as [number, number, number],
+      target: [1.5, 0.5, 2] as [number, number, number],
+    };
+    const relative = toRelativeCameraPose(camera, box)!;
+    const pose = computeViewFramingPose(box, relative);
+    pose.position.forEach((v, i) => expect(v).toBeCloseTo(camera.position[i]));
+    pose.target.forEach((v, i) => expect(v).toBeCloseTo(camera.target[i]));
+  });
+
+  it('크기가 2배인 경계에서는 거리도 2배다 — 새 버전이 커져도 같은 구도', () => {
+    const view = {
+      direction: [1, 1, 1] as [number, number, number],
+      distance: 2.5,
+      targetOffset: [0, 0, 0] as [number, number, number],
+    };
+    const small = computeViewFramingPose(bounds, view);
+    const large = computeViewFramingPose(
+      { min: [-2, -2, -2], max: [2, 2, 2] },
+      view,
+    );
+    expect(large.distance).toBeCloseTo(small.distance * 2);
+    expect(large.radius).toBeCloseTo(small.radius * 2);
+  });
+
+  it('방향이 단위 벡터가 아니어도 거리는 그대로다(정규화)', () => {
+    const pose = computeViewFramingPose(bounds, {
+      direction: [0, 0, 10],
+      distance: 3,
+      targetOffset: [0, 0, 0],
+    });
+    expect(distanceBetween(pose.position, pose.target)).toBeCloseTo(
+      pose.distance,
+    );
+    expect(pose.position[2]).toBeCloseTo(3 * pose.radius);
+  });
+
+  it('크기 0 인 상자는 반지름 1 로 본다', () => {
+    const pose = computeViewFramingPose(
+      { min: [5, 5, 5], max: [5, 5, 5] },
+      { direction: [0, 0, 1], distance: 3, targetOffset: [0, 0, 0] },
+    );
+    expect(pose.radius).toBe(1);
+    expect(pose.distance).toBe(3);
+    expect(pose.position).toEqual([5, 5, 8]);
+  });
+
+  it('프리셋 프레이밍과 같은 모양(FramingPose)을 돌려준다', () => {
+    const fit = computeFramingPose(bounds, 35, 1.5, 'iso');
+    const pose = computeViewFramingPose(bounds, {
+      direction: [1, 0.72, 1.12],
+      distance: fit.distance / fit.radius,
+      targetOffset: [0, 0, 0],
+    });
+    expect(Object.keys(pose).sort()).toEqual(Object.keys(fit).sort());
+    pose.position.forEach((v, i) => expect(v).toBeCloseTo(fit.position[i]));
   });
 });

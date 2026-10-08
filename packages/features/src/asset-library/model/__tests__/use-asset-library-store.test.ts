@@ -494,6 +494,21 @@ describe('addVersion·saveThumbnail', () => {
     expect(store.getState().assets[0].thumbnail).toBeDefined();
     expect(store.getState().assets[0].history).toEqual([]);
   });
+
+  it('찍을 때의 카메라 자세를 썸네일에 함께 남기고, 없이 다시 찍으면 지운다', async () => {
+    const { store } = setup();
+    await store.getState().load();
+    const view = {
+      direction: [0, 0, 1] as [number, number, number],
+      distance: 3,
+      targetOffset: [0, 0, 0] as [number, number, number],
+    };
+    expect(await store.getState().saveThumbnail('okpo-ttc', new Blob(['p']), 'me', view)).toBe(true);
+    expect(store.getState().assets[0].thumbnail?.view).toEqual(view);
+    // 자세 없이 찍은 썸네일(배경 등)은 옛 자세를 물려받지 않는다.
+    expect(await store.getState().saveThumbnail('okpo-ttc', new Blob(['p']), 'me', null)).toBe(true);
+    expect(store.getState().assets[0].thumbnail).not.toHaveProperty('view');
+  });
 });
 
 describe('removeAsset', () => {

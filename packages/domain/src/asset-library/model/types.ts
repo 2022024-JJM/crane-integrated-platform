@@ -144,9 +144,28 @@ export interface AssetHistoryEntry {
   fields?: string[];
 }
 
+/**
+ * 물체 경계에 대한 카메라의 상대 자세. 길이는 전부 경계 구 반지름의 배수라
+ * 새 버전에서 모델 크기가 바뀌어도 같은 구도가 된다. 뷰어의 카메라 맞물림과
+ * 썸네일의 촬영 시점이 같은 모양을 쓴다.
+ */
+export interface AssetViewPose {
+  /** 대상 → 카메라 방향(단위 벡터). */
+  direction: Vector3Tuple;
+  /** 카메라-대상 거리 / 반지름. */
+  distance: number;
+  /** (대상 − 경계 중심) / 반지름. */
+  targetOffset: Vector3Tuple;
+}
+
 export interface AssetThumbnail {
   ref: AssetFileRef;
   updatedAt: string;
+  /**
+   * 찍을 때의 카메라 자세. 뷰어가 이 자산을 열 때 이 자세로 시작한다 — 썸네일과
+   * 처음 보이는 화면이 같은 각도다. 없으면 기본 프레이밍으로 연다.
+   */
+  view?: AssetViewPose;
 }
 
 /**

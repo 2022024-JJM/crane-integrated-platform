@@ -39,6 +39,7 @@ import {
   formatMeters,
   pickGridStep,
   type AssetStats,
+  type AssetViewPose,
 } from '@crane/domain/asset-library';
 import { VIEWER_GLASS_BAR } from '../lib/asset-presentation';
 import { renderThumbnail } from '../lib/thumbnail-crop';
@@ -56,6 +57,7 @@ import {
   computeFramingPose,
   computeObjectStats,
   computeRenderBounds,
+  computeViewFramingPose,
   countLodLevels,
   createPlaybackClock,
   createViewModeMaterials,
@@ -153,9 +155,19 @@ const BACKGROUND_STYLE: Record<
   },
 };
 
+export interface AssetThumbnailCapture {
+  blob: Blob;
+  /**
+   * 찍은 순간의 카메라 자세(물체 경계 기준). 뷰어가 다음에 이 자산을 열 때
+   * 같은 각도로 시작하도록 썸네일과 함께 저장된다. 물체가 없는 뷰어(배경)는
+   * null 이다.
+   */
+  view: AssetViewPose | null;
+}
+
 export interface AssetViewerHandle {
   /** 지금 보이는 시점을 정사각 투명 PNG 로 찍는다. 도우미는 빠진다. */
-  captureThumbnail: () => Promise<Blob | null>;
+  captureThumbnail: () => Promise<AssetThumbnailCapture | null>;
 }
 
 export interface AssetViewerLoaded {
@@ -176,6 +188,12 @@ interface AssetModelViewerProps {
   onReady?: () => void;
   /** 썸네일 저장 버튼. 없으면 버튼을 그리지 않는다. */
   onSaveThumbnail?: () => void;
+  /**
+   * 처음 열 때의 카메라 자세(썸네일의 촬영 시점). 없으면 기본 프레이밍(iso)
+   * 으로 연다. 모델이 올라오는 순간에만 읽는다 — 보는 중에 바뀌어도(썸네일을
+   * 다시 찍어 저장) 카메라를 되돌리지 않는다.
+   */
+  initialView?: AssetViewPose | null;
   /**
    * 조작 도구. `full` 은 전부, `compact` 는 좁은 자리(목록의 미리보기)에 맞는
    * 표시 토글만, `none` 은 없음(나란히 보기의 오른쪽).
@@ -332,15 +350,25 @@ function settleControls(controls: OrbitControlsImpl) {
   controls.enableDamping = damping;
 }
 
+function toFramingBounds(bounds: Box3): FramingBounds {
+  return {
+    min: bounds.min.toArray() as Vector3Tuple,
+    max: bounds.max.toArray() as Vector3Tuple,
+  };
+}
+
 function ViewerRig({
   bounds,
   turntable,
+  initialView,
   handleRef,
   onFramed,
   cameraSync,
 }: {
   bounds: Box3 | null;
   turntable: boolean;
+  /** 모델이 올라올 때 시작할 자세. 없으면 iso. */
+  initialView: AssetViewPose | null;
   handleRef: Ref<ViewerRigHandle>;
   /** 새 모델에 카메라를 맞춘 직후. 이때부터 화면을 찍을 수 있다. */
   onFramed: () => void;
@@ -352,34 +380,44 @@ function ViewerRig({
   const invalidate = useThree((state) => state.invalidate);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
-  const frame = useCallback(
-    (preset: ViewPreset) => {
+  /**
+   * 경계에 카메라를 맞춘다. `view` 가 있으면 그 상대 자세로 시작하고 없으면
+   * 프리셋 방향에서 전체가 보이게 선다. 깊이 범위와 줌 범위는 시작 각도와
+   * 무관하게 전체를 담는 포즈로 정한다 — 가까이서 찍은 시점으로 열어도 전체가
+   * 보일 때까지 물러날 수 있다.
+   */
+  const applyFraming = useCallback(
+    (preset: ViewPreset, view: AssetViewPose | null) => {
       const controls = controlsRef.current;
       if (!bounds || bounds.isEmpty() || !controls) return;
       const { gl } = getState();
       const camera = getState().camera as PerspectiveCamera;
       const canvas = gl.domElement;
-      const pose = computeFramingPose(
-        {
-          min: bounds.min.toArray() as Vector3Tuple,
-          max: bounds.max.toArray() as Vector3Tuple,
-        },
+      const framing = toFramingBounds(bounds);
+      const fit = computeFramingPose(
+        framing,
         camera.fov,
         canvas.clientWidth / Math.max(1, canvas.clientHeight),
         preset,
       );
+      const pose = view ? computeViewFramingPose(framing, view) : fit;
       camera.position.fromArray(pose.position);
       // 물체 크기에 맞춘 깊이 범위 — 수 cm 부품과 수 km 지형을 같은 뷰어로 본다.
-      camera.near = Math.max(pose.radius / 500, 0.001);
-      camera.far = (pose.distance + pose.radius) * 12;
+      camera.near = Math.max(fit.radius / 500, 0.001);
+      camera.far = (fit.distance + fit.radius) * 12;
       camera.updateProjectionMatrix();
       controls.target.fromArray(pose.target);
-      controls.minDistance = pose.radius * 0.05;
-      controls.maxDistance = pose.distance * 6;
+      controls.minDistance = fit.radius * 0.05;
+      controls.maxDistance = fit.distance * 6;
       settleControls(controls);
       invalidate();
     },
     [bounds, getState, invalidate],
+  );
+
+  const frame = useCallback(
+    (preset: ViewPreset) => applyFraming(preset, null),
+    [applyFraming],
   );
 
   const orbit = useCallback(
@@ -402,14 +440,22 @@ function ViewerRig({
     [getState, invalidate],
   );
 
-  // 새 모델이 준비되면 전체가 보이게 맞춘다. 캔버스 안은 별도의 React 루트라
-  // 바깥 상태가 여기까지 오는 시점이 프레임과 맞물리지 않는다 — "찍어도 되는
-  // 때" 는 바깥에서 프레임 수로 짐작하지 않고 여기서 알린다.
+  // 시작 자세는 모델이 올라오는 순간에만 읽는다 — 썸네일을 다시 찍어 저장하면
+  // 바깥의 값이 바뀌지만, 그때 카메라를 되돌리면 돌고 있던 턴테이블이 튄다.
+  const initialViewRef = useRef(initialView);
+  useEffect(() => {
+    initialViewRef.current = initialView;
+  }, [initialView]);
+
+  // 새 모델이 준비되면 저장된 시점(없으면 iso)으로 전체가 보이게 맞춘다. 캔버스
+  // 안은 별도의 React 루트라 바깥 상태가 여기까지 오는 시점이 프레임과 맞물리지
+  // 않는다 — "찍어도 되는 때" 는 바깥에서 프레임 수로 짐작하지 않고 여기서
+  // 알린다.
   useEffect(() => {
     if (!bounds || bounds.isEmpty()) return;
-    frame('iso');
+    applyFraming('iso', initialViewRef.current);
     onFramed();
-  }, [bounds, frame, onFramed]);
+  }, [applyFraming, bounds, onFramed]);
 
   // 카메라 맞물림 — 내 카메라가 움직이면 물체 기준 상대 자세로 내보내고,
   // 다른 뷰어가 보낸 자세는 내 물체의 경계로 되돌려 적용한다. 적용 중에 나는
@@ -421,10 +467,7 @@ function ViewerRig({
     if (!syncBus || !syncId || !controls || !bounds || bounds.isEmpty()) {
       return;
     }
-    const framing: FramingBounds = {
-      min: bounds.min.toArray() as Vector3Tuple,
-      max: bounds.max.toArray() as Vector3Tuple,
-    };
+    const framing = toFramingBounds(bounds);
     let applying = false;
     const handleChange = () => {
       if (applying) return;
@@ -461,6 +504,7 @@ function ViewerRig({
       orbit,
       captureThumbnail: () => {
         const { camera, gl, scene } = getState();
+        const controls = controlsRef.current;
         const helpers = scene.getObjectByName(HELPERS_GROUP_NAME);
         const wasVisible = helpers?.visible ?? false;
         if (helpers) helpers.visible = false;
@@ -468,15 +512,32 @@ function ViewerRig({
         // 그리기 버퍼는 이 태스크가 끝나면 비워질 수 있다 — 렌더 직후
         // 동기로 2D 캔버스에 옮겨 둔다.
         const canvas = renderThumbnail(gl.domElement, THUMBNAIL_SIZE);
+        // 카메라 자세도 같은 동기 구간에서 읽는다 — 턴테이블이 도는 중이라도
+        // 그림과 자세가 어긋나지 않는다.
+        const view =
+          bounds && !bounds.isEmpty() && controls
+            ? toRelativeCameraPose(
+                {
+                  position: camera.position.toArray() as Vector3Tuple,
+                  target: controls.target.toArray() as Vector3Tuple,
+                },
+                toFramingBounds(bounds),
+              )
+            : null;
         if (helpers) helpers.visible = wasVisible;
         invalidate();
-        return new Promise<Blob | null>((resolve) => {
+        return new Promise<AssetThumbnailCapture | null>((resolve) => {
           if (!canvas) resolve(null);
-          else canvas.toBlob(resolve, 'image/png');
+          else {
+            canvas.toBlob(
+              (blob) => resolve(blob ? { blob, view } : null),
+              'image/png',
+            );
+          }
         });
       },
     }),
-    [frame, getState, invalidate, orbit],
+    [bounds, frame, getState, invalidate, orbit],
   );
 
   return (
@@ -636,6 +697,7 @@ export function AssetModelViewer({
   onLoaded,
   onReady,
   onSaveThumbnail,
+  initialView = null,
   toolbar = 'full',
   display: controlledDisplay,
   onDisplayChange,
@@ -812,6 +874,7 @@ export function AssetModelViewer({
               <ViewerRig
                 bounds={info?.bounds ?? null}
                 turntable={turntable}
+                initialView={initialView}
                 handleRef={rigRef}
                 onFramed={handleFramed}
                 cameraSync={cameraSync}

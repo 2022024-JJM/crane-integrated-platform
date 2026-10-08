@@ -91,11 +91,31 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/okpo-goliath.png"
         },
-        "updatedAt": "2026-10-01T08:04:36.274Z"
+        "updatedAt": "2026-10-08T00:00:24.407Z",
+        "view": {
+          "direction": [
+            0.672602922448889,
+            0.43238759300285684,
+            -0.600538323615079
+          ],
+          "distance": 3.824335951936498,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
       "updatedAt": "2026-09-23T07:45:15.000Z",
-      "history": []
+      "history": [
+        {
+          "id": "296a86a3-5c6d-439b-8ddd-01a5d3362dc4",
+          "at": "2026-10-08T00:00:24.407Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
     },
     {
       "id": "okpo-oc",
@@ -134,11 +154,31 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/okpo-oc.png"
         },
-        "updatedAt": "2026-10-01T08:04:41.901Z"
+        "updatedAt": "2026-10-08T00:00:29.854Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.43238759300285706,
+            -0.6005383236150792
+          ],
+          "distance": 3.8243359519364972,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
       "updatedAt": "2026-09-23T07:45:15.000Z",
-      "history": []
+      "history": [
+        {
+          "id": "01d48e19-92f9-43c2-9226-4fd7dbe6aac6",
+          "at": "2026-10-08T00:00:29.854Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
     },
     {
       "id": "okpo-tc",
@@ -177,11 +217,31 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/okpo-tc.png"
         },
-        "updatedAt": "2026-10-01T08:04:47.307Z"
+        "updatedAt": "2026-10-08T00:00:34.517Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.43238759300285706,
+            -0.600538323615079
+          ],
+          "distance": 3.8243359519364963,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
       "updatedAt": "2026-09-23T07:45:15.000Z",
-      "history": []
+      "history": [
+        {
+          "id": "fc1e01fa-f127-4193-8fa2-d8c9d107df2b",
+          "at": "2026-10-08T00:00:34.517Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
     },
     {
       "id": "okpo-ttc",
@@ -220,11 +280,31 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/okpo-ttc.png"
         },
-        "updatedAt": "2026-10-01T08:04:52.082Z"
+        "updatedAt": "2026-10-08T00:00:39.595Z",
+        "view": {
+          "direction": [
+            0.6726029224488888,
+            0.43238759300285706,
+            -0.6005383236150794
+          ],
+          "distance": 3.8243359519364963,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
       "updatedAt": "2026-09-23T07:45:15.000Z",
-      "history": []
+      "history": [
+        {
+          "id": "93684333-9ce9-44dc-bed7-dbba8a8c74b4",
+          "at": "2026-10-08T00:00:39.595Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
     },
     {
       "id": "llc-002",
@@ -437,7 +517,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/hanwha-ocean-lngc-174k.png"
         },
-        "updatedAt": "2026-10-01T08:05:13.264Z"
+        "updatedAt": "2026-10-08T00:00:02.010Z",
+        "view": {
+          "direction": [
+            0.6726029224488886,
+            0.43238759300285706,
+            -0.6005383236150793
+          ],
+          "distance": 3.824335951936497,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-04T02:07:44.000Z",
       "updatedAt": "2026-10-06T04:18:22.072Z",
@@ -459,13 +552,19 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "ab3f37b1-8303-4d1f-8d85-d9260dbc0e5f",
+          "at": "2026-10-08T00:00:02.010Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
     {
       "id": "1p-3bay",
       "kind": "model",
-      "name": "1P 3Bay-test",
+      "name": "1P 3Bay",
       "description": "",
       "categories": [
         "indoor",
@@ -499,10 +598,23 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/1p-3bay.png"
         },
-        "updatedAt": "2026-10-01T06:05:50.718Z"
+        "updatedAt": "2026-10-07T23:50:15.525Z",
+        "view": {
+          "direction": [
+            0.6726119232866119,
+            0.43237210348303046,
+            -0.6005393948629388
+          ],
+          "distance": 3.8243359519364963,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-10-01T11:40:28.519Z",
+      "updatedAt": "2026-10-08T00:02:41.025Z",
       "history": [
         {
           "id": "id-mup4rta7-l0ts6p3k",
@@ -514,6 +626,21 @@
           "id": "id-mupgq5ev-1df0a3vq",
           "at": "2026-10-01T11:40:28.519Z",
           "actor": "crane.philly",
+          "action": "metadata",
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "eb875f87-831d-4224-87b8-86aa94ed0c70",
+          "at": "2026-10-07T23:50:15.525Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "7fb40097-c827-4f49-a2e2-47aa1c425a68",
+          "at": "2026-10-08T00:02:41.025Z",
+          "actor": "crane.ocean",
           "action": "metadata",
           "fields": [
             "name"
@@ -558,7 +685,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/3p.png"
         },
-        "updatedAt": "2026-10-01T08:05:19.045Z"
+        "updatedAt": "2026-10-07T23:50:22.570Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.43238759300285706,
+            -0.6005383236150791
+          ],
+          "distance": 3.8243359519364977,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-10-02T01:53:00.395Z",
@@ -571,6 +711,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "05a9551e-add1-4ac0-b1df-312978ed7470",
+          "at": "2026-10-07T23:50:22.570Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -611,11 +757,31 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/5p-1bay.png"
         },
-        "updatedAt": "2026-10-01T08:05:25.135Z"
+        "updatedAt": "2026-10-07T23:50:29.946Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.43238759300285684,
+            -0.6005383236150791
+          ],
+          "distance": 3.8243359519364972,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-09-09T22:19:11.000Z",
-      "history": []
+      "history": [
+        {
+          "id": "2fb496b4-f87f-4bd2-9cb8-9d187711b2f1",
+          "at": "2026-10-07T23:50:29.946Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
     },
     {
       "id": "5p-2bay",
@@ -654,11 +820,31 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/5p-2bay.png"
         },
-        "updatedAt": "2026-10-01T08:05:31.292Z"
+        "updatedAt": "2026-10-07T23:50:34.246Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.43238759300285706,
+            -0.600538323615079
+          ],
+          "distance": 3.8243359519364972,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-09-09T22:19:11.000Z",
-      "history": []
+      "history": [
+        {
+          "id": "2023f021-8657-494e-88ef-8b5d15278af4",
+          "at": "2026-10-07T23:50:34.246Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
     },
     {
       "id": "c-171",
@@ -1476,7 +1662,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-okpo.png"
         },
-        "updatedAt": "2026-10-01T06:00:11.773Z"
+        "updatedAt": "2026-10-08T00:54:06.481Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018984,
+            0.0014999983125020468
+          ],
+          "distance": 3.824335951936498,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-10-06T04:21:19.890Z",
@@ -1489,6 +1688,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "4b998e73-af20-4545-82ab-85efd0169b77",
+          "at": "2026-10-08T00:54:06.481Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1536,7 +1741,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-okpo-terrain.png"
         },
-        "updatedAt": "2026-10-01T06:00:18.408Z"
+        "updatedAt": "2026-10-08T00:53:53.803Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018983,
+            0.0014999983125020449
+          ],
+          "distance": 3.824335951936498,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-21T00:43:32.000Z",
       "updatedAt": "2026-10-06T04:21:27.106Z",
@@ -1549,6 +1767,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "e9402391-7a19-49ba-81e4-d24c1a589c4b",
+          "at": "2026-10-08T00:53:53.803Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1596,7 +1820,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-okpo-tree.png"
         },
-        "updatedAt": "2026-10-01T06:00:26.308Z"
+        "updatedAt": "2026-10-08T00:53:47.933Z",
+        "view": {
+          "direction": [
+            7.970970124073467e-10,
+            0.9999988733227984,
+            0.0015011172950325597
+          ],
+          "distance": 3.8243359519364986,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-21T00:43:32.000Z",
       "updatedAt": "2026-10-06T04:21:27.106Z",
@@ -1609,6 +1846,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "86844983-9729-49c1-ba84-54882d257ec0",
+          "at": "2026-10-08T00:53:47.933Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1647,7 +1890,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-philly-area-1.png"
         },
-        "updatedAt": "2026-10-01T06:00:32.379Z"
+        "updatedAt": "2026-10-08T00:04:13.670Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018982,
+            0.00149999831257606
+          ],
+          "distance": 3.824335951936499,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-10T23:33:53.000Z",
       "updatedAt": "2026-10-06T04:21:19.890Z",
@@ -1660,6 +1916,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "cd7e8318-61af-4aad-a7d9-9d1a9629a664",
+          "at": "2026-10-08T00:04:13.670Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1698,7 +1960,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-philly-area-2.png"
         },
-        "updatedAt": "2026-10-01T06:00:38.140Z"
+        "updatedAt": "2026-10-08T00:04:10.645Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018984,
+            0.0014999983125020449
+          ],
+          "distance": 3.8243359519364977,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-10T23:33:53.000Z",
       "updatedAt": "2026-10-06T04:21:19.890Z",
@@ -1711,6 +1986,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "4df6fb4b-bb4b-4947-a9dd-6d24c3a182ad",
+          "at": "2026-10-08T00:04:10.645Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1758,7 +2039,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-philly-terrain.png"
         },
-        "updatedAt": "2026-10-01T06:00:44.836Z"
+        "updatedAt": "2026-10-08T00:04:01.319Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018981,
+            0.0014999983126500747
+          ],
+          "distance": 3.8243359519364986,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-09-08T04:41:16.000Z",
       "updatedAt": "2026-10-06T04:21:27.106Z",
@@ -1771,6 +2065,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "7f078564-a06d-4eff-a757-8930887d2eaa",
+          "at": "2026-10-08T00:04:01.319Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1807,7 +2107,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-1dock.png"
         },
-        "updatedAt": "2026-10-01T06:00:49.419Z"
+        "updatedAt": "2026-10-08T00:54:02.758Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018983,
+            0.0014999983124280298
+          ],
+          "distance": 3.8243359519364986,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-10-06T04:21:19.890Z",
@@ -1820,6 +2133,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "4efe0d24-3112-485d-a2e4-565f4848cb5a",
+          "at": "2026-10-08T00:54:02.758Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -1856,7 +2175,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/map-plane.png"
         },
-        "updatedAt": "2026-10-01T06:00:53.358Z"
+        "updatedAt": "2026-10-08T00:54:17.747Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018981,
+            0.0014999983125760599
+          ],
+          "distance": 3.824335951936499,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-10-06T04:21:19.890Z",
@@ -1869,6 +2201,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "6535b0b8-49b7-4e88-8547-8d2172f3550a",
+          "at": "2026-10-08T00:54:17.747Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -2006,7 +2344,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/rt-crane.png"
         },
-        "updatedAt": "2026-10-01T06:00:58.164Z"
+        "updatedAt": "2026-10-07T23:59:42.855Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.43238759300285706,
+            -0.6005383236150791
+          ],
+          "distance": 3.824335951936497,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-10-06T04:19:24.990Z",
@@ -2028,6 +2379,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "447c5d99-6886-46bc-b9aa-7c93ef8ecfb6",
+          "at": "2026-10-07T23:59:42.855Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -2123,7 +2480,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/rt-ttc-27.png"
         },
-        "updatedAt": "2026-10-01T06:01:06.349Z"
+        "updatedAt": "2026-10-08T00:02:18.712Z",
+        "view": {
+          "direction": [
+            0.6726029224488891,
+            0.4323875930028569,
+            -0.6005383236150791
+          ],
+          "distance": 3.824335951936499,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
       "updatedAt": "2026-10-06T04:19:24.991Z",
@@ -2136,6 +2506,12 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "676092bf-6a64-4b6a-84a1-ad6e96e237c0",
+          "at": "2026-10-08T00:02:18.712Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -2691,7 +3067,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/person.png"
         },
-        "updatedAt": "2026-10-06T04:10:30.889Z"
+        "updatedAt": "2026-10-08T00:01:42.682Z",
+        "view": {
+          "direction": [
+            0.6005383236150794,
+            0.43238759300285684,
+            0.6726029224488889
+          ],
+          "distance": 3.824335951936498,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-10-06T04:10:30.090Z",
       "updatedAt": "2026-10-06T04:11:32.009Z",
@@ -2740,6 +3129,18 @@
           "version": 1,
           "from": "approved",
           "to": "published"
+        },
+        {
+          "id": "032910f9-577d-4def-8b54-2ffd818fba53",
+          "at": "2026-10-08T00:01:27.991Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "0da8d953-d6fb-422e-b1e0-f3bf168d948f",
+          "at": "2026-10-08T00:01:42.682Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -2796,7 +3197,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/person-bike.png"
         },
-        "updatedAt": "2026-10-06T04:12:08.838Z"
+        "updatedAt": "2026-10-08T00:02:11.371Z",
+        "view": {
+          "direction": [
+            -0.6726029224488888,
+            0.4323875930028571,
+            0.6005383236150794
+          ],
+          "distance": 3.8243359519364972,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-10-06T04:12:07.943Z",
       "updatedAt": "2026-10-06T04:12:11.958Z",
@@ -2834,6 +3248,30 @@
           "version": 1,
           "from": "approved",
           "to": "published"
+        },
+        {
+          "id": "e0862491-e8b1-4897-a798-937e079bd125",
+          "at": "2026-10-07T23:19:02.025Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "fc812a2c-2c78-4bd9-82f5-a89c00f1af16",
+          "at": "2026-10-07T23:19:12.009Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "c80f8e1a-908d-4cbc-99f0-9f64eedffd6d",
+          "at": "2026-10-07T23:43:29.674Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "b919c244-710f-4bf5-855a-996d73a699a7",
+          "at": "2026-10-08T00:02:11.371Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -2984,7 +3422,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/car.png"
         },
-        "updatedAt": "2026-10-06T04:14:00.112Z"
+        "updatedAt": "2026-10-07T23:49:44.010Z",
+        "view": {
+          "direction": [
+            -0.672602922448889,
+            0.432387593002857,
+            0.6005383236150793
+          ],
+          "distance": 3.8243359519364954,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-10-06T04:13:59.543Z",
       "updatedAt": "2026-10-06T04:14:06.874Z",
@@ -3022,6 +3473,12 @@
           "version": 1,
           "from": "approved",
           "to": "published"
+        },
+        {
+          "id": "e5f439f0-d985-4f47-b4bc-d65114ee9df1",
+          "at": "2026-10-07T23:49:44.010Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -3272,7 +3729,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/worker-bike.png"
         },
-        "updatedAt": "2026-10-06T04:16:32.458Z"
+        "updatedAt": "2026-10-08T00:02:06.430Z",
+        "view": {
+          "direction": [
+            -0.6726029224488888,
+            0.43238759300285706,
+            0.6005383236150794
+          ],
+          "distance": 3.8243359519364972,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-10-06T04:16:31.662Z",
       "updatedAt": "2026-10-06T04:16:35.973Z",
@@ -3310,6 +3780,24 @@
           "version": 1,
           "from": "approved",
           "to": "published"
+        },
+        {
+          "id": "996ffc59-0d1a-4dc8-aff0-d08e55a7fcf4",
+          "at": "2026-10-07T23:44:29.937Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "1a039e63-9e5b-4314-8c43-7fb7df98d262",
+          "at": "2026-10-07T23:44:44.778Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "68e99abf-941d-4f0a-8fe9-a056dc18bcac",
+          "at": "2026-10-08T00:02:06.430Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -3366,7 +3854,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/worker.png"
         },
-        "updatedAt": "2026-10-06T04:16:56.240Z"
+        "updatedAt": "2026-10-08T00:01:56.874Z",
+        "view": {
+          "direction": [
+            0.6005383236150792,
+            0.432387593002857,
+            0.6726029224488888
+          ],
+          "distance": 3.824335951936497,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-10-06T04:16:55.540Z",
       "updatedAt": "2026-10-06T05:20:43.241Z",
@@ -3404,6 +3905,12 @@
           "version": 1,
           "from": "approved",
           "to": "published"
+        },
+        {
+          "id": "ab2867d5-a806-462b-a063-5a8ca292d713",
+          "at": "2026-10-08T00:01:56.874Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -3461,7 +3968,20 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/oil-tanker.png"
         },
-        "updatedAt": "2026-10-06T04:17:57.321Z"
+        "updatedAt": "2026-10-08T00:03:18.551Z",
+        "view": {
+          "direction": [
+            -0.6005377799409393,
+            0.43238169513623564,
+            -0.6726071993182378
+          ],
+          "distance": 3.824335951936496,
+          "targetOffset": [
+            -2.395879674319463e-12,
+            7.698227897747159e-12,
+            7.087801772569417e-12
+          ]
+        }
       },
       "createdAt": "2026-10-06T04:17:56.948Z",
       "updatedAt": "2026-10-06T04:18:37.505Z",
@@ -3508,6 +4028,18 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "90f4869b-49a6-4594-b363-13bc9bab05e3",
+          "at": "2026-10-08T00:00:19.715Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "2bb4a828-f3de-488e-9451-b56ec9f17336",
+          "at": "2026-10-08T00:03:18.551Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     }

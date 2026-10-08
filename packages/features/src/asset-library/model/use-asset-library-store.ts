@@ -35,6 +35,7 @@ import {
   type AssetUsageSource,
   type AssetUsageState,
   type AssetVersionStatus,
+  type AssetViewPose,
   ASSET_VERSIONS_MAX,
   getCurrentAssetVersion,
   getNextAssetVersionNumber,
@@ -176,12 +177,14 @@ export interface AssetLibraryState {
   ) => Promise<number | null>;
   /**
    * 썸네일을 저장한다. `actor` 가 null 이면 자동 생성으로 보고 이력을 남기지
-   * 않는다.
+   * 않는다. `view` 는 찍을 때의 카메라 자세로, 뷰어가 다음에 이 자산을 열 때
+   * 그 각도로 시작한다(없으면 기본 프레이밍).
    */
   saveThumbnail: (
     assetId: string,
     blob: Blob,
     actor: string | null,
+    view?: AssetViewPose | null,
   ) => Promise<boolean>;
   /** 어디에서도 쓰이지 않는 자산만 지운다(파일까지). */
   removeAsset: (assetId: string) => Promise<boolean>;
@@ -680,7 +683,7 @@ export function createAssetLibraryStore(
         return added;
       },
 
-      saveThumbnail: async (assetId, blob, actor) => {
+      saveThumbnail: async (assetId, blob, actor, view = null) => {
         if (!isReady()) return false;
         let ref;
         try {
@@ -693,7 +696,7 @@ export function createAssetLibraryStore(
         return applyToAsset(assetId, (asset) =>
           setAssetThumbnail(
             asset,
-            { ref, updatedAt },
+            { ref, updatedAt, ...(view ? { view } : {}) },
             actor === null ? null : { ...context(actor), at: updatedAt },
           ),
         );

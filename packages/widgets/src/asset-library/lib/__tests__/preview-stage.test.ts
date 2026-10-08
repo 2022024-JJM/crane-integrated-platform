@@ -10,7 +10,6 @@ const open: PreviewStageInput = {
   previewMode: '3d',
   interactive: true,
   fileStatus: 'ready',
-  wants3d: true,
   settled: true,
 };
 const FILE_STATUSES = ['loading', 'ready', 'missing'] as const;
@@ -34,27 +33,22 @@ describe('resolvePreviewStage', () => {
     ).toBe('opening');
   });
 
-  it('큰 파일은 썸네일 위에서 묻는다 — 머물렀는지와 무관하다', () => {
-    expect(resolvePreviewStage({ ...open, wants3d: false })).toBe('ask');
-    expect(
-      resolvePreviewStage({ ...open, wants3d: false, settled: false }),
-    ).toBe('ask');
+  it('파일이 없으면 썸네일이다', () => {
+    for (const settled of FLAGS) {
+      expect(
+        resolvePreviewStage({ ...open, fileStatus: 'missing', settled }),
+      ).toBe('thumbnail');
+    }
   });
 
-  it('큰 파일의 주소를 아직 모르면 묻지 않고 썸네일만 보인다', () => {
-    expect(
-      resolvePreviewStage({ ...open, wants3d: false, fileStatus: 'loading' }),
-    ).toBe('thumbnail');
-  });
-
-  it('파일이 없으면 열겠다고 했어도 썸네일이다', () => {
-    for (const wants3d of FLAGS) {
+  it('이미지로 보기를 고르면 어떤 자산이든 썸네일이다', () => {
+    for (const fileStatus of FILE_STATUSES) {
       for (const settled of FLAGS) {
         expect(
           resolvePreviewStage({
-            ...open,
-            fileStatus: 'missing',
-            wants3d,
+            previewMode: 'image',
+            interactive: true,
+            fileStatus,
             settled,
           }),
         ).toBe('thumbnail');
@@ -62,33 +56,15 @@ describe('resolvePreviewStage', () => {
     }
   });
 
-  it('이미지로 보기를 고르면 어떤 자산이든 썸네일이다', () => {
-    for (const fileStatus of FILE_STATUSES) {
-      for (const wants3d of FLAGS) {
-        for (const settled of FLAGS) {
-          expect(
-            resolvePreviewStage({
-              previewMode: 'image',
-              interactive: true,
-              fileStatus,
-              wants3d,
-              settled,
-            }),
-          ).toBe('thumbnail');
-        }
-      }
-    }
-  });
-
   it('돌려 볼 수 없는 자산은 3D 로 보기를 골라도 썸네일이다', () => {
     for (const fileStatus of FILE_STATUSES) {
-      for (const wants3d of FLAGS) {
+      for (const settled of FLAGS) {
         expect(
           resolvePreviewStage({
             ...open,
             interactive: false,
             fileStatus,
-            wants3d,
+            settled,
           }),
         ).toBe('thumbnail');
       }
@@ -96,14 +72,35 @@ describe('resolvePreviewStage', () => {
   });
 
   it('뷰어를 올리는 단계에서는 썸네일을 보이지 않는다', () => {
-    // 열기로 정해진 자산(3D · 돌려 볼 수 있음 · 받아도 됨 · 파일이 있음)은
-    // 어느 순간에도 썸네일 단계를 거치지 않는다.
+    // 열기로 정해진 자산(3D · 돌려 볼 수 있음 · 파일이 있음)은 어느 순간에도
+    // 썸네일 단계를 거치지 않는다.
     for (const fileStatus of ['loading', 'ready'] as const) {
       for (const settled of FLAGS) {
         const stage = resolvePreviewStage({ ...open, fileStatus, settled });
         expect(['opening', 'viewer']).toContain(stage);
       }
     }
+  });
+
+  it('단계는 셋뿐이다 — 크기로 묻는 단계가 없다', () => {
+    const stages = new Set<string>();
+    for (const previewMode of PREVIEW_MODES) {
+      for (const interactive of FLAGS) {
+        for (const fileStatus of FILE_STATUSES) {
+          for (const settled of FLAGS) {
+            stages.add(
+              resolvePreviewStage({
+                previewMode,
+                interactive,
+                fileStatus,
+                settled,
+              }),
+            );
+          }
+        }
+      }
+    }
+    expect([...stages].sort()).toEqual(['opening', 'thumbnail', 'viewer']);
   });
 });
 

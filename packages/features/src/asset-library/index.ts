@@ -45,7 +45,11 @@ export type {
   FramingPose,
   ViewPreset,
 } from './lib/viewer-framing';
-export { computeFramingPose, VIEW_PRESETS } from './lib/viewer-framing';
+export {
+  computeFramingPose,
+  computeViewFramingPose,
+  VIEW_PRESETS,
+} from './lib/viewer-framing';
 export type {
   CameraPose,
   RelativeCameraPose,

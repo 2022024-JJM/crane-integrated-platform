@@ -325,7 +325,7 @@
       "light": "Light",
       "blueprint": "Blueprint"
     },
-    "saveThumbnail": "Save this view as the thumbnail",
+    "saveThumbnail": "Save this view as the thumbnail — the asset opens from here next time",
     "camera": "Viewpoint",
     "rotateCcw": "Rotate counterclockwise {{degrees}}°",
     "rotateCw": "Rotate clockwise {{degrees}}°",
@@ -412,7 +412,6 @@
     "previous": "Previous asset",
     "next": "Next asset",
     "close": "Close preview",
-    "open3d": "View in 3D ({{size}})",
     "placements": "In scenes",
     "notPlaced": "Not placed",
     "openDetail": "Open details",
