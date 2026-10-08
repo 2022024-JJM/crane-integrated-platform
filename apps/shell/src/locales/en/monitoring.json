@@ -482,6 +482,38 @@
     "pausedTitle": "Collision — simulation paused",
     "resume": "Resume"
   },
+  "collisionGuard": {
+    "enable": "Show collision detection",
+    "disable": "Hide collision detection",
+    "hud": {
+      "title": "Detected objects",
+      "kind": {
+        "person": "Person",
+        "worker": "Worker",
+        "car": "Car",
+        "forklift": "Forklift"
+      },
+      "severity": {
+        "warning": "Warn",
+        "danger": "Danger"
+      },
+      "empty": "No objects in detection range",
+      "scanning": "Monitoring"
+    },
+    "help": {
+      "title": "Help",
+      "show": "Show help",
+      "hide": "Hide help",
+      "detectionRing": "LiDAR detection range",
+      "dangerRing": "Danger radius",
+      "sensor": "LiDAR mount point (both girder legs)",
+      "arrow": "Heading · length scales with speed",
+      "severityDanger": "Danger — inside danger radius",
+      "severityWarning": "Warning — inside detection range",
+      "distanceBasis": "All distances are measured from the girder end.",
+      "simulationNote": "Currently running on simulated data."
+    }
+  },
   "compass": {
     "label": "Compass"
   },

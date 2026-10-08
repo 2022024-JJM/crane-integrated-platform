@@ -8,16 +8,31 @@ import {
   useFullscreenAlarmOverlay,
 } from '@crane/features/alarm';
 import {
+  CollisionGuardHelp,
+  CollisionGuardHud,
+  CollisionGuardSceneLayer,
+  CollisionGuardToggle,
   Monitoring3dView,
   useCraneIdFromFocusedModel,
   useObjectFocusStore,
   type Monitoring3dViewActions,
 } from '@crane/features/3d';
+import { getRegionById } from '@crane/domain/region';
 import { Spinner } from '@crane/ui/atoms/spinner';
 import { CraneCmmsDetailPanel } from '@crane/widgets/crane';
 
+/**
+ * 충돌 감지 표시(LiDAR 근접 존)는 필리 조선소 화면에만 둔다. 존은 씬의
+ * 골리앗 크레인 배치에서 파생하는데, 옥포 씬에도 같은 자산의 골리앗이
+ * 있어 "씬에 크레인이 있으면" 으로는 가르지 못한다 — 사이트로 가른다.
+ */
+function hasCollisionGuard(regionId: string): boolean {
+  return getRegionById(regionId)?.siteType === 'philly-shipyard';
+}
+
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
+  const collisionGuard = hasCollisionGuard(regionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
   const {
     visible: alarmOverlayVisible,
@@ -81,11 +96,29 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           />
         }
         toolbarExtras={
-          <AlarmFullscreenToggleButton
-            active={alarmOverlayVisible}
-            alarmCount={activeAlarmCount}
-            onToggle={toggleAlarmOverlay}
-          />
+          <>
+            <AlarmFullscreenToggleButton
+              active={alarmOverlayVisible}
+              alarmCount={activeAlarmCount}
+              onToggle={toggleAlarmOverlay}
+            />
+            {collisionGuard ? (
+              <CollisionGuardToggle regionId={regionId} />
+            ) : null}
+          </>
+        }
+        sceneExtras={
+          collisionGuard ? (
+            <CollisionGuardSceneLayer regionId={regionId} />
+          ) : null
+        }
+        overlayExtras={
+          collisionGuard ? (
+            <>
+              <CollisionGuardHud regionId={regionId} />
+              <CollisionGuardHelp regionId={regionId} />
+            </>
+          ) : null
         }
         toolbarLayout="dock"
       />

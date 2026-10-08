@@ -8,6 +8,15 @@ export {
   type CollisionGuardCameraPose,
 } from './ui/collision-guard-camera-rig';
 export { CollisionGuardTopViewSync } from './ui/collision-guard-top-view-sync';
+export { CollisionGuardSceneLayer } from './ui/collision-guard-scene-layer';
+export { CollisionGuardToggle } from './ui/collision-guard-toggle';
+export { CollisionGuardHud } from './ui/collision-guard-hud';
+export { CollisionGuardHelp } from './ui/collision-guard-help';
+export { useGoliathCollisionZones } from './model/use-goliath-collision-zones';
+export {
+  buildGoliathCollisionZones,
+  buildGoliathEgoTopPose,
+} from './lib/goliath-collision-zone';
 export {
   distanceFromZone,
   nearestZone,
