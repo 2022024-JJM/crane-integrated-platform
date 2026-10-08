@@ -7,7 +7,7 @@
       "key": "GC_04:gantry_position",
       "name": "GC-04 주행(직선 이동)",
       "min": 0,
-      "max": 100,
+      "max": 300,
       "initial": 0,
       "pattern": {
         "kind": "sine",
