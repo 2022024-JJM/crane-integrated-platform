@@ -46,8 +46,6 @@ services:
       # ${BACKEND_HOST} 등을 이 값으로 치환한다.
       BACKEND_HOST: ${BACKEND_HOST}
       BACKEND_PORT: ${BACKEND_PORT}
-      LIDAR_HOST: ${LIDAR_HOST}
-      LIDAR_PORT: ${LIDAR_PORT}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]

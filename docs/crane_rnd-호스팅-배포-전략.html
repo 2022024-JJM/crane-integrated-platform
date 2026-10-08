@@ -2087,7 +2087,7 @@ docker compose --env-file deploy/env/dev.env down</pre>
         <div class="note note--warn"><p class="note__t">자주 나는 오류</p>
           Git Bash 가 <span class="mono">/crane_rnd/…</span> 인자를 Windows 경로로 바꿉니다(<span class="mono">C:/Program Files/Git/crane_rnd/</span>). 변수를 직접 붙이지 말고 <span class="mono">pnpm dev:dev</span> 처럼 env 파일을 읽는 스크립트를 쓰거나, 꼭 붙여야 하면 앞에 <span class="mono">MSYS_NO_PATHCONV=1</span>.
           저장소 루트에 <span class="mono">.env</span> 가 없으면 compose 의 기존 환경변수가 비어 컨테이너가 뜨지 않습니다.
-          로컬에 <span class="mono">.env</span> 를 두지 않으려면 <span class="mono">BACKEND_HOST=127.0.0.1 BACKEND_PORT=8000 LIDAR_HOST=127.0.0.1 LIDAR_PORT=9000</span> 을 export 하고 2번을 실행합니다.
+          로컬에 <span class="mono">.env</span> 를 두지 않으려면 <span class="mono">BACKEND_HOST=127.0.0.1 BACKEND_PORT=8000</span> 을 export 하고 2번을 실행합니다.
           pnpm 이 10.11.0 이 아니면 <span class="mono">ERR_PNPM_BAD_PM_VERSION</span> 으로 모든 스크립트가 멈춥니다 — <span class="mono">corepack enable</span>.</div>
       </div>
       <div class="note note--ok">

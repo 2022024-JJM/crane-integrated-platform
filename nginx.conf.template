@@ -100,47 +100,6 @@ server {
         proxy_read_timeout 86400s;
     }
 
-    # LiDAR WebSocket proxy → 별도 LiDAR 서버
-    # 프론트는 동일 origin 의 /lidar 또는 /crane_rnd/lidar 로 ws 연결한다.
-    # LiDAR 서버는 루트(/)에서 ws 핸드셰이크를 받으므로 / 로만 프록시한다.
-    # 슬래시 유무 모두 받아야 하므로 정확 매칭(=) 과 prefix 매칭을 모두 둔다.
-    location = /lidar {
-        proxy_pass http://${LIDAR_HOST}:${LIDAR_PORT}/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400s;
-    }
-    location /lidar/ {
-        rewrite ^/lidar/(.*)$ /$1 break;
-        proxy_pass http://${LIDAR_HOST}:${LIDAR_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400s;
-    }
-
-    # 앞단이 그대로 /crane_rnd/lidar(/) 로 전달한 경우 호환
-    location = /crane_rnd/lidar {
-        proxy_pass http://${LIDAR_HOST}:${LIDAR_PORT}/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400s;
-    }
-    location /crane_rnd/lidar/ {
-        rewrite ^/crane_rnd/lidar/(.*)$ /$1 break;
-        proxy_pass http://${LIDAR_HOST}:${LIDAR_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400s;
-    }
-
     # Root hit → redirect into the SPA base path
     location = / {
         return 302 /crane_rnd/;

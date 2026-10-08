@@ -31,8 +31,8 @@ COPY apps/      ./apps/
 COPY packages/  ./packages/
 COPY tsconfig.json tsconfig.base.json turbo.json ./
 
-# 백엔드/LiDAR IP·PORT 는 런타임 nginx envsubst 로 주입된다 (BACKEND_HOST/PORT,
-# LIDAR_HOST/PORT 등 — docker-compose.yml 의 environment 참조).
+# 백엔드 IP·PORT 는 런타임 nginx envsubst 로 주입된다 (BACKEND_HOST/PORT —
+# docker-compose.yml 의 environment 참조).
 #
 # 반면 VITE_* 환경변수는 Vite 가 빌드 시점에 import.meta.env 로 번들에 인라인하므로
 # ARG 로 주입해야 한다. 운영 서버에서 .env 만 바꿔서는 반영되지 않는다.
@@ -71,7 +71,7 @@ COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html/crane_rnd
 
 # nginx 공식 이미지의 entrypoint 가 /etc/nginx/templates/*.template 을
 # envsubst 로 치환해 /etc/nginx/conf.d/ 로 출력한다.
-# 따라서 BACKEND_HOST/PORT, LIDAR_HOST/PORT 환경변수만 주입하면
+# 따라서 BACKEND_HOST/PORT 환경변수만 주입하면
 # 이미지 재빌드 없이 IP 변경이 가능하다.
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 # [환경별 배포 — 지금은 주석] ${BASE_PATH} 치환 템플릿을 쓸 때 BASE_PATH 검사 · BASE_PATH_NOSLASH 파생.
