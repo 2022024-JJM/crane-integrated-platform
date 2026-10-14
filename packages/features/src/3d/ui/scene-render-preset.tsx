@@ -66,8 +66,6 @@ import {
   sceneLightingInfo,
 } from '../model/scene-lighting-info';
 import { excludeFromReflection } from '../model/scene-reflection-exclusions';
-import { requestSceneFrame } from '../model/scene-frame-request';
-import { useSceneLookStore } from '../model/use-scene-look-store';
 import { useSceneClockStore } from '../model/use-scene-clock-store';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -484,44 +482,6 @@ function resetToManualLook(
   }
 }
 
-/**
- * 관제 모드 조명 — 평평하게. 키 라이트를 낮추고 환경광을 올려 면 간 명암
- * 대비를 줄이고(지붕·야드가 한 톤), 환경맵 세기를 거의 0 으로 두어 금속의
- * 하늘 반사를 없애며, 그림자는 흐리게 남긴다(형태 단서는 유지). 배수는
- * 기준값(SCENE_LIGHTING) 대비라 밝기 기준점이 바뀌어도 따라간다.
- */
-const CONTROL_ROOM_KEY_RATIO = 0.55;
-const CONTROL_ROOM_AMBIENT_RATIO = 1.7;
-const CONTROL_ROOM_ENVIRONMENT_INTENSITY = 0.03;
-const CONTROL_ROOM_SHADOW_INTENSITY = 0.4;
-/**
- * 관제 모드의 그림자 — 끈다. 평평한 룩에서 그림자는 형태 단서가 거의 없고
- * shadow pass(캐스터 전부를 한 번 더 그림)와 픽셀당 PCF 샘플이 그대로
- * 든다. castShadow 를 바꾸면 그림자 받는 머티리얼이 한 번 재컴파일된다 —
- * 토글 순간의 정지라 받아들인다.
- */
-const CONTROL_ROOM_CAST_SHADOW = false;
-
-function applyControlRoomLook(
-  light: DirectionalLight | null,
-  ambient: AmbientLight | null,
-  scene: Scene,
-) {
-  if (light) {
-    light.intensity =
-      SCENE_LIGHTING.directionalIntensity * CONTROL_ROOM_KEY_RATIO;
-    light.shadow.intensity = CONTROL_ROOM_SHADOW_INTENSITY;
-    light.castShadow = CONTROL_ROOM_CAST_SHADOW;
-  }
-  if (ambient) {
-    ambient.intensity =
-      SCENE_LIGHTING.ambientIntensity * CONTROL_ROOM_AMBIENT_RATIO;
-  }
-  if (scene.environment) {
-    scene.environmentIntensity = CONTROL_ROOM_ENVIRONMENT_INTENSITY;
-  }
-}
-
 /** 밤하늘 틴트 돔 — 안쪽이 보이는 구, 반투명 남색. useFrame 이 카메라에 붙인다. */
 function useSkyTintDome() {
   const dome = useMemo(() => {
@@ -666,11 +626,9 @@ export function SceneLighting({
     trueNorth,
   );
   const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
-  // solar 모드는 씬 설정과 현장 위치(씬 지역)가 모두 있어야 켜진다. 관제
-  // 모드에선 꺼서 기준 주광으로 고정한다 — 밤에 어두운 화면은 관제에 불리하다.
-  const controlRoom = useSceneLookStore((s) => s.controlRoom);
+  // solar 모드는 씬 설정과 현장 위치(씬 지역)가 모두 있어야 켜진다.
   const solarGeo =
-    !controlRoom && lighting?.sunMode === 'solar' && regionId
+    lighting?.sunMode === 'solar' && regionId
       ? resolveSceneSiteGeo(regionId, sceneInfo)
       : null;
 
@@ -759,29 +717,6 @@ export function SceneLighting({
       if (tint) tint.visible = false;
     };
   }, [solarGeo, scene]);
-
-  // 관제 모드 — 수동(기준) 조명 위에 평평한 룩을 덮고, 끄면 수동 기본값으로.
-  // solar 는 관제 모드에서 이미 꺼져 있어(solarGeo null) 서로 겹치지 않는다.
-  useEffect(() => {
-    if (!controlRoom) return;
-    const light = lightRef.current;
-    const ambient = ambientRef.current;
-    const fill = fillRef.current;
-    const hemisphere = hemisphereRef.current;
-    applyControlRoomLook(light, ambient, scene);
-    invalidateShadows();
-    requestSceneFrame();
-    return () => {
-      resetToManualLook(light, ambient, fill, hemisphere, scene);
-      if (light) {
-        light.shadow.intensity = 1;
-        // R3F 는 바뀌지 않은 prop 을 다시 쓰지 않으므로 직접 원복한다.
-        light.castShadow = shadowsEnabled;
-      }
-      invalidateShadows();
-      requestSceneFrame();
-    };
-  }, [controlRoom, scene, shadowsEnabled]);
 
   // 온디맨드 shadow 렌더 — three 기본은 매 프레임 shadow map 재렌더인데,
   // 캐스터가 움직인 프레임에만 그리도록 autoUpdate 를 끄고 무효화 신호

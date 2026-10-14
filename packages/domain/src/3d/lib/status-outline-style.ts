@@ -15,17 +15,10 @@ export const STATUS_OUTLINE_COLORS: Record<StatusOutlineKind, string> = {
   commError: '#e0e0e0',
   slowdown: '#ffff00',
   endstop: '#ff0000',
-  contour: '#f3f5f8',
 };
 
 /** 상태 외곽선의 화면 두께(px) — 선택·충돌 테두리(SILHOUETTE_OUTLINE_PX)보다 얇다. */
 export const STATUS_OUTLINE_PX = 2;
-/** 상시 윤곽은 더 얇다 — 상태를 말하는 선이 아니라 형태를 떼어 놓는 선. */
-export const CONTOUR_OUTLINE_PX = 1.25;
-
-export function statusOutlineThicknessPx(kind: StatusOutlineKind): number {
-  return kind === 'contour' ? CONTOUR_OUTLINE_PX : STATUS_OUTLINE_PX;
-}
 
 /**
  * 헐의 렌더 순서. 선택·충돌 테두리(lib/silhouette-outline.ts 의 헐 기본값)보다
@@ -33,7 +26,6 @@ export function statusOutlineThicknessPx(kind: StatusOutlineKind): number {
  * 쪽이 위다 — 화면에서 겹친 두 장비의 테두리가 만나는 자리에 적색이 남는다.
  */
 const STATUS_OUTLINE_RENDER_ORDER: Record<StatusOutlineKind, number> = {
-  contour: 10.4,
   commError: 10.5,
   slowdown: 10.6,
   endstop: 10.7,

@@ -41,14 +41,6 @@ function isChannel(value: unknown): value is TagMappingChannel {
   return (TAG_MAPPING_CHANNELS as readonly unknown[]).includes(value);
 }
 
-function isVector3Tuple(value: unknown): value is [number, number, number] {
-  return (
-    Array.isArray(value) &&
-    value.length === 3 &&
-    value.every((v) => typeof v === 'number' && Number.isFinite(v))
-  );
-}
-
 function sanitizeTarget(raw: unknown): TagMappingTarget | null {
   if (!raw || typeof raw !== 'object') return null;
   const t = raw as Record<string, unknown>;
@@ -61,17 +53,7 @@ function sanitizeTarget(raw: unknown): TagMappingTarget | null {
     // node 는 '' (모델 루트) 도 유효하다 — 문자열이기만 하면 된다.
     if (typeof t.node !== 'string') return null;
     if (!isChannel(t.channel) || !isRigAxis(t.axis)) return null;
-    const target: TagMappingTarget = {
-      kind: 'node',
-      node: t.node,
-      channel: t.channel,
-      axis: t.axis,
-    };
-    // 선회 중심은 회전 채널에만 의미가 있고, 유한수 3개가 아니면 버린다.
-    if (target.channel === 'rotation' && isVector3Tuple(t.pivot)) {
-      target.pivot = [t.pivot[0], t.pivot[1], t.pivot[2]];
-    }
-    return target;
+    return { kind: 'node', node: t.node, channel: t.channel, axis: t.axis };
   }
   return null;
 }

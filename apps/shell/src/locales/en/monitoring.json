@@ -87,7 +87,6 @@
       "root": "(model root)",
       "channel": "Type",
       "axis": "Axis",
-      "pivot": "Pivot",
       "joint": "Joint",
       "tag": "Tag",
       "tagPlaceholder": "Select tag",
@@ -577,7 +576,6 @@
       "open": "Connected",
       "connecting": "Connecting",
       "closed": "Disconnected",
-      "stalled": "No data",
       "held": "On hold",
       "play3dPlaying": "Playing",
       "play3dPaused": "Paused"
@@ -727,9 +725,5 @@
     "update": "Update",
     "hint": "Updating switches every placement of that asset in this scene to the new version. Placement and tag mappings stay as they are, so check the result on screen; save to apply it to monitoring.",
     "unmanaged": "{{count}} objects are placed from files that are not in the asset library. New versions cannot be reported for them."
-  },
-  "proximity": {
-    "title": "Proximity",
-    "overlap": "overlap"
   }
 }

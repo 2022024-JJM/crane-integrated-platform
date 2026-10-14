@@ -23,7 +23,6 @@ import {
   type MinimapFrame,
 } from '../lib/minimap';
 import { zoneColorWithAlpha } from '../lib/scene-zones';
-import type { ProximityLevel } from '../lib/scene-proximity';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
 
@@ -83,16 +82,7 @@ const SEVERITY_COLORS: Record<AlarmSeverity, string> = {
   medium: '#f59e0b',
   info: '#3b82f6',
 };
-/**
- * 평상시 마커 — 조용한 회백색. 색은 사건에만: 근접 위험 적·주의 황(관제
- * 화면의 거리 선과 같은 색), 알람은 심각도 색. 24시간 화면에서 미니맵은
- * "어느 구역에 문제가 있나" 를 한눈에 답해야 한다.
- */
-const MARKER_COLOR = '#cbd5e1';
-const PROXIMITY_MARKER_COLORS: Record<ProximityLevel, string> = {
-  warn: '#ffd400',
-  danger: '#ff2d2d',
-};
+const MARKER_COLOR = '#fde047';
 /** 카메라 픽토그램·시야 부채꼴 공통 색. */
 const CAMERA_COLOR = '#22d3ee';
 /**
@@ -110,8 +100,6 @@ const CAMERA_GLYPH_SIZE_PX = 5;
 interface SceneMinimapProps {
   sceneInfo: SavedSceneInfo | null;
   alarmsByCraneId: Record<string, AlarmSeverity>;
-  /** 모델 id → 근접 등급(주의·황 / 위험·적). 없으면 평상시 색. */
-  proximityLevelById?: Record<string, ProximityLevel>;
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
   /** 카메라를 즉시 옮긴다 — 북마크·포커스 복귀와 같은 경로. */
@@ -137,7 +125,6 @@ interface DrawnMarker {
 export function SceneMinimap({
   sceneInfo,
   alarmsByCraneId,
-  proximityLevelById,
   getPose,
   onMoveTo,
   className,
@@ -190,7 +177,6 @@ export function SceneMinimap({
         scale,
         sceneInfo,
         alarmsByCraneId,
-        proximityLevelById,
         useObjectFocusStore.getState().focusedModelId,
         cacheRef.current,
       );
@@ -206,14 +192,7 @@ export function SceneMinimap({
     draw();
     const timer = window.setInterval(draw, DRAW_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [
-    visible,
-    snapshot,
-    sceneInfo,
-    alarmsByCraneId,
-    proximityLevelById,
-    getPose,
-  ]);
+  }, [visible, snapshot, sceneInfo, alarmsByCraneId, getPose]);
 
   const localPixel = useCallback(
     (event: PointerEvent<HTMLCanvasElement>) => {
@@ -472,7 +451,6 @@ function drawMarkers(
   scale: number,
   sceneInfo: SavedSceneInfo | null,
   alarms: Record<string, AlarmSeverity>,
-  proximity: Record<string, ProximityLevel> | undefined,
   focusedModelId: string | null,
   cache: MarkerCache,
 ): DrawnMarker[] {
@@ -492,19 +470,11 @@ function drawMarkers(
       continue;
     }
     const severity = model.craneId ? alarms[model.craneId] : undefined;
-    const level = proximity?.[model.id];
     const isFocused = focusedModelId === model.id;
     context.beginPath();
     context.arc(px, py, isFocused ? radius * 1.4 : radius, 0, Math.PI * 2);
-    // 근접 위험 > 알람 > 근접 주의 > 기본.
-    context.fillStyle =
-      level === 'danger'
-        ? PROXIMITY_MARKER_COLORS.danger
-        : severity
-          ? SEVERITY_COLORS[severity]
-          : level === 'warn'
-            ? PROXIMITY_MARKER_COLORS.warn
-            : MARKER_COLOR;
+    // 알람 > 기본.
+    context.fillStyle = severity ? SEVERITY_COLORS[severity] : MARKER_COLOR;
     context.fill();
     context.lineWidth = (isFocused ? 2 : 1) * scale;
     context.strokeStyle = isFocused ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';

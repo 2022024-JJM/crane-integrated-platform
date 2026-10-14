@@ -77,44 +77,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-26243a93",
-          "target": {
-            "kind": "node",
-            "node": "",
-            "channel": "position",
-            "axis": "x"
-          },
-          "tagKey": "C_171:tl_distance",
-          "scale": 0.6667,
-          "offset": -1010
-        },
-        {
-          "id": "map-051ed725",
-          "target": {
-            "kind": "node",
-            "node": "[0]Goliath/[1]Trolly_Goliath_001",
-            "channel": "position",
-            "axis": "z"
-          },
-          "tagKey": "C_171:ts_distance",
-          "scale": 0.1,
-          "offset": -20
-        },
-        {
-          "id": "map-3adedd4d",
-          "target": {
-            "kind": "node",
-            "node": "[0]Goliath/[2]Trolly_Goliath_002",
-            "channel": "position",
-            "axis": "z"
-          },
-          "tagKey": "C_171:mh1_height",
-          "scale": 1,
-          "offset": -15
-        }
       ]
     },
     {
@@ -192,23 +154,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-0310025f",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_864:slew_angle"
-        }
       ]
     },
     {
@@ -234,23 +179,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-62625af2",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_173:slew_angle"
-        }
       ]
     },
     {
@@ -276,44 +204,6 @@
         1.55,
         1.1,
         1.55
-      ],
-      "tagMappings": [
-        {
-          "id": "map-515d5d42",
-          "target": {
-            "kind": "node",
-            "node": "",
-            "channel": "position",
-            "axis": "x"
-          },
-          "tagKey": "C_172:tl_distance",
-          "scale": 0.6667,
-          "offset": -603.333
-        },
-        {
-          "id": "map-60b6b27d",
-          "target": {
-            "kind": "node",
-            "node": "[0]Goliath/[1]Trolly_Goliath_001",
-            "channel": "position",
-            "axis": "z"
-          },
-          "tagKey": "C_172:ts_distance",
-          "scale": 0.1,
-          "offset": -20
-        },
-        {
-          "id": "map-8b2a6196",
-          "target": {
-            "kind": "node",
-            "node": "[0]Goliath/[2]Trolly_Goliath_002",
-            "channel": "position",
-            "axis": "z"
-          },
-          "tagKey": "C_172:mh1_height",
-          "scale": 1,
-          "offset": -15
-        }
       ]
     },
     {
@@ -365,23 +255,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-ce1523d8",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_800:slew_angle"
-        }
       ]
     },
     {
@@ -407,23 +280,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-82346dcb",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_801:slew_angle"
-        }
       ]
     },
     {
@@ -449,23 +305,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-86dceda7",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_810:slew_angle"
-        }
       ]
     },
     {
@@ -491,23 +330,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-d0e8d950",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_811:slew_angle"
-        }
       ]
     },
     {
@@ -558,23 +380,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-55b63c68",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_812:slew_angle"
-        }
       ]
     },
     {
@@ -625,23 +430,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-aa641bbb",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_863:slew_angle"
-        }
       ]
     },
     {
@@ -667,23 +455,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-7bb4a457",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_171:slew_angle"
-        }
       ]
     },
     {
@@ -709,23 +480,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-64fa5906",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_172:slew_angle"
-        }
       ]
     },
     {
@@ -751,24 +505,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-2349b950",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_171:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -819,23 +555,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-7ddd18b1",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_865:slew_angle"
-        }
       ]
     },
     {
@@ -861,23 +580,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-957a1ac4",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_866:slew_angle"
-        }
       ]
     },
     {
@@ -903,23 +605,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-ebe6ee63",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_867:slew_angle"
-        }
       ]
     },
     {
@@ -945,23 +630,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-8d0f545b",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_868:slew_angle"
-        }
       ]
     },
     {
@@ -1065,23 +733,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-31ea058a",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_869:slew_angle"
-        }
       ]
     },
     {
@@ -1107,24 +758,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-cbe59431",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_172:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1150,24 +783,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-b503fc74",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_173:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1193,24 +808,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-20bec867",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_800:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1236,24 +833,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-e3345338",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_801:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1355,24 +934,6 @@
         0.7,
         0.7,
         0.7
-      ],
-      "tagMappings": [
-        {
-          "id": "map-acde5e6d",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_810:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1398,24 +959,6 @@
         0.7,
         0.7,
         0.7
-      ],
-      "tagMappings": [
-        {
-          "id": "map-c0314168",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_811:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1441,24 +984,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-7bda0185",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_812:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1484,24 +1009,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-cc097e7e",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_863:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1527,24 +1034,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-6b65d8ae",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_864:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1570,24 +1059,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-9530ac89",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_865:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1613,24 +1084,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-3523bf16",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_866:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1656,24 +1109,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-fae992ad",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_867:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1699,24 +1134,6 @@
         1,
         1,
         1
-      ],
-      "tagMappings": [
-        {
-          "id": "map-7f2a91c3",
-          "target": {
-            "kind": "node",
-            "node": "[0]TC_크레인/[1]TC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0.2626461982727051,
-              34.51821804046631,
-              -0.008340120315551758
-            ]
-          },
-          "tagKey": "C_868:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {
@@ -1742,24 +1159,6 @@
         0.7,
         0.7,
         0.7
-      ],
-      "tagMappings": [
-        {
-          "id": "map-b85562e3",
-          "target": {
-            "kind": "node",
-            "node": "[0]TTC_크레인/[1]TTC_Top",
-            "channel": "rotation",
-            "axis": "y",
-            "pivot": [
-              0,
-              59.156800270080566,
-              0
-            ]
-          },
-          "tagKey": "C_869:slew_angle",
-          "scale": -1
-        }
       ]
     },
     {

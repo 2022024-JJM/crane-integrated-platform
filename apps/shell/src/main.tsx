@@ -9,15 +9,6 @@ import './styles/global.css';
 import { QueryProvider } from '@crane/core/providers';
 import { AppErrorBoundary } from '@crane/ui/organisms/app-error-boundary';
 
-// 전역 오류 로그 — 바운더리 밖(이벤트 핸들러·타이머·비동기)의 오류도 콘솔에
-// 남긴다. 무인 운영에서 "언제부터 이상했나" 의 유일한 단서다.
-window.addEventListener('error', (event) => {
-  console.error('[window.error]', event.message, event.error ?? '');
-});
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('[unhandledrejection]', event.reason ?? '');
-});
-
 // NOTE: StrictMode 비활성화 — React Three Fiber(R3F)의 Canvas 컴포넌트가
 // StrictMode의 double-mount와 호환되지 않아 WebGL Context Lost가 발생함.
 // Production 빌드에서는 StrictMode가 동작하지 않으므로 영향 없음.

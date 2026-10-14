@@ -259,37 +259,6 @@ function MappingCard({
               label={t('monitoring:inspector.mapping.axis')}
             />
           </Field>
-          {target.channel === 'rotation' ? (
-            // 선회 중심(부모 프레임 좌표). 셋 다 비우면 노드 원점.
-            <Field compact label={t('monitoring:inspector.mapping.pivot')}>
-              {([0, 1, 2] as const).map((i) => (
-                <NumberField
-                  key={i}
-                  value={target.pivot?.[i]}
-                  placeholder={['x', 'y', 'z'][i]}
-                  step={0.1}
-                  onChange={(v) => {
-                    const next: [number, number, number] = [
-                      target.pivot?.[0] ?? 0,
-                      target.pivot?.[1] ?? 0,
-                      target.pivot?.[2] ?? 0,
-                    ];
-                    const cleared =
-                      v === undefined &&
-                      [0, 1, 2].every(
-                        (j) => j === i || target.pivot?.[j] === undefined,
-                      );
-                    next[i] = v ?? 0;
-                    const rest = { ...target };
-                    delete rest.pivot;
-                    onChange({
-                      target: cleared ? rest : { ...rest, pivot: next },
-                    });
-                  }}
-                />
-              ))}
-            </Field>
-          ) : null}
           {!nodesReady ? (
             <p className="text-muted-foreground text-[10px]">
               {t('monitoring:inspector.rigging.nodesUnavailable')}

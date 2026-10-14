@@ -1,5 +1,4 @@
 import { Quaternion, Vector3 } from 'three';
-import type { Vector3Tuple } from '@crane/core/types/math';
 import {
   degToRad,
   type RigAxis,
@@ -11,8 +10,6 @@ export interface ChannelDelta {
   channel: TagMappingChannel;
   axis: RigAxis;
   delta: number;
-  /** 회전 채널의 선회 중심(부모 프레임). 있으면 위치도 그 점 둘레로 돌았다. */
-  pivot?: Vector3Tuple;
 }
 
 export interface ChannelPose {
@@ -28,8 +25,6 @@ const AXES: Record<RigAxis, Vector3> = {
 };
 
 const _q = new Quaternion();
-const _axis = new Vector3();
-const _pivot = new Vector3();
 
 /**
  * `apply-channel.ts` 의 역연산 — Δ 가 섞인 자세에서 Δ 를 벗겨 rest(배치값)를
@@ -50,29 +45,14 @@ export function stripChannelDeltas(
   deltas: ReadonlyArray<ChannelDelta>,
   parentScale: number,
 ): ChannelPose {
-  // 1) 회전부터 전부 벗겨 rest 회전을 얻는다 — 선회 중심 궤도의 축(부모
-  //    프레임)이 rest 회전으로 정해지므로 위치를 되돌리기 전에 필요하다.
   for (let i = deltas.length - 1; i >= 0; i -= 1) {
     const { channel, axis, delta } = deltas[i];
     const d = Number.isFinite(delta) ? delta : 0;
-    if (d === 0 || channel !== 'rotation') continue;
-    pose.quaternion.multiply(
-      _q.setFromAxisAngle(AXES[axis], degToRad(d)).invert(),
-    );
-  }
-  // 2) 위치·크기(와 선회 중심 궤도)를 역순으로 벗긴다.
-  for (let i = deltas.length - 1; i >= 0; i -= 1) {
-    const { channel, axis, delta, pivot } = deltas[i];
-    const d = Number.isFinite(delta) ? delta : 0;
     if (d === 0) continue;
     if (channel === 'rotation') {
-      if (!pivot) continue;
-      _axis.copy(AXES[axis]).applyQuaternion(pose.quaternion);
-      _pivot.set(pivot[0], pivot[1], pivot[2]);
-      pose.position
-        .sub(_pivot)
-        .applyQuaternion(_q.setFromAxisAngle(_axis, -degToRad(d)))
-        .add(_pivot);
+      pose.quaternion.multiply(
+        _q.setFromAxisAngle(AXES[axis], degToRad(d)).invert(),
+      );
       continue;
     }
     if (channel === 'position') {

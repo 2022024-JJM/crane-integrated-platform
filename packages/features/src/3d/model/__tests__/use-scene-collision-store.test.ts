@@ -35,11 +35,7 @@ function reset(enabled = true) {
     activeMode: null,
     baselinePending: false,
   });
-  useRealtimeStore.setState({
-    isRunning: true,
-    held: false,
-    buffer: new Map(),
-  });
+  useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
 }
 
 let runtimePhase: 'idle' | 'halted' | 'scanning' = 'halted';

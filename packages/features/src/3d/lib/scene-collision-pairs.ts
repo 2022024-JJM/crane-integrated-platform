@@ -8,12 +8,8 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  * 계산을 하지 않는다는 규칙.
  */
 
-/**
- * 스캔 주기. 매 프레임 돌리지 않는다 — 10Hz. 크레인은 느려(붐 끝도 초당 수십
- * cm) 100ms 안의 이동은 시각적으로 즉시이고, 스캔 비용(BVH 교차·분리 판정)은
- * 주기에 정비례하므로 20Hz 대비 절반이다. 감지 지연의 상한이 이 값이다.
- */
-export const SCAN_INTERVAL_MS = 100;
+/** 스캔 주기. 매 프레임 돌리지 않는다 — 20Hz 면 시각적으로 즉시다. */
+export const SCAN_INTERVAL_MS = 50;
 /** 한 스캔의 시간 예산. job(모델 쌍) 사이에서만 검사하고 job 하나는 끝까지 돈다. */
 export const SCAN_BUDGET_MS = 3;
 /** BVH 가 아직 없는 메쉬 쌍을 다시 볼 때까지의 대기. ModelMesh 가 유휴 시간에 빌드한다. */
@@ -37,27 +33,6 @@ export const BASELINE_SETTLE_MS = 1000;
  * 히스테리시스는 이 하나로 충분하다.
  */
 export const SEPARATION_MARGIN = 0.05;
-/**
- * 억제된 쌍(기준선 겹침·보고 뒤 닫힘)의 분리 재판정 간격. 분리 판정은 삼각형
- * 최단 거리(BVH 쌍 탐색)라 새 충돌 검사보다 훨씬 비싸고, 붙어 있는 동안 매
- * 스캔(20Hz) 다시 볼 이유가 없다 — 떨어진 것을 이 간격 안에 알아채면 된다.
- * 실내처럼 크레인 20대가 동시에 움직이는 씬에서 이게 유휴 CPU 의 1/3 이었다.
- * 붙은 채 계속 움직이는 쌍(멈춘 쌍은 dirty 가 아니라 비용 0)은 이 간격마다
- * BVH 를 다시 타므로 간격이 곧 비용이다 — "떨어졌다" 는 좋은 소식이라 반 초
- * 늦게 알아도 된다.
- */
-export const SUPPRESSED_RECHECK_MS = 500;
-/**
- * 떨어진 쌍의 여유 거리(clearance)를 재는 상한 — 씬 unit. 이보다 멀면 "최소
- * 이만큼" 으로만 기억한다(멀리 있는 쌍은 가지치기만으로 끝나 싸다). 두 메쉬의
- * 누적 이동 한계가 여유 거리를 넘기 전까지는 교차 검사를 건너뛴다. 여유
- * 거리는 메쉬 AABB 간격만으로 잰다(런타임 measureClearance 주석).
- */
-export const CLEARANCE_PROBE = 2;
-/**
- * 이보다 작은 여유 거리는 0 으로 둔다 — 한두 스캔이면 소진될 값이다.
- */
-export const CLEARANCE_MIN = 0.25;
 /** 이보다 작은 월드 크기의 메쉬(볼트·라벨 앵커 등)는 검사에서 뺀다 — 씬 unit. */
 export const MIN_MESH_EXTENT = 0.01;
 /** 충돌 기록 보관 개수 — 초과하면 가장 오래된 것부터 버린다. */
@@ -102,30 +77,6 @@ export function matrixChanged(prev: Float64Array, matrix: Matrix4): boolean {
     if (prev[i] !== e[i]) return true;
   }
   return false;
-}
-
-/**
- * matrixWorld 가 prev 에서 지금으로 바뀌는 강체 이동으로 메쉬의 어느 점이든
- * 움직일 수 있는 거리의 **상한** — |Δ평행이동| + ‖ΔR‖_F · reach. ΔR 은 3×3
- * 상단(스케일 포함)의 차이라 회전·스케일 변화를 함께 덮는다. prev 가 NaN
- * (첫 관측)이면 Infinity — 반드시 검사하게.
- */
-export function displacementBound(
-  prev: Float64Array,
-  matrix: Matrix4,
-  reach: number,
-): number {
-  const e = matrix.elements;
-  if (Number.isNaN(prev[0])) return Number.POSITIVE_INFINITY;
-  const tx = e[12] - prev[12];
-  const ty = e[13] - prev[13];
-  const tz = e[14] - prev[14];
-  let rot = 0;
-  for (const i of [0, 1, 2, 4, 5, 6, 8, 9, 10]) {
-    const d = e[i] - prev[i];
-    rot += d * d;
-  }
-  return Math.sqrt(tx * tx + ty * ty + tz * tz) + Math.sqrt(rot) * reach;
 }
 
 export function copyMatrix(matrix: Matrix4, out: Float64Array): Float64Array {

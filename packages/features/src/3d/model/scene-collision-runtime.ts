@@ -1,13 +1,10 @@
 import { Box3, Vector3, type Mesh, type Object3D } from 'three';
 import {
   approxContactPoint,
-  boxesDistance,
-  closestPointsBetweenBoxes,
   collectCollidableMeshes,
   getMeshPath,
   meshesIntersectExact,
   meshesWithinDistance,
-  meshLocalReach,
   meshObbsIntersect,
   meshWorldBox,
   modelObjectRegistry,
@@ -17,15 +14,11 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import {
   BASELINE_SETTLE_MS,
   BVH_RETRY_MS,
-  CLEARANCE_MIN,
-  CLEARANCE_PROBE,
   copyMatrix,
-  displacementBound,
   matrixChanged,
   MIN_MESH_EXTENT,
   pairKey,
   SEPARATION_MARGIN,
-  SUPPRESSED_RECHECK_MS,
 } from '../lib/scene-collision-pairs';
 
 /**
@@ -76,10 +69,6 @@ interface MeshEntry {
   nodePath: string;
   box: Box3;
   lastMatrix: Float64Array;
-  /** 항목을 만들 때의 지오메트리 — 바뀌면 강체 이동 한계가 무효라 반드시 검사한다. */
-  geometry: Mesh['geometry'];
-  /** 로컬 원점에서 가장 먼 정점 거리 — 이동 한계(displacementBound)용. */
-  reach: number;
 }
 
 interface ModelEntry {
@@ -89,8 +78,6 @@ interface ModelEntry {
   meshes: MeshEntry[];
   box: Box3;
   dirty: boolean;
-  /** 이번 tick 에 이 모델의 어느 점이든 움직였을 수 있는 거리 상한(메쉬별 최대). */
-  tickDrift: number;
 }
 
 type PairState = 'untested' | 'clear' | 'suppressed';
@@ -104,38 +91,11 @@ interface PairJob {
   /** BVH 미준비로 미룬 경우 이 시각 전엔 다시 보지 않는다. */
   bvhRetryAt: number;
   /**
-   * 억제 쌍의 다음 분리 재판정 시각. 직전 판정이 "아직 붙음" 이면
-   * SUPPRESSED_RECHECK_MS 뒤로 미루고, 그 전엔 큐에 남겨만 둔다(비용 0).
-   */
-  separationCheckAt: number;
-  /**
-   * 마지막 clear 판정 때 잰 여유 거리(두 모델 사이 최단 거리의 하한, 씬 unit).
-   * 0 = 모름. 두 모델의 누적 이동 한계(`driftSinceClear`)가 이 값을 넘기
-   * 전까지는 다시 검사하지 않는다 — 강체 이동 한계가 보수적이라 놓치는
-   * 충돌은 없다.
-   */
-  clearance: number;
-  driftSinceClear: number;
-
-  /**
    * 기준선 단계에서 BVH 가 없어 판정을 못 내린 쌍 — 기준선은 이 쌍을 기다리지
    * 않고 끝나며, 뒤늦게 난 첫 hit 은 기준선 겹침으로 보고 억제한다.
    */
   baselineDeferred: boolean;
 }
-
-/** 근접 쌍 — 모델 AABB 간격 기준(씬 unit). 겹치면 gap 0. */
-export interface SceneProximityCandidate {
-  key: string;
-  a: string;
-  b: string;
-  gap: number;
-  from: [number, number, number];
-  to: [number, number, number];
-}
-
-const _nearA = new Vector3();
-const _nearB = new Vector3();
 
 export type SceneCollisionRuntimePhase =
   | 'idle'
@@ -186,8 +146,6 @@ export class SceneCollisionRuntime {
   private settleFromNextTick = false;
   /** 마지막 tick 의 소요 시간(ms) — 예산 초과 관측용. */
   lastTickMs = 0;
-  /** 삼각형(BVH) 교차 검사 누계 — 여유 거리 컬링 효과 관측·테스트용. */
-  exactTests = 0;
 
   private readonly clock: () => number;
 
@@ -239,9 +197,6 @@ export class SceneCollisionRuntime {
     for (const job of this.pairs) {
       if (job.state !== 'suppressed') job.state = 'untested';
       job.bvhRetryAt = 0;
-      job.separationCheckAt = 0;
-      job.clearance = 0;
-      job.driftSinceClear = 0;
     }
   }
 
@@ -283,63 +238,11 @@ export class SceneCollisionRuntime {
     this.settleFromNextTick = true;
   }
 
-  /**
-   * 모델 AABB 간격이 `maxGap` 이하인 쌍을 가까운 순으로 최대 `limit` 개.
-   * 상자는 마지막 tick 의 변화 감지가 갱신한 값이다(tick 뒤에 부른다).
-   * 비용은 쌍 수에 비례한 AABB 간격 계산뿐이다. idle 이면 빈 배열.
-   */
-  nearestPairs(
-    maxGap: number,
-    limit: number,
-    include: (model: SavedModelInfo) => boolean = () => true,
-  ): SceneProximityCandidate[] {
-    if (this.phase === 'idle') return [];
-    const out: SceneProximityCandidate[] = [];
-    for (const job of this.pairs) {
-      if (job.a.meshes.length === 0 || job.b.meshes.length === 0) continue;
-      if (job.a.box.isEmpty() || job.b.box.isEmpty()) continue;
-      if (!include(job.a.model) || !include(job.b.model)) continue;
-      // 모델 상자 간격으로 먼저 거르고, 들어오면 **메쉬 상자 쌍의 최소 간격**으로
-      // 잰다 — 타워크레인은 마스트·상부가 메쉬로 나뉘어 있어 모델 상자(지브가
-      // 쓸고 간 전체)보다 훨씬 덜 보수적이다(상부가 높이 60m 면 아래 크레인과
-      // 겹치지 않는다).
-      if (boxesDistance(job.a.box, job.b.box) > maxGap) continue;
-      let gap = Number.POSITIVE_INFINITY;
-      let nearA: MeshEntry | null = null;
-      let nearB: MeshEntry | null = null;
-      for (const ma of job.a.meshes) {
-        for (const mb of job.b.meshes) {
-          const d = boxesDistance(ma.box, mb.box);
-          if (d < gap) {
-            gap = d;
-            nearA = ma;
-            nearB = mb;
-          }
-        }
-      }
-      if (!nearA || !nearB || gap > maxGap) continue;
-      closestPointsBetweenBoxes(nearA.box, nearB.box, _nearA, _nearB);
-      out.push({
-        key: job.key,
-        a: job.a.id,
-        b: job.b.id,
-        gap,
-        from: [_nearA.x, _nearA.y, _nearA.z],
-        to: [_nearB.x, _nearB.y, _nearB.z],
-      });
-    }
-    out.sort((x, y) => x.gap - y.gap);
-    return out.length > limit ? out.slice(0, limit) : out;
-  }
-
   /** 닫기 — 이 쌍은 분리될 때까지 보고하지 않는다. 없는 키는 no-op. */
   suppress(key: string): void {
     this.suppressed.add(key);
     const job = this.jobsByKey.get(key);
-    if (job) {
-      job.state = 'suppressed';
-      job.separationCheckAt = 0;
-    }
+    if (job) job.state = 'suppressed';
   }
 
   /**
@@ -365,28 +268,10 @@ export class SceneCollisionRuntime {
       this.settleFromNextTick = false;
     }
 
-    // A. 변화 감지 — 메쉬 matrixWorld 비교. 바뀐 메쉬만 박스를 다시 재고,
-    //    이번 tick 의 이동 한계(어느 점이든 이보다 멀리는 못 갔다)를 모델에 모은다.
+    // A. 변화 감지 — 메쉬 matrixWorld 비교. 바뀐 메쉬만 박스를 다시 잰다.
     for (const entry of this.entries.values()) {
       for (const m of entry.meshes) {
-        const geometrySwapped = m.mesh.geometry !== m.geometry;
-        if (
-          !geometrySwapped &&
-          !matrixChanged(m.lastMatrix, m.mesh.matrixWorld)
-        ) {
-          continue;
-        }
-        let drift = displacementBound(
-          m.lastMatrix,
-          m.mesh.matrixWorld,
-          m.reach,
-        );
-        if (geometrySwapped) {
-          m.geometry = m.mesh.geometry;
-          m.reach = meshLocalReach(m.mesh);
-          drift = Number.POSITIVE_INFINITY;
-        }
-        if (drift > entry.tickDrift) entry.tickDrift = drift;
+        if (!matrixChanged(m.lastMatrix, m.mesh.matrixWorld)) continue;
         copyMatrix(m.mesh.matrixWorld, m.lastMatrix);
         meshWorldBox(m.mesh, m.box);
         entry.dirty = true;
@@ -395,20 +280,10 @@ export class SceneCollisionRuntime {
     }
 
     // B. dirty 모델이 낀 쌍만 큐에. 억제된 쌍도 분리 판정을 위해 넣는다.
-    //    clear 쌍은 여유 거리가 남아 있으면(누적 이동 한계 < clearance) 건너뛴다
-    //    — 이 비교가 유일한 비용이다.
     for (const job of this.pairs) {
-      if (!job.a.dirty && !job.b.dirty) continue;
-      if (job.state === 'clear' && job.clearance > 0) {
-        job.driftSinceClear += job.a.tickDrift + job.b.tickDrift;
-        if (job.driftSinceClear < job.clearance) continue;
-      }
-      this.enqueue(job);
+      if (job.a.dirty || job.b.dirty) this.enqueue(job);
     }
-    for (const entry of this.entries.values()) {
-      entry.dirty = false;
-      entry.tickDrift = 0;
-    }
+    for (const entry of this.entries.values()) entry.dirty = false;
 
     // C. 이번 tick 에 볼 job 은 지금 큐에 있는 것까지다 — 처리 중 재큐된
     //    job(BVH 재시도 등)은 다음 tick 으로 간다. 그렇지 않으면 예산 안에서
@@ -423,25 +298,15 @@ export class SceneCollisionRuntime {
       const job = pending[i];
 
       if (job.state === 'suppressed') {
-        if (job.separationCheckAt > now) {
-          // 재판정 시각까지 큐에 남겨 움직임이 멈춰도 때가 되면 다시 본다.
-          this.enqueue(job);
-          continue;
-        }
         if (this.meshPairsSeparated(job)) {
           this.suppressed.delete(job.key);
           job.state = 'untested';
-          job.separationCheckAt = 0;
-        } else {
-          job.separationCheckAt = now + SUPPRESSED_RECHECK_MS;
         }
         continue;
       }
       if (!job.a.box.intersectsBox(job.b.box)) {
         job.state = 'clear';
         job.baselineDeferred = false;
-        // 모델 AABB 간격은 메쉬 거리의 하한 — 그만큼 움직이기 전엔 안 본다.
-        this.setClearance(job, boxesDistance(job.a.box, job.b.box));
         continue;
       }
       if (job.bvhRetryAt > now) {
@@ -455,7 +320,6 @@ export class SceneCollisionRuntime {
           job.baselineDeferred = false;
           this.suppressed.add(job.key);
           job.state = 'suppressed';
-          job.separationCheckAt = now + SUPPRESSED_RECHECK_MS;
           continue;
         }
         for (let j = i + 1; j < pending.length; j += 1)
@@ -467,26 +331,19 @@ export class SceneCollisionRuntime {
         if (this.phase === 'baseline') job.baselineDeferred = true;
         job.state = 'untested';
         job.bvhRetryAt = now + BVH_RETRY_MS;
-        this.setClearance(job, 0);
         this.enqueue(job);
         continue;
       }
       job.state = 'clear';
       job.baselineDeferred = false;
-      this.setClearance(job, this.measureClearance(job));
     }
 
-    // BVH 재시도 대기 쌍과 분리 재판정을 기다리는 억제 쌍은 기다리지 않는다 —
-    // BVH 가 끝내 안 생기는 메쉬 하나가 기준선 전체를 붙잡으면 안 된다(그 쌍은
-    // baselineDeferred 로 따로 넘긴다).
+    // BVH 재시도 대기 쌍은 기다리지 않는다 — BVH 가 끝내 안 생기는 메쉬 하나가
+    // 기준선 전체를 붙잡으면 안 된다(그 쌍은 baselineDeferred 로 따로 넘긴다).
     if (
       this.phase === 'baseline' &&
       now >= this.settleUntil &&
-      this.queue.every(
-        (job) =>
-          job.bvhRetryAt > now ||
-          (job.state === 'suppressed' && job.separationCheckAt > now),
-      )
+      this.queue.every((job) => job.bvhRetryAt > now)
     ) {
       this.phase = 'scanning';
     }
@@ -498,30 +355,6 @@ export class SceneCollisionRuntime {
 
   private hitMeshA: MeshEntry | null = null;
   private hitMeshB: MeshEntry | null = null;
-
-  private setClearance(job: PairJob, clearance: number): void {
-    job.clearance = Number.isFinite(clearance) && clearance > 0 ? clearance : 0;
-    job.driftSinceClear = 0;
-  }
-
-  /**
-   * clear 판정 직후 두 모델 사이 최단 거리의 하한(CLEARANCE_PROBE 상한) —
-   * **메쉬 AABB 간격만** 쓴다. 어느 메쉬 쌍이든 AABB 가 겹치면 0(컬링 없음).
-   * 삼각형 거리(BVH 쌍 탐색)로 재지 않는다 — 옥포 타워크레인처럼 삼각형이
-   * 조밀한 큰 메쉬 쌍은 질의 하나가 수 초라 화면이 1 fps 로 떨어졌다.
-   * CLEARANCE_MIN 아래는 한두 스캔에 소진돼 의미가 없어 0 으로 둔다.
-   */
-  private measureClearance(job: PairJob): number {
-    let clearance = CLEARANCE_PROBE;
-    for (const ma of job.a.meshes) {
-      for (const mb of job.b.meshes) {
-        const gap = boxesDistance(ma.box, mb.box);
-        if (gap < clearance) clearance = gap;
-        if (clearance < CLEARANCE_MIN) return 0;
-      }
-    }
-    return clearance;
-  }
 
   /**
    * 억제 해제 판정 — **메쉬 단위**로 떨어졌는지. 모델 전체 AABB 는 크레인처럼
@@ -574,7 +407,6 @@ export class SceneCollisionRuntime {
       for (const mb of _candB) {
         if (!ma.box.intersectsBox(mb.box)) continue;
         if (!meshObbsIntersect(ma.mesh, mb.mesh)) continue;
-        this.exactTests += 1;
         const exact = meshesIntersectExact(ma.mesh, mb.mesh);
         if (exact === null) {
           bvhMissing = true;
@@ -646,20 +478,10 @@ export class SceneCollisionRuntime {
         nodePath,
         box: new Box3(),
         lastMatrix: new Float64Array(16).fill(Number.NaN),
-        geometry: mesh.geometry,
-        reach: meshLocalReach(mesh),
       });
     }
     _meshScratch.length = 0;
-    return {
-      id: model.id,
-      model,
-      root,
-      meshes,
-      box: new Box3(),
-      dirty: true,
-      tickDrift: 0,
-    };
+    return { id: model.id, model, root, meshes, box: new Box3(), dirty: true };
   }
 
   /** 다음 tick 의 변화 감지가 모든 메쉬를 새로 재게 한다. */
@@ -702,10 +524,6 @@ export class SceneCollisionRuntime {
               ? prev.state
               : 'untested',
           bvhRetryAt: prev?.bvhRetryAt ?? 0,
-          separationCheckAt: prev?.separationCheckAt ?? 0,
-          clearance: prev && prev.a === a && prev.b === b ? prev.clearance : 0,
-          driftSinceClear:
-            prev && prev.a === a && prev.b === b ? prev.driftSinceClear : 0,
           baselineDeferred:
             prev !== undefined && prev.a === a && prev.b === b
               ? prev.baselineDeferred

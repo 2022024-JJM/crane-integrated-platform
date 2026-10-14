@@ -20,7 +20,6 @@ import {
   selectReflectionHidden,
 } from '../lib/water-reflection';
 import { resolveWaterSunUniforms } from '../lib/water-sun-uniforms';
-import { useSceneLookStore } from '../model/use-scene-look-store';
 import { sceneLightingInfo } from '../model/scene-lighting-info';
 import { getReflectionExclusions } from '../model/scene-reflection-exclusions';
 
@@ -75,13 +74,6 @@ const SEA_RENDER_ORDER = 0.25;
 /** 반사 RT 한 변(px). 예제와 같다 — 줄이면 반사가 뭉개지는 대신 미러 패스가 싸진다. */
 const WATER_REFLECTION_SIZE = 512;
 /**
- * 반사 RT 갱신 최소 간격 — 15Hz. 정지 카메라에서 반사에 보이는 변화는 모델
- * 이동뿐이라 이 주기면 눈에 띄지 않고, 미러 패스가 본 패스만큼 비싸서
- * 30fps 틱에서 그 절반이 빠진다. 카메라가 움직이면 매 프레임 그린다
- * (ocean-water.ts reflectionIntervalMs).
- */
-const WATER_REFLECTION_INTERVAL_MS = 66;
-/**
  * 수면 아래 산란색. 예제값(0x001e0f)은 거의 검정이라 낮엔 태양 확산 회색이,
  * 저녁엔 검정이 남았다 — 시각과 무관하게 "바다 파랑" 이 깔리도록 밝게 둔다.
  */
@@ -94,32 +86,6 @@ const WATER_DISTORTION_SCALE = 3.7;
  * 멀리 있는 바다가 너무 희거나 어두우면 이 값 하나만 조정한다.
  */
 const WATER_REFLECTION_INTENSITY = 0.3;
-/** 관제 모드의 물 — 반사를 끄고 회청색 한 가지로 가라앉힌다. */
-const CONTROL_ROOM_WATER_COLOR = 0x1e252c;
-
-/** 관제 모드의 잔물결 — 왜곡·태양 확산을 낮춰 수면이 평평한 면으로 읽힌다. */
-const CONTROL_ROOM_DISTORTION_SCALE = 0.8;
-const CONTROL_ROOM_SUN_DIFFUSE_INTENSITY = 0.05;
-
-/**
- * 물 색·반사·잔물결 유니폼만 바꾼다(재컴파일 없음). 관제 모드는 미러 패스
- * 자체를 끈다 — 반사 세기가 0 에 가까워 보이지도 않는 패스에 본 패스만큼의
- * 비용이 들었다.
- */
-function applyWaterLook(water: OceanWater, controlRoom: boolean): void {
-  water.reflectionEnabled = !controlRoom;
-  const u = water.uniforms;
-  u.waterColor.value.setHex(
-    controlRoom ? CONTROL_ROOM_WATER_COLOR : WATER_COLOR,
-  );
-  u.reflectionIntensity.value = controlRoom ? 0 : WATER_REFLECTION_INTENSITY;
-  u.distortionScale.value = controlRoom
-    ? CONTROL_ROOM_DISTORTION_SCALE
-    : WATER_DISTORTION_SCALE;
-  u.sunDiffuseIntensity.value = controlRoom
-    ? CONTROL_ROOM_SUN_DIFFUSE_INTENSITY
-    : WATER_SUN_DIFFUSE_INTENSITY;
-}
 /**
  * 태양 확산 회색항 배율(포크 전용, 예제는 1). 예제 원값이면 낮에 이 회색이
  * 산란색을 8배로 덮어 물이 회색이 된다 — 낮에도 파랑이 남는 값으로 둔다.
@@ -164,8 +130,6 @@ function* excludedObjectsOf(water: OceanWater) {
 /** useFrame 이 읽고 쓰는 프레임 상태 — 훅이 돌려준 물을 직접 고치지 않는다. */
 interface WaterFrameState {
   uniforms: OceanWaterUniforms;
-  /** 파도 시간을 멈춤(관제 모드) — 잔물결이 안 보이는 룩에서 바다 때문에 프레임을 돌리지 않는다. */
-  frozen: boolean;
   /** 마지막으로 유니폼에 반영한 sceneLightingInfo 튜플·세기 — 참조로 비교. */
   sunDirection: Vector3Tuple | null;
   sunColor: RgbTuple | null;
@@ -176,7 +140,6 @@ function createFrameState(uniforms: OceanWaterUniforms): WaterFrameState {
   // null·NaN 이라 첫 프레임에 반드시 유니폼을 쓴다.
   return {
     uniforms,
-    frozen: false,
     sunDirection: null,
     sunColor: null,
     sunIntensity: Number.NaN,
@@ -207,7 +170,6 @@ export function SceneWater({
     const water: OceanWater = new OceanWater(geometry, {
       textureWidth: WATER_REFLECTION_SIZE,
       textureHeight: WATER_REFLECTION_SIZE,
-      reflectionIntervalMs: WATER_REFLECTION_INTERVAL_MS,
       waterNormals: normals,
       sunDirection: new Vector3(0, 1, 0),
       sunColor: 0xffffff,
@@ -269,7 +231,7 @@ export function SceneWater({
     // 예제와 같이 무한 누적 — 며칠 연속 가동하면 float32 정밀도로 파도가
     // 거칠어진다(이전 셰이더도 같았다). wrap 은 레이어 주기가 서로 소수라
     // 어디서든 튄다 — docs/agents/rendering-perf.md 미룬 것.
-    if (!state.frozen) state.uniforms.time.value += delta * WATER_TIME_SCALE;
+    state.uniforms.time.value += delta * WATER_TIME_SCALE;
 
     const { sunDirection, sunColor, sunIntensity } = sceneLightingInfo;
     if (
@@ -295,14 +257,6 @@ export function SceneWater({
       sun.color[2],
     );
   });
-
-  // 관제 모드: 물 색·반사 유니폼만 바꾼다(재컴파일 없음). 끄면 원래 값.
-  const controlRoom = useSceneLookStore((s) => s.controlRoom);
-  useEffect(() => {
-    applyWaterLook(water, controlRoom);
-    frameRef.current.frozen = controlRoom;
-    invalidate();
-  }, [controlRoom, water, invalidate]);
 
   return <primitive object={water} />;
 }

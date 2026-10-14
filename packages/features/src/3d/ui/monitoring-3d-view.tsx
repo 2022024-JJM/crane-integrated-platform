@@ -23,7 +23,6 @@ import {
   resolveTrueNorth,
   unionObjectBounds,
   type SceneViewport,
-  getSceneMetersPerUnit,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
@@ -53,7 +52,6 @@ import { SceneZoneAlertOverlay } from './scene-zone-alert-overlay';
 import { SceneZoneDetector } from './scene-zone-detector';
 import { SceneZoneRings } from './scene-zone-rings';
 import { SceneClockMenu } from './scene-clock-menu';
-import { SceneContextRecovery } from './scene-context-recovery';
 import { SceneFrameGovernor } from './scene-frame-governor';
 import {
   OutdoorWorkModelSimulation,
@@ -74,20 +72,6 @@ import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
-import { SceneLookToggle } from './scene-look-toggle';
-import { SceneProximityDetector } from './scene-proximity-detector';
-import { SceneProximityLayer } from './scene-proximity-layer';
-import { SceneEquipmentFootprints } from './scene-equipment-footprints';
-import { SceneContourCuller } from './scene-contour-culler';
-import { SceneOffscreenIndicators } from './scene-offscreen-indicators';
-import { ScenePlanMarkers } from './scene-plan-markers';
-import { expandTopViewBounds } from '../lib/top-view-focus';
-import { PLAN_VIEW_DISTANCE_SCALE, PLAN_VIEW_FOV } from '../lib/plan-view';
-import { proximityLevelById } from '../lib/scene-proximity';
-import { isEquipment } from '../model/use-scene-proximity';
-import { useSceneProximityStore } from '../model/use-scene-proximity-store';
-import { useSceneLookStore } from '../model/use-scene-look-store';
-import { mergeProximityOutlines } from '../lib/proximity-outline';
 import { SceneStatusHud } from './scene-status-hud';
 import { useModelStatusRecords } from '../model/use-model-runtime-statuses';
 import { useStatusJournalSync } from '../model/use-status-journal-sync';
@@ -255,38 +239,12 @@ export function Monitoring3dView({
   const {
     runtime: runtimeStatuses,
     labels: labelStates,
-    outlines: statusOutlineStates,
+    outlines: outlineStates,
   } = useModelStatusRecords(
     sceneInfo,
     isPlay3d
       ? { paused: !transport.isPlaying, timeScale: transport.speed }
       : undefined,
-  );
-  // 근접 쌍의 두 모델에 외곽선(주의 황·위험 적) — 상태 외곽선 위에 덮는다.
-  // 키·등급만 보는 슬라이스 — 간격 숫자는 패널·선이 따로 구독한다.
-  const proximityPairs = useSceneProximityStore((s) => s.outlinePairs);
-  // 관제 모드: 장비 전부에 얇은 상시 윤곽 — 어두운 야드에서 멀리 있는 가는
-  // 타워크레인도 형태가 읽힌다. 근접·상태 외곽선이 있으면 그쪽이 이긴다.
-  const controlRoom = useSceneLookStore((s) => s.controlRoom);
-  // 카메라 거리 안의 장비만(SceneContourCuller 가 스토어에 쓴다) — 멀리 있는
-  // 장비는 윤곽이 몇 픽셀이라 비용만 든다.
-  const culledContourIds = useSceneLookStore((s) => s.contourIds);
-  const contourIds =
-    controlRoom && showControlRoomWidgets ? culledContourIds : null;
-  const outlineStates = useMemo(
-    () =>
-      mergeProximityOutlines(statusOutlineStates, proximityPairs, contourIds),
-    [statusOutlineStates, proximityPairs, contourIds],
-  );
-  // 미니맵 마커 색 — 어느 구역에 문제가 있나(키·등급 슬라이스라 드물게 바뀐다).
-  const minimapProximity = useMemo(
-    () => proximityLevelById(proximityPairs),
-    [proximityPairs],
-  );
-  // 위험 쌍이 있는 동안은 링 맥동 때문에 프레임을 돌린다(거버너 pulse, 저속).
-  const proximityDanger = useMemo(
-    () => proximityPairs.some((p) => p.level === 'danger'),
-    [proximityPairs],
   );
   // 통신두절 진입·복귀를 저널에 남긴다(그 밖의 전환은 제외) — 실시간 화면만.
   useStatusJournalSync(
@@ -446,44 +404,19 @@ export function Monitoring3dView({
   const cameraBoundsKey = resolveCameraBoundsMaps(sceneInfo?.maps)
     .map((m) => m.id)
     .join('|');
-  // 탑뷰는 장비 범위(lib/top-view-focus) — 지도 전체가 아니다(장비가 몇
-  // 픽셀이 된다). 장비가 없는 씬만 지도 기준.
-  const equipmentKey = useMemo(
-    () =>
-      (sceneInfo?.models ?? [])
-        .filter(isEquipment)
-        .map((m) => m.id)
-        .join('|'),
-    [sceneInfo],
-  );
-  const topViewMpu = getSceneMetersPerUnit(regionId);
   const cameraPreset = useMemo(
     () => ({
       defaultPosition: cameraPosition,
       defaultTarget: cameraTarget,
-      // 망원 탑뷰 — 평면도에 가깝게(lib/plan-view). 보던 구역 위로 올라간다.
-      topViewFov: PLAN_VIEW_FOV,
-      topViewFromCurrent: true,
-      topViewDistanceScale: PLAN_VIEW_DISTANCE_SCALE,
-      getTopViewBounds: () => {
-        if (equipmentKey) {
-          const focused = expandTopViewBounds(
-            unionObjectBounds(
-              equipmentKey.split('|').map((id) => modelObjectRegistry.get(id)),
-            ),
-            topViewMpu,
-          );
-          if (focused) return focused;
-        }
-        return unionObjectBounds(
+      getTopViewBounds: () =>
+        unionObjectBounds(
           cameraBoundsKey
             .split('|')
             .filter(Boolean)
             .map((id) => modelObjectRegistry.get(id)),
-        );
-      },
+        ),
     }),
-    [cameraPosition, cameraTarget, cameraBoundsKey, equipmentKey, topViewMpu],
+    [cameraPosition, cameraTarget, cameraBoundsKey],
   );
 
   // 좌측 상단 열 — 첫 줄은 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드
@@ -578,14 +511,8 @@ export function Monitoring3dView({
               ) : null}
               {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
                 알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
-              {/* 관제 모드에선 가장자리 비네트를 뺀다 — 화면 전체 대비를
-                깎는다. 충돌·침범은 해당 쌍의 적색 외곽선·거리 선·링이 말한다. */}
-              {controlRoom ? null : (
-                <>
-                  <SceneCollisionAlertOverlay runner={collisionRunner} />
-                  <SceneZoneAlertOverlay />
-                </>
-              )}
+              <SceneCollisionAlertOverlay runner={collisionRunner} />
+              <SceneZoneAlertOverlay />
               {/* 분할 타일(이름·방위·클릭) — 캔버스 위에 깔려 포인터를 전부
                 받는다. 비네트는 pointer-events-none 이라 위에 있어도 클릭이
                 통과한다. */}
@@ -605,7 +532,6 @@ export function Monitoring3dView({
                 <SceneMinimap
                   sceneInfo={sceneInfo}
                   alarmsByCraneId={sceneAlarms}
-                  proximityLevelById={minimapProximity}
                   getPose={handleGetPose}
                   onMoveTo={handleMoveTo}
                 />
@@ -655,10 +581,7 @@ export function Monitoring3dView({
               <>
                 {toolbarExtras}
                 {showControlRoomWidgets ? (
-                  <>
-                    <SceneLookToggle />
-                    <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
-                  </>
+                  <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
                 ) : null}
                 {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
                   의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
@@ -687,13 +610,7 @@ export function Monitoring3dView({
           onControllerReady={handleControllerReady}
         >
           {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
-          {/* 관제 모드의 바다는 반사·잔물결이 멈춰 상시 소스가 아니다. */}
-          <SceneFrameGovernor
-            sea={seaVisible && !controlRoom}
-            slow={solarSun}
-            pulse={proximityDanger && showControlRoomWidgets}
-          />
-          <SceneContextRecovery />
+          <SceneFrameGovernor animating={seaVisible} slow={solarSun} />
           {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키.
             리플레이 소스의 낮/밤은 프레임 타임스탬프를 따른다. */}
           <SceneLighting
@@ -739,34 +656,6 @@ export function Monitoring3dView({
             />
             <SceneCollisionHighlight />
             {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
-            <SceneProximityDetector
-              regionId={regionId}
-              enabled={showControlRoomWidgets}
-            />
-            <SceneProximityLayer />
-            {showControlRoomWidgets ? (
-              <>
-                <SceneEquipmentFootprints
-                  sceneInfo={sceneInfo}
-                  outlineStates={outlineStates}
-                />
-                <SceneContourCuller sceneInfo={sceneInfo} regionId={regionId} />
-                <ScenePlanMarkers
-                  sceneInfo={sceneInfo}
-                  regionId={regionId}
-                  labelStates={labelStates}
-                  onMoveTo={handleMoveTo}
-                />
-                <SceneOffscreenIndicators
-                  sceneInfo={sceneInfo}
-                  regionId={regionId}
-                  overlapLabel={t('monitoring:proximity.overlap', {
-                    defaultValue: '겹침',
-                  })}
-                  onMoveTo={handleMoveTo}
-                />
-              </>
-            ) : null}
             <SceneZoneDetector
               sceneInfo={sceneInfo}
               enabled={zonesEnabled}

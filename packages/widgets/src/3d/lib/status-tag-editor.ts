@@ -50,17 +50,13 @@ export function describeLabelState(
     tone: Record<EquipmentLabelState['tone'], string>;
     bypass: string;
     freeSwing: string;
-    /** 상태 태그가 만드는 외곽선만 — `contour` 는 관제 모드의 상시 윤곽이라 상태 태그와 무관. */
-    outline: Record<Exclude<EquipmentOutlineState, 'none' | 'contour'>, string>;
+    outline: Record<Exclude<EquipmentOutlineState, 'none'>, string>;
   },
   outline: EquipmentOutlineState = 'none',
 ): string {
   const parts = [names.tone[state.tone]];
   if (state.bypass) parts.push(names.bypass);
   if (state.freeSwing) parts.push(names.freeSwing);
-  // 상시 윤곽(contour)은 상태가 아니라 미리보기 문구에 넣지 않는다.
-  if (outline !== 'none' && outline !== 'contour') {
-    parts.push(names.outline[outline]);
-  }
+  if (outline !== 'none') parts.push(names.outline[outline]);
   return parts.join(' · ');
 }

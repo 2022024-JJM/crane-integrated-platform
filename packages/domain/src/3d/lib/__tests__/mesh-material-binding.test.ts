@@ -1,4 +1,3 @@
-import { sceneLookCacheKey } from '../sea-submersion';
 import { describe, expect, it } from 'vitest';
 import { Mesh, MeshStandardMaterial, BoxGeometry } from 'three';
 import {
@@ -13,7 +12,7 @@ import {
   restoreOriginalMaterials,
 } from '../mesh-material-binding';
 
-const SEA_CACHE_KEY = sceneLookCacheKey(true, 'environment');
+const SEA_CACHE_KEY = 'sea-submersion';
 
 function makeBinding(material = new MeshStandardMaterial()) {
   const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
@@ -21,9 +20,8 @@ function makeBinding(material = new MeshStandardMaterial()) {
 }
 
 function cacheKeyOf(material: unknown): string {
-  return (
-    material as { customProgramCacheKey: () => string }
-  ).customProgramCacheKey();
+  return (material as { customProgramCacheKey: () => string })
+    .customProgramCacheKey();
 }
 
 describe('sea-material-cache', () => {

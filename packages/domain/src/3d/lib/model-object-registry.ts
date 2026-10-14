@@ -14,18 +14,6 @@ import { isMeshId } from './mesh-path';
  */
 const registry = new Map<string, Object3D>();
 
-/**
- * dev 진단 — 콘솔에서 `__craneModelRegistry` 로 마운트된 객체를 본다(노드
- * 자세 샘플링·"모델이 왜 안 움직이나" 판정). 프로덕션 번들에선 코드가
- * 제거된다(import.meta.env.DEV 트리셰이킹, shadow-invalidation 의
- * __shadowDebug 와 같은 방식).
- */
-if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (
-    window as { __craneModelRegistry?: Map<string, Object3D> }
-  ).__craneModelRegistry = registry;
-}
-
 export const modelObjectRegistry = {
   register(id: string, object: Object3D): void {
     registry.set(id, object);

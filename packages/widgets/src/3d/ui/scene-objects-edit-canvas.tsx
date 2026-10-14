@@ -60,7 +60,6 @@ import {
   SCENE_RAYCASTER_OPTIONS,
   CAMERA_MIN_SURFACE_DISTANCE,
   SceneEnvironment,
-  SceneContextRecovery,
   SceneFrameGovernor,
   SceneLighting,
   sceneCanvasShadows,
@@ -1039,10 +1038,9 @@ export function SceneObjectsEditCanvas({
         {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. 바다 씬은
             파도가 상시 애니메이션, solar 씬은 태양이 느리게 움직인다. */}
         <SceneFrameGovernor
-          sea={seaVisible}
+          animating={seaVisible}
           slow={sceneInfo?.lighting?.sunMode === 'solar'}
         />
-        <SceneContextRecovery />
         {/* regionId 는 solar 모드(현장 시각 낮/밤)의 위치·시간대 키 — 뷰어와
             같은 하늘을 편집 중에도 본다. */}
         <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
@@ -1166,12 +1164,10 @@ export function SceneObjectsEditCanvas({
               key={m.id}
               label={`map ${m.path}`}
               isolateSuspense
-              assetPath={m.path}
             >
               <SelectionAwareGltfModel
                 id={m.id}
                 url={m.path}
-                lookGroup="environment"
                 position={m.position}
                 rotation={m.rotation}
                 scale={m.scale}
@@ -1202,7 +1198,6 @@ export function SceneObjectsEditCanvas({
             key={model.id}
             label={`model ${model.equipName || model.id} (${model.path})`}
             isolateSuspense
-            assetPath={model.path}
           >
             <SelectionAwareGltfModel
               id={model.id}

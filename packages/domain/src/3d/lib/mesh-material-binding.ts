@@ -1,6 +1,5 @@
 import { Color, type Material, type Mesh } from 'three';
 import { applySeaSubmersion } from './sea-submersion';
-import type { SceneLookGroup } from './scene-look';
 import { acquireSeaVariant, releaseSeaVariant } from './sea-material-cache';
 
 /**
@@ -25,21 +24,10 @@ export interface MeshMaterialBinding {
   cloned: Material | Material[] | null;
   /** 잠김 공유 variant 사용 중 여부 — release 대칭을 위해 기억한다. */
   shared: boolean;
-  /** 공유 중인 variant 가 잠김 안개 포함인지(반납할 풀을 고른다). */
-  sharedFog: boolean;
-  /** 공유 중인 variant 의 룩 그룹. */
-  sharedGroup: SceneLookGroup;
 }
 
 export function createMeshMaterialBinding(mesh: Mesh): MeshMaterialBinding {
-  return {
-    mesh,
-    original: mesh.material,
-    cloned: null,
-    shared: false,
-    sharedFog: true,
-    sharedGroup: 'environment',
-  };
+  return { mesh, original: mesh.material, cloned: null, shared: false };
 }
 
 function toArray(value: Material | Material[]): Material[] {
@@ -51,7 +39,7 @@ function releaseShared(binding: MeshMaterialBinding): void {
   if (!binding.shared) return;
   binding.shared = false;
   for (const original of toArray(binding.original)) {
-    releaseSeaVariant(original, binding.sharedFog, binding.sharedGroup);
+    releaseSeaVariant(original);
   }
 }
 
@@ -71,26 +59,12 @@ function disposeCloned(binding: MeshMaterialBinding): void {
  * 잠김 공유 상태로 전이. 이미 공유 중이면 no-op(멱등). 개별 클론이 있었으면
  * 처분한다 — 알람이 꺼져 "잠김만" 으로 돌아오는 경로.
  */
-export function assignSharedSeaMaterials(
-  binding: MeshMaterialBinding,
-  fog = true,
-  group: SceneLookGroup = 'environment',
-): void {
-  if (
-    binding.shared &&
-    binding.sharedFog === fog &&
-    binding.sharedGroup === group
-  )
-    return;
-  releaseShared(binding);
+export function assignSharedSeaMaterials(binding: MeshMaterialBinding): void {
+  if (binding.shared) return;
   disposeCloned(binding);
   const originals = toArray(binding.original);
-  const variants = originals.map((original) =>
-    acquireSeaVariant(original, fog, group),
-  );
+  const variants = originals.map((original) => acquireSeaVariant(original));
   binding.shared = true;
-  binding.sharedFog = fog;
-  binding.sharedGroup = group;
   binding.mesh.material = Array.isArray(binding.original)
     ? variants
     : variants[0];
@@ -105,7 +79,6 @@ export function assignSharedSeaMaterials(
 export function ensureClonedMaterials(
   binding: MeshMaterialBinding,
   seaSubmersion: boolean,
-  group: SceneLookGroup = 'environment',
 ): Material[] {
   if (binding.cloned) {
     return toArray(binding.cloned);
@@ -118,8 +91,9 @@ export function ensureClonedMaterials(
       (c as unknown as { _originalColor: Color })._originalColor =
         c.color.clone();
     }
-    // 룩(무채색) 패치는 항상, 잠김 안개는 바다 씬만.
-    applySeaSubmersion(c, { fog: seaSubmersion, group });
+    if (seaSubmersion) {
+      applySeaSubmersion(c);
+    }
     return c;
   };
 

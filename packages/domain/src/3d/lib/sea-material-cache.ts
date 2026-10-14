@@ -1,6 +1,5 @@
 import type { Material } from 'three';
 import { applySeaSubmersion } from './sea-submersion';
-import type { SceneLookGroup } from './scene-look';
 
 /**
  * seaSubmersion 전용 공유 머티리얼 캐시 — 원본 머티리얼당 패치된 클론 1개를
@@ -31,37 +30,14 @@ interface CacheEntry {
   refs: number;
 }
 
-/** 변형 풀 — (잠김 안개 유무) × (룩 그룹) 조합마다 하나. */
-const pools = new Map<string, Map<Material, CacheEntry>>();
+const cache = new Map<Material, CacheEntry>();
 
-function poolFor(
-  fog: boolean,
-  group: SceneLookGroup,
-): Map<Material, CacheEntry> {
-  const key = `${fog ? 'fog' : 'look'}:${group}`;
-  let pool = pools.get(key);
-  if (!pool) {
-    pool = new Map();
-    pools.set(key, pool);
-  }
-  return pool;
-}
-
-/**
- * 원본에 대응하는 공유 variant 를 얻는다(refcount +1). `fog` 가 true 면 잠김
- * 안개 + 룩, false 면 룩만(바다 없는 씬) — 어느 쪽이든 관제 모드 무채색화를
- * 받는다.
- */
-export function acquireSeaVariant(
-  original: Material,
-  fog = true,
-  group: SceneLookGroup = 'environment',
-): Material {
-  const cache = poolFor(fog, group);
+/** 원본에 대응하는 공유 잠김 variant 를 얻는다(refcount +1). */
+export function acquireSeaVariant(original: Material): Material {
   let entry = cache.get(original);
   if (!entry) {
     const variant = original.clone();
-    applySeaSubmersion(variant, { fog, group });
+    applySeaSubmersion(variant);
     entry = { variant, refs: 0 };
     cache.set(original, entry);
   }
@@ -70,12 +46,7 @@ export function acquireSeaVariant(
 }
 
 /** 반납(refcount −1). 0 이 되면 variant 를 dispose 하고 캐시에서 지운다. */
-export function releaseSeaVariant(
-  original: Material,
-  fog = true,
-  group: SceneLookGroup = 'environment',
-): void {
-  const cache = poolFor(fog, group);
+export function releaseSeaVariant(original: Material): void {
   const entry = cache.get(original);
   if (!entry) return;
   entry.refs -= 1;
@@ -85,9 +56,7 @@ export function releaseSeaVariant(
   }
 }
 
-/** 테스트 전용 — 현재 캐시 엔트리 수(두 풀 합). */
+/** 테스트 전용 — 현재 캐시 엔트리 수. */
 export function seaVariantCacheSize(): number {
-  let n = 0;
-  for (const pool of pools.values()) n += pool.size;
-  return n;
+  return cache.size;
 }

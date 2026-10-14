@@ -1,5 +1,4 @@
 import { Quaternion, Vector3, type Object3D } from 'three';
-import type { Vector3Tuple } from '@crane/core/types/math';
 import {
   degToRad,
   type RestPose,
@@ -15,14 +14,6 @@ const AXES: Record<RigAxis, Vector3> = {
 
 // 프레임당 할당 0 을 위해 모듈 스코프에서 재사용.
 const _q = new Quaternion();
-const _axis = new Vector3();
-const _pivot = new Vector3();
-
-/** 회전 Δ 의 선회 중심 — 부모 프레임의 점과, 축을 부모 프레임으로 옮길 rest 회전. */
-export interface ChannelOrbit {
-  pivot: Vector3Tuple;
-  rest: Quaternion;
-}
 
 /**
  * 부모 체인의 누적 scale(x 성분) — 노드 로컬 1 단위가 월드 몇 미터인지.
@@ -47,9 +38,6 @@ export function accumulatedParentScale(node: Object3D): number {
  *
  * - rotation: **자기 로컬 축** 중심 회전(deg) → rest 에 post-multiply. 절대
  *   대입(`rotation.x = θ`)은 rest 가 항등이 아닌 Empty 의 원본 자세를 파괴한다.
- *   `orbit` 을 주면 노드 원점이 아니라 부모 프레임의 `pivot` 을 지나는 같은
- *   축 둘레를 돈다 — 위치도 `pivot + R(θ)·(position − pivot)` 로 옮긴다(축은
- *   rest 회전으로 부모 프레임에 옮긴 로컬 축). GLB 원점이 선회축 밖인 노드용.
  * - position: **부모 프레임 축** 방향 평행이동(m). 부모 scale 체인을 나눠
  *   로컬 단위로 환산한다. 갠트리 위 트롤리처럼 "부모 좌표계의 한 축을 따라
  *   미끄러지는" 쓰임이 일반적이라 부모 축을 택했다.
@@ -66,20 +54,11 @@ export function addChannelDelta(
   channel: TagMappingChannel,
   axis: RigAxis,
   delta: number,
-  orbit?: ChannelOrbit,
 ): void {
   const d = Number.isFinite(delta) ? delta : 0;
   if (d === 0) return;
   if (channel === 'rotation') {
     node.quaternion.multiply(_q.setFromAxisAngle(AXES[axis], degToRad(d)));
-    if (orbit) {
-      _axis.copy(AXES[axis]).applyQuaternion(orbit.rest);
-      _pivot.set(orbit.pivot[0], orbit.pivot[1], orbit.pivot[2]);
-      node.position
-        .sub(_pivot)
-        .applyQuaternion(_q.setFromAxisAngle(_axis, degToRad(d)))
-        .add(_pivot);
-    }
     return;
   }
   if (channel === 'position') {

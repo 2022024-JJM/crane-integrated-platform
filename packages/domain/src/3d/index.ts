@@ -198,10 +198,6 @@ export {
   isCollidableMesh,
   meshesIntersectExact,
   meshesWithinDistance,
-  meshesClearance,
-  boxesDistance,
-  closestPointsBetweenBoxes,
-  meshLocalReach,
   meshObbsIntersect,
   meshWorldBox,
 } from './lib/collision-volumes';
@@ -366,7 +362,6 @@ export {
 export {
   STATUS_OUTLINE_COLORS,
   STATUS_OUTLINE_PX,
-  statusOutlineThicknessPx,
   isStatusOutlineVisible,
   statusOutlineRenderOrder,
   type StatusOutlineKind,
@@ -384,23 +379,3 @@ export {
   SCENE_METERS_PER_UNIT_BY_REGION_ID,
   getSceneMetersPerUnit,
 } from './model/scene-unit-scale';
-export {
-  EQUIPMENT_MUTE,
-  sceneLookUniforms,
-  sceneLookSettings,
-  setSceneMute,
-  setSceneLookLabelMinScale,
-  setSceneLookLabelEmphasis,
-  setSceneLookLabelMaxDistance,
-  setSceneLookPlanView,
-  setSceneDim,
-  type SceneLookGroup,
-} from './lib/scene-look';
-export {
-  isBehindCamera,
-  labelBoxClass,
-  LABEL_TONE_DOT_CLASS,
-  projectToScreen,
-  type ScreenPoint,
-} from './lib/label-dom';
-export { StableLine } from './ui/stable-line';

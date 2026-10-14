@@ -111,15 +111,6 @@ export interface OceanWaterOptions {
   textureHeight?: number;
   /** oblique 클립 평면 바이어스. 기본 0. */
   clipBias?: number;
-  /**
-   * 반사 RT 를 다시 그리는 최소 간격(ms). 0(기본) 이면 매 프레임. 카메라가
-   * 움직이면 간격과 무관하게 바로 다시 그린다 — 궤도 조작 중 반사가 끌리지
-   * 않게. 정지 카메라에서 움직이는 것은 모델뿐이라 15Hz 면 눈에 띄지 않고,
-   * 미러 패스(씬을 한 번 더 그림)가 렌더 비용의 큰 몫이라 그만큼 빠진다.
-   */
-  reflectionIntervalMs?: number;
-  /** 테스트용 시계. 기본 performance.now. */
-  now?: () => number;
   alpha?: number;
   time?: number;
   /** 태양 방향(단위 벡터). 유니폼 값으로 **그 참조를** 쓴다. */
@@ -286,16 +277,6 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     | ((scene: Scene) => Iterable<Object3D | null | undefined>)
     | null;
   private readonly renderTarget: WebGLRenderTarget;
-  private readonly reflectionIntervalMs: number;
-  private readonly now: () => number;
-  /**
-   * 미러 패스 스위치. 끄면 씬을 한 번 더 그리는 반사 RT 갱신을 건너뛴다 —
-   * 관제 모드처럼 반사 세기가 0 에 가까운 룩에서 본 패스만큼의 비용을 뺀다.
-   * 유니폼 eye 는 계속 쓴다(스펙큘러·프레넬).
-   */
-  reflectionEnabled = true;
-  private lastReflectionAt = Number.NEGATIVE_INFINITY;
-  private readonly lastCameraMatrix = new Matrix4().makeScale(0, 0, 0);
   private readonly mirrorCamera = new PerspectiveCamera();
   private readonly textureMatrix = new Matrix4();
 
@@ -320,8 +301,6 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     const textureHeight = options.textureHeight ?? DEFAULT_TEXTURE_SIZE;
     this.clipBias = options.clipBias ?? 0.0;
     this.excludedObjects = options.excludedObjects ?? null;
-    this.reflectionIntervalMs = Math.max(0, options.reflectionIntervalMs ?? 0);
-    this.now = options.now ?? (() => performance.now());
 
     const alpha = options.alpha ?? 1.0;
     const time = options.time ?? 0.0;
@@ -416,23 +395,6 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
 
     mirrorWorldPosition.setFromMatrixPosition(this.matrixWorld);
     cameraWorldPosition.setFromMatrixPosition(perspective.matrixWorld);
-    // eye 는 매 프레임 — 스펙큘러·프레넬이 쓴다. 반사 RT 와 무관.
-    this.uniforms.eye.value.copy(cameraWorldPosition);
-    if (!this.reflectionEnabled) return;
-
-    // 간격 안이고 카메라가 그대로면 지난 반사(RT·textureMatrix)를 그대로 쓴다.
-    if (this.reflectionIntervalMs > 0) {
-      const tick = this.now();
-      const cameraStill = this.lastCameraMatrix.equals(perspective.matrixWorld);
-      if (
-        cameraStill &&
-        tick - this.lastReflectionAt < this.reflectionIntervalMs
-      ) {
-        return;
-      }
-      this.lastReflectionAt = tick;
-      this.lastCameraMatrix.copy(perspective.matrixWorld);
-    }
 
     rotationMatrix.extractRotation(this.matrixWorld);
 
@@ -522,6 +484,8 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     projectionMatrix.elements[6] = clipPlane.y;
     projectionMatrix.elements[10] = clipPlane.z + 1.0 - this.clipBias;
     projectionMatrix.elements[14] = clipPlane.w;
+
+    this.uniforms.eye.value.setFromMatrixPosition(perspective.matrixWorld);
 
     // 미러 패스
     const currentRenderTarget = renderer.getRenderTarget();

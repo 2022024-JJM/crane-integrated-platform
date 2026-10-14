@@ -26,7 +26,6 @@ pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` �
 - `node scripts/optimize-{glb,map}.mjs --single <입력> <출력>`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 최적화는 자산 등록 화면이 돌린다. 절차는 `docs/agents/assets-glb.md`
 - `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채운다. `docs/agents/asset-library.md`
 - `pnpm assets:stats [--check]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. `docs/agents/asset-library.md`
-- 프론트 부하 테스트는 실서버 계약(`/ws/cranes-lite/all`·`/api/sites`·`/api/playback`·`/api/alarms/runtime`·`/api/tags`)을 흉내 내는 로컬 시뮬레이션 백엔드(저장소 밖, 33500)에 `apps/shell/.env.local` 의 dev 프록시를 붙여서 한다. 태그 수·주기·형식(`per-tag`/`snapshot.batch`)을 바꿔 가며 재는 절차와 결과는 `docs/agents/tag-mapping-rig.md` 의 실시간 수신 항목
 
 ### 검증 커맨드의 실제 커버리지 (주의)
 
@@ -196,7 +195,6 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts` — `docs/agents/3d-editor.md` |
-| 실시간 수신(Worker 파싱·병합·관심 키·배치 전달) | `packages/domain/src/monitoring/lib/{realtime-ingest.worker,realtime-ingest-client,realtime-ingest-protocol}.ts`, 브리지 `packages/features/src/3d/model/use-realtime-websocket-bridge.ts` — `docs/agents/tag-mapping-rig.md` |
 | 태그 맵핑 스키마·방어 / 값 버스 / 편집 UI | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/tag-mapping-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 가상 태그 정의 / 스토어·러너 / 관리 페이지 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/virtual-tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
@@ -211,7 +209,6 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D 자산 라이브러리(모델·지도·배경·도면·CAD 의 단일 원천, 종류 › 카테고리 계층·미리보기·상세 뷰어·버전 비교·상태·배치 속성·처리할 일·사용처, 서버 없는 저장) | `packages/domain/src/asset-library/`, `packages/features/src/asset-library/`, `packages/widgets/src/asset-library/`, `apps/shell/public/asset-library/` — `docs/agents/asset-library.md` |
 | 씬의 자산 참조(자산 id·버전)·편집 팔레트·새 버전 갱신 | 스키마 `SceneAssetRef`(`types.ts`), `packages/domain/src/3d/lib/{scene-asset-ref,scene-asset-update}.ts`, `packages/features/src/asset-library/lib/{scene-palette,scene-asset-updates}.ts`, `packages/widgets/src/3d/ui/palette-asset-updates.tsx` — `docs/agents/asset-library.md` |
 | 코드가 직접 로드하는 자산 표 | `packages/domain/src/3d/model/code-asset-refs.ts`(`CODE_ASSETS`), 도면은 `packages/domain/src/asset-library/model/code-used-assets.ts` — `docs/agents/asset-library.md` |
-| 관제 모드(무채색 환경·고정 주광) / 근접 거리 선·외곽선 | `packages/features/src/3d/model/{use-scene-look-store,use-scene-proximity}.ts`, `ui/{scene-look-toggle,scene-proximity-layer}.tsx`, 유니폼 `packages/domain/src/3d/lib/scene-look.ts` — `docs/agents/monitoring-ui.md` |
 | 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
 | 충돌 감지 표시(골리앗 LiDAR 근접 존 — 토글·존 링·감지 객체 시뮬레이션·HUD·도움말, 필리 실외 화면만) | `packages/features/src/3d/ui/collision-guard{,-scene-layer,-toggle,-hud,-help}.tsx`, 존 빌더 `lib/goliath-collision-zone.ts`, 존 파생 `model/use-goliath-collision-zones.ts`, 스토어·시뮬레이션 `model/use-collision-guard-{store,simulation}.ts`, 배선 `apps/hanwha-ocean/src/pages/outdoor-work/ui/realtime-monitoring-view.tsx` — `docs/agents/monitoring-ui.md` |
 
@@ -291,7 +288,6 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
 - 시뮬레이션 값은 씬 시간의 함수다 — 가상 태그 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
-- 실시간 서버 메시지를 메인 스레드에서 직접 받는 코드를 새로 두지 않는다. 수신·파싱·병합은 `realtime-ingest.worker.ts` 가 하고 소비자는 `cranesLiteIngestClient` 의 `subscribeTagBatch`/`subscribeMessages`/`subscribeState` 로만 받는다 (tag-mapping-rig).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
 - 모델·지도·배경의 목록은 자산 라이브러리(`library.json`)가 유일한 원천이다. 코드에 자산 목록을 두지 않는다 (asset-library).
@@ -338,7 +334,6 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 문서 간 충돌이 있으면 **실제 코드 → `AGENTS.md` → `docs/agents/` → `README.md`** 순서로 신뢰한다. `README.md` 는 단일 앱 PoC 시절 내용이라 현재 모노레포 구조와 크게 다르다.
 - ESLint 는 FSD import 제약 외에 React 19 계열 hook/ref 규칙과 `react-refresh/only-export-components` 를 강하게 검사한다. 단순 동작 수정이어도 render 중 ref 를 읽는 패턴, effect 내부 동기 `setState`, 컴포넌트 파일 내 non-component export 가 lint 실패 원인이 될 수 있다.
 - `apps/indoorshop` 의 이식 코드(`src/dashboard/**`, `src/pages/inshop-*/**`)는 `react-hooks` 컴파일러 규칙과 `react-refresh/only-export-components` 가 warn 으로 완화돼 있다. 이식 전부터 있던 패턴이고 대부분 three.js 뷰어의 명령형 코드라 검증 없이 고치면 동작이 바뀐다. 자세한 배경과 종료 조건은 `eslint.config.js` 의 해당 블록 주석에 있다.
-- 무인 운영 복구: 라우트 에러 바운더리(`packages/core/src/lib/route-error-boundary.tsx`)는 지수 백오프로 스스로 리셋하고 청크 로드 실패는 간격 안에서 새로 고친다(판정 `lib/route-error-recovery.ts`). 전역 `error`/`unhandledrejection` 은 `apps/shell/src/main.tsx` 가 콘솔에 남긴다. 씬 객체 재시도·WebGL 컨텍스트 복구·무수신 감시는 각각 `docs/agents/monitoring-ui.md`·`rendering-perf.md`·`tag-mapping-rig.md`.
 - `VITE_*` 환경변수는 Vite 가 빌드 시점에 번들로 인라인한다. 운영 서버에서 `.env` 만 바꿔서는 반영되지 않고 재빌드가 필요하다. 반면 백엔드/LiDAR IP·PORT 는 런타임에 nginx envsubst 로 주입되므로 `.env` 수정만으로 바뀐다 (`Dockerfile`, `docker-compose.yml` 주석 참조).
 - 배포는 폐쇄망이다. `docker save` 로 만든 tar 를 운영 서버로 옮겨 `docker load` 하며, 운영 서버에는 인터넷이 없다. 도구·의존성을 추가하는 제안을 할 때 이 제약을 전제한다.
 - 배포 자동화는 `.github/workflows/deploy-199.yml`(검사는 GitHub 호스티드, 빌드·전송은 self-hosted 러너) → 운영 서버의 `deploy/deploy.sh` 다. 환경별 값은 `deploy/env/<env>.env`, 응답 확인은 `deploy/smoke.sh`. 컨테이너 nginx 의 경로는 `nginx.conf.template` 의 `${BASE_PATH}` 치환 하나로 따라가고 파생 변수는 `deploy/nginx/15-base-path.envsh` 가 만든다 — 템플릿에 `/crane_rnd/` 를 다시 하드코딩하지 않는다. 절차·시크릿 목록은 `docs/crane_rnd-호스팅-배포-전략.html`.

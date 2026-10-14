@@ -39,34 +39,6 @@ export {
   mapReplayResponseToRows,
 } from './lib/replay-mapper';
 export { isRealtimeCraneLiteMessage } from './lib/realtime-monitoring';
-export {
-  INGEST_FLUSH_MS,
-  TagBatchCoalescer,
-  parseIngestEnvelope,
-} from './lib/realtime-ingest-protocol';
-export type {
-  IngestConnectionState,
-  IngestEnvelope,
-  IngestEvent,
-  IngestCommand,
-  IngestReconnectPolicy,
-} from './lib/realtime-ingest-protocol';
-export {
-  RealtimeIngestClient,
-  cranesLiteIngestClient,
-  createInlineTransport,
-  createWorkerTransport,
-} from './lib/realtime-ingest-client';
-export type {
-  IngestMessageHandler,
-  IngestStateListener,
-  IngestStats,
-  IngestTransport,
-  IngestTransportFactory,
-  RealtimeIngestClientOptions,
-  TagBatch,
-  TagBatchHandler,
-} from './lib/realtime-ingest-client';
 export { toTagNumber } from './lib/tag-number';
 export { formatReplayTimestamp } from './lib/format-replay-timestamp';
 export { parseReplayTimestamp } from './lib/parse-replay-timestamp';

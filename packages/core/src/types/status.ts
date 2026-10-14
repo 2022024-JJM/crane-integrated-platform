@@ -52,9 +52,7 @@ export type EquipmentOutlineState =
   | 'none'
   | 'commError'
   | 'slowdown'
-  | 'endstop'
-  /** 관제 모드의 상시 윤곽(밝은 회백색, 얇게) — 배경에서 장비를 떼어 놓는다. */
-  | 'contour';
+  | 'endstop';
 
 // ─── CMMS 상태 타입 ──────────────────────────────────────────────
 export type OnOff = 'ON' | 'OFF';

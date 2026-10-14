@@ -129,13 +129,7 @@ describe('applySeaSubmersion', () => {
   it('customProgramCacheKey를 반드시 지정한다 — 없으면 원본 프로그램이 재사용된다', () => {
     const material = new MeshStandardMaterial();
     applySeaSubmersion(material);
-    expect(material.customProgramCacheKey()).toBe('sea-submersion:environment');
-    const equipment = new MeshStandardMaterial();
-    applySeaSubmersion(equipment, { group: 'equipment' });
-    expect(equipment.customProgramCacheKey()).toBe('sea-submersion:equipment');
-    const lookOnly = new MeshStandardMaterial();
-    applySeaSubmersion(lookOnly, { fog: false });
-    expect(lookOnly.customProgramCacheKey()).toBe('scene-look:environment');
+    expect(material.customProgramCacheKey()).toBe('sea-submersion');
   });
 
   it('needsUpdate를 올린다 (version 증가)', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SMOOTH_SETTLE_EPS, smoothDampStep } from '../smooth-damp';
+import { smoothDampStep } from '../smooth-damp';
 
 describe('smoothDampStep', () => {
   it('smoothTime 0 이면 즉시 목표로 점프하고 속도는 0', () => {
@@ -47,30 +47,6 @@ describe('smoothDampStep', () => {
       prev = v;
     }
     expect(prev).toBeCloseTo(0, 1);
-  });
-
-  it('유한한 스텝 안에 target 에 정확히 닿는다(ε 스냅) — 지수 수렴이 영원히 남지 않는다', () => {
-    const s = { value: 0, velocity: 0 };
-    let steps = 0;
-    while (s.value !== 10 && steps < 10_000) {
-      smoothDampStep(s, 10, 0.35, 1 / 60);
-      steps++;
-    }
-    expect(s.value).toBe(10);
-    expect(s.velocity).toBe(0);
-    // smoothTime 0.35s 면 2~3초(≈120~180 프레임) 안에 정착한다.
-    expect(steps).toBeLessThan(240);
-  });
-
-  it('ε 스냅은 값·속도가 함께 임계 아래일 때만 — 임계 바깥은 한 스텝에 고정되지 않는다', () => {
-    const near = { value: 10 - SMOOTH_SETTLE_EPS / 2, velocity: 0 };
-    smoothDampStep(near, 10, 0.35, 1 / 60);
-    expect(near.value).toBe(10);
-    expect(near.velocity).toBe(0);
-
-    const far = { value: 10 - SMOOTH_SETTLE_EPS * 10, velocity: 0 };
-    smoothDampStep(far, 10, 0.35, 1 / 60);
-    expect(far.value).not.toBe(10);
   });
 
   it('이미 목표에 있으면 그대로 머문다', () => {

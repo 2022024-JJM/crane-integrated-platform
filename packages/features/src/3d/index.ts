@@ -84,7 +84,6 @@ export {
 export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
 export { SceneClockMenu } from './ui/scene-clock-menu';
 export { SceneFrameGovernor } from './ui/scene-frame-governor';
-export { SceneContextRecovery } from './ui/scene-context-recovery';
 export {
   registerSceneFrameRequester,
   requestSceneFrame,

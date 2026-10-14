@@ -1,17 +1,9 @@
 import { Suspense, useEffect } from 'react';
-import { useFrame, useLoader, useThree } from '@react-three/fiber';
-import {
-  CONTROL_ROOM_FOG_FAR,
-  CONTROL_ROOM_FOG_NEAR,
-  controlRoomFogRange,
-} from '../lib/control-room-fog';
-import { useSceneLookStore } from '../model/use-scene-look-store';
+import { useLoader, useThree } from '@react-three/fiber';
 import {
   EquirectangularReflectionMapping,
   type Scene,
   type Texture,
-  Color,
-  Fog,
 } from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import {
@@ -90,7 +82,6 @@ function EnvironmentBackground({ url }: { url: string }) {
   const texture = useLoader(EXRLoader, url);
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
-  const controlRoom = useSceneLookStore((s) => s.controlRoom);
 
   // scene.background/environment 는 리컨실러 밖 변조라 demand 캔버스에서
   // 프레임을 직접 깨운다(배경 교체·해제 직후 화면 반영).
@@ -103,43 +94,7 @@ function EnvironmentBackground({ url }: { url: string }) {
     };
   }, [scene, texture, invalidate]);
 
-  // 관제 모드: 하늘(배경)만 평탄한 회색으로 — 환경광(scene.environment)은
-  // 그대로 두어 재질 음영은 유지한다. 미러 패스도 이 배경을 비춘다.
-  useEffect(() => {
-    if (!controlRoom) return;
-    const restore = applyControlRoomSky(scene);
-    invalidate();
-    return () => {
-      restore();
-      invalidate();
-    };
-  }, [controlRoom, scene, texture, invalidate]);
-
   return null;
-}
-
-/** 관제 모드 하늘색 — 무채색화된 지도보다 조금 밝은 회색(수평선이 보이게). */
-const CONTROL_ROOM_SKY = 0x5a6068;
-
-/**
- * 거리 안개(씬 unit) — 먼 도시·지형이 하늘색으로 녹아 가까운 야드가 먼저
- * 읽힌다. near 는 관제 카메라 거리(수백 unit) 밖이라 작업 구역엔 끼지 않는다.
- */
-
-/** 배경을 평탄한 회색으로, 같은 색의 거리 안개를 걸고 되돌리는 함수를 돌려준다(환경광은 그대로). */
-function applyControlRoomSky(scene: Scene): () => void {
-  const previousBackground = scene.background;
-  const previousFog = scene.fog;
-  scene.background = new Color(CONTROL_ROOM_SKY);
-  scene.fog = new Fog(
-    CONTROL_ROOM_SKY,
-    CONTROL_ROOM_FOG_NEAR,
-    CONTROL_ROOM_FOG_FAR,
-  );
-  return () => {
-    scene.background = previousBackground;
-    scene.fog = previousFog;
-  };
 }
 
 /**
@@ -159,21 +114,6 @@ function applyControlRoomSky(scene: Scene): () => void {
  * 콘솔에 남는다. 두 슬롯의 위치는 고정이라 배경 미지정→지정 전환에도
  * 물이 리마운트되지 않는다.
  */
-/** 관제 모드 안개를 카메라 높이에 맞춘다(lib/control-room-fog). Canvas 안 null 컴포넌트. */
-function ControlRoomFogFollower() {
-  const scene = useThree((s) => s.scene);
-  useFrame(({ camera }) => {
-    const fog = scene.fog;
-    if (!fog || !(fog instanceof Fog)) return;
-    const { near, far } = controlRoomFogRange(camera.position.y);
-    if (fog.near !== near || fog.far !== far) {
-      fog.near = near;
-      fog.far = far;
-    }
-  });
-  return null;
-}
-
 export function SceneEnvironment({
   environment,
   seaVisible,
@@ -191,7 +131,6 @@ export function SceneEnvironment({
   if (!url && !seaVisible) return null;
   return (
     <>
-      <ControlRoomFogFollower />
       <Suspense fallback={null}>
         {url ? (
           // key 는 경계에 — 배경이 바뀌면 에러 상태도 함께 초기화된다.

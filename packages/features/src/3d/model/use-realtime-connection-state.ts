@@ -1,8 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import {
-  cranesLiteIngestClient,
-  type IngestConnectionState as WebSocketConnectionState,
-} from '@crane/domain/monitoring';
+import { cranesLiteWebSocketClient } from '@crane/core/ws';
+import type { WebSocketConnectionState } from '@crane/core/ws';
 import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
 import { useRealtimeStore } from './use-realtime-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
@@ -27,7 +25,6 @@ export interface SceneConnectionView {
     | 'open'
     | 'connecting'
     | 'closed'
-    | 'stalled'
     | 'held'
     | 'play3dPlaying'
     | 'play3dPaused';
@@ -57,19 +54,17 @@ export function resolveConnectionView(
       return { state: 'open', tone: 'good' };
     case 'connecting':
       return { state: 'connecting', tone: 'warn' };
-    case 'stalled':
-      return { state: 'stalled', tone: 'warn' };
     default:
       return { state: 'closed', tone: 'bad' };
   }
 }
 
 function subscribeSocket(onChange: () => void): () => void {
-  return cranesLiteIngestClient.subscribeState(() => onChange());
+  return cranesLiteWebSocketClient.subscribeState(() => onChange());
 }
 
 function readSocket(): WebSocketConnectionState {
-  return cranesLiteIngestClient.getState();
+  return cranesLiteWebSocketClient.getState();
 }
 
 /**

@@ -47,9 +47,8 @@ describe('STATUS_OUTLINE_COLORS', () => {
 
   it('외곽선 역할과 외곽선 종류가 1:1 이다', () => {
     expect([...OUTLINE_STATUS_TAG_ROLES].sort()).toEqual([...KINDS].sort());
-    // 색 표는 상태 종류 + 관제 모드의 상시 윤곽(contour, 상태 태그가 아니다).
     expect(Object.keys(STATUS_OUTLINE_COLORS).sort()).toEqual(
-      [...KINDS, 'contour'].sort(),
+      [...KINDS].sort(),
     );
   });
 });

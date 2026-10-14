@@ -20,14 +20,8 @@ function restNode(): Object3D {
 /** rest 에 Δ 목록을 적용한 자세를 만든다(드라이버와 같은 순서). */
 function applied(node: Object3D, rest: RestPose, deltas: ChannelDelta[]) {
   beginNodePose(node, rest);
-  for (const { channel, axis, delta, pivot } of deltas) {
-    addChannelDelta(
-      node,
-      channel,
-      axis,
-      delta,
-      pivot ? { pivot, rest: rest.quaternion } : undefined,
-    );
+  for (const { channel, axis, delta } of deltas) {
+    addChannelDelta(node, channel, axis, delta);
   }
   return capturePose(node);
 }
@@ -114,22 +108,5 @@ describe('stripChannelDeltas', () => {
     };
     stripChannelDeltas(pose, [{ channel: 'position', axis: 'z', delta: 2 }], 0);
     expect(pose.position.z).toBe(3);
-  });
-});
-
-describe('stripChannelDeltas — 선회 중심(pivot) 궤도', () => {
-  it('pivot 둘레로 돈 위치와 회전을 함께 벗기면 rest 로 돌아온다(여러 Δ 혼합)', () => {
-    const node = restNode();
-    const rest = capturePose(node);
-    const deltas: ChannelDelta[] = [
-      { channel: 'rotation', axis: 'y', delta: 70, pivot: [0, 2, 0] },
-      { channel: 'position', axis: 'x', delta: 1.5 },
-      { channel: 'rotation', axis: 'z', delta: -30, pivot: [4, 0, -1] },
-      { channel: 'scale', axis: 'y', delta: 0.25 },
-    ];
-    const pose = applied(node, rest, deltas);
-    expect(pose.position.distanceTo(rest.position)).toBeGreaterThan(0.5);
-    stripChannelDeltas(pose, deltas, accumulatedParentScale(node));
-    expectPose(pose, rest);
   });
 });

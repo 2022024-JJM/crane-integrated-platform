@@ -66,7 +66,8 @@ function normalizeTagSchemaItem(value: unknown): ReplayTagSchemaItem | null {
   }
 
   return {
-    displayName: typeof value.displayName === 'string' ? value.displayName : '',
+    displayName:
+      typeof value.displayName === 'string' ? value.displayName : '',
     category: typeof value.category === 'string' ? value.category : 'status',
     dataType: typeof value.dataType === 'string' ? value.dataType : null,
     unit: typeof value.unit === 'string' ? value.unit : null,
@@ -82,9 +83,7 @@ function normalizeTagSchema(value: unknown): ReplayTagSchema | null {
 
   const entries = Object.entries(value)
     .map(([tagCode, item]) => [tagCode, normalizeTagSchemaItem(item)] as const)
-    .filter(
-      (entry): entry is [string, ReplayTagSchemaItem] => entry[1] !== null,
-    );
+    .filter((entry): entry is [string, ReplayTagSchemaItem] => entry[1] !== null);
 
   return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
@@ -161,9 +160,7 @@ function normalizePlaybackStream(
   };
 }
 
-function buildReplayFrames(
-  streams: NormalizedPlaybackStream[],
-): ReplayLiteFrame[] {
+function buildReplayFrames(streams: NormalizedPlaybackStream[]): ReplayLiteFrame[] {
   const currentStates = new Map<string, ReplayLiteValueMap>();
   const currentSnapshotAt = new Map<string, string | null>();
   const allEvents = streams

@@ -87,7 +87,6 @@
       "root": "(모델 루트)",
       "channel": "타입",
       "axis": "축",
-      "pivot": "선회 중심",
       "joint": "관절",
       "tag": "태그",
       "tagPlaceholder": "태그 선택",
@@ -577,7 +576,6 @@
       "open": "연결됨",
       "connecting": "연결 중",
       "closed": "끊김",
-      "stalled": "수신 없음",
       "held": "반영 보류",
       "play3dPlaying": "재생 중",
       "play3dPaused": "일시정지"
@@ -727,9 +725,5 @@
     "update": "갱신",
     "hint": "갱신하면 이 씬에 놓인 그 자산이 전부 새 버전으로 바뀝니다. 배치와 태그 맵핑은 그대로이니 화면에서 확인하고, 저장해야 모니터링에 반영됩니다.",
     "unmanaged": "자산 라이브러리에 없는 파일로 놓인 객체가 {{count}}개 있습니다. 새 버전을 알릴 수 없습니다."
-  },
-  "proximity": {
-    "title": "근접",
-    "overlap": "겹침"
   }
 }

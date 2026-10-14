@@ -33,13 +33,8 @@ import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
-import { isEquipment } from '../model/use-scene-proximity';
-import { useSceneLookStore } from '../model/use-scene-look-store';
 import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
-import {
-  collectSceneLiveTagKeys,
-  type LabelStateRecord,
-} from '../lib/model-label-state';
+import type { LabelStateRecord } from '../lib/model-label-state';
 import type { OutlineStateRecord } from '../lib/model-outline-state';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
@@ -238,7 +233,6 @@ export function OutdoorWorkModelSimulation({
   const camera = useThree((s) => s.camera);
   // 라벨(domain)은 i18n 을 모른다 — 번역한 문구를 한 묶음으로 넘긴다. 참조가
   // 유지돼야 memo 된 모델이 리렌더되지 않는다.
-  const controlRoom = useSceneLookStore((s) => s.controlRoom);
   const labelTitles = useMemo<ModelLabelTitles>(
     () => ({
       tone: {
@@ -261,13 +255,7 @@ export function OutdoorWorkModelSimulation({
   // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
   useRealtimeRunner();
-  // 실시간은 이 씬이 쓰는 키만 받는다 — 서버가 보내는 수만 태그 중 나머지는
-  // 수신 Worker 가 버린다.
-  const liveTagKeys = useMemo(
-    () => collectSceneLiveTagKeys(sceneInfo),
-    [sceneInfo],
-  );
-  useRealtimeWebSocketBridge(mode === 'realtime', liveTagKeys);
+  useRealtimeWebSocketBridge(mode === 'realtime');
 
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const enterFocus = useObjectFocusStore((s) => s.enterFocus);
@@ -471,11 +459,7 @@ export function OutdoorWorkModelSimulation({
           // 삼각형 브루트포스 raycast가 프레임을 밀어낸다(model-mesh 주석 참고).
           // showLabel=false: 지도는 라벨이 없으므로 마운트 시 전체 트리 bbox
           // 순회(수십만 정점)를 건너뛴다.
-          <SceneObjectBoundary
-            key={m.id}
-            label={`map ${m.path}`}
-            assetPath={m.path}
-          >
+          <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
             <GltfModel
               id={m.id}
               url={m.path}
@@ -493,10 +477,6 @@ export function OutdoorWorkModelSimulation({
               // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 바다가 닿지
               // 않는 곳(드라이독)은 셰이더가 마스크로 거른다.
               seaSubmersion={seaVisible}
-              // 모니터링의 지도는 움직이지 않는다 — 매 프레임 행렬 합성 생략.
-              staticTransform
-              // 관제 모드에서 지도·지형은 완전 무채색(장비는 채도 일부 유지).
-              lookGroup="environment"
             />
           </SceneObjectBoundary>
         );
@@ -508,17 +488,12 @@ export function OutdoorWorkModelSimulation({
         <SceneObjectBoundary
           key={model.id}
           label={`model ${model.equipName || model.id} (${model.path})`}
-          assetPath={model.path}
         >
           <GltfModel
             id={model.id}
             url={model.path}
             equipName={model.equipName}
-            // 관제 모드: 태그 없는 모델(선박·블록·부속)의 이름 칩은 뺀다 —
-            // 장비 id 만 남겨 화면의 글자 수를 줄인다.
-            showLabel={
-              !model.labelHidden && (!controlRoom || isEquipment(model))
-            }
+            showLabel={!model.labelHidden}
             opacity={resolveFocusOpacity(
               model.id,
               focusedModelId,
@@ -531,8 +506,6 @@ export function OutdoorWorkModelSimulation({
             alarmHighlightMesh={alarmHighlightMesh}
             labelState={labelStates[model.id]}
             outlineState={outlineStates[model.id]}
-            // 태그 없는 모델(선박·블록)은 환경으로 — 관제 모드에서 완전 무채색.
-            lookGroup={isEquipment(model) ? 'equipment' : 'environment'}
             labelTitles={labelTitles}
             labelReadings={labelReadingsById.get(model.id)}
             readLabelValue={readTagLiveValue}
@@ -557,9 +530,8 @@ export function OutdoorWorkModelSimulation({
           scale={text.scale}
         />
       ))}
-      {/* 거리 눈금 — onSelect 를 넘기지 않아 클릭이 통과한다(관제 화면).
-          관제 모드에선 그리지 않는다 — 편집용 보조선이라 관제사에겐 글자 잡음. */}
-      {(controlRoom ? [] : rulers).map((ruler) => (
+      {/* 거리 눈금 — onSelect 를 넘기지 않아 클릭이 통과한다(관제 화면). */}
+      {rulers.map((ruler) => (
         <SceneRuler
           key={ruler.id}
           id={ruler.id}

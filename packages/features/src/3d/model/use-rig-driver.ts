@@ -382,11 +382,11 @@ export function useRigDriver({
         const d = rigValueStore.get(makeJointAddress(model.id, binding.id));
         mappingValues.set(binding.id, d);
         const { channel, axis } = binding.target;
-        const entry: ChannelEntry = { channel, axis, delta: d };
-        if (channel === 'rotation' && binding.target.pivot) {
-          entry.pivot = binding.target.pivot;
-        }
-        entryFor(binding.node).set(`${channel}:${axis}`, entry);
+        entryFor(binding.node).set(`${channel}:${axis}`, {
+          channel,
+          axis,
+          delta: d,
+        });
       }
       for (const { joint, node } of instance.joints) {
         const channel = jointChannel(joint);
@@ -403,14 +403,8 @@ export function useRigDriver({
         const driven = instance.drivenNodes.get(node);
         if (!driven || (driven.isRoot && dragging)) continue;
         beginNodePose(node, driven.rest);
-        for (const { channel, axis, delta: d, pivot } of entries.values()) {
-          addChannelDelta(
-            node,
-            channel,
-            axis,
-            d,
-            pivot ? { pivot, rest: driven.rest.quaternion } : undefined,
-          );
+        for (const { channel, axis, delta: d } of entries.values()) {
+          addChannelDelta(node, channel, axis, d);
         }
         if (driven.isRoot) {
           if (driven.lastApplied) {

@@ -10,16 +10,6 @@ export interface SmoothDampState {
   velocity: number;
 }
 
-/**
- * 정착 스냅 임계 — 값·속도가 함께 이 아래면 target 에 고정하고 속도를 0 으로.
- * 지수 수렴은 수학적으로 영원히 target 에 닿지 않아(실측 고정점 ~1e-14)
- * `value === target` 판정(값 저장소 step·hasPendingSmoothing)이 끝나지 않고,
- * 거버너 유예가 지난 뒤에도 드라이버가 프레임마다 다음 프레임을 요청해 유휴
- * 화면이 주사율로 그려졌다. 단위는 m·deg·배율 공통 — 0.1mm·0.0001° 는 어떤
- * 카메라 거리에서도 픽셀에 나타나지 않는다.
- */
-export const SMOOTH_SETTLE_EPS = 1e-4;
-
 export function smoothDampStep(
   state: SmoothDampState,
   target: number,
@@ -46,13 +36,8 @@ export function smoothDampStep(
   state.velocity = (state.velocity - omega * temp) * exp;
   state.value = target + (change + temp) * exp;
 
-  // 오버슈트가 목표를 지나치면 목표에 고정(진동 방지). 남은 거리·속도가
-  // 임계 아래면 정착으로 보고 고정 — 그래야 소비자가 "끝났다" 를 안다.
-  if (
-    change < 0 === state.value > target ||
-    (Math.abs(state.value - target) < SMOOTH_SETTLE_EPS &&
-      Math.abs(state.velocity) < SMOOTH_SETTLE_EPS)
-  ) {
+  // 오버슈트가 목표를 지나치면 목표에 고정(진동 방지).
+  if (change < 0 === state.value > target) {
     state.value = target;
     state.velocity = 0;
   }

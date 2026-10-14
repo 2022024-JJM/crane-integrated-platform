@@ -209,17 +209,13 @@ export class WebSocketClient {
     }
 
     const message = createEnvelope(parsedPayload);
-    // 핸들러 Set 을 그대로 순회한다 — 메시지마다 Set 2개 + 배열 하나를 만들면
-    // 초당 수만 건에서 그 자체가 GC 비용이다. Set 순회는 도중 삭제(핸들러가
-    // 자기 구독을 푸는 경우)에 안전하고, 추가된 핸들러는 다음 메시지부터 받는다.
-    const scopedHandlers = this.messageHandlers.get(message.type);
-    if (scopedHandlers) {
-      for (const handler of scopedHandlers) handler(message);
-    }
-    const globalHandlers = this.messageHandlers.get(ALL_MESSAGES_KEY);
-    if (globalHandlers) {
-      for (const handler of globalHandlers) handler(message);
-    }
+    const scopedHandlers = this.messageHandlers.get(message.type) ?? new Set();
+    const globalHandlers =
+      this.messageHandlers.get(ALL_MESSAGES_KEY) ?? new Set();
+
+    [...scopedHandlers, ...globalHandlers].forEach((handler) => {
+      handler(message);
+    });
   };
 
   private handleClose = () => {
