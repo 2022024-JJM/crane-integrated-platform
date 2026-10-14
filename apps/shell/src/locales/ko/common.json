@@ -291,6 +291,7 @@
     "zoomOut": "축소",
     "resetView": "메인 뷰",
     "topView": "탑뷰",
+    "topViewExit": "탑뷰 해제",
     "fullscreen": "전체화면",
     "exitFullscreen": "전체화면 복원",
     "badge": "3D Viewer",

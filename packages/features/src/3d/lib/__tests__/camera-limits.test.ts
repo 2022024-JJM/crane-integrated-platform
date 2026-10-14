@@ -12,6 +12,7 @@ import {
   clampToBoundsXZ,
   maxDistanceForBounds,
   maxPolarAngleForMinY,
+  orthoZoomAdvance,
   surfaceDollyAdvance,
 } from '../camera-limits';
 
@@ -276,5 +277,62 @@ describe('surfaceDollyAdvance', () => {
     expect(surfaceDollyAdvance(100, 0, 1, MAX)).toBe(0);
     expect(surfaceDollyAdvance(MIN, 0, 1, MAX)).toBe(0);
     expect(surfaceDollyAdvance(MAX, 0, 1, MAX)).toBe(0);
+  });
+});
+
+describe('orthoZoomAdvance', () => {
+  const MIN = CAMERA_MIN_SURFACE_DISTANCE;
+
+  it('배율의 로그를 더한다 — 0.9 배 줌인은 ln(0.9)', () => {
+    expect(orthoZoomAdvance(100, 0, 0.9, 30000)).toBeCloseTo(Math.log(0.9), 12);
+    expect(orthoZoomAdvance(100, 0, 1 / 0.9, 30000)).toBeCloseTo(
+      -Math.log(0.9),
+      12,
+    );
+  });
+
+  it('pending 을 반영한 유효 거리에서 목표를 잡아 연속 휠에서도 틱당 배율이 같다', () => {
+    const first = orthoZoomAdvance(100, 0, 0.5, 30000);
+    const second = orthoZoomAdvance(100, first, 0.5, 30000);
+    expect(first).toBeCloseTo(Math.log(0.5), 12);
+    expect(second).toBeCloseTo(Math.log(0.5), 12);
+  });
+
+  it('하한: 유효 거리 × 배율이 MIN 아래면 MIN 까지만, 정확히 MIN 이면 그대로', () => {
+    expect(orthoZoomAdvance(MIN * 2, 0, 0.5, 30000)).toBeCloseTo(
+      Math.log(0.5),
+      12,
+    );
+    expect(orthoZoomAdvance(MIN * 2, 0, 0.25, 30000)).toBeCloseTo(
+      Math.log(0.5),
+      12,
+    );
+    expect(orthoZoomAdvance(MIN, 0, 0.5, 30000)).toBe(0);
+  });
+
+  it('상한: maxDistance 를 넘지 못하고, 이미 넘어 있으면 음수(안쪽으로)', () => {
+    expect(orthoZoomAdvance(100, 0, 2, 150)).toBeCloseTo(Math.log(1.5), 12);
+    expect(orthoZoomAdvance(100, 0, 1.5, 150)).toBeCloseTo(Math.log(1.5), 12);
+    expect(orthoZoomAdvance(200, 0, 1.1, 150)).toBeCloseTo(Math.log(0.75), 12);
+  });
+
+  it('상한이 하한보다 작으면 하한을 상한으로, 유한하지 않으면 CAMERA_MAX_DISTANCE', () => {
+    expect(orthoZoomAdvance(100, 0, 2, MIN / 2)).toBeCloseTo(
+      Math.log(MIN / 100),
+      12,
+    );
+    expect(
+      orthoZoomAdvance(CAMERA_MAX_DISTANCE / 2, 0, 4, Infinity),
+    ).toBeCloseTo(Math.log(2), 12);
+  });
+
+  it('거리·pending·factor 가 유한하지 않거나 거리·factor 가 0 이하이면 0', () => {
+    expect(orthoZoomAdvance(NaN, 0, 0.9, 100)).toBe(0);
+    expect(orthoZoomAdvance(100, NaN, 0.9, 100)).toBe(0);
+    expect(orthoZoomAdvance(100, 0, NaN, 100)).toBe(0);
+    expect(orthoZoomAdvance(100, 0, Infinity, 100)).toBe(0);
+    expect(orthoZoomAdvance(0, 0, 0.9, 100)).toBe(0);
+    expect(orthoZoomAdvance(-5, 0, 0.9, 100)).toBe(0);
+    expect(orthoZoomAdvance(100, 0, 0, 100)).toBe(0);
   });
 });

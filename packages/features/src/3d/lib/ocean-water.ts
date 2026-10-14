@@ -273,6 +273,8 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
   readonly isOceanWater = true;
 
   private readonly clipBias: number;
+  /** 설정된 반사 세기 — 직교(탑뷰) 렌더 뒤 원근으로 돌아올 때 유니폼을 되돌린다. */
+  private readonly reflectionIntensity: number;
   private readonly excludedObjects:
     | ((scene: Scene) => Iterable<Object3D | null | undefined>)
     | null;
@@ -310,6 +312,7 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     const eye = options.eye ?? new Vector3(0, 0, 0);
     const distortionScale = options.distortionScale ?? 20.0;
     const reflectionIntensity = options.reflectionIntensity ?? 1.0;
+    this.reflectionIntensity = reflectionIntensity;
     const sunDiffuseIntensity = options.sunDiffuseIntensity ?? 1.0;
     const side = options.side ?? FrontSide;
     const fog = options.fog ?? false;
@@ -366,7 +369,9 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
   ): void {
     // 미러 카메라가 projectionMatrix 를 복사하므로 직교 투영엔 의미가 없다 —
     // 미러 패스는 건너뛰고 eye 만 시선 반대쪽 먼 점으로 둔다(파일 상단 주석).
-    // 카메라 로컬 +Z(matrixWorld 셋째 열)가 시선의 반대 방향이다.
+    // 카메라 로컬 +Z(matrixWorld 셋째 열)가 시선의 반대 방향이다. 반사 RT 에는
+    // 마지막 원근 프레임이 남아 있으므로 직교(탑뷰)로 그리는 동안은 반사를
+    // 0 으로 두고, 원근으로 돌아오면 설정값으로 되돌린다.
     const perspective = camera as PerspectiveCamera;
     if (!perspective.isPerspectiveCamera) {
       this.cameraWorldPosition.setFromMatrixPosition(camera.matrixWorld);
@@ -375,7 +380,11 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
         .normalize()
         .multiplyScalar(ORTHO_EYE_DISTANCE)
         .add(this.cameraWorldPosition);
+      this.uniforms.reflectionIntensity.value = 0;
       return;
+    }
+    if (this.uniforms.reflectionIntensity.value !== this.reflectionIntensity) {
+      this.uniforms.reflectionIntensity.value = this.reflectionIntensity;
     }
 
     const {

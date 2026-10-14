@@ -194,7 +194,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D 런타임 상태(Zustand) | `packages/features/src/3d/model/` |
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
-| 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts` — `docs/agents/3d-editor.md` |
+| 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈·직교 탑뷰 토글 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts`, `packages/ui/src/organisms/use-ortho-top-view.ts` — `docs/agents/3d-editor.md` |
 | 씬에 놓는 조명(투광등) — 스키마·배치·인스펙터 / 밤 점등·SpotLight 슬롯·기구 글로우 | 스키마 `SavedFloodlightInfo`(`packages/domain/src/3d/model/floodlight-types.ts`), 기하 `packages/domain/src/3d/lib/floodlight.ts`, 배치 `packages/widgets/src/3d/ui/use-floodlight-place.ts`, 편집 `packages/widgets/src/3d/lib/floodlight-editor.ts` — `docs/agents/3d-editor.md`; 렌더 `packages/features/src/3d/ui/{scene-floodlights,scene-floodlight-fixture}.tsx`, `lib/floodlight-{spot,slots}.ts` — `docs/agents/rendering-perf.md` |
 | 태그 맵핑 스키마·방어 / 값 버스 / 편집 UI | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/tag-mapping-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 가상 태그 정의 / 스토어·러너 / 관리 페이지 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/virtual-tags/` — `docs/agents/tag-mapping-rig.md` |
@@ -282,7 +282,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
 - 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
 - Canvas 안 마운트 순서는 계약이다: `RigDriver` → 충돌 검출기 → `SceneCollisionHighlight` → 영역 검출기 → `SceneZoneRings`, `SceneSurfaceCamera` 바로 다음 `SceneCameraLimits`. 같은 priority 의 useFrame 은 마운트 순으로 돈다 (3d-collision, 3d-zone, monitoring-ui).
-- 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다 (3d-editor).
+- 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다. 탑뷰는 직교 카메라 교체 토글(`useOrthoTopView`)이라 카메라를 옮기는 명령은 훅의 `moveTo`/`applyPose` 를 거치고, fov·aspect 는 `resolveCameraFov`/`resolveCameraAspect` 로 읽는다 (3d-editor).
 - 기즈모 스냅은 `lib/snap-transform.ts` 순수 함수로 저장값 기준으로 한다. three `TransformControls` 의 `*Snap` 은 쓰지 않는다 (3d-editor).
 - 씬 스키마 필드를 추가하면 `sanitize-*` 와 `scene-snapshot.ts` 의 동등 비교(`isZoneListEqual` 류)를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 저장되지 않는다 (3d-editor, 3d-zone).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).

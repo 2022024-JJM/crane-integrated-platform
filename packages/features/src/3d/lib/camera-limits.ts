@@ -142,6 +142,44 @@ export function maxDistanceForBounds(
 }
 
 /**
+ * 직교 탑뷰의 휠 줌 — 한 이벤트가 누적 **로그 배율**(pendingLog)에 더할 값.
+ * 직교에선 카메라를 옮겨도 크기가 안 변하므로 포즈·프러스텀을 커서 아래 점
+ * 기준으로 같은 배율(e^x)만큼 키운다(ui/scene-surface-camera.tsx). `distance`
+ * 는 현재 카메라-타깃 거리(프러스텀 반높이의 기준 — 같은 구도의 원근 카메라
+ * 거리), `factor` 는 이벤트 배율(<1 줌인). 상·하한·pending 반영 규칙은
+ * surfaceDollyAdvance 와 같다. 거리·pending·factor 가 유한하지 않거나 거리·
+ * factor 가 0 이하이면 0.
+ */
+export function orthoZoomAdvance(
+  distance: number,
+  pendingLog: number,
+  factor: number,
+  maxDistance: number,
+): number {
+  if (
+    !Number.isFinite(distance) ||
+    !Number.isFinite(pendingLog) ||
+    !Number.isFinite(factor) ||
+    distance <= 0 ||
+    factor <= 0
+  ) {
+    return 0;
+  }
+  const upper = Number.isFinite(maxDistance)
+    ? Math.max(CAMERA_MIN_SURFACE_DISTANCE, maxDistance)
+    : CAMERA_MAX_DISTANCE;
+  const effective = Math.max(
+    CAMERA_MIN_SURFACE_DISTANCE,
+    distance * Math.exp(pendingLog),
+  );
+  const goal = Math.min(
+    Math.max(effective * factor, CAMERA_MIN_SURFACE_DISTANCE),
+    upper,
+  );
+  return Math.log(goal / effective);
+}
+
+/**
  * 휠 한 이벤트가 표면 기준 dolly 의 누적 이동(pending)에 더할 거리(m, +면
  * 표면 쪽). `dist` 는 커서 레이로 잰 표면까지 거리, `factor` 는 이벤트의
  * 배율(<1 줌인), `maxDistance` 는 줌아웃 상한(controls.maxDistance).

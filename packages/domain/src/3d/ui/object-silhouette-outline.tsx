@@ -1,11 +1,7 @@
 import { createPortal, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import {
-  Mesh,
-  PerspectiveCamera,
-  type Object3D,
-  type ShaderMaterial,
-} from 'three';
+import { Mesh, type Object3D, type ShaderMaterial } from 'three';
+import { resolveCameraFov } from '@crane/core/lib/top-view-pose';
 import {
   SILHOUETTE_OUTLINE_PX,
   SILHOUETTE_OUTLINE_RENDER_ORDER,
@@ -141,7 +137,8 @@ export function ObjectSilhouetteOutline({
   // 아니라 그리는 뷰포트 높이다 — 분할 화면은 타일 높이(전부 같다).
   const heightPx = useSceneViewportHeight();
   const camera = useThree((s) => s.camera);
-  const fov = camera instanceof PerspectiveCamera ? camera.fov : 60;
+  // 직교 탑뷰 카메라는 userData 의 원근 fov(같은 구도의 원근 높이에 서 있다).
+  const fov = resolveCameraFov(camera) ?? 60;
   const offsetUniformRef = useRef(material.uniforms.uOffsetFactor);
   useEffect(() => {
     offsetUniformRef.current = material.uniforms.uOffsetFactor;

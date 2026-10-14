@@ -1,12 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { Vector3, type Box3, type Camera, type Object3D } from 'three';
 import {
-  PerspectiveCamera,
-  Vector3,
-  type Box3,
-  type Camera,
-  type Object3D,
-} from 'three';
+  resolveCameraAspect,
+  resolveCameraFov,
+} from '@crane/core/lib/top-view-pose';
 import {
   SEA_LEVEL_Y,
   modelObjectRegistry,
@@ -127,12 +125,21 @@ const CHANGE_EVENT = { type: 'change' } as const;
 const cameraDelta = new Vector3();
 const targetDelta = new Vector3();
 
-/** 카메라 `aspect`·`fov` — 직교 카메라는 반경 상한을 계산할 수 없어 기본값. */
+/**
+ * 카메라 `aspect`·`fov` — 직교 탑뷰 카메라는 userData 의 원근 fov 와 프러스텀
+ * 비를 읽어 원근과 같은 반경 상한이 나온다. 모르면 기본값.
+ */
 function perspectiveOf(camera: Camera): { aspect: number; fov: number } {
-  if (camera instanceof PerspectiveCamera) {
-    return { aspect: camera.aspect, fov: camera.fov };
-  }
-  return { aspect: 1, fov: 75 };
+  return {
+    aspect: resolveCameraAspect(camera) ?? 1,
+    fov: resolveCameraFov(camera) ?? 75,
+  };
+}
+
+function isOrthographic(camera: Camera): boolean {
+  return (
+    (camera as { isOrthographicCamera?: boolean }).isOrthographicCamera === true
+  );
 }
 
 /** (x, z) 아래 지도 표면 중 가장 높은 y. 지도가 없거나 전부 miss 면 해수면. */
@@ -196,6 +203,10 @@ export function SceneCameraLimits({
     cache.prevPosition.copy(state.camera.position);
     cache.prevTarget.copy(controls.target);
     cache.hasPrev = true;
+
+    // 직교 탑뷰는 극각이 양쪽 다 잠겨 있다(ui use-ortho-top-view) — 바닥
+    // 기준 상한을 덮어쓰면 기울이기가 풀린다. 바닥은 아래 투영이 지킨다.
+    if (isOrthographic(state.camera)) return;
 
     const dist = state.camera.position.distanceTo(controls.target);
     controls.maxPolarAngle = Math.min(

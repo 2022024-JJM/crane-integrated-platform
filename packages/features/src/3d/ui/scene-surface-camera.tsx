@@ -7,9 +7,10 @@ import {
   Vector3,
   type Camera,
   type Object3D,
+  type OrthographicCamera,
 } from 'three';
 import { SEA_LEVEL_Y, modelObjectRegistry } from '@crane/domain/3d';
-import { surfaceDollyAdvance } from '../lib/camera-limits';
+import { orthoZoomAdvance, surfaceDollyAdvance } from '../lib/camera-limits';
 
 /**
  * 구글 어스식 카메라 줌 — 표면 기준 dolly + 표면 피벗.
@@ -39,6 +40,14 @@ import { surfaceDollyAdvance } from '../lib/camera-limits';
  * 맞는다. 히트가 없으면 바다가 켜진 씬(seaVisible — resolveSeaVisible)에서는
  * 수면(SEA_LEVEL_Y) 평면, 그것도 없으면 화면 중앙 표면 거리 → 타깃 거리 순으로
  * 폴백한다.
+ *
+ * 직교 탑뷰(ui use-ortho-top-view)에서는 카메라를 옮겨도 크기가 변하지
+ * 않으므로 휠은 dolly 가 아니라 **커서 아래 점 기준 배율**이다 — 카메라·타깃·
+ * 프러스텀을 그 점 기준으로 같은 배율로 키워 커서 아래 지점이 화면에서
+ * 움직이지 않는다(지도 앱의 줌). 배율의 상·하한은 카메라-타깃 거리(같은
+ * 구도의 원근 거리)에 원근과 같은 하한·maxDistance 를 적용한다
+ * (lib/camera-limits.ts orthoZoomAdvance). 표면 피벗(5)은 그대로 — 타깃 거리가
+ * 조금 바뀌어도 프러스텀은 건드리지 않는다.
  */
 
 /**
@@ -53,6 +62,8 @@ const ZOOM_FACTOR_MAX = 2;
 const ZOOM_EASE_TAU = 0.12;
 /** 남은 이동이 이보다 작으면 마무리한다(월드 unit). */
 const ZOOM_SETTLE_EPS = 0.01;
+/** 직교 탑뷰 줌의 남은 로그 배율이 이보다 작으면 마무리한다(0.1%). */
+const ORTHO_ZOOM_SETTLE_EPS = 1e-3;
 /** deltaMode=1(줄 단위) 휠을 픽셀로 환산. */
 const WHEEL_LINE_PX = 16;
 /**
@@ -141,10 +152,18 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v));
 }
 
+function isOrthographic(camera: Camera): camera is OrthographicCamera {
+  return (camera as OrthographicCamera).isOrthographicCamera === true;
+}
+
 interface DollyState {
   /** 커서 레이 방향으로 남은 이동 거리(부호 있음, +면 표면 쪽). */
   pending: number;
   dir: Vector3;
+  /** 직교 탑뷰: 남은 로그 배율(e^x 를 포즈·프러스텀에 곱한다, +면 축소). */
+  orthoPendingLog: number;
+  /** 직교 탑뷰: 배율의 고정점(커서 아래 표면점, 월드). */
+  orthoAnchor: Vector3;
   /** OrbitControls start~end 사이(드래그 중). 이 동안은 피벗을 옮기지 않는다. */
   interacting: boolean;
   /** 마지막으로 본 레지스트리 크기 — 지도 GLB가 뒤늦게 로드되면 피벗을 다시 잡는다. */
@@ -174,6 +193,8 @@ export function SceneSurfaceCamera({
   const stateRef = useRef<DollyState>({
     pending: 0,
     dir: new Vector3(),
+    orthoPendingLog: 0,
+    orthoAnchor: new Vector3(),
     interacting: false,
     registrySize: -1,
     lastPivot: new Vector3(),
@@ -196,13 +217,6 @@ export function SceneSurfaceCamera({
         -((event.clientY - rect.top) / rect.height) * 2 + 1,
       );
       raycaster.setFromCamera(ndc, camera);
-      const cursorDir = raycaster.ray.direction.clone();
-
-      // 커서 아래 표면 → 없으면(하늘) 화면 중앙 표면 → 그것도 없으면 타깃 거리.
-      const dist =
-        surfaceDistance(fallbackRef.current) ??
-        centerSurfaceDistance(camera, fallbackRef.current) ??
-        camera.position.distanceTo(controls.target);
 
       const deltaY =
         event.deltaMode === 1 ? event.deltaY * WHEEL_LINE_PX : event.deltaY;
@@ -211,6 +225,33 @@ export function SceneSurfaceCamera({
         ZOOM_FACTOR_MIN,
         ZOOM_FACTOR_MAX,
       );
+
+      if (isOrthographic(camera)) {
+        // 직교 탑뷰 — 커서 아래 표면점(없으면 수면, 그것도 없으면 타깃 높이
+        // 평면)을 고정점으로 배율을 누적한다(파일 상단 주석). 직교 레이는
+        // near 평면에서 출발하므로 거리가 아니라 점을 쓴다.
+        const anchorDist = surfaceDistance(
+          fallbackRef.current ?? controls.target.y,
+        );
+        if (anchorDist === null) return;
+        raycaster.ray.at(anchorDist, state.orthoAnchor);
+        state.orthoPendingLog += orthoZoomAdvance(
+          camera.position.distanceTo(controls.target),
+          state.orthoPendingLog,
+          factor,
+          controls.maxDistance,
+        );
+        invalidate();
+        return;
+      }
+
+      const cursorDir = raycaster.ray.direction.clone();
+
+      // 커서 아래 표면 → 없으면(하늘) 화면 중앙 표면 → 그것도 없으면 타깃 거리.
+      const dist =
+        surfaceDistance(fallbackRef.current) ??
+        centerSurfaceDistance(camera, fallbackRef.current) ??
+        camera.position.distanceTo(controls.target);
 
       // 하한은 CAMERA_MIN_SURFACE_DISTANCE, 상한은 OrbitControls maxDistance
       // — SceneCameraLimits 가 지도 크기(탑뷰 fit 거리 × 배수)로 정해 두는
@@ -243,7 +284,7 @@ export function SceneSurfaceCamera({
 
     const onStart = () => {
       state.interacting = true;
-      if (state.pending === 0) {
+      if (state.pending === 0 && state.orthoPendingLog === 0) {
         placePivot(camera, controls, fallbackRef.current, state.lastPivot);
       }
     };
@@ -260,7 +301,7 @@ export function SceneSurfaceCamera({
   }, [camera, controls]);
 
   // 프레임: 외부 타깃 변경 감지 → 표면 피벗, dolly easing(구글 어스 4).
-  useFrame((_, delta) => {
+  useFrame((frame, delta) => {
     if (!controls) return;
     const state = stateRef.current;
 
@@ -270,7 +311,8 @@ export function SceneSurfaceCamera({
     // 직후 컨트롤러 등록 effect의 reset()이 이 컴포넌트가 controls를 받기 전에
     // 실행돼 이벤트를 놓치고, 지하 타깃이 남아 첫 탑뷰가 기울었다. 벡터 비교는
     // 매 프레임, 레이캐스트는 실제로 바뀐 프레임에만 돈다.
-    if (state.pending === 0 && !state.interacting && controls.enabled) {
+    const idle = state.pending === 0 && state.orthoPendingLog === 0;
+    if (idle && !state.interacting && controls.enabled) {
       const registrySize = modelObjectRegistry.size;
       const targetMoved =
         controls.target.distanceToSquared(state.lastPivot) > 1e-6;
@@ -281,6 +323,42 @@ export function SceneSurfaceCamera({
           state.registrySize = registrySize;
         }
       }
+    }
+
+    if (state.orthoPendingLog !== 0) {
+      // 프러스텀은 프레임 state 의 카메라에 쓴다 — 훅 반환값(useThree 의
+      // camera) 의 속성 대입은 react-hooks/immutability 에 걸린다. 같은 객체다.
+      const ortho = frame.camera;
+      if (!isOrthographic(ortho)) {
+        // 배율이 남은 채 원근으로 복귀했다 — 버린다.
+        state.orthoPendingLog = 0;
+        return;
+      }
+      let step = state.orthoPendingLog * (1 - Math.exp(-delta / ZOOM_EASE_TAU));
+      if (Math.abs(state.orthoPendingLog - step) < ORTHO_ZOOM_SETTLE_EPS) {
+        step = state.orthoPendingLog;
+      }
+      const scale = Math.exp(step);
+      const anchor = state.orthoAnchor;
+      // 고정점 기준으로 카메라·타깃·프러스텀을 같은 배율로 — 고정점이 화면에서
+      // 움직이지 않는다. 극각·방위는 그대로다(오프셋이 배율만 바뀐다).
+      ortho.position.sub(anchor).multiplyScalar(scale).add(anchor);
+      controls.target.sub(anchor).multiplyScalar(scale).add(anchor);
+      ortho.left *= scale;
+      ortho.right *= scale;
+      ortho.top *= scale;
+      ortho.bottom *= scale;
+      ortho.updateProjectionMatrix();
+      state.orthoPendingLog -= step;
+      state.lastPivot.copy(controls.target);
+      controls.update();
+
+      if (state.orthoPendingLog === 0) {
+        placePivot(camera, controls, fallbackRef.current, state.lastPivot);
+      } else {
+        invalidate();
+      }
+      return;
     }
 
     if (state.pending === 0) return;

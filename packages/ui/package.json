@@ -50,7 +50,8 @@
     "./organisms/app-toaster": "./src/organisms/app-toaster.tsx",
     "./organisms/navigation-progress-bar": "./src/organisms/navigation-progress-bar.tsx",
     "./organisms/scene-dock": "./src/organisms/scene-dock.tsx",
-    "./organisms/three-scene-viewer": "./src/organisms/three-scene-viewer.tsx"
+    "./organisms/three-scene-viewer": "./src/organisms/three-scene-viewer.tsx",
+    "./organisms/use-ortho-top-view": "./src/organisms/use-ortho-top-view.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

@@ -1,5 +1,5 @@
 import { OrbitControls } from '@react-three/drei';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import {
   Binoculars,
   House,
@@ -14,17 +14,14 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
-import {
-  computeTopViewPose,
-  ensureTopViewTilt,
-} from '@crane/core/lib/top-view-pose';
+import { scalePoseAboutPoint } from '@crane/core/lib/top-view-pose';
+import { useOrthoTopView } from './use-ortho-top-view';
 import { PortalContainerProvider } from '../molecules/portal-container';
 import {
   SceneToolbarButton,
@@ -45,19 +42,17 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 // 버튼(알람 토글 등)이 로그인 화면까지 3D 런타임을 실었다. 상수는
 // `@crane/ui/molecules/scene-toolbar-button` 에서 가져온다.
 
+/**
+ * 초기 시점·"메인 뷰" 버튼의 구도. 탑뷰는 프리셋이 아니라 지금 보는 화면
+ * 위로 올라가는 토글이다(use-ortho-top-view).
+ */
 interface ThreeSceneViewerCameraPreset {
   defaultPosition: Vector3Tuple;
   defaultTarget: Vector3Tuple;
-  topViewPosition?: Vector3Tuple;
-  topViewTarget?: Vector3Tuple;
-  /**
-   * 탑뷰가 한 화면에 담을 영역(보통 지도 bounds). 있으면 topViewPosition/
-   * Target 대신 이 박스가 세로 fov·종횡비 기준으로 꽉 차는 높이에서
-   * 정수직에 가깝게(미세 tilt, @crane/core top-view-pose) 내려다본다.
-   * 없거나 비어 있으면 기존 프리셋 경로.
-   */
-  getTopViewBounds?: () => Box3 | null;
 }
+
+/** 호출부가 cameraClip 을 넘기지 않을 때 — far 5000(지도 잘림 방지 최소값). */
+const DEFAULT_CAMERA_CLIP = { near: 0.1, far: 5000 } as const;
 
 interface ThreeSceneViewerProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
@@ -103,17 +98,27 @@ interface ThreeSceneViewerProps {
 }
 
 export interface SceneController {
+  /** 메인 뷰(프리셋 기본 구도). 탑뷰 중이면 원근으로 복귀하면서 간다. */
   reset: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  moveToTopView: () => void;
+  /** 직교 탑뷰 진입 / "지금 보는 곳 기준" 원근 복귀. */
+  toggleTopView: () => void;
+  /** 탑뷰면 원근으로 복귀(지금 보는 곳 기준), 아니면 no-op. */
+  exitTopView: () => void;
+  /** 구도로 이동 — 탑뷰 중이면 원근으로 복귀하면서 그 구도로 간다. */
   moveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
+  /** 모드를 유지한 채 이동(미니맵 팬) — 탑뷰 중이면 탑뷰인 채 옮긴다. */
+  panTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
   getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
 }
 
 interface SceneControlsBridgeProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
+  /** 카메라 far — 직교 탑뷰 카메라가 같은 값을 쓴다. */
+  cameraFar: number;
   onControllerChange: (controller: SceneController | null) => void;
+  onTopViewActiveChange: (active: boolean) => void;
 }
 
 const ZOOM_STEP = 1.2;
@@ -153,143 +158,51 @@ function isWebGLSupported(): boolean {
   return cachedWebGLSupport;
 }
 
-/**
- * 탑뷰 포즈에 넘길 거리 상한 — OrbitControls maxDistance 에서 박스 반높이
- * (target 은 박스 중심, 카메라는 윗면 기준)를 뺀 값. 상한이 없으면 undefined
- * (core 기본 TOP_VIEW_MAX_DISTANCE).
- */
-function topViewMaxDistance(
-  bounds: Box3,
-  maxDistance: number | undefined,
-): number | undefined {
-  if (maxDistance === undefined || !Number.isFinite(maxDistance)) {
-    return undefined;
-  }
-  const halfHeight = (bounds.max.y - bounds.min.y) / 2;
-  return Math.max(0, maxDistance - halfHeight);
-}
-
-function toVector3([x, y, z]: Vector3Tuple) {
-  return new Vector3(x, y, z);
-}
-
 function SceneControlsBridge({
   cameraPreset,
+  cameraFar,
   onControllerChange,
+  onTopViewActiveChange,
 }: SceneControlsBridgeProps) {
-  const camera = useThree((state) => state.camera);
-  const invalidate = useThree((state) => state.invalidate);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+  // 직교 탑뷰 토글 — 카메라 교체·포즈 적용·프러스텀은 훅이 맡는다. 아래
+  // 콜백은 전부 controlsRef 를 읽고 state.camera 에 의존하지 않는다 — 카메라
+  // 교체(탑뷰)로 컨트롤러가 다시 등록되거나 reset 이 다시 돌면 안 된다.
+  const topView = useOrthoTopView({ controlsRef, far: cameraFar });
+  const { active: topViewActive, applyPose, moveTo, exit, toggle } = topView;
+
+  useEffect(() => {
+    onTopViewActiveChange(topViewActive);
+  }, [onTopViewActiveChange, topViewActive]);
 
   const { defaultPosition, defaultTarget } = cameraPreset;
-  const defaultDistance = useMemo(() => {
-    const distance = toVector3(defaultPosition).distanceTo(
-      toVector3(defaultTarget),
-    );
-    return distance > 0 ? distance : 1;
-  }, [defaultPosition, defaultTarget]);
-  const topViewTarget = cameraPreset.topViewTarget ?? defaultTarget;
-  // 프리셋 폴백은 타깃 정확히 위(정수직)다. 정규 tilt 는 applyCameraState 의
-  // ensureTopViewTilt 가 붙인다.
-  const topViewPosition = useMemo<Vector3Tuple>(
-    () =>
-      cameraPreset.topViewPosition ?? [
-        topViewTarget[0],
-        topViewTarget[1] + defaultDistance,
-        topViewTarget[2],
-      ],
-    [cameraPreset.topViewPosition, defaultDistance, topViewTarget],
-  );
 
-  // 카메라 up 은 항상 +Y(three 기본)다. 탑뷰도 up 을 바꾸지 않고 카메라를
-  // 미세하게 기울여 만든다 — 이유는 @crane/core top-view-pose 의 TOP_VIEW_TILT
-  // 주석. 정수직 포즈(사이트 프리셋·옛 북마크)는 ensureTopViewTilt 로
-  // 같은 정규 포즈로 바꿔 lookAt 이 퇴화하지 않게 한다.
-  const applyCameraState = useCallback(
-    (position: Vector3Tuple, target: Vector3Tuple) => {
-      const controls = controlsRef.current;
-
-      if (!controls) {
-        return;
-      }
-
-      camera.position.fromArray(ensureTopViewTilt(position, target));
-      controls.target.fromArray(target);
-      camera.lookAt(controls.target);
-
-      // 감쇠(damping)를 잠시 끄고 update() 한다. 켠 채로 부르면 직전 드래그의
-      // 잔여 관성이 남아 있다가 이후 프레임에서 계속 적용돼, 방금 맞춘 포즈가
-      // 조금씩 흘러간다("리셋을 눌렀는데 카메라가 미끄러진다"). three-stdlib는
-      // damping이 꺼져 있을 때만 update()에서 델타를 0으로 리셋한다.
-      const previousDamping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = previousDamping;
-
-      invalidate();
-    },
-    [camera, invalidate],
-  );
-
+  // 메인 뷰 — 탑뷰 중이면 원근으로 복귀하면서 그 구도로 간다.
   const reset = useCallback(() => {
-    applyCameraState(defaultPosition, defaultTarget);
-  }, [applyCameraState, defaultPosition, defaultTarget]);
+    moveTo(defaultPosition, defaultTarget);
+  }, [defaultPosition, defaultTarget, moveTo]);
 
-  const getTopViewBounds = cameraPreset.getTopViewBounds;
-  const moveToTopView = useCallback(() => {
-    const bounds = getTopViewBounds?.();
-    const perspective = camera as PerspectiveCamera;
-    const controls = controlsRef.current;
-    // 지도 XZ가 세로 fov 기준으로 화면에 꽉 차는 높이(편집기와 같은 함수).
-    // 상한은 controls.maxDistance(features 의 SceneCameraLimits 가 지도
-    // 크기로 정한 값) — 포즈의 궤도 반경은 거리 + 박스 반높이라 그만큼 빼서
-    // 넘긴다. 넘기지 않으면 다음 update 의 반경 clamp 로 카메라가 튄다.
-    const pose =
-      bounds && perspective.isPerspectiveCamera
-        ? computeTopViewPose(bounds, perspective.aspect, perspective.fov, {
-            maxDistance: topViewMaxDistance(bounds, controls?.maxDistance),
-          })
-        : null;
-    if (pose) {
-      applyCameraState(pose.position, pose.target);
-      return;
-    }
-    applyCameraState(topViewPosition, topViewTarget);
-  }, [
-    applyCameraState,
-    camera,
-    getTopViewBounds,
-    topViewPosition,
-    topViewTarget,
-  ]);
-
+  // 줌 버튼 — 타깃(화면 중앙 표면) 기준 거리 배율. 탑뷰(직교)도 같은 식이고
+  // applyPose 가 거리로 프러스텀을 다시 잡는다.
   const zoomByFactor = useCallback(
     (factor: number) => {
       const controls = controlsRef.current;
-
-      if (!controls) {
-        return;
-      }
-
-      const nextOffset = camera.position.clone().sub(controls.target);
-      const nextDistance = Math.max(
-        MIN_CAMERA_DISTANCE,
-        nextOffset.length() * factor,
+      if (!controls) return;
+      const cam = controls.object;
+      const distance = cam.position.distanceTo(controls.target);
+      if (!(distance > 0)) return;
+      const nextDistance = Math.max(MIN_CAMERA_DISTANCE, distance * factor);
+      const pose = scalePoseAboutPoint(
+        {
+          position: cam.position.toArray(),
+          target: controls.target.toArray(),
+        },
+        controls.target.toArray(),
+        nextDistance / distance,
       );
-
-      nextOffset.setLength(nextDistance);
-      camera.position.copy(controls.target).add(nextOffset);
-
-      // applyCameraState와 같은 이유로 감쇠를 잠시 끄고 update() 한다 —
-      // 잔여 관성이 남으면 줌 버튼으로 맞춘 거리가 이후 프레임에서 흘러간다.
-      const previousDamping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = previousDamping;
-
-      invalidate();
+      applyPose(pose.position, pose.target);
     },
-    [camera.position, invalidate],
+    [applyPose],
   );
 
   const zoomIn = useCallback(() => {
@@ -300,47 +213,33 @@ function SceneControlsBridge({
     zoomByFactor(ZOOM_STEP);
   }, [zoomByFactor]);
 
-  const moveTo = useCallback(
-    (position: Vector3Tuple, target: Vector3Tuple) => {
-      applyCameraState(position, target);
-    },
-    [applyCameraState],
-  );
+  const exitTopView = useCallback(() => {
+    exit();
+  }, [exit]);
 
   const getPose = useCallback((): {
     position: Vector3Tuple;
     target: Vector3Tuple;
   } | null => {
     const controls = controlsRef.current;
-
-    if (!controls) {
-      return null;
-    }
-
+    if (!controls) return null;
     return {
-      position: camera.position.toArray() as Vector3Tuple,
-      target: controls.target.toArray() as Vector3Tuple,
+      position: controls.object.position.toArray(),
+      target: controls.target.toArray(),
     };
-  }, [camera]);
+  }, []);
 
   useEffect(() => {
-    const controls = controlsRef.current;
-
-    if (!controls) {
-      return;
-    }
-
     onControllerChange({
       reset,
       zoomIn,
       zoomOut,
-      moveToTopView,
+      toggleTopView: toggle,
+      exitTopView,
       moveTo,
+      panTo: applyPose,
       getPose,
     });
-
-    reset();
-
     return () => {
       onControllerChange(null);
     };
@@ -349,10 +248,19 @@ function SceneControlsBridge({
     reset,
     zoomIn,
     zoomOut,
-    moveToTopView,
+    toggle,
+    exitTopView,
     moveTo,
+    applyPose,
     getPose,
   ]);
+
+  // 초기 시점, 그리고 프리셋이 바뀔 때(모델 로드 뒤 정면 뷰를 주입하는 작은
+  // 뷰어) 다시 — reset 의 의존성은 프리셋뿐이라 탑뷰 카메라 교체로는 돌지
+  // 않는다.
+  useEffect(() => {
+    reset();
+  }, [reset]);
 
   return (
     <OrbitControls
@@ -410,6 +318,9 @@ export function ThreeSceneViewer({
   } = useFullscreen();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const controllerRef = useRef<SceneController | null>(null);
+  // 탑뷰 버튼의 눌림 표시 — 상태는 Canvas 안 브리지(useOrthoTopView)가 소유한다.
+  const [topViewActive, setTopViewActive] = useState(false);
+  const clip = cameraClip ?? DEFAULT_CAMERA_CLIP;
 
   const setController = useCallback(
     (controller: SceneController | null) => {
@@ -473,12 +384,17 @@ export function ThreeSceneViewer({
         <House />
       </SceneToolbarButton>
       <SceneToolbarButton
-        label={t('common:viewer3d.topView')}
+        label={
+          topViewActive
+            ? t('common:viewer3d.topViewExit')
+            : t('common:viewer3d.topView')
+        }
         side={tooltipSide}
+        pressed={topViewActive}
         disabled={cameraDisabled}
         disabledLabel={cameraControlsDisabledLabel}
         onClick={() => {
-          controllerRef.current?.moveToTopView();
+          controllerRef.current?.toggleTopView();
         }}
       >
         <Binoculars />
@@ -588,7 +504,7 @@ export function ThreeSceneViewer({
                 // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
                 camera={{
                   position: cameraPreset.defaultPosition,
-                  ...(cameraClip ?? { near: 0.1, far: 5000 }),
+                  ...clip,
                 }}
                 // 픽셀 비율 상한 1.5 — Retina(DPR 2~3)에서 네이티브로 그리면
                 // 프래그먼트 수가 1.8~4배라 지도급 씬에서 프레임을 다 먹는다.
@@ -601,7 +517,9 @@ export function ThreeSceneViewer({
               >
                 <SceneControlsBridge
                   cameraPreset={cameraPreset}
+                  cameraFar={clip.far}
                   onControllerChange={setController}
+                  onTopViewActiveChange={setTopViewActive}
                 />
                 {children}
               </Canvas>

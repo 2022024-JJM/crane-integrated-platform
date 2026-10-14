@@ -16,7 +16,7 @@ import {
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
+import { MOUSE, Object3D, Vector3, type Camera } from 'three';
 import {
   FLOODLIGHT_HEIGHT_DEFAULT_M,
   GltfModel,
@@ -26,7 +26,6 @@ import {
   SceneText,
   SilhouetteOutlineWarmup,
   buildLabelReadings,
-  collectCameraBoundsBox,
   extendGltfLoaderWithKtx2,
   getMeshPath,
   isContextMap,
@@ -103,11 +102,14 @@ import {
 import { withFloodlightAimPoint } from '../lib/floodlight-editor';
 import { formatRulerLength } from '../lib/ruler-editor';
 import {
-  computeTopViewFallbackPose,
-  computeTopViewPose,
-  ensureTopViewTilt,
+  resolveCameraAspect,
+  resolveCameraFov,
   type CameraPose,
 } from '@crane/core/lib/top-view-pose';
+import {
+  useOrthoTopView,
+  type OrthoTopViewHandle,
+} from '@crane/ui/organisms/use-ortho-top-view';
 import { collectWorldBounds } from '../lib/world-bounds';
 import { EditorGroundGrid } from './editor-ground-grid';
 
@@ -230,13 +232,67 @@ function SelectionAwareSceneFloodlight(
   return <SceneFloodlightFixture {...props} isSelected={isSelected} editing />;
 }
 
+interface EditorCameraBridgeProps {
+  controlsRef: RefObject<OrbitControlsImpl | null>;
+  handleRef: RefObject<OrthoTopViewHandle | null>;
+  cameraRef: RefObject<Camera | null>;
+  cameraStateRef?: RefObject<SavedCameraInfo | null>;
+  onActiveChange?: (active: boolean) => void;
+}
+
+/**
+ * Canvas 안에서 직교 탑뷰 훅(ui use-ortho-top-view)을 돌리고 핸들을 바깥의
+ * 도구 모음 액션에 넘긴다 — useThree 는 Canvas 안에서만 쓸 수 있다. 포즈가
+ * 적용되면 카메라 상태 ref 를, 카메라가 교체되면 드롭·마퀴 레이캐스트의
+ * 카메라 ref 를 갱신한다. OrbitControls 뒤에 마운트한다(교체 뒤 새 컨트롤의
+ * ref 가 먼저 붙는다).
+ */
+function EditorCameraBridge({
+  controlsRef,
+  handleRef,
+  cameraRef,
+  cameraStateRef,
+  onActiveChange,
+}: EditorCameraBridgeProps) {
+  const onPoseApplied = useCallback(
+    (pose: CameraPose) => {
+      if (cameraStateRef) {
+        cameraStateRef.current = {
+          position: [...pose.position],
+          target: [...pose.target],
+        };
+      }
+    },
+    [cameraStateRef],
+  );
+  const onCameraChange = useCallback(
+    (camera: Camera) => {
+      cameraRef.current = camera;
+    },
+    [cameraRef],
+  );
+  const handle = useOrthoTopView({
+    controlsRef,
+    far: SCENE_CAMERA_CLIP.far,
+    onPoseApplied,
+    onCameraChange,
+  });
+  useLayoutEffect(() => {
+    handleRef.current = handle;
+  }, [handle, handleRef]);
+  useEffect(() => {
+    onActiveChange?.(handle.active);
+  }, [handle.active, onActiveChange]);
+  return null;
+}
+
 /** 도구 모음의 카메라 버튼이 호출하는 액션(focusSelectedRef 와 같은 방식). */
 export interface SceneEditorCameraActions {
-  /** 마지막으로 로드/저장된 카메라(없으면 편집기 기본 시점)로 복귀. */
+  /** 홈 카메라(메인 뷰, 없으면 로드/저장 시점)로 — 탑뷰 중이면 원근으로 복귀하면서. */
   resetView: () => void;
-  /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
+  /** 직교 탑뷰 토글 — 지금 보는 화면 위로, 다시 누르면 지금 보는 곳 기준 복귀. */
   topView: () => void;
-  /** 저장된 구도(씬 뷰)로 즉시 이동 — 뷰 탭의 행 클릭·우상단 고정 뷰 버튼. */
+  /** 저장된 구도(씬 뷰)로 즉시 이동 — 뷰 탭의 행 클릭·우상단 고정 뷰 버튼. 탑뷰 중이면 원근으로 복귀하면서. */
   moveTo: (pose: SavedCameraInfo) => void;
 }
 
@@ -256,6 +312,8 @@ interface SceneObjectsEditCanvasProps {
    * 없으면 저장 시점 카메라). 없으면 initialCamera.
    */
   homeCamera?: SavedCameraInfo | null;
+  /** 직교 탑뷰 상태 — 헤더 탑뷰 버튼의 눌림 표시. */
+  onTopViewActiveChange?: (active: boolean) => void;
   onTransformVectorChange: (
     field: SceneTransformField,
     value: Vector3Tuple,
@@ -333,6 +391,7 @@ export function SceneObjectsEditCanvas({
   cameraStateRef,
   initialCamera,
   homeCamera,
+  onTopViewActiveChange,
   onTransformVectorChange,
   onTransformCommit,
   onAddModel,
@@ -791,6 +850,40 @@ export function SceneObjectsEditCanvas({
     };
   }, [cameraStateRef, orbitControlsRef]);
 
+  // 직교 탑뷰 핸들 — Canvas 안 EditorCameraBridge 가 채운다. 포즈 적용·카메라
+  // 교체는 그 훅이 맡고 카메라 상태 ref 는 훅의 onPoseApplied 가 갱신한다.
+  const topViewHandleRef = useRef<OrthoTopViewHandle | null>(null);
+
+  // 모드를 유지한 채 포즈 적용(F 포커스·로드 시점 카메라). 브리지가 아직
+  // 없으면(Canvas 자식 마운트 전) 컨트롤에 직접 쓴다 — 감쇠를 잠시 끄고
+  // update() 하는 이유는 ui use-ortho-top-view 의 applyPose 와 같다.
+  const applyCameraPose = useCallback(
+    (pose: CameraPose) => {
+      const handle = topViewHandleRef.current;
+      if (handle) {
+        handle.applyPose(pose.position, pose.target);
+        return;
+      }
+      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+      if (!controls) return;
+      const cam = controls.object;
+      cam.position.set(...pose.position);
+      controls.target.set(...pose.target);
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
+      controls.update();
+      controls.enableDamping = previousDamping;
+
+      if (cameraStateRef) {
+        cameraStateRef.current = {
+          position: [...pose.position],
+          target: [...pose.target],
+        };
+      }
+    },
+    [cameraStateRef, orbitControlsRef],
+  );
+
   const fitToObjects = useCallback(
     (objects: Object3D[]) => {
       const controls = orbitControlsRef.current as OrbitControlsImpl | null;
@@ -806,15 +899,17 @@ export function SceneObjectsEditCanvas({
 
       // 바운딩 스피어가 세로·가로 fov 중 좁은 쪽에 들어오는 거리. 예전에는
       // 가장 긴 변 길이를 그대로 거리로 써서 fov·종횡비에 따라 잘리거나
-      // 지나치게 멀었다.
+      // 지나치게 멀었다. 직교 탑뷰도 같은 식이다 — 카메라가 같은 구도의 원근
+      // 높이에 서고(userData 의 fov) applyPose 가 거리로 프러스텀을 잡는다.
       const cam = controls.object;
       const radius = Math.max(size.length() / 2, 1e-3);
       let halfFov = Math.PI / 4;
-      if (cam instanceof PerspectiveCamera) {
-        const halfVertical = (cam.fov * Math.PI) / 360;
+      const fov = resolveCameraFov(cam);
+      if (fov !== null) {
+        const halfVertical = (fov * Math.PI) / 360;
         halfFov = Math.min(
           halfVertical,
-          Math.atan(Math.tan(halfVertical) * cam.aspect),
+          Math.atan(Math.tan(halfVertical) * (resolveCameraAspect(cam) ?? 1)),
         );
       }
       const distance = Math.max(
@@ -828,25 +923,13 @@ export function SceneObjectsEditCanvas({
 
       // 거리 상한은 두지 않는다 — update()가 OrbitControls maxDistance
       // (SceneCameraLimits 가 지도 크기로 정한 값)로 잘라 준다. 지도처럼 큰
-      // 객체는 뷰어 탑뷰와 같은 상한에서 멈춘다.
-      cam.position.copy(center).addScaledVector(direction, distance);
-      controls.target.copy(center);
-      // 감쇠를 잠시 끄고 update() 한다 — 켠 채로 부르면 직전 드래그의 잔여
-      // 관성이 이후 프레임에 계속 적용돼 방금 맞춘 포즈가 흘러간다
-      // (ThreeSceneViewer.applyCameraState와 같은 이유).
-      const previousDamping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = previousDamping;
-
-      if (cameraStateRef) {
-        cameraStateRef.current = {
-          position: [cam.position.x, cam.position.y, cam.position.z],
-          target: [center.x, center.y, center.z],
-        };
-      }
+      // 객체는 탑뷰 줌 상한과 같은 거리에서 멈춘다.
+      applyCameraPose({
+        position: center.clone().addScaledVector(direction, distance).toArray(),
+        target: center.toArray(),
+      });
     },
-    [cameraStateRef, orbitControlsRef],
+    [applyCameraPose, orbitControlsRef],
   );
 
   // 씬에 존재하는 id만 포커스 대상이다(스토어에 남은 stale 선택 방어). 지도는
@@ -999,81 +1082,30 @@ export function SceneObjectsEditCanvas({
     }
   }, [focusSelected, focusSelectedRef]);
 
-  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 @crane/core 의 top-view-pose 가 하고 여기서는
-  // OrbitControls 에 적용만 한다(감쇠 처리는 fitToObjects 와 같은 이유).
-  const applyCameraPose = useCallback(
-    (pose: CameraPose) => {
-      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-      if (!controls) return;
-      const cam = controls.object;
-      cam.position.set(...pose.position);
-      controls.target.set(...pose.target);
-      const previousDamping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = previousDamping;
-
-      if (cameraStateRef) {
-        cameraStateRef.current = {
-          position: [...pose.position],
-          target: [...pose.target],
-        };
+  // 구도로 이동 — 탑뷰 중이면 원근으로 복귀하면서 그 구도로 간다(메인 뷰·
+  // 씬 뷰). 정수직 방어(ensureTopViewTilt)는 훅의 applyPose 가 한다.
+  const moveTo = useCallback(
+    (pose: SavedCameraInfo) => {
+      const handle = topViewHandleRef.current;
+      if (handle) {
+        handle.moveTo(pose.position, pose.target);
+        return;
       }
+      applyCameraPose(pose);
     },
-    [cameraStateRef, orbitControlsRef],
+    [applyCameraPose],
   );
 
   // 메인 뷰 버튼 — 홈 카메라(메인 뷰, 없으면 마지막으로 로드/저장된 시점).
   const resetView = useCallback(() => {
-    applyCameraPose({ position: homePosition, target: homeTarget });
-  }, [applyCameraPose, homePosition, homeTarget]);
+    moveTo({ position: homePosition, target: homeTarget });
+  }, [homePosition, homeTarget, moveTo]);
 
-  // 바운즈 우선순위: 카메라 영역 제한에 체크된 지도들의 합집합(없으면 모든
-  // 지도 — 뷰어·SceneCameraLimits 와 같은 기준) → 배치된 객체 전체 →
-  // (아무것도 없으면) 현재 거리를 유지한 채 타깃 바로 위. 지도 GLB 가 아직
-  // 로드 전이면 박스가 비어 있어 객체 전체로 내려간다.
+  // 탑뷰 토글 — 지금 보는 화면 위로(직교), 다시 누르면 지금 보는 곳 기준으로
+  // 원근 복귀. 동작은 ui use-ortho-top-view.
   const topView = useCallback(() => {
-    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-    if (!controls) return;
-    const registry = modelObjectRegistryRef.current;
-    let bounds = collectCameraBoundsBox(sceneInfo?.maps, (id) =>
-      registry.get(id),
-    );
-    if (!bounds) {
-      bounds = collectWorldBounds([...registry.values()]);
-    }
-
-    const cam = controls.object;
-    let pose: CameraPose | null = null;
-    if (bounds && cam instanceof PerspectiveCamera) {
-      // 상한은 controls.maxDistance(SceneCameraLimits 가 지도 크기로 정한 값)
-      // 에서 박스 반높이를 뺀 값 — 뷰어(ThreeSceneViewer)와 같은 계산. 넘기지
-      // 않으면 다음 update 의 반경 clamp 로 카메라가 튄다.
-      const halfHeight = (bounds.max.y - bounds.min.y) / 2;
-      pose = computeTopViewPose(bounds, cam.aspect, cam.fov, {
-        minDistance: FOCUS_MIN_DISTANCE,
-        maxDistance: Math.max(0, controls.maxDistance - halfHeight),
-      });
-    }
-    if (!pose) {
-      pose = computeTopViewFallbackPose(
-        [cam.position.x, cam.position.y, cam.position.z],
-        [controls.target.x, controls.target.y, controls.target.z],
-      );
-    }
-    applyCameraPose(pose);
-  }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
-
-  // 씬 뷰로 이동 — 탑뷰와 같은 적용 경로(ensureTopViewTilt 로 정수직 방어).
-  const moveTo = useCallback(
-    (pose: SavedCameraInfo) => {
-      applyCameraPose({
-        position: ensureTopViewTilt(pose.position, pose.target),
-        target: pose.target,
-      });
-    },
-    [applyCameraPose],
-  );
+    topViewHandleRef.current?.toggle();
+  }, []);
 
   useEffect(() => {
     if (cameraActionsRef) {
@@ -1081,25 +1113,16 @@ export function SceneObjectsEditCanvas({
     }
   }, [cameraActionsRef, resetView, topView, moveTo]);
 
+  // 로드·저장 시점 카메라 — 모드는 유지한다(저장 뒤 같은 포즈가 다시 들어와도
+  // 탑뷰가 풀리지 않게).
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
     if (!initialCamera || initialCamera === appliedCameraRef.current) return;
     const controls = orbitControlsRef.current as OrbitControlsImpl | null;
     if (!controls) return;
-
-    const cam = controls.object;
-    cam.position.set(...initialCamera.position);
-    controls.target.set(...initialCamera.target);
-    controls.update();
     appliedCameraRef.current = initialCamera;
-
-    if (cameraStateRef) {
-      cameraStateRef.current = {
-        position: [...initialCamera.position],
-        target: [...initialCamera.target],
-      };
-    }
-  }, [initialCamera, cameraStateRef, orbitControlsRef]);
+    applyCameraPose(initialCamera);
+  }, [applyCameraPose, initialCamera, orbitControlsRef]);
 
   useEffect(() => {
     if (!draggingModelCatalogItem) {
@@ -1237,6 +1260,14 @@ export function SceneObjectsEditCanvas({
             MIDDLE: MOUSE.ROTATE,
             RIGHT: MOUSE.PAN,
           }}
+        />
+        {/* 직교 탑뷰 — OrbitControls 바로 뒤(주석 참고). */}
+        <EditorCameraBridge
+          controlsRef={orbitControlsRef}
+          handleRef={topViewHandleRef}
+          cameraRef={cameraRef}
+          cameraStateRef={cameraStateRef}
+          onActiveChange={onTopViewActiveChange}
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
             27px) + 6px(오버레이들의 top-1.5/right-1.5 와 같은 여백) + 여유로

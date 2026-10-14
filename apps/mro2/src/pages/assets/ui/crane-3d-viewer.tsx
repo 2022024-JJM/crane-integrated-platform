@@ -1,11 +1,22 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Box3, Vector3, type Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import {
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
-import { GltfModel, getCraneModel, type CraneZoneConfig } from '@crane/domain/3d';
+import {
+  GltfModel,
+  getCraneModel,
+  type CraneZoneConfig,
+} from '@crane/domain/3d';
 import type { CraneType } from '@crane/domain/asset';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import {
@@ -95,11 +106,16 @@ function PartsScene({
   );
 
   const resolveZoneKey = useCallback(
-    (hostKey: string, event?: ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>) => {
+    (
+      hostKey: string,
+      event?: ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>,
+    ) => {
       const subZones = subZonesByHost.get(hostKey);
       const hostBox = hostBoxes.get(hostKey);
       if (!subZones || !hostBox || !event) return hostKey;
-      return classifyPointToZone(event.point, hostBox, subZones)?.key ?? hostKey;
+      return (
+        classifyPointToZone(event.point, hostBox, subZones)?.key ?? hostKey
+      );
     },
     [subZonesByHost, hostBoxes],
   );
@@ -118,8 +134,10 @@ function PartsScene({
     <>
       {zoneConfig.zones.map((zone) =>
         (zone.parts ?? []).map((part, i) => {
-          const isHighlighted = hoveredZoneKey === zone.key || selectedZoneKey === zone.key;
-          const isDimmed = selectedZoneKey !== null && selectedZoneKey !== zone.key;
+          const isHighlighted =
+            hoveredZoneKey === zone.key || selectedZoneKey === zone.key;
+          const isDimmed =
+            selectedZoneKey !== null && selectedZoneKey !== zone.key;
           return (
             <GltfModel
               key={`${zone.key}-${i}`}
@@ -133,11 +151,19 @@ function PartsScene({
               alarmSeverity={isHighlighted ? 'info' : null}
               alarmHighlightMesh={isHighlighted}
               isSelected={selectedZoneKey === zone.key}
-              onSelect={(_id, event) => onZoneSelect(resolveZoneKey(zone.key, event))}
-              onHoverStart={(_id, _x, _y, event) => onZoneHover(resolveZoneKey(zone.key, event))}
-              onHoverMove={(_id, _x, _y, event) => onZoneHover(resolveZoneKey(zone.key, event))}
+              onSelect={(_id, event) =>
+                onZoneSelect(resolveZoneKey(zone.key, event))
+              }
+              onHoverStart={(_id, _x, _y, event) =>
+                onZoneHover(resolveZoneKey(zone.key, event))
+              }
+              onHoverMove={(_id, _x, _y, event) =>
+                onZoneHover(resolveZoneKey(zone.key, event))
+              }
               onHoverEnd={() => onZoneHover(null)}
-              onObjectReady={(_id, object) => handleObjectReady(zone.key, object)}
+              onObjectReady={(_id, object) =>
+                handleObjectReady(zone.key, object)
+              }
             />
           );
         }),
@@ -300,7 +326,9 @@ export function Crane3dViewer({
   const controllerRef = useRef<SceneController | null>(null);
   const wholeObjectRef = useRef<Object3D | null>(null);
   const zoneObjectsRef = useRef<Map<string, Object3D>>(new Map());
-  const [framedPreset, setFramedPreset] = useState<typeof cfg.cameraPreset | null>(null);
+  const [framedPreset, setFramedPreset] = useState<
+    typeof cfg.cameraPreset | null
+  >(null);
 
   useEffect(() => {
     if (!hoveredZoneKey) return;
@@ -314,12 +342,9 @@ export function Crane3dViewer({
   const applyWholeView = useCallback(
     (view: { position: Vector3Tuple; target: Vector3Tuple } | null) => {
       if (!view) return;
-      const dist = new Vector3(...view.position).distanceTo(new Vector3(...view.target));
       setFramedPreset({
         defaultPosition: view.position,
         defaultTarget: view.target,
-        topViewPosition: [view.target[0], view.target[1] + dist, view.target[2]],
-        topViewTarget: view.target,
       });
     },
     [],
@@ -336,13 +361,19 @@ export function Crane3dViewer({
     applyWholeView(computeFrontalView(wholeObjectRef.current));
   }, [applyWholeView, zoneConfig.strategy]);
 
-  const handleControllerReady = useCallback((controller: SceneController | null) => {
-    controllerRef.current = controller;
-  }, []);
+  const handleControllerReady = useCallback(
+    (controller: SceneController | null) => {
+      controllerRef.current = controller;
+    },
+    [],
+  );
 
-  const handleZoneObjectReady = useCallback((zoneKey: string, object: Object3D | null) => {
-    if (object) zoneObjectsRef.current.set(zoneKey, object);
-  }, []);
+  const handleZoneObjectReady = useCallback(
+    (zoneKey: string, object: Object3D | null) => {
+      if (object) zoneObjectsRef.current.set(zoneKey, object);
+    },
+    [],
+  );
 
   const handlePartsGroupReady = useCallback(() => {
     frameWhole();
@@ -387,7 +418,10 @@ export function Crane3dViewer({
   return (
     <div
       className={`overflow-hidden rounded-[4px] border ${className ?? ''}`}
-      style={{ borderColor: 'var(--kc-border)', background: 'var(--canvas-background)' }}
+      style={{
+        borderColor: 'var(--kc-border)',
+        background: 'var(--canvas-background)',
+      }}
     >
       <ThreeSceneViewer
         cameraPreset={framedPreset ?? cfg.cameraPreset}

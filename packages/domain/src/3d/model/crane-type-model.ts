@@ -2,11 +2,10 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import type { CraneType } from '../../asset/model/types';
 import { CODE_ASSETS } from './code-asset-refs';
 
+/** 초기 시점. 탑뷰는 뷰어가 지금 보는 화면 위로 올라가는 토글이라 프리셋이 없다. */
 export interface CraneModelCameraPreset {
   defaultPosition: Vector3Tuple;
   defaultTarget: Vector3Tuple;
-  topViewPosition?: Vector3Tuple;
-  topViewTarget?: Vector3Tuple;
 }
 
 export interface CraneModelConfig {
@@ -23,8 +22,6 @@ const GOLIATH: CraneModelConfig = {
   cameraPreset: {
     defaultPosition: [15, 12, 20],
     defaultTarget: [0, 4, 0],
-    topViewPosition: [0, 30, 0],
-    topViewTarget: [0, 0, 0],
   },
 };
 
@@ -35,8 +32,6 @@ const LLC: CraneModelConfig = {
   cameraPreset: {
     defaultPosition: [14, 11, 18],
     defaultTarget: [0, 4, 0],
-    topViewPosition: [0, 28, 0],
-    topViewTarget: [0, 0, 0],
   },
 };
 
@@ -47,8 +42,6 @@ const GANTRY: CraneModelConfig = {
   cameraPreset: {
     defaultPosition: [15, 12, 20],
     defaultTarget: [0, 4, 0],
-    topViewPosition: [0, 30, 0],
-    topViewTarget: [0, 0, 0],
   },
 };
 
@@ -58,8 +51,6 @@ const TTC: CraneModelConfig = {
   cameraPreset: {
     defaultPosition: [18, 14, 22],
     defaultTarget: [0, 5, 0],
-    topViewPosition: [0, 34, 0],
-    topViewTarget: [0, 0, 0],
   },
 };
 
@@ -70,8 +61,6 @@ const GENERIC: CraneModelConfig = {
   cameraPreset: {
     defaultPosition: [14, 11, 18],
     defaultTarget: [0, 3.5, 0],
-    topViewPosition: [0, 28, 0],
-    topViewTarget: [0, 0, 0],
   },
 };
 

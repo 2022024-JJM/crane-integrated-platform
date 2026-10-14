@@ -18,7 +18,7 @@
 | 씬 설정 팔레트(배경·지역·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭 — 진북 입력·지역 드롭다운 포함), 배경 URL `packages/domain/src/3d/lib/scene-environment.ts`(`resolveEnvironmentFileUrl`), 지역 `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteLocation`), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 환경 절의 바다·미러 스위치), 지도 역할 `packages/domain/src/3d/lib/resolve-ground-map.ts`(`resolveGroundMaps`·`isContextMap`), 바다·미러 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`·`resolveSeaMirror`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
 | 씬 뷰·분할·메인 뷰 지정(뷰 탭) | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `packages/domain/src/3d/lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 홈 카메라 `lib/scene-home-camera.ts`(`resolveSceneHomeCamera`), 편집 `packages/widgets/src/3d/lib/view-editor.ts`(전부 테스트 대상), 팔레트 `packages/widgets/src/3d/ui/palette-view-section.tsx`, 우상단 고정 줄 `packages/features/src/3d/ui/scene-view-bar.tsx` |
 | dev 저장 미들웨어 / public 자산 리로드 | `apps/shell/vite.config.ts`, `apps/shell/vite-plugin-asset-hash.ts`, `packages/domain/src/3d/lib/scene-dev-storage.ts` |
-| 탑뷰 포즈(정수직 회피 tilt, 뷰어·에디터 공용) | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
+| 탑뷰 포즈(진입·복귀·정수직 회피 tilt, 뷰어·에디터 공용) / 직교 탑뷰 토글 훅 | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewEntryPose`, `computeTopViewExitPose`, `ensureTopViewTilt`, 테스트 대상), `packages/ui/src/organisms/use-ortho-top-view.ts` |
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
 | 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts`, `packages/features/src/3d/model/use-rig-driver.ts` |
 | 선택 표시(박스·실루엣) | `packages/domain/src/3d/lib/selection-bounding-box.ts`, `packages/domain/src/3d/lib/silhouette-outline.ts`, `packages/domain/src/3d/ui/gltf-model.tsx`, `packages/domain/src/3d/ui/model-mesh.tsx` |
@@ -91,11 +91,16 @@
 - 편집 의미는 `view-editor.ts` 의 순수 함수(`withSceneView*`, `withSplit*`)가 정하고 결과가 같으면 같은 참조를 돌려준다. 세터(`scene-manipulation-actions.ts`)는 그 함수를 `updateScene` 에 넘길 뿐이다. undo·dirty 는 다른 씬 설정과 같다.
 - 뷰 id 는 씬 객체(모델·텍스트·눈금) id 집합과 별개다 — 뷰는 선택·기즈모·레지스트리 대상이 아니다.
 
-### 카메라 up 과 탑뷰
+### 카메라 up 과 탑뷰 (뷰어·에디터 공용)
 
 - 카메라 `up` 은 항상 +Y 다. 탑뷰는 `top-view-pose.ts` 의 미세 tilt(`TOP_VIEW_TILT`)로 만든다.
-- up=+Y 인 채 타깃 정확히 위에 서면 `lookAt` 이 퇴화해 roll 이 부동소수 노이즈로 정해지므로, 뷰어 `applyCameraState` 는 들어오는 모든 포즈를 `ensureTopViewTilt` 로 정규화한다 — 사이트 프리셋 `topViewPosition: [0,30,0]` 과 옛 북마크 방어.
-- 에디터 캔버스는 `frameloop='demand'` 이며 `SceneFrameGovernor` 를 마운트한다. 카메라 이동 범위 제한·탑뷰 bounds 도 뷰어와 같은 합집합을 본다 — `docs/agents/rendering-perf.md`, `docs/agents/monitoring-ui.md`.
+- up=+Y 인 채 타깃 정확히 위에 서면 `lookAt` 이 퇴화해 roll 이 부동소수 노이즈로 정해지므로, 포즈를 적용하는 경로(`useOrthoTopView.applyPose`)는 들어오는 모든 포즈를 `ensureTopViewTilt` 로 정규화한다 — 옛 북마크 방어.
+- **탑뷰는 직교 카메라로 교체하는 토글**이다(`packages/ui/src/organisms/use-ortho-top-view.ts`, 뷰어 `SceneControlsBridge` 와 에디터 `EditorCameraBridge` 가 같은 훅). 지도 fit 이 아니라 **지금 보는 화면**(궤도 타깃 = 화면 중앙 표면점) 위에서 내려다보고, 보던 수평 방향이 화면 위가 된다(`computeTopViewEntryPose`). 거리는 그대로이고 직교 프러스텀 반높이 = 거리×tan(원근 fov/2) — 직교 카메라가 "같은 구도의 원근 카메라가 있을 높이"에 서므로 거리로 판단하는 코드(라벨 축소·지형 LOD·그림자 반경·미니맵)가 그대로 맞는다. fov 가 필요한 코드는 `resolveCameraFov`/`resolveCameraAspect` 로 읽는다(직교는 `userData` 의 원근 fov·프러스텀 비). near 는 음수(`TOP_VIEW_ORTHO_NEAR`)라 카메라보다 높은 구조물도 평면도에 그려진다.
+- 탑뷰 중 조작은 팬·휠 줌·방위 회전이다. 극각은 `TOP_VIEW_POLAR_ANGLE` 로 양쪽 잠근다(`SceneCameraLimits` 는 직교일 때 극각을 건드리지 않는다). 휠은 커서 아래 점 기준 배율(`SceneSurfaceCamera` 의 직교 분기, `orthoZoomAdvance`) — 포즈·프러스텀을 같은 배율로 키우고 상·하한은 원근 거리 규칙과 같다. 표면 피벗이 타깃 거리를 조금 바꿔도 프러스텀은 명시적 줌·`applyPose` 에서만 바뀐다.
+- **복귀는 "지금 보는 곳 기준"**이다(`computeTopViewExitPose`): 진입 때 저장한 원근 오프셋을 탑뷰에서 돌린 방위만큼 회전하고 현재 거리로 스케일해 현재 타깃에 붙인다. 탑뷰 버튼 재클릭은 이 포즈로, 메인 뷰·씬 뷰·포커스·영역 보기는 원근으로 복귀하면서 그 구도로 간다(`moveTo`). 미니맵 팬만 모드를 유지한다(`panTo`). 분할 화면 진입·충돌 감지 표시 ON 은 탑뷰를 먼저 해제한다.
+- 탑뷰 중 저장한 뷰·씬 `camera` 는 그 자세(정수직 원근 포즈)로 저장된다 — 스키마에 직교 플래그는 없다.
+- 직교에서는 EXR 배경이 그려지지 않아 지도 밖이 검정이고(바다 씬은 바다 원판이 덮는다), `SceneLighting` 은 태양·달 표식과 밤 틴트 돔을 숨기며 `OceanWater` 는 반사를 0 으로 둔다(낡은 반사 RT). 카메라보다 높은 앵커의 라벨은 drei `Html` 이 "카메라 뒤"로 보고 숨긴다.
+- 에디터 캔버스는 `frameloop='demand'` 이며 `SceneFrameGovernor` 를 마운트한다. 카메라 이동 범위 제한은 뷰어와 같은 합집합을 본다 — `docs/agents/rendering-perf.md`, `docs/agents/monitoring-ui.md`.
 
 ### 기즈모 스냅
 
@@ -161,6 +166,8 @@
 ## 불변식
 
 - 카메라 `up` 은 항상 +Y. 탑뷰는 `ensureTopViewTilt`/`TOP_VIEW_TILT` 로 만들고, 포즈를 적용하는 새 경로는 `ensureTopViewTilt` 로 정규화한다.
+- 카메라를 옮기는 새 명령은 `useOrthoTopView` 의 `moveTo`(원근 복귀)·`applyPose`(모드 유지)를 거친다. 컨트롤에 직접 쓰면 직교 프러스텀·극각 잠금이 따라오지 않는다. fov·aspect 는 `camera.fov` 대신 `resolveCameraFov`/`resolveCameraAspect`.
+- 카메라를 옮기는 effect 는 기본 카메라를 구독(`useThree(s => s.camera)` 의존성)하지 않고 `get().camera` 로 읽는다. 탑뷰 진입·복귀가 기본 카메라를 교체하므로 구독한 effect 는 그때마다 다시 돌아 탑뷰를 끊는다(`OutdoorWorkModelSimulation` 의 포커스 프레이밍이 선례).
 - 기즈모·스테퍼 스냅은 `snap-transform.ts` 순수 함수 한 곳. three `TransformControls` 의 `translationSnap`/`rotationSnap`/`scaleSnap` 은 쓰지 않는다.
 - 씬 스키마에 필드를 추가하면 `sanitize-scene-info.ts`(또는 해당 `sanitize-*`)와 `scene-snapshot.ts` 의 동등 비교를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 dirty 가 서지 않고 저장되지 않는다(`isZoneListEqual` 이 선례 — `docs/agents/3d-zone.md`).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나. 미등록 region 은 `null`, 기본 파일 fallback 금지.

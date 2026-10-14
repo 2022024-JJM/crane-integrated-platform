@@ -91,7 +91,9 @@ interface EditorHeaderBarProps {
   showGrid: boolean;
   onToggleGrid: () => void;
   onResetView: () => void;
+  /** 직교 탑뷰 토글. */
   onTopView: () => void;
+  topViewActive: boolean;
   /** 씬이 로드되기 전 — 도구·설정·보기 전부 잠근다. */
   sceneDisabled: boolean;
   // 사이드 패널 접기/펼치기 — 헤더 양끝의 고정 토글
@@ -152,6 +154,7 @@ export function EditorHeaderBar({
   onToggleGrid,
   onResetView,
   onTopView,
+  topViewActive,
   sceneDisabled,
   leftPanelCollapsed,
   onToggleLeftPanel,
@@ -288,7 +291,13 @@ export function EditorHeaderBar({
             <House className="size-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            label={t('common:viewer3d.topView')}
+            label={
+              topViewActive
+                ? t('common:viewer3d.topViewExit')
+                : t('common:viewer3d.topView')
+            }
+            kind="toggle"
+            pressed={topViewActive}
             side="bottom"
             disabled={sceneDisabled}
             onClick={onTopView}

@@ -175,6 +175,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   } = useFullscreen();
   const focusSelectedRef = useRef<(() => void) | null>(null);
   const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
+  // 직교 탑뷰 상태 — 캔버스가 알려 주고 헤더 버튼의 눌림 표시에 쓴다.
+  const [topViewActive, setTopViewActive] = useState(false);
   const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
   const snapStep = useSceneEditorViewStore((state) => state.snapStep);
   const setSnapStep = useSceneEditorViewStore((state) => state.setSnapStep);
@@ -777,6 +779,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               onToggleGrid={toggleGrid}
               onResetView={() => cameraActionsRef.current?.resetView()}
               onTopView={() => cameraActionsRef.current?.topView()}
+              topViewActive={topViewActive}
               sceneDisabled={saveDisabled}
               leftPanelCollapsed={leftCollapsed}
               onToggleLeftPanel={() => setLeftCollapsed((v) => !v)}
@@ -792,6 +795,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 cameraStateRef={cameraStateRef}
                 initialCamera={initialCamera}
                 homeCamera={homeCamera}
+                onTopViewActiveChange={setTopViewActive}
                 sceneInfo={sceneInfo}
                 regionId={regionId}
                 catalogItems={palette.placeableModels}

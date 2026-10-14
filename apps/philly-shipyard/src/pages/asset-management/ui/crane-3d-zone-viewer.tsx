@@ -1,4 +1,11 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Box3, Vector3, type Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import {
@@ -111,7 +118,9 @@ function PartsScene({
       const subZones = subZonesByHost.get(hostKey);
       const hostBox = hostBoxes.get(hostKey);
       if (!subZones || !hostBox || !event) return hostKey;
-      return classifyPointToZone(event.point, hostBox, subZones)?.key ?? hostKey;
+      return (
+        classifyPointToZone(event.point, hostBox, subZones)?.key ?? hostKey
+      );
     },
     [subZonesByHost, hostBoxes],
   );
@@ -158,7 +167,9 @@ function PartsScene({
                 onZoneHover(resolveZoneKey(zone.key, event))
               }
               onHoverEnd={() => onZoneHover(null)}
-              onObjectReady={(_id, object) => handleObjectReady(zone.key, object)}
+              onObjectReady={(_id, object) =>
+                handleObjectReady(zone.key, object)
+              }
             />
           );
         }),
@@ -208,12 +219,7 @@ function RegionOverlay({
           modelBox.min.z + ((minZ + maxZ) / 2) * size.z,
         ];
         return (
-          <mesh
-            key={i}
-            position={center}
-            raycast={() => null}
-            renderOrder={10}
-          >
+          <mesh key={i} position={center} raycast={() => null} renderOrder={10}>
             <boxGeometry args={boxSize} />
             <meshBasicMaterial
               color={REGION_HIGHLIGHT_COLOR}
@@ -352,18 +358,9 @@ export function Crane3dZoneViewer({
   const applyWholeView = useCallback(
     (view: { position: Vector3Tuple; target: Vector3Tuple } | null) => {
       if (!view) return;
-      const dist = new Vector3(...view.position).distanceTo(
-        new Vector3(...view.target),
-      );
       setFramedPreset({
         defaultPosition: view.position,
         defaultTarget: view.target,
-        topViewPosition: [
-          view.target[0],
-          view.target[1] + dist,
-          view.target[2],
-        ],
-        topViewTarget: view.target,
       });
     },
     [],
@@ -441,7 +438,7 @@ export function Crane3dZoneViewer({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-lg border border-border',
+        'border-border overflow-hidden rounded-lg border',
         className,
       )}
       style={{ background: 'var(--canvas-background)' }}

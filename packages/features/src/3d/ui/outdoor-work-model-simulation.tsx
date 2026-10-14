@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useThree } from '@react-three/fiber';
-import { Box3, MathUtils, Object3D, PerspectiveCamera, Vector3 } from 'three';
+import { Box3, MathUtils, Object3D, Vector3 } from 'three';
+import {
+  resolveCameraAspect,
+  resolveCameraFov,
+} from '@crane/core/lib/top-view-pose';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
@@ -233,7 +237,8 @@ export function OutdoorWorkModelSimulation({
   outlineStates = NO_OUTLINE_STATES,
 }: OutdoorWorkModelSimulationProps) {
   const { t } = useTranslation();
-  const camera = useThree((s) => s.camera);
+  // 카메라는 구독하지 않고 필요할 때 읽는다(아래 프레이밍 effect 주석).
+  const getThree = useThree((s) => s.get);
   // 라벨(domain)은 i18n 을 모른다 — 번역한 문구를 한 묶음으로 넘긴다. 참조가
   // 유지돼야 memo 된 모델이 리렌더되지 않는다.
   const labelTitles = useMemo<ModelLabelTitles>(
@@ -341,19 +346,23 @@ export function OutdoorWorkModelSimulation({
     [],
   );
 
-  // 직전 effect 실행 시점의 포커스 대상. 마운트(포커스 없음)와 해제(포커스
-  // 있음 → 없음)를 구분한다 — 해제 시 카메라는 위 subscribe 가 복귀시키므로
-  // 여기서 리셋하면 그 복귀를 덮어쓴다.
-  const prevFocusedModelIdRef = useRef<string | null>(null);
-
+  // 마운트 때 포커스가 없으면 씬 기본 카메라로 한 번 리셋한다. 포커스 해제
+  // (있음 → 없음)는 여기 오지 않는다 — 해제 시 카메라는 위 subscribe 가
+  // 복귀시키므로 여기서 리셋하면 그 복귀를 덮어쓴다. 마운트에만 묶는 이유:
+  // 아래 프레이밍 effect 에 섞여 있던 시절 기본 카메라 교체(직교 탑뷰)마다
+  // 다시 돌아 탑뷰 직후 메인 뷰로 되돌아갔다.
   useEffect(() => {
-    const prevFocusedModelId = prevFocusedModelIdRef.current;
-    prevFocusedModelIdRef.current = focusedModelId;
+    if (useObjectFocusStore.getState().focusedModelId === null) {
+      onResetCameraRef.current?.();
+    }
+  }, []);
 
+  // 포커스 대상이 바뀔 때만 프레이밍한다. 카메라는 effect 안에서 읽는다 —
+  // 구독하면 기본 카메라 교체(직교 탑뷰 진입·복귀)마다 다시 맞춰 탑뷰를 끊는다.
+  // 직교 탑뷰 중에도 fit 은 원근 기준(userData 의 fov·프러스텀 비)이고, 이동
+  // 명령이 원근으로 복귀하면서 이 구도로 간다.
+  useEffect(() => {
     if (!focusedModelId) {
-      if (prevFocusedModelId === null) {
-        onResetCameraRef.current?.();
-      }
       return;
     }
 
@@ -374,8 +383,9 @@ export function OutdoorWorkModelSimulation({
 
     const center = groupBox.getCenter(new Vector3());
 
-    const fov = camera instanceof PerspectiveCamera ? camera.fov : 75;
-    const aspect = camera instanceof PerspectiveCamera ? camera.aspect : 16 / 9;
+    const camera = getThree().camera;
+    const fov = resolveCameraFov(camera) ?? 75;
+    const aspect = resolveCameraAspect(camera) ?? 16 / 9;
     const vFov = MathUtils.degToRad(fov / 2);
     const hFov = Math.atan(Math.tan(vFov) * aspect);
 
@@ -433,7 +443,7 @@ export function OutdoorWorkModelSimulation({
     const target: Vector3Tuple = [center.x, center.y, center.z];
 
     onMoveToRef.current?.(position, target);
-  }, [focusedModelId, camera]);
+  }, [focusedModelId, getThree]);
 
   useEffect(() => {
     objectMapRef.current.clear();

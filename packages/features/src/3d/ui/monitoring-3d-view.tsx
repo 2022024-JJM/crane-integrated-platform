@@ -15,13 +15,11 @@ import {
   SilhouetteOutlineWarmup,
   modelObjectRegistry,
   zoneCenterWorld,
-  resolveCameraBoundsMaps,
   resolveSceneHomeCamera,
   resolveSeaMirror,
   resolveSeaVisible,
   resolveSplitLayout,
   resolveTrueNorth,
-  unionObjectBounds,
   type SceneViewport,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -91,6 +89,7 @@ import { SceneViewBar } from './scene-view-bar';
 import { SceneSplitOverlay } from './scene-split-overlay';
 import { SceneSplitRenderer } from './scene-split-renderer';
 import { useSceneSplitStore } from '../model/use-scene-split-store';
+import { useCollisionGuardStore } from '../model/use-collision-guard-store';
 import {
   resolveShadowFocusForPose,
   unionShadowFocus,
@@ -282,6 +281,15 @@ export function Monitoring3dView({
     [],
   );
 
+  // 미니맵 팬 — 평행이동이라 탑뷰 중이면 탑뷰인 채 옮긴다(다른 이동 명령은
+  // 원근으로 복귀한다).
+  const handlePanTo = useCallback(
+    (position: Vector3Tuple, target: Vector3Tuple) => {
+      sceneControllerRef.current?.panTo(position, target);
+    },
+    [],
+  );
+
   const handleResetCamera = useCallback(() => {
     sceneControllerRef.current?.reset();
   }, []);
@@ -380,6 +388,14 @@ export function Monitoring3dView({
   const splitDisabledLabel = splitActive
     ? t('monitoring:sceneSplit.disabledInSplit')
     : undefined;
+  // 분할(타일별 원근 카메라)과 충돌 감지 표시(카메라 비행)는 직교 탑뷰와
+  // 섞이지 않는다 — 켜지는 순간 원근으로 복귀한다.
+  const collisionGuardEnabled = useCollisionGuardStore((s) => s.enabled);
+  useEffect(() => {
+    if (splitActive || collisionGuardEnabled) {
+      sceneControllerRef.current?.exitTopView();
+    }
+  }, [collisionGuardEnabled, splitActive]);
 
   const handleSelectView = useCallback(
     (view: SavedSceneView) => {
@@ -396,27 +412,12 @@ export function Monitoring3dView({
   // 인라인 리터럴로 넘기면 부모 리렌더마다 새 객체 → SceneControlsBridge의
   // 컨트롤러 재등록 effect가 재실행되며 reset()이 사용자 카메라를 초기
   // 위치로 되돌린다(알람 배너 등 잦은 리렌더 화면에서 실제 발생).
-  // 탑뷰 fit 대상 = 카메라 영역 제한에 체크된 지도들의 합집합(없으면 모든
-  // 지도) — SceneCameraLimits 와 같은 기준. id 목록을 이어 붙인 문자열만
-  // 의존성에 넣어 sceneInfo 객체가 갱신돼도 cameraPreset 참조가 바뀌지 않게
-  // 한다(위 주석의 reset 문제). 객체는 버튼을 누르는 시점에 레지스트리에서
-  // 읽으므로 로드 타이밍과 무관하다.
-  const cameraBoundsKey = resolveCameraBoundsMaps(sceneInfo?.maps)
-    .map((m) => m.id)
-    .join('|');
   const cameraPreset = useMemo(
     () => ({
       defaultPosition: cameraPosition,
       defaultTarget: cameraTarget,
-      getTopViewBounds: () =>
-        unionObjectBounds(
-          cameraBoundsKey
-            .split('|')
-            .filter(Boolean)
-            .map((id) => modelObjectRegistry.get(id)),
-        ),
     }),
-    [cameraPosition, cameraTarget, cameraBoundsKey],
+    [cameraPosition, cameraTarget],
   );
 
   // 좌측 상단 열 — 첫 줄은 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드
@@ -533,7 +534,7 @@ export function Monitoring3dView({
                   sceneInfo={sceneInfo}
                   alarmsByCraneId={sceneAlarms}
                   getPose={handleGetPose}
-                  onMoveTo={handleMoveTo}
+                  onMoveTo={handlePanTo}
                 />
               ) : null}
               {/* 관제 요약 HUD(상단 중앙) — 실시간 관제 화면에서만, 분할 중엔 숨김. */}

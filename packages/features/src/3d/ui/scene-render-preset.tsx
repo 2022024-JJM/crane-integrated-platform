@@ -879,7 +879,12 @@ export function SceneLighting({
         }
 
         // 하늘 표식 — EXR 배경이 있을 때만. 카메라를 따라 "무한 원점"에 둔다.
-        const hasSky = frameScene.background !== null;
+        // 직교 탑뷰에는 하늘이 없다 — 배경이 그려지지 않고, 평행 투영에선
+        // 카메라 기준 표식·돔이 지도 위의 얼룩이 된다.
+        const hasSky =
+          frameScene.background !== null &&
+          (camera as { isPerspectiveCamera?: boolean }).isPerspectiveCamera ===
+            true;
         const sun = sunSpriteRef.current;
         if (sun) {
           const opacity = hasSky ? sky.sunVisibility : 0;

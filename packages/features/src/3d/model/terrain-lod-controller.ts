@@ -1,5 +1,6 @@
 import { Box3, Vector3, type Camera, type Object3D } from 'three';
 import { modelObjectRegistry } from '@crane/domain/3d';
+import { resolveCameraFov } from '@crane/core/lib/top-view-pose';
 import {
   lodCarrierKey,
   selectTerrainLod,
@@ -103,14 +104,10 @@ export class TerrainLodController {
       this.cameras.set(cameraKey, state);
     }
 
-    const perspective = camera as Camera & {
-      isPerspectiveCamera?: boolean;
-      fov?: number;
-    };
-    const factor =
-      perspective.isPerspectiveCamera && typeof perspective.fov === 'number'
-        ? terrainLodPixelFactor(perspective.fov, heightPx)
-        : 0;
+    // 직교 탑뷰 카메라는 userData 의 원근 fov 로 같은 판정을 받는다(같은
+    // 구도의 원근 카메라 높이에 서 있다). fov 를 모르는 카메라는 0 → 원본.
+    const fov = resolveCameraFov(camera);
+    const factor = fov === null ? 0 : terrainLodPixelFactor(fov, heightPx);
 
     const last = state.last;
     const moved =

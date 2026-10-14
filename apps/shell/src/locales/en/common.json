@@ -291,6 +291,7 @@
     "zoomOut": "Zoom out",
     "resetView": "Main view",
     "topView": "Top view",
+    "topViewExit": "Exit top view",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "badge": "3D Viewer",

@@ -291,6 +291,7 @@
     "zoomOut": "Minue",
     "resetView": "Prospectus principalis",
     "topView": "Visus desuper",
+    "topViewExit": "Visum desuper claudere",
     "fullscreen": "Plenus modus",
     "exitFullscreen": "Restitue fenestram",
     "badge": "Visor 3D",
