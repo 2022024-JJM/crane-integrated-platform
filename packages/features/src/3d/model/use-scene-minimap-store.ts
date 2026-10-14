@@ -4,7 +4,7 @@ import {
   removeStorageItem,
   setStorageItem,
 } from '@crane/core/lib/safe-storage';
-import type { MinimapFrame, PanelPosition } from '../lib/minimap';
+import type { MinimapFrame, PanelRatio } from '../lib/minimap';
 
 /**
  * 모니터링 2D 미니맵 상태.
@@ -16,9 +16,12 @@ import type { MinimapFrame, PanelPosition } from '../lib/minimap';
  *   rig-live-readouts 와 같은 규칙).
  * - `visible`: 표시 여부. 리전 무관 전역 설정이고 localStorage 에 영속한다
  *   (독 pin 과 같은 계열 `crane:<feature>`). 기본 표시.
- * - `position`: 패널 좌상단의 캔버스 영역 기준 좌표(px). null 이면 기본 자리
- *   (좌하단). 헤더 바를 끌어 옮기면 저장되고, 복원 시 창 크기에 맞춰 클램프
- *   한다(lib/minimap clampPanelPosition).
+ * - `position`: 패널 좌상단의 **비율 위치**(캔버스 영역 여유 공간 대비 0~1,
+ *   lib/minimap PanelRatio). null 이면 기본 자리(좌하단). 헤더 바를 끌어
+ *   옮기면 놓는 순간의 컨테이너 크기로 비율을 만들어 저장하고, 복원·리사이즈
+ *   때 그 비율로 px 를 다시 계산한다(panelRatioToPosition) — 전체화면으로
+ *   컨테이너가 커져도 우하단에 둔 패널이 우하단에 머문다. px 로 저장했던
+ *   예전 모양(`{x, y}`)은 비율로 바꿀 수 없어 null 로 읽는다.
  */
 
 export interface MinimapSnapshot {
@@ -43,8 +46,15 @@ export function writeMinimapVisible(visible: boolean): void {
 
 export const MINIMAP_POSITION_STORAGE_KEY = 'crane:scene-minimap:position';
 
-/** 저장된 패널 위치. 없거나 손상(JSON 아님·유한수 아님)이면 null(기본 자리). */
-export function readMinimapPosition(): PanelPosition | null {
+function clampUnit(value: number): number {
+  return Math.min(Math.max(value, 0), 1);
+}
+
+/**
+ * 저장된 패널 비율 위치. 없거나 손상(JSON 아님·유한수 아님·예전 px 모양)이면
+ * null(기본 자리). 범위 밖 값은 [0,1] 로 클램프한다.
+ */
+export function readMinimapPosition(): PanelRatio | null {
   const raw = getStorageItem(MINIMAP_POSITION_STORAGE_KEY);
   if (raw === null) return null;
   try {
@@ -52,11 +62,11 @@ export function readMinimapPosition(): PanelPosition | null {
     if (
       typeof parsed === 'object' &&
       parsed !== null &&
-      Number.isFinite((parsed as PanelPosition).x) &&
-      Number.isFinite((parsed as PanelPosition).y)
+      Number.isFinite((parsed as PanelRatio).fx) &&
+      Number.isFinite((parsed as PanelRatio).fy)
     ) {
-      const { x, y } = parsed as PanelPosition;
-      return { x, y };
+      const { fx, fy } = parsed as PanelRatio;
+      return { fx: clampUnit(fx), fy: clampUnit(fy) };
     }
   } catch {
     // 손상된 저장값은 기본 자리로.
@@ -64,7 +74,7 @@ export function readMinimapPosition(): PanelPosition | null {
   return null;
 }
 
-export function writeMinimapPosition(position: PanelPosition | null): void {
+export function writeMinimapPosition(position: PanelRatio | null): void {
   if (position === null) {
     removeStorageItem(MINIMAP_POSITION_STORAGE_KEY);
     return;
@@ -75,12 +85,12 @@ export function writeMinimapPosition(position: PanelPosition | null): void {
 interface SceneMinimapState {
   snapshot: MinimapSnapshot | null;
   visible: boolean;
-  position: PanelPosition | null;
+  position: PanelRatio | null;
   setSnapshot: (snapshot: MinimapSnapshot | null) => void;
   setVisible: (visible: boolean) => void;
   toggleVisible: () => void;
-  /** 같은 좌표 재설정은 no-op(참조 유지). null 은 기본 자리로 복귀. */
-  setPosition: (position: PanelPosition | null) => void;
+  /** 같은 비율 재설정은 no-op(참조 유지). null 은 기본 자리로 복귀. */
+  setPosition: (position: PanelRatio | null) => void;
 }
 
 export const useSceneMinimapStore = create<SceneMinimapState>()((set, get) => ({
@@ -107,8 +117,8 @@ export const useSceneMinimapStore = create<SceneMinimapState>()((set, get) => ({
       current === position ||
       (current !== null &&
         position !== null &&
-        current.x === position.x &&
-        current.y === position.y)
+        current.fx === position.fx &&
+        current.fy === position.fy)
     ) {
       return;
     }

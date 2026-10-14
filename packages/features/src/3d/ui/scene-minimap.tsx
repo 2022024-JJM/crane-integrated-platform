@@ -1,5 +1,11 @@
 import { GripHorizontal, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, type PointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type PointerEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type Object3D } from 'three';
 import { modelObjectRegistry, type SavedSceneInfo } from '@crane/domain/3d';
@@ -19,6 +25,8 @@ import {
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
+  panelPositionToRatio,
+  panelRatioToPosition,
   worldToMinimap,
   type MinimapFrame,
 } from '../lib/minimap';
@@ -32,7 +40,9 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 배경은 SceneMinimapCapture 가 찍어 둔 탑뷰 스냅샷이고, 그 위에 매 폴링
  * 틱마다 장비 마커(레지스트리의 현재 월드 위치 — 리그·태그로 움직인 자세를
  * 따라간다)와 카메라(시선 방향으로 도는 카메라 픽토그램 + 같은 색의 시야
- * 부채꼴, 강조색 CAMERA_COLOR 청록)를 그린다. 부채꼴은 방향 표시일 뿐이라
+ * 부채꼴, 강조색 CAMERA_COLOR 흰색)를 그린다. 순서는 마커 → 부채꼴 →
+ * 픽토그램 → 호버 라벨 — 카메라가 마커에 가려지지 않는다(부채꼴은 반투명
+ * 이라 안의 마커가 비친다). 부채꼴은 방향 표시일 뿐이라
  * 각·길이가 고정이고 카메라 fov·타깃 거리를 따라가지 않는다. 영역 원은
  * 그리지 않는다 — 3D 링과
  * HUD 가 담당하고 미니맵에선 마커를 가린다. 그리기는 setInterval 로 2D
@@ -52,10 +62,12 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 운전 상태 색은 HUD·3D 라벨이 담당한다), 포커스 중인 모델은 흰 테두리다.
  *
  * 패널 자체는 상단 헤더 바(그립)를 끌어 캔버스 영역 안 어디든 놓을 수 있다.
- * 끄는 동안은 스타일을 직접 써서 리렌더하지 않고, 놓을 때 스토어에 저장한다
- * (localStorage 영속, 리전 무관). 저장 위치는 마운트·리사이즈 때 컨테이너
- * 안으로 클램프한다 — 큰 창에서 우하단에 두고 작은 창에서 열어도 밖으로
- * 나가지 않는다. 위치가 없으면(기본) 좌하단이다.
+ * 끄는 동안은 스타일을 직접 써서 리렌더하지 않고, 놓을 때 컨테이너 여유
+ * 공간 대비 **비율**(lib/minimap PanelRatio)로 스토어에 저장한다
+ * (localStorage 영속, 리전 무관). 마운트·리사이즈 때는 그 비율로 px 를 다시
+ * 계산한다 — 전체화면으로 컨테이너가 커져도 우하단에 둔 패널이 우하단에
+ * 머물고, 큰 창에서 두고 작은 창에서 열어도 밖으로 나가지 않는다. 위치가
+ * 없으면(기본) 좌하단이다.
  */
 
 /** 미니맵 표시 폭(CSS px). 높이는 스냅샷 종횡비를 따른다. */
@@ -83,8 +95,11 @@ const SEVERITY_COLORS: Record<AlarmSeverity, string> = {
   info: '#3b82f6',
 };
 const MARKER_COLOR = '#fde047';
-/** 카메라 픽토그램·시야 부채꼴 공통 색. */
-const CAMERA_COLOR = '#22d3ee';
+/**
+ * 카메라 픽토그램·시야 부채꼴 공통 색 — 흰색. 픽토그램은 검은 외곽선을
+ * 둘러 밝은 지도 위에서도 읽힌다.
+ */
+const CAMERA_COLOR = '#ffffff';
 /**
  * 시야 부채꼴 — 픽토그램과 같은 색, 카메라에서 멀어질수록 투명해지는
  * 그라데이션 채움. 테두리는 호 없이 양쪽 모서리 직선만 그린다.
@@ -168,9 +183,8 @@ export function SceneMinimap({
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
-      // 카메라(부채꼴·픽토그램)를 먼저, 장비 마커를 그 위에 — 부채꼴 안의
-      // 장비가 가려지지 않는다.
-      drawCamera(context, drawFrame, scale, getPose());
+      // 장비 마커 → 카메라(부채꼴·픽토그램). 카메라가 마커에 가려지지 않는다
+      // — 부채꼴은 반투명 그라데이션이라 안의 마커가 비쳐 보인다.
       markersRef.current = drawMarkers(
         context,
         drawFrame,
@@ -180,6 +194,11 @@ export function SceneMinimap({
         useObjectFocusStore.getState().focusedModelId,
         cacheRef.current,
       );
+      const camera = resolveCameraDraw(drawFrame, scale, getPose());
+      if (camera) {
+        drawCameraFootprint(context, scale, camera);
+        drawCameraGlyph(context, scale, camera);
+      }
       const hit = resolveHover(markersRef.current, hoverRef.current, scale);
       drawHoverLabel(context, scale, hit);
       // 마커 위에서는 클릭이 포커스라 커서로 알려 준다.
@@ -262,15 +281,17 @@ export function SceneMinimap({
     }
   };
 
-  // 저장 위치 복원·리사이즈 클램프. 컨테이너는 오버레이 슬롯(캔버스 영역
-  // inset-0)이다.
-  useEffect(() => {
+  // 저장 비율 → px 복원. 컨테이너는 오버레이 슬롯(캔버스 영역 inset-0)이고
+  // 전체화면 전환도 컨테이너 리사이즈로 들어와 같은 경로를 탄다. 비율은
+  // 컨테이너 크기를 알아야 px 가 되므로 레이아웃 effect 로 첫 페인트 전에
+  // 놓는다 — 좌상단에서 튀는 한 프레임을 없앤다.
+  useLayoutEffect(() => {
     if (!visible || !snapshot || position === null) return;
     const panel = panelRef.current;
     const container = panel?.parentElement;
     if (!panel || !container) return;
-    const clamp = () => {
-      const next = clampPanelPosition(
+    const place = () => {
+      const next = panelRatioToPosition(
         useSceneMinimapStore.getState().position ?? position,
         panel.offsetWidth,
         panel.offsetHeight,
@@ -280,8 +301,8 @@ export function SceneMinimap({
       panel.style.left = `${next.x}px`;
       panel.style.top = `${next.y}px`;
     };
-    clamp();
-    const observer = new ResizeObserver(clamp);
+    place();
+    const observer = new ResizeObserver(place);
     observer.observe(container);
     return () => observer.disconnect();
   }, [visible, snapshot, position]);
@@ -332,12 +353,24 @@ export function SceneMinimap({
 
   const endPanelDrag = (event: PointerEvent<HTMLDivElement>) => {
     const drag = panelDragRef.current;
+    const panel = panelRef.current;
+    const container = panel?.parentElement;
     if (!drag) return;
     panelDragRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    setPosition(drag.last);
+    if (!panel || !container) return;
+    // 놓는 순간의 컨테이너 크기로 비율을 만들어 저장한다.
+    setPosition(
+      panelPositionToRatio(
+        drag.last,
+        panel.offsetWidth,
+        panel.offsetHeight,
+        container.clientWidth,
+        container.clientHeight,
+      ),
+    );
   };
 
   if (!visible || !snapshot || !frame) return null;
@@ -358,11 +391,8 @@ export function SceneMinimap({
         position === null && 'bottom-1.5 left-1.5',
         className,
       )}
-      style={
-        position === null
-          ? { width: MINIMAP_CSS_WIDTH }
-          : { width: MINIMAP_CSS_WIDTH, left: position.x, top: position.y }
-      }
+      // 비율 위치의 left/top 은 위 레이아웃 effect 가 px 로 놓는다.
+      style={{ width: MINIMAP_CSS_WIDTH }}
     >
       <div
         className="flex h-5 cursor-move touch-none items-center justify-between bg-black/40 pl-1 select-none"
@@ -489,70 +519,82 @@ function drawMarkers(
   return drawn;
 }
 
-function drawCamera(
-  context: CanvasRenderingContext2D,
+/** 카메라 그리기에 필요한 픽셀 값 — 부채꼴·픽토그램이 같은 값을 쓴다. */
+interface CameraDraw {
+  px: number;
+  py: number;
+  heading: number;
+  halfAngle: number;
+  /** 시선 방향이 정의되는가(정수직 탑뷰가 아닌가). */
+  hasHeading: boolean;
+  lengthPx: number;
+}
+
+function resolveCameraDraw(
   frame: MinimapFrame,
   scale: number,
   pose: { position: Vector3Tuple; target: Vector3Tuple } | null,
-): void {
-  if (!pose) return;
+): CameraDraw | null {
+  if (!pose) return null;
   const footprint = cameraFootprint(pose, FOOTPRINT_ANGLE_DEG);
   const origin = worldToMinimap(frame, footprint.x, footprint.z);
   const unitsPerPx = frame.worldWidth / frame.pxWidth;
-
-  // 시선 방향이 정의되는(정수직 탑뷰가 아닌) 경우에만 부채꼴·픽토그램.
   // 카메라→타깃 거리는 이 판정에만 쓰고 부채꼴 길이는 고정 픽셀이다.
-  const hasHeading =
-    footprint.length / unitsPerPx > HEADING_MIN_DISTANCE_PX * scale;
-  const lengthPx = FOOTPRINT_LENGTH_PX * scale;
-  if (hasHeading) {
-    const gradient = context.createRadialGradient(
-      origin.px,
-      origin.py,
-      0,
-      origin.px,
-      origin.py,
-      lengthPx,
-    );
-    gradient.addColorStop(0, FOOTPRINT_FILL_NEAR);
-    gradient.addColorStop(0.45, FOOTPRINT_FILL_MID);
-    gradient.addColorStop(1, FOOTPRINT_FILL_FAR);
-    context.beginPath();
-    context.moveTo(origin.px, origin.py);
-    context.arc(
-      origin.px,
-      origin.py,
-      lengthPx,
-      footprint.heading - footprint.halfAngle,
-      footprint.heading + footprint.halfAngle,
-    );
-    context.closePath();
-    context.fillStyle = gradient;
-    context.fill();
-    // 모서리 직선 — 호는 그리지 않는다.
-    context.beginPath();
-    for (const angle of [
-      footprint.heading - footprint.halfAngle,
-      footprint.heading + footprint.halfAngle,
-    ]) {
-      context.moveTo(origin.px, origin.py);
-      context.lineTo(
-        origin.px + Math.cos(angle) * lengthPx,
-        origin.py + Math.sin(angle) * lengthPx,
-      );
-    }
-    context.lineWidth = FOOTPRINT_EDGE_WIDTH_PX * scale;
-    context.strokeStyle = FOOTPRINT_EDGE;
-    context.stroke();
-  }
+  return {
+    px: origin.px,
+    py: origin.py,
+    heading: footprint.heading,
+    halfAngle: footprint.halfAngle,
+    hasHeading: footprint.length / unitsPerPx > HEADING_MIN_DISTANCE_PX * scale,
+    lengthPx: FOOTPRINT_LENGTH_PX * scale,
+  };
+}
 
-  // 카메라 위치 — 시선 방향으로 돌린 카메라 픽토그램. 탑뷰(방향 없음)면 점.
+/** 시야 부채꼴 — 정수직 탑뷰면 그리지 않는다. */
+function drawCameraFootprint(
+  context: CanvasRenderingContext2D,
+  scale: number,
+  camera: CameraDraw,
+): void {
+  if (!camera.hasHeading) return;
+  const { px, py, heading, halfAngle, lengthPx } = camera;
+  const gradient = context.createRadialGradient(px, py, 0, px, py, lengthPx);
+  gradient.addColorStop(0, FOOTPRINT_FILL_NEAR);
+  gradient.addColorStop(0.45, FOOTPRINT_FILL_MID);
+  gradient.addColorStop(1, FOOTPRINT_FILL_FAR);
+  context.beginPath();
+  context.moveTo(px, py);
+  context.arc(px, py, lengthPx, heading - halfAngle, heading + halfAngle);
+  context.closePath();
+  context.fillStyle = gradient;
+  context.fill();
+  // 모서리 직선 — 호는 그리지 않는다.
+  context.beginPath();
+  for (const angle of [heading - halfAngle, heading + halfAngle]) {
+    context.moveTo(px, py);
+    context.lineTo(
+      px + Math.cos(angle) * lengthPx,
+      py + Math.sin(angle) * lengthPx,
+    );
+  }
+  context.lineWidth = FOOTPRINT_EDGE_WIDTH_PX * scale;
+  context.strokeStyle = FOOTPRINT_EDGE;
+  context.stroke();
+}
+
+/** 카메라 위치 — 시선 방향으로 돌린 카메라 픽토그램. 탑뷰(방향 없음)면 점. */
+function drawCameraGlyph(
+  context: CanvasRenderingContext2D,
+  scale: number,
+  camera: CameraDraw,
+): void {
+  const { px, py, heading, hasHeading } = camera;
   context.beginPath();
   if (hasHeading) {
     const points = cameraGlyphPolygon(
-      origin.px,
-      origin.py,
-      footprint.heading,
+      px,
+      py,
+      heading,
       CAMERA_GLYPH_SIZE_PX * scale,
     );
     context.moveTo(points[0].px, points[0].py);
@@ -561,7 +603,7 @@ function drawCamera(
     }
     context.closePath();
   } else {
-    context.arc(origin.px, origin.py, 2 * scale, 0, Math.PI * 2);
+    context.arc(px, py, 2 * scale, 0, Math.PI * 2);
   }
   context.fillStyle = CAMERA_COLOR;
   context.fill();

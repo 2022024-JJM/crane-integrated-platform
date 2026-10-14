@@ -35,30 +35,44 @@ beforeEach(() => {
 });
 
 describe('position', () => {
-  it('저장값 없음·손상·비유한수는 null', () => {
+  it('저장값 없음·손상·비유한수·예전 px 모양은 null', () => {
     expect(readMinimapPosition()).toBeNull();
     window.localStorage.setItem(MINIMAP_POSITION_STORAGE_KEY, '{garbage');
     expect(readMinimapPosition()).toBeNull();
     window.localStorage.setItem(
       MINIMAP_POSITION_STORAGE_KEY,
-      JSON.stringify({ x: 'a', y: 1 }),
+      JSON.stringify({ fx: 'a', fy: 1 }),
+    );
+    expect(readMinimapPosition()).toBeNull();
+    // px 로 저장하던 예전 모양은 비율로 바꿀 수 없어 기본 자리.
+    window.localStorage.setItem(
+      MINIMAP_POSITION_STORAGE_KEY,
+      JSON.stringify({ x: 12, y: 34 }),
     );
     expect(readMinimapPosition()).toBeNull();
     window.localStorage.setItem(
       MINIMAP_POSITION_STORAGE_KEY,
-      JSON.stringify({ x: 12, y: 34, extra: true }),
+      JSON.stringify({ fx: 0.25, fy: 1, extra: true }),
     );
-    expect(readMinimapPosition()).toEqual({ x: 12, y: 34 });
+    expect(readMinimapPosition()).toEqual({ fx: 0.25, fy: 1 });
   });
 
-  it('setPosition 은 영속하고 같은 좌표·null 재설정은 참조 유지, null 은 저장 삭제', () => {
+  it('범위 밖 비율은 [0,1] 로 클램프', () => {
+    window.localStorage.setItem(
+      MINIMAP_POSITION_STORAGE_KEY,
+      JSON.stringify({ fx: 1.5, fy: -0.2 }),
+    );
+    expect(readMinimapPosition()).toEqual({ fx: 1, fy: 0 });
+  });
+
+  it('setPosition 은 영속하고 같은 비율·null 재설정은 참조 유지, null 은 저장 삭제', () => {
     const store = useSceneMinimapStore;
-    store.getState().setPosition({ x: 5, y: 6 });
+    store.getState().setPosition({ fx: 0.5, fy: 0.6 });
     expect(
       JSON.parse(window.localStorage.getItem(MINIMAP_POSITION_STORAGE_KEY)!),
-    ).toEqual({ x: 5, y: 6 });
+    ).toEqual({ fx: 0.5, fy: 0.6 });
     const before = store.getState();
-    store.getState().setPosition({ x: 5, y: 6 });
+    store.getState().setPosition({ fx: 0.5, fy: 0.6 });
     expect(store.getState()).toBe(before);
     store.getState().setPosition(null);
     expect(store.getState().position).toBeNull();

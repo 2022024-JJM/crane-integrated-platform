@@ -7,6 +7,8 @@ import {
   cameraFootprint,
   cameraGlyphPolygon,
   clampPanelPosition,
+  panelPositionToRatio,
+  panelRatioToPosition,
   computeMinimapFrame,
   minimapToWorld,
   nearestMarkerIndex,
@@ -203,6 +205,82 @@ describe('clampPanelPosition', () => {
       x: 0,
       y: 0,
     });
+  });
+});
+
+describe('panelPositionToRatio / panelRatioToPosition', () => {
+  // 패널 100×50, 컨테이너 500×300 → 여유 400×250.
+  const PANEL = [100, 50] as const;
+  const BOX = [500, 300] as const;
+
+  it('좌상단 = (0,0), 우하단 = (1,1), 중앙 = (0.5,0.5)', () => {
+    expect(panelPositionToRatio({ x: 0, y: 0 }, ...PANEL, ...BOX)).toEqual({
+      fx: 0,
+      fy: 0,
+    });
+    expect(
+      panelPositionToRatio({ x: 400, y: 250 }, ...PANEL, ...BOX),
+    ).toEqual({ fx: 1, fy: 1 });
+    expect(
+      panelPositionToRatio({ x: 200, y: 125 }, ...PANEL, ...BOX),
+    ).toEqual({ fx: 0.5, fy: 0.5 });
+  });
+
+  it('여유 밖 px 는 비율 [0,1] 로 클램프, NaN 은 0', () => {
+    expect(
+      panelPositionToRatio({ x: -10, y: 999 }, ...PANEL, ...BOX),
+    ).toEqual({ fx: 0, fy: 1 });
+    expect(
+      panelPositionToRatio({ x: NaN, y: NaN }, ...PANEL, ...BOX),
+    ).toEqual({ fx: 0, fy: 0 });
+  });
+
+  it('패널이 컨테이너 이상이면 그 축은 0 (0 나누기 없음)', () => {
+    expect(panelPositionToRatio({ x: 50, y: 50 }, 500, 50, ...BOX)).toEqual({
+      fx: 0,
+      fy: 0.2,
+    });
+    expect(panelPositionToRatio({ x: 50, y: 50 }, 600, 400, ...BOX)).toEqual({
+      fx: 0,
+      fy: 0,
+    });
+  });
+
+  it('비율 → px 는 여유 공간에 곱하고 범위 밖·NaN 비율은 클램프', () => {
+    expect(panelRatioToPosition({ fx: 1, fy: 1 }, ...PANEL, ...BOX)).toEqual({
+      x: 400,
+      y: 250,
+    });
+    expect(
+      panelRatioToPosition({ fx: 0.5, fy: 0.5 }, ...PANEL, ...BOX),
+    ).toEqual({ x: 200, y: 125 });
+    expect(
+      panelRatioToPosition({ fx: 1.1, fy: -0.1 }, ...PANEL, ...BOX),
+    ).toEqual({ x: 400, y: 0 });
+    expect(
+      panelRatioToPosition({ fx: NaN, fy: Infinity }, ...PANEL, ...BOX),
+    ).toEqual({ x: 0, y: 0 });
+    // 패널이 컨테이너보다 크면 0.
+    expect(panelRatioToPosition({ fx: 1, fy: 1 }, 600, 400, ...BOX)).toEqual({
+      x: 0,
+      y: 0,
+    });
+  });
+
+  it('우하단 비율은 컨테이너가 커져도(전체화면) 우하단 px 로 복원된다', () => {
+    const ratio = panelPositionToRatio({ x: 400, y: 250 }, ...PANEL, ...BOX);
+    expect(panelRatioToPosition(ratio, ...PANEL, 1920, 1080)).toEqual({
+      x: 1820,
+      y: 1030,
+    });
+    // px → 비율 → px 왕복은 같은 컨테이너에서 원값.
+    expect(
+      panelRatioToPosition(
+        panelPositionToRatio({ x: 120, y: 75 }, ...PANEL, ...BOX),
+        ...PANEL,
+        ...BOX,
+      ),
+    ).toEqual({ x: 120, y: 75 });
   });
 });
 

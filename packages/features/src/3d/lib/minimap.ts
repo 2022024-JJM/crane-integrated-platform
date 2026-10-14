@@ -279,3 +279,59 @@ export function clampPanelPosition(
     y: Math.min(Math.max(y, 0), maxY),
   };
 }
+
+/**
+ * 패널 좌상단의 **비율 위치** — 컨테이너에서 패널을 뺀 여유 공간 대비 0~1.
+ * (0,0) = 좌상단 밀착, (1,1) = 우하단 밀착, (0.5,0.5) = 중앙. px 가 아니라
+ * 비율로 저장해야 전체화면·창 리사이즈로 컨테이너가 커져도 "우하단에 붙여
+ * 둔" 패널이 그 자리에 머문다(px 저장은 커진 만큼 위·왼쪽으로 밀린다).
+ */
+export interface PanelRatio {
+  fx: number;
+  fy: number;
+}
+
+function clampUnit(value: number): number {
+  return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+}
+
+/**
+ * px 위치 → 비율. 여유 공간이 0 이하(패널이 컨테이너 이상)면 그 축은 0 —
+ * 비율이 정의되지 않고 복원해도 어차피 0 에 붙는다. 비율은 [0,1] 로 클램프.
+ */
+export function panelPositionToRatio(
+  position: PanelPosition,
+  panelWidth: number,
+  panelHeight: number,
+  containerWidth: number,
+  containerHeight: number,
+): PanelRatio {
+  const freeX = containerWidth - panelWidth;
+  const freeY = containerHeight - panelHeight;
+  return {
+    fx: freeX > 0 ? clampUnit(position.x / freeX) : 0,
+    fy: freeY > 0 ? clampUnit(position.y / freeY) : 0,
+  };
+}
+
+/**
+ * 비율 → px 위치. 비율을 [0,1] 로 클램프한 뒤 여유 공간에 곱하고
+ * `clampPanelPosition` 으로 한 번 더 창 안에 넣는다(여유 음수·NaN 방어).
+ */
+export function panelRatioToPosition(
+  ratio: PanelRatio,
+  panelWidth: number,
+  panelHeight: number,
+  containerWidth: number,
+  containerHeight: number,
+): PanelPosition {
+  const freeX = Math.max(0, containerWidth - panelWidth);
+  const freeY = Math.max(0, containerHeight - panelHeight);
+  return clampPanelPosition(
+    { x: clampUnit(ratio.fx) * freeX, y: clampUnit(ratio.fy) * freeY },
+    panelWidth,
+    panelHeight,
+    containerWidth,
+    containerHeight,
+  );
+}
