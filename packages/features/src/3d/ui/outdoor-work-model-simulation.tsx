@@ -36,6 +36,8 @@ import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-brid
 import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
 import type { LabelStateRecord } from '../lib/model-label-state';
 import type { OutlineStateRecord } from '../lib/model-outline-state';
+import { SceneFloodlightFixture } from './scene-floodlight-fixture';
+import { SceneFloodlights } from './scene-floodlights';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
 export interface UseSceneDataOptions {
@@ -281,6 +283,7 @@ export function OutdoorWorkModelSimulation({
   const models = sceneInfo?.models ?? [];
   const texts = sceneInfo?.texts ?? [];
   const rulers = sceneInfo?.rulers ?? [];
+  const floodlights = sceneInfo?.floodlights;
   const metersPerUnit = getSceneMetersPerUnit(regionId);
   // 라벨 위 태그 값 목록 — 모델마다 참조를 고정해야 memo 된 GltfModel 이
   // 렌더마다 다시 그려지지 않는다.
@@ -547,6 +550,18 @@ export function OutdoorWorkModelSimulation({
           startValue={ruler.startValue}
           unitHidden={ruler.unitHidden}
           metersPerUnit={metersPerUnit}
+        />
+      ))}
+      {/* 투광등 — 밤에만 켜진다. 빛은 슬롯(SceneFloodlights), 광원 글로우는
+          기구(SceneFloodlightFixture). 관제 화면은 클릭을 받지 않는다. */}
+      <SceneFloodlights floodlights={floodlights} />
+      {(floodlights ?? []).map((light) => (
+        <SceneFloodlightFixture
+          key={light.id}
+          id={light.id}
+          position={light.position}
+          aim={light.aim}
+          angle={light.angle}
         />
       ))}
     </>

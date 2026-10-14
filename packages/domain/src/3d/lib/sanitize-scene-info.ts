@@ -9,6 +9,7 @@
  * 지금은 loadSceneInfoByRegionId가 이 함수를 통과시키므로 에디터·뷰어·
  * 리플레이가 **같은 데이터**를 본다. 이 파일이 도메인에 있는 이유다.
  */
+import type { SavedFloodlightInfo } from '../model/floodlight-types';
 import type { SavedRulerInfo } from '../model/ruler-types';
 import { isSceneSiteLocation } from '../model/scene-site-geo';
 import type {
@@ -28,6 +29,7 @@ import {
 } from '../model/types';
 import { normalizeDegrees } from './math-utils';
 import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
+import { sanitizeFloodlightFields } from './sanitize-floodlights';
 import { sanitizeModelZones } from './sanitize-model-zones';
 import { sanitizeRulerFields } from './sanitize-rulers';
 import {
@@ -264,6 +266,28 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       })
     : [];
 
+  // 투광등 — 눈금과 같은 규칙(같은 id 집합, 비출 수 없는 항목은 버림).
+  const rawFloodlights = (sceneInfo as SavedSceneInfo | undefined)?.floodlights;
+  const safeFloodlights: SavedFloodlightInfo[] = Array.isArray(rawFloodlights)
+    ? rawFloodlights.flatMap((light) => {
+        const fields = sanitizeFloodlightFields(light);
+        if (!fields) return [];
+
+        let nextId =
+          typeof light.id === 'string' && light.id.length > 0
+            ? light.id
+            : createSceneModelId();
+
+        if (seenIds.has(nextId)) {
+          nextId = createSceneModelId();
+        }
+
+        seenIds.add(nextId);
+
+        return [{ id: nextId, ...fields }];
+      })
+    : [];
+
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
   const sanitized: SavedSceneInfo = {
@@ -280,6 +304,9 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   // 눈금이 없는 씬은 필드 자체가 빠진다 — 기존 저장본과 diff 0.
   if (safeRulers.length > 0) {
     sanitized.rulers = safeRulers;
+  }
+  if (safeFloodlights.length > 0) {
+    sanitized.floodlights = safeFloodlights;
   }
 
   // 공유 씬의 region 별 카메라 — 유효한 슬롯만 남기고, 없으면 필드를 뺀다.

@@ -34,12 +34,25 @@ interface SceneEditorViewState {
    * 시작점·끝점이다. 눈금을 하나 그리거나 Esc 를 누르면 꺼진다.
    */
   rulerDrawing: boolean;
+  /**
+   * 조명(투광등) 배치 모드. 켜져 있는 동안 캔버스의 클릭 두 번이 기구 자리·
+   * 조준점이다. 하나 놓거나 Esc 를 누르면 꺼진다. 눈금 그리기와 동시에 켜지지
+   * 않는다 — 한쪽을 켜면 다른 쪽은 꺼진다.
+   */
+  floodlightPlacing: boolean;
+  /**
+   * 조준점 다시 찍기 — 인스펙터 조명 탭에서 켠다. 값은 대상 조명 id 이고,
+   * 다음 바닥 클릭이 그 조명의 조준점이 된다. 찍거나 Esc·선택 변경이면 null.
+   */
+  floodlightAimingId: string | null;
   toggleSnap: () => void;
   setSnapStep: (channel: SceneSnapChannel, value: number) => void;
   setTransformSpace: (space: SceneTransformSpace) => void;
   setTransformPivot: (pivot: SceneTransformPivot) => void;
   toggleGrid: () => void;
   setRulerDrawing: (drawing: boolean) => void;
+  setFloodlightPlacing: (placing: boolean) => void;
+  setFloodlightAimingId: (id: string | null) => void;
 }
 
 /**
@@ -58,6 +71,8 @@ export const useSceneEditorViewStore = create<SceneEditorViewState>()(
     transformPivot: 'individual',
     showGrid: false,
     rulerDrawing: false,
+    floodlightPlacing: false,
+    floodlightAimingId: null,
     toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
     setSnapStep: (channel, value) => {
       const current = get().snapStep;
@@ -77,9 +92,43 @@ export const useSceneEditorViewStore = create<SceneEditorViewState>()(
         state.transformPivot === pivot ? state : { transformPivot: pivot },
       ),
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+    // 배치 모드는 서로 배타다 — 캔버스 클릭 하나를 두 모드가 같이 받으면
+    // 눈금과 조명이 한 번에 생긴다.
     setRulerDrawing: (drawing) =>
       set((state) =>
-        state.rulerDrawing === drawing ? state : { rulerDrawing: drawing },
+        state.rulerDrawing === drawing
+          ? state
+          : drawing
+            ? {
+                rulerDrawing: true,
+                floodlightPlacing: false,
+                floodlightAimingId: null,
+              }
+            : { rulerDrawing: false },
+      ),
+    setFloodlightPlacing: (placing) =>
+      set((state) =>
+        state.floodlightPlacing === placing
+          ? state
+          : placing
+            ? {
+                floodlightPlacing: true,
+                rulerDrawing: false,
+                floodlightAimingId: null,
+              }
+            : { floodlightPlacing: false },
+      ),
+    setFloodlightAimingId: (id) =>
+      set((state) =>
+        state.floodlightAimingId === id
+          ? state
+          : id
+            ? {
+                floodlightAimingId: id,
+                rulerDrawing: false,
+                floodlightPlacing: false,
+              }
+            : { floodlightAimingId: null },
       ),
   }),
 );

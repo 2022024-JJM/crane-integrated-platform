@@ -2,6 +2,7 @@ import {
   Bone,
   Box,
   ChevronRight,
+  Lightbulb,
   Lock,
   LockOpen,
   Map as MapIcon,
@@ -16,6 +17,7 @@ import {
   makeMeshId,
   modelObjectRegistry,
   parseMeshId,
+  type SavedFloodlightInfo,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedRulerInfo,
@@ -43,6 +45,7 @@ interface PalettePlacedObjectsProps {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
   placedRulers?: SavedRulerInfo[];
+  placedFloodlights?: SavedFloodlightInfo[];
   placedMaps?: SavedMapInfo[];
   objectSearch: string;
   selectedIds: Set<string>;
@@ -52,9 +55,12 @@ interface PalettePlacedObjectsProps {
   onDeletePlacedText?: (id: string) => void;
   onSelectPlacedRuler?: (id: string) => void;
   onDeletePlacedRuler?: (id: string) => void;
+  onSelectPlacedFloodlight?: (id: string) => void;
+  onDeletePlacedFloodlight?: (id: string) => void;
   onTogglePlacedModel?: (id: string) => void;
   onTogglePlacedText?: (id: string) => void;
   onTogglePlacedRuler?: (id: string) => void;
+  onTogglePlacedFloodlight?: (id: string) => void;
   onTogglePlacedMap?: (id: string) => void;
   onSelectPlacedMap?: (id: string) => void;
   onDeletePlacedMap?: (id: string) => void;
@@ -74,6 +80,7 @@ export function PalettePlacedObjects({
   placedModels,
   placedTexts = [],
   placedRulers = [],
+  placedFloodlights = [],
   placedMaps = [],
   objectSearch = '',
   selectedIds,
@@ -83,9 +90,12 @@ export function PalettePlacedObjects({
   onDeletePlacedText,
   onSelectPlacedRuler,
   onDeletePlacedRuler,
+  onSelectPlacedFloodlight,
+  onDeletePlacedFloodlight,
   onTogglePlacedModel,
   onTogglePlacedText,
   onTogglePlacedRuler,
+  onTogglePlacedFloodlight,
   onTogglePlacedMap,
   onSelectPlacedMap,
   onDeletePlacedMap,
@@ -189,10 +199,18 @@ export function PalettePlacedObjects({
       placedModels,
       placedTexts,
       placedRulers,
+      placedFloodlights,
       placedMaps,
       objectSearch,
     });
-  }, [objectSearch, placedMaps, placedModels, placedRulers, placedTexts]);
+  }, [
+    objectSearch,
+    placedFloodlights,
+    placedMaps,
+    placedModels,
+    placedRulers,
+    placedTexts,
+  ]);
 
   // 편집 중이던 객체가 삭제·필터링으로 목록에서 사라지면 편집을 접는다.
   useEffect(() => {
@@ -251,6 +269,8 @@ export function PalettePlacedObjects({
                   onSelectPlacedText?.(targetItem.id);
                 } else if (targetItem.type === 'ruler') {
                   onSelectPlacedRuler?.(targetItem.id);
+                } else if (targetItem.type === 'floodlight') {
+                  onSelectPlacedFloodlight?.(targetItem.id);
                 } else {
                   onSelectPlacedModel(targetItem.id);
                 }
@@ -267,6 +287,8 @@ export function PalettePlacedObjects({
                     onTogglePlacedText?.(item.id);
                   } else if (item.type === 'ruler') {
                     onTogglePlacedRuler?.(item.id);
+                  } else if (item.type === 'floodlight') {
+                    onTogglePlacedFloodlight?.(item.id);
                   } else {
                     onTogglePlacedModel?.(item.id);
                   }
@@ -362,6 +384,8 @@ export function PalettePlacedObjects({
                     <Type className={iconClassName} />
                   ) : item.type === 'ruler' ? (
                     <Ruler className={iconClassName} />
+                  ) : item.type === 'floodlight' ? (
+                    <Lightbulb className={iconClassName} />
                   ) : (
                     <Box className={iconClassName} />
                   )}
@@ -428,6 +452,8 @@ export function PalettePlacedObjects({
                           onDeletePlacedText?.(item.id);
                         } else if (item.type === 'ruler') {
                           onDeletePlacedRuler?.(item.id);
+                        } else if (item.type === 'floodlight') {
+                          onDeletePlacedFloodlight?.(item.id);
                         } else {
                           onDeletePlacedModel(item.id);
                         }

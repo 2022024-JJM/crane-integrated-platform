@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { SCENE_LIGHTING_BASE, type RgbTuple } from '../../lib/sky-lighting';
 import {
+  publishFloodlightOn,
   publishSunLight,
   sceneLightingInfo,
   type SceneLightingInfo,
@@ -12,16 +13,48 @@ function createInfo(): SceneLightingInfo {
     sunDirection: [0, 1, 0],
     sunColor: [1, 1, 1],
     sunIntensity: SCENE_LIGHTING_BASE.sunIntensity,
+    floodlightOn: 0,
   };
 }
 
 describe('sceneLightingInfo 기본값', () => {
-  it('천정 백색 태양·기준 세기', () => {
+  it('천정 백색 태양·기준 세기·투광등 꺼짐', () => {
     expect(sceneLightingInfo.sunDirection).toEqual([0, 1, 0]);
     expect(sceneLightingInfo.sunColor).toEqual([1, 1, 1]);
     expect(sceneLightingInfo.sunIntensity).toBe(
       SCENE_LIGHTING_BASE.sunIntensity,
     );
+    expect(sceneLightingInfo.floodlightOn).toBe(0);
+  });
+});
+
+describe('publishFloodlightOn', () => {
+  it('같은 값이면 false, 다르면 true 로 기록한다', () => {
+    const info = createInfo();
+    expect(publishFloodlightOn(info, 0)).toBe(false);
+    expect(publishFloodlightOn(info, 0.4)).toBe(true);
+    expect(info.floodlightOn).toBe(0.4);
+    expect(publishFloodlightOn(info, 0.4)).toBe(false);
+  });
+
+  it('범위 밖은 [0, 1] 로 클램프 — 경계값은 그대로', () => {
+    const info = createInfo();
+    publishFloodlightOn(info, 1);
+    expect(info.floodlightOn).toBe(1);
+    publishFloodlightOn(info, 1.5);
+    expect(info.floodlightOn).toBe(1);
+    publishFloodlightOn(info, -0.2);
+    expect(info.floodlightOn).toBe(0);
+  });
+
+  it('NaN·무한대는 0(꺼짐) — 계산 오류로 켜지지 않는다', () => {
+    const info = createInfo();
+    publishFloodlightOn(info, 1);
+    expect(publishFloodlightOn(info, Number.NaN)).toBe(true);
+    expect(info.floodlightOn).toBe(0);
+    publishFloodlightOn(info, 1);
+    publishFloodlightOn(info, Number.POSITIVE_INFINITY);
+    expect(info.floodlightOn).toBe(0);
   });
 });
 
@@ -134,5 +167,4 @@ describe('publishSunLight', () => {
     ).toBe(true);
     expect(info.sunDirection).not.toBe(stored);
   });
-
 });

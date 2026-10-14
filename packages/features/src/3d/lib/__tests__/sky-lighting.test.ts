@@ -15,6 +15,7 @@ import {
   NIGHT_HEMISPHERE_INTENSITY_DARK,
   NIGHT_HEMISPHERE_INTENSITY_LIT,
   NIGHT_HEMISPHERE_SKY_COLOR,
+  NIGHT_LIGHT_VISIBLE_EPSILON,
   NIGHT_SKY_INTENSITY,
   NIGHT_SKY_TINT_ALPHA,
   SUN_COLOR_HORIZON,
@@ -123,7 +124,7 @@ describe('resolveSkyLighting — 낮', () => {
 });
 
 describe('resolveSkyLighting — 밤 (작업등 켜짐)', () => {
-  it('깊은 밤(−40°)은 하늘만 어둡고 작업등이 방향광, 환경광은 난색으로 밝다', () => {
+  it('깊은 밤(−40°)은 하늘이 어둡고 작업등이 방향광, 환경광은 난색 바닥값', () => {
     const sky = at(-40, 50, 1);
     expect(sky.daylight).toBe(0);
     expect(sky.skyIntensity).toBeCloseTo(NIGHT_SKY_INTENSITY, 12);
@@ -248,11 +249,13 @@ describe('resolveSkyLighting — 태양→작업등 인계 연속성', () => {
     }
   });
 
-  it('밤에도 방향광이 낮의 절반~3/4 로 남아 장비가 보인다', () => {
+  it('밤의 전역광은 바닥값 — 0 은 아니되 낮의 1/3 아래(바닥은 투광등이 밝힌다)', () => {
     const night = at(-40);
-    expect(night.keyIntensity).toBeGreaterThan(BASE.sunIntensity * 0.3);
-    expect(night.keyIntensity).toBeLessThanOrEqual(BASE.sunIntensity * 0.75);
-    expect(night.ambientIntensity).toBeGreaterThan(BASE.ambientIntensity * 0.6);
+    expect(night.keyIntensity).toBeGreaterThan(0);
+    expect(night.keyIntensity).toBeLessThan(BASE.sunIntensity / 3);
+    expect(night.ambientIntensity).toBeGreaterThan(0);
+    expect(night.ambientIntensity).toBeLessThan(BASE.ambientIntensity / 2);
+    expect(night.hemisphereIntensity).toBeGreaterThan(0);
   });
 });
 
@@ -338,5 +341,46 @@ describe('resolveSkyLighting — 반구광 색', () => {
       NIGHT_HEMISPHERE_SKY_COLOR,
     );
     expect(at(60).hemisphereGroundColor).toEqual(DAY_HEMISPHERE_GROUND_COLOR);
+  });
+});
+
+describe('resolveSkyLighting — floodlightOn (투광등 점등 비율)', () => {
+  it('낮 0, 깊은 밤 1, 점등 구간(YARD_LIGHT_FADE) 안에서 단조 증가', () => {
+    expect(at(30).floodlightOn).toBe(0);
+    expect(at(YARD_LIGHT_FADE[1]).floodlightOn).toBe(0);
+    expect(at(YARD_LIGHT_FADE[0]).floodlightOn).toBe(1);
+    expect(at(-40).floodlightOn).toBe(1);
+    let prev = 0;
+    for (let el = YARD_LIGHT_FADE[1]; el >= YARD_LIGHT_FADE[0]; el -= 0.5) {
+      const on = at(el).floodlightOn;
+      expect(on).toBeGreaterThanOrEqual(prev);
+      prev = on;
+    }
+  });
+
+  it('전역 작업등 세기와 같은 곡선이다 — 같은 순간에 켜지고 꺼진다', () => {
+    for (const el of [1, 0, -1, -2, -3, -4]) {
+      const sky = at(el);
+      expect(sky.yardIntensity).toBeCloseTo(YARD_FULL * sky.floodlightOn, 12);
+    }
+  });
+
+  it('보조 투광등이 문턱(NIGHT_LIGHT_VISIBLE_EPSILON) 아래로 꺼지는 고도에서 함께 0 — 같은 프레임에 토글', () => {
+    let seenOff = false;
+    let seenOn = false;
+    for (let el = YARD_LIGHT_FADE[1]; el >= YARD_LIGHT_FADE[0]; el -= 0.01) {
+      const sky = at(el);
+      const fillOn = sky.fillIntensity > NIGHT_LIGHT_VISIBLE_EPSILON;
+      expect(sky.floodlightOn > 0, String(el)).toBe(fillOn);
+      if (fillOn) seenOn = true;
+      else seenOff = true;
+    }
+    // 점등 구간 안에 꺼진 고도와 켜진 고도가 둘 다 있다 — 문턱이 구간 밖이 아니다.
+    expect(seenOff).toBe(true);
+    expect(seenOn).toBe(true);
+  });
+
+  it('NaN 고도는 낮이라 0', () => {
+    expect(at(Number.NaN).floodlightOn).toBe(0);
   });
 });

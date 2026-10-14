@@ -1006,3 +1006,85 @@ describe('sanitizeSceneInfo — 메인 뷰(mainViewByRegion)', () => {
     ).not.toHaveProperty('mainViewByRegion');
   });
 });
+
+describe('sanitizeSceneInfo — 조명(floodlights)', () => {
+  function floodlight(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'light-1',
+      name: '조명 1',
+      position: [10, 30, -20],
+      aim: [20, -30, 10],
+      ...overrides,
+    };
+  }
+
+  it('유효한 조명은 id 와 함께 보존한다', () => {
+    const out = sanitizeSceneInfo(scene({ floodlights: [floodlight()] }));
+    expect(out.floodlights).toEqual([floodlight()]);
+  });
+
+  it('조명이 없거나 전부 무효·배열이 아니면 필드 자체가 빠진다', () => {
+    for (const floodlights of [
+      undefined,
+      [],
+      [null, 'x', 3, {}],
+      [floodlight({ aim: [0, 0, 0] })],
+      { id: 'light-1' },
+      'lights',
+    ]) {
+      const out = sanitizeSceneInfo(scene({ floodlights }));
+      expect(out).not.toHaveProperty('floodlights');
+      expect('floodlights' in JSON.parse(JSON.stringify(out))).toBe(false);
+    }
+  });
+
+  it('깨진 항목만 버리고 나머지는 순서대로 살린다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        floodlights: [
+          floodlight({ id: 'a' }),
+          floodlight({ id: 'b', position: [1, Number.NaN, 2] }),
+          null,
+          floodlight({ id: 'c', aim: [1, 2] }),
+          floodlight({ id: 'd', angle: 50, intensity: 2, locked: true }),
+        ],
+      }),
+    );
+    expect(out.floodlights?.map((f) => f.id)).toEqual(['a', 'd']);
+    expect(out.floodlights?.[1]).toMatchObject({
+      angle: 50,
+      intensity: 2,
+      locked: true,
+    });
+  });
+
+  it('id 는 모델·텍스트·눈금과 같은 집합에서 중복을 가린다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        texts: [
+          {
+            id: 'dup',
+            content: 'T',
+            color: '#ffffff',
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: [1, 1, 1],
+          },
+        ],
+        floodlights: [floodlight({ id: 'dup' }), floodlight({ id: '' })],
+      }),
+    );
+    const ids = out.floodlights?.map((f) => f.id) ?? [];
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toBe('dup');
+    expect(ids[1].length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('왕복(round-trip)에 안정적이다', () => {
+    const once = sanitizeSceneInfo(
+      scene({ floodlights: [floodlight({ angle: 50 })] }),
+    );
+    expect(sanitizeSceneInfo(once)).toEqual(once);
+  });
+});

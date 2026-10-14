@@ -14,6 +14,7 @@ import {
   Download,
   Grid3x3,
   House,
+  Lightbulb,
   Loader2,
   Magnet,
   Maximize2,
@@ -73,6 +74,9 @@ interface EditorHeaderBarProps {
   /** 눈금 그리기 모드 — 켜면 캔버스 클릭 두 번으로 눈금을 그린다. */
   rulerDrawing: boolean;
   onToggleRulerDrawing: () => void;
+  /** 조명 배치 모드 — 켜면 캔버스 클릭 두 번(기구 자리·비출 자리)으로 놓는다. */
+  floodlightPlacing: boolean;
+  onToggleFloodlightPlacing: () => void;
   // 도구 동작 설정
   transformSpace: SceneTransformSpace;
   onTransformSpaceChange: (space: SceneTransformSpace) => void;
@@ -134,6 +138,8 @@ export function EditorHeaderBar({
   onAddText,
   rulerDrawing,
   onToggleRulerDrawing,
+  floodlightPlacing,
+  onToggleFloodlightPlacing,
   transformSpace,
   onTransformSpaceChange,
   transformPivot,
@@ -307,6 +313,16 @@ export function EditorHeaderBar({
             onClick={onToggleRulerDrawing}
           >
             <Ruler className="size-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            label={t('monitoring:editor.placeFloodlight')}
+            kind="toggle"
+            pressed={floodlightPlacing}
+            side="bottom"
+            disabled={sceneDisabled}
+            onClick={onToggleFloodlightPlacing}
+          >
+            <Lightbulb className="size-4" />
           </EditorToolbarButton>
         </div>
 

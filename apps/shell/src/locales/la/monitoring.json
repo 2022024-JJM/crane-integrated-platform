@@ -163,6 +163,16 @@
         "right": "Dextra"
       },
       "guideColor": "Color"
+    },
+    "floodlight": {
+      "title": "Lumen",
+      "height": "Altitudo",
+      "aimPoint": "Punctum directionis",
+      "reaim": "Punctum directionis iterum selige",
+      "reaimActive": "Solum preme",
+      "angle": "Angulus coni",
+      "intensity": "Intensitas",
+      "hint": "Nocte tantum activa; {{slots}} lumina centro visus proxima solum illuminant."
     }
   },
   "transform": {
@@ -357,6 +367,11 @@
     "rulerDrawStartHint": "Punctum initii preme",
     "rulerDrawEndHint": "Punctum finis preme",
     "rulerDrawCancel": "ut abroges",
+    "placeFloodlight": "Lumen pone",
+    "floodlightName": "Lumen {{index}}",
+    "floodlightPlaceStartHint": "Locum ubi malus luminis stat preme",
+    "floodlightPlaceAimHint": "Locum illuminandum preme (eundem locum preme ut recta deorsum dirigas)",
+    "floodlightAimHint": "Novum punctum directionis preme",
     "views": {
       "mainSection": "Prospectus principalis",
       "mainClear": "Prospectum principalem vacua",

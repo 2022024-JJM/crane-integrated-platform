@@ -26,6 +26,8 @@ beforeEach(() => {
     transformPivot: 'individual',
     showGrid: false,
     rulerDrawing: false,
+    floodlightPlacing: false,
+    floodlightAimingId: null,
   });
 });
 
@@ -163,6 +165,73 @@ describe('useSceneEditorViewStore — 눈금 그리기 모드', () => {
   it('다른 필드를 건드리지 않는다', () => {
     store.getState().toggleSnap();
     store.getState().setRulerDrawing(true);
+    const s = store.getState();
+    expect(s.snapEnabled).toBe(true);
+    expect(s.showGrid).toBe(false);
+    expect(s.transformSpace).toBe('local');
+  });
+});
+
+describe('useSceneEditorViewStore — 조명 배치·조준 모드', () => {
+  it('기본은 꺼져 있다', () => {
+    expect(store.getState().floodlightPlacing).toBe(false);
+    expect(store.getState().floodlightAimingId).toBeNull();
+  });
+
+  it('배치 모드를 켜고 끈다 — 같은 값은 no-op(상태 참조 유지)', () => {
+    const before = store.getState();
+    store.getState().setFloodlightPlacing(false);
+    expect(store.getState()).toBe(before);
+    store.getState().setFloodlightPlacing(true);
+    expect(store.getState().floodlightPlacing).toBe(true);
+    const placing = store.getState();
+    store.getState().setFloodlightPlacing(true);
+    expect(store.getState()).toBe(placing);
+    store.getState().setFloodlightPlacing(false);
+    expect(store.getState().floodlightPlacing).toBe(false);
+  });
+
+  it('조준 모드는 대상 id 를 들고, null 로 끈다 — 같은 값은 no-op', () => {
+    store.getState().setFloodlightAimingId('f1');
+    expect(store.getState().floodlightAimingId).toBe('f1');
+    const aiming = store.getState();
+    store.getState().setFloodlightAimingId('f1');
+    expect(store.getState()).toBe(aiming);
+    store.getState().setFloodlightAimingId('f2');
+    expect(store.getState().floodlightAimingId).toBe('f2');
+    store.getState().setFloodlightAimingId(null);
+    expect(store.getState().floodlightAimingId).toBeNull();
+    const off = store.getState();
+    store.getState().setFloodlightAimingId(null);
+    expect(store.getState()).toBe(off);
+  });
+
+  it('배치 모드들은 서로 배타다 — 하나를 켜면 다른 둘은 꺼진다', () => {
+    store.getState().setRulerDrawing(true);
+    store.getState().setFloodlightPlacing(true);
+    expect(store.getState().rulerDrawing).toBe(false);
+    expect(store.getState().floodlightPlacing).toBe(true);
+
+    store.getState().setFloodlightAimingId('f1');
+    expect(store.getState().floodlightPlacing).toBe(false);
+    expect(store.getState().floodlightAimingId).toBe('f1');
+
+    store.getState().setRulerDrawing(true);
+    expect(store.getState().floodlightAimingId).toBeNull();
+    expect(store.getState().floodlightPlacing).toBe(false);
+    expect(store.getState().rulerDrawing).toBe(true);
+  });
+
+  it('끄는 호출은 다른 모드를 건드리지 않는다', () => {
+    store.getState().setRulerDrawing(true);
+    store.getState().setFloodlightPlacing(false);
+    store.getState().setFloodlightAimingId(null);
+    expect(store.getState().rulerDrawing).toBe(true);
+  });
+
+  it('다른 필드를 건드리지 않는다', () => {
+    store.getState().toggleSnap();
+    store.getState().setFloodlightPlacing(true);
     const s = store.getState();
     expect(s.snapEnabled).toBe(true);
     expect(s.showGrid).toBe(false);

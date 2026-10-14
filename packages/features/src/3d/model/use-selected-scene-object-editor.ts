@@ -3,6 +3,7 @@ import {
   parseMeshId,
   type ModelStatusTags,
   type RigDefinition,
+  type SavedFloodlightInfo,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedModelZone,
@@ -41,6 +42,25 @@ function withoutScale(ruler: SavedRulerInfo): SavedRulerInfo {
   return rest;
 }
 
+/**
+ * 조명(투광등)에는 rotation·scale 이 없다 — 방향은 조준 오프셋(aim)이 정한다.
+ * 공통 transform 경로가 실어 온 두 필드를 떼어 낸다.
+ */
+function withoutRotationScale(light: SavedFloodlightInfo): SavedFloodlightInfo {
+  if (!('scale' in light) && !('rotation' in light)) return light;
+  const {
+    scale: _scale,
+    rotation: _rotation,
+    ...rest
+  } = light as SavedFloodlightInfo & {
+    scale?: unknown;
+    rotation?: unknown;
+  };
+  void _scale;
+  void _rotation;
+  return rest;
+}
+
 interface UseSelectedSceneObjectEditorParams {
   sceneInfo: SavedSceneInfo | null;
   updateSceneInfo: (
@@ -66,6 +86,7 @@ interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
   selectedRuler: SavedRulerInfo | null;
+  selectedFloodlight: SavedFloodlightInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   renameObject: (id: string, name: string) => void;
   /**
@@ -118,6 +139,13 @@ interface UseSelectedSceneObjectEditorResult {
    */
   updateSelectedRuler: (
     updater: (ruler: SavedRulerInfo) => SavedRulerInfo,
+  ) => void;
+  /**
+   * 선택 조명(투광등)의 옵션(높이·조준·각도·세기) 갱신 — updateSelectedRuler
+   * 와 같은 규칙. 기구 위치는 트랜스폼 경로가 맡는다.
+   */
+  updateSelectedFloodlight: (
+    updater: (light: SavedFloodlightInfo) => SavedFloodlightInfo,
   ) => void;
   updateMultiObjectTransforms: (
     updates: Array<{
@@ -184,12 +212,13 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    // model/text/map/ruler 는 id가 전역 고유하므로 타입 분기 없이 네 컬렉션
-    // 어디에든 존재하면 선택을 유지한다.
+    // model/text/map/ruler/floodlight 는 id가 전역 고유하므로 타입 분기 없이
+    // 어느 컬렉션에든 존재하면 선택을 유지한다.
     const exists =
       sceneInfo.models.some((m) => m.id === selectedModelId) ||
       (sceneInfo.texts ?? []).some((t) => t.id === selectedModelId) ||
       (sceneInfo.rulers ?? []).some((r) => r.id === selectedModelId) ||
+      (sceneInfo.floodlights ?? []).some((f) => f.id === selectedModelId) ||
       (sceneInfo.maps ?? []).some((m) => m.id === selectedModelId);
 
     if (!exists) {
@@ -213,6 +242,9 @@ export function useSelectedSceneObjectEditor({
       ) ||
       (sceneInfo.rulers ?? []).some(
         (r) => r.locked === true && selectedIds.has(r.id),
+      ) ||
+      (sceneInfo.floodlights ?? []).some(
+        (f) => f.locked === true && selectedIds.has(f.id),
       ) ||
       (sceneInfo.maps ?? []).some(
         (m) => m.locked !== false && selectedIds.has(m.id),
@@ -247,6 +279,16 @@ export function useSelectedSceneObjectEditor({
           null)
         : null,
     [sceneInfo?.rulers, selectedModelId, selectedObjectType],
+  );
+
+  const selectedFloodlight = useMemo(
+    () =>
+      selectedObjectType === 'floodlight'
+        ? ((sceneInfo?.floodlights ?? []).find(
+            (f) => f.id === selectedModelId,
+          ) ?? null)
+        : null,
+    [sceneInfo?.floodlights, selectedModelId, selectedObjectType],
   );
 
   const selectedMap = useMemo(
@@ -305,6 +347,14 @@ export function useSelectedSceneObjectEditor({
           ...prev,
           rulers: (prev.rulers ?? []).map((ruler) =>
             ruler.id === id ? { ...ruler, name: trimmed } : ruler,
+          ),
+        };
+      }
+      if ((prev.floodlights ?? []).some((light) => light.id === id)) {
+        return {
+          ...prev,
+          floodlights: (prev.floodlights ?? []).map((light) =>
+            light.id === id ? { ...light, name: trimmed } : light,
           ),
         };
       }
@@ -436,6 +486,16 @@ export function useSelectedSceneObjectEditor({
         ),
       };
     }
+    if ((prev.floodlights ?? []).some((f) => f.id === selectedModelId)) {
+      return {
+        ...prev,
+        floodlights: (prev.floodlights ?? []).map((light) =>
+          light.id === selectedModelId
+            ? withoutRotationScale({ ...light, ...makePatch(light) })
+            : light,
+        ),
+      };
+    }
     return { ...prev, maps: (prev.maps ?? []).map(patchItem) };
   };
 
@@ -515,6 +575,27 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const updateSelectedFloodlight = (
+    updater: (light: SavedFloodlightInfo) => SavedFloodlightInfo,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+      const floodlights = prev.floodlights ?? [];
+      const current = floodlights.find((f) => f.id === selectedModelId);
+      if (!current) return prev;
+      const next = updater(current);
+      if (next === current) return prev;
+      return {
+        ...prev,
+        floodlights: floodlights.map((f) =>
+          f.id === selectedModelId ? next : f,
+        ),
+      };
+    });
+  };
+
   const updateSelectedTextColor = (color: string) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
@@ -567,6 +648,18 @@ export function useSelectedSceneObjectEditor({
             if (r.id !== id) return r;
             if (locked) return { ...r, locked: true };
             const rest = { ...r };
+            delete rest.locked;
+            return rest;
+          }),
+        };
+      }
+      if ((prev.floodlights ?? []).some((f) => f.id === id)) {
+        return {
+          ...prev,
+          floodlights: (prev.floodlights ?? []).map((f) => {
+            if (f.id !== id) return f;
+            if (locked) return { ...f, locked: true };
+            const rest = { ...f };
             delete rest.locked;
             return rest;
           }),
@@ -659,6 +752,11 @@ export function useSelectedSceneObjectEditor({
         // 눈금은 필드가 없던 씬에 빈 배열을 만들지 않는다(직렬화 diff 0).
         ...(prev.rulers && {
           rulers: prev.rulers.map((ruler) => withoutScale(applyUpdate(ruler))),
+        }),
+        ...(prev.floodlights && {
+          floodlights: prev.floodlights.map((light) =>
+            withoutRotationScale(applyUpdate(light)),
+          ),
         }),
         // 잠금 해제된 지도는 Ctrl 토글·Ctrl+A로 다중 선택에 참여한다.
         // 터치한 필드만 병합되므로 optional transform 계약도 유지된다.
@@ -852,6 +950,9 @@ export function useSelectedSceneObjectEditor({
         ...(prev.rulers && {
           rulers: prev.rulers.filter((r) => !selectedIds.has(r.id)),
         }),
+        ...(prev.floodlights && {
+          floodlights: prev.floodlights.filter((f) => !selectedIds.has(f.id)),
+        }),
         // 잠금 해제된 지도도 선택·삭제 대상이다. 지도가 없어지면 드롭
         // raycast는 y=0 평면으로 폴백한다(use-scene-drop 참고).
         maps: (prev.maps ?? []).filter((m) => !selectedIds.has(m.id)),
@@ -865,6 +966,7 @@ export function useSelectedSceneObjectEditor({
     selectedModel,
     selectedText,
     selectedRuler,
+    selectedFloodlight,
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
@@ -875,6 +977,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedRuler,
+    updateSelectedFloodlight,
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     updateSelectedStatusTags,

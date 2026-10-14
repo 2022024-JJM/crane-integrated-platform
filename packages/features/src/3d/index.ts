@@ -72,6 +72,16 @@ export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
 export { SceneEnvironment } from './ui/scene-environment';
+export {
+  SceneFloodlightFixture,
+  SceneFloodlightPreview,
+} from './ui/scene-floodlight-fixture';
+export { SceneFloodlights } from './ui/scene-floodlights';
+export {
+  FLOODLIGHT_SLOT_COUNT,
+  resolveFloodlightSpot,
+} from './lib/floodlight-spot';
+export { assignFloodlightSlots } from './lib/floodlight-slots';
 export { SceneObjectBoundary } from './ui/scene-object-boundary';
 export {
   SCENE_CAMERA_CLIP,

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type {
   SavedCameraInfo,
+  SavedFloodlightInfo,
   SavedModelInfo,
   SavedRulerGuide,
   SavedRulerInfo,
   SavedSceneInfo,
 } from '@crane/domain/3d';
 import {
+  FLOODLIGHT_ANGLE_DEFAULT,
+  FLOODLIGHT_INTENSITY_DEFAULT,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
 } from '@crane/domain/3d';
@@ -1228,5 +1231,93 @@ describe('isSceneInfoEqual — 메인 뷰', () => {
         scene({ views: [view('a')], mainViewByRegion: { 'dock-2': 'a' } }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('isSceneInfoEqual — 조명(floodlights)', () => {
+  function floodlight(
+    overrides: Partial<SavedFloodlightInfo> = {},
+  ): SavedFloodlightInfo {
+    return {
+      id: 'f1',
+      name: '조명 1',
+      position: [10, 30, -20],
+      aim: [20, -30, 10],
+      ...overrides,
+    };
+  }
+
+  it('조명 추가·삭제는 다르다', () => {
+    expect(
+      isSceneInfoEqual(scene(), scene({ floodlights: [floodlight()] })),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ floodlights: [floodlight(), floodlight({ id: 'f2' })] }),
+        scene({ floodlights: [floodlight()] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('필드 없음과 빈 배열은 같은 상태다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ floodlights: [] }))).toBe(true);
+  });
+
+  it('내용이 같은 다른 객체는 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ floodlights: [floodlight()] }),
+        scene({ floodlights: [floodlight()] }),
+      ),
+    ).toBe(true);
+  });
+
+  it.each<[string, Partial<SavedFloodlightInfo>]>([
+    ['이름', { name: '조명 2' }],
+    ['위치', { position: [10, 31, -20] }],
+    ['조준', { aim: [20, -30, 11] }],
+    ['각도', { angle: 50 }],
+    ['세기', { intensity: 2 }],
+    ['잠금', { locked: true }],
+  ])('%s 변경은 dirty 로 잡힌다', (_label, change) => {
+    expect(
+      isSceneInfoEqual(
+        scene({ floodlights: [floodlight()] }),
+        scene({ floodlights: [floodlight(change)] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('기본값 명시는 필드 없음과 같은 상태다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ floodlights: [floodlight()] }),
+        scene({
+          floodlights: [
+            floodlight({
+              angle: FLOODLIGHT_ANGLE_DEFAULT,
+              intensity: FLOODLIGHT_INTENSITY_DEFAULT,
+              locked: false,
+            }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('스냅샷은 sanitize 를 거친다 — 기본값·회전·크기는 직렬화에 남지 않는다', () => {
+    const snapshot = createSceneSnapshot(
+      scene({
+        floodlights: [
+          {
+            ...floodlight({ angle: FLOODLIGHT_ANGLE_DEFAULT }),
+            rotation: [0, 90, 0],
+            scale: [1, 1, 1],
+          } as SavedFloodlightInfo,
+        ],
+      }),
+    );
+    const parsed = JSON.parse(snapshot ?? '{}');
+    expect(parsed.floodlights).toEqual([floodlight()]);
   });
 });

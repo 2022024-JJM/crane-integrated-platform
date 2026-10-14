@@ -46,6 +46,21 @@ export function createSunGlowTexture(): CanvasTexture | null {
   ]);
 }
 
+/**
+ * 투광등 기구 글로우 — 작은 난백색 핵 + 짧은 광륜. 밤에 광원 자체가 눈부시게
+ * 보이는 것이 "조명이 켜져 있다" 는 가장 강한 단서라, 슬롯 밖이라 바닥을
+ * 비추지 못하는 먼 조명도 이 스프라이트는 전부 그린다(SceneFloodlightFixture).
+ */
+export function createFloodlightGlowTexture(): CanvasTexture | null {
+  return createRadialGlowTexture(64, [
+    [0, 'rgba(255, 250, 236, 1)'],
+    [0.18, 'rgba(255, 240, 205, 0.9)'],
+    [0.4, 'rgba(255, 220, 160, 0.35)'],
+    [0.7, 'rgba(255, 205, 130, 0.08)'],
+    [1, 'rgba(255, 200, 120, 0)'],
+  ]);
+}
+
 /** 달 — 창백한 원판, 가장자리만 부드럽게. */
 export function createMoonTexture(): CanvasTexture | null {
   return createRadialGlowTexture(128, [

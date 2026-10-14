@@ -4,6 +4,7 @@ import type {
   RigDefinition,
   RigJoint,
   SavedCameraInfo,
+  SavedFloodlightInfo,
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
@@ -24,6 +25,8 @@ import {
   STATUS_TAG_ROLES,
 } from '@crane/domain/3d';
 import {
+  FLOODLIGHT_ANGLE_DEFAULT,
+  FLOODLIGHT_INTENSITY_DEFAULT,
   RULER_GUIDE_OPACITY_DEFAULT,
   RULER_GUIDE_SIDE_DEFAULT,
   RULER_SIZE_DEFAULT,
@@ -200,6 +203,27 @@ function isRulerInfoEqual(a: SavedRulerInfo, b: SavedRulerInfo): boolean {
     (a.locked ?? false) === (b.locked ?? false) &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation)
+  );
+}
+
+/**
+ * 투광등 — 각도·세기는 기본값으로 정규화해 비교한다(sanitize-floodlights 가
+ * 기본값을 생략하는 규칙과 짝).
+ */
+function isFloodlightInfoEqual(
+  a: SavedFloodlightInfo,
+  b: SavedFloodlightInfo,
+): boolean {
+  return (
+    a.id === b.id &&
+    a.name === b.name &&
+    (a.angle ?? FLOODLIGHT_ANGLE_DEFAULT) ===
+      (b.angle ?? FLOODLIGHT_ANGLE_DEFAULT) &&
+    (a.intensity ?? FLOODLIGHT_INTENSITY_DEFAULT) ===
+      (b.intensity ?? FLOODLIGHT_INTENSITY_DEFAULT) &&
+    (a.locked ?? false) === (b.locked ?? false) &&
+    isVector3TupleEqual(a.position, b.position) &&
+    isVector3TupleEqual(a.aim, b.aim)
   );
 }
 
@@ -417,6 +441,12 @@ export function isSceneInfoEqual(
   if (aRulers.length !== bRulers.length) return false;
   for (let i = 0; i < aRulers.length; i++) {
     if (!isRulerInfoEqual(aRulers[i], bRulers[i])) return false;
+  }
+  const aFloodlights = a.floodlights ?? [];
+  const bFloodlights = b.floodlights ?? [];
+  if (aFloodlights.length !== bFloodlights.length) return false;
+  for (let i = 0; i < aFloodlights.length; i++) {
+    if (!isFloodlightInfoEqual(aFloodlights[i], bFloodlights[i])) return false;
   }
   return true;
 }

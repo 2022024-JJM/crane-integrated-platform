@@ -11,7 +11,8 @@
 | 프레임 거버너(demand 루프의 틱 생산) | `packages/features/src/3d/ui/scene-frame-governor.tsx`(`SceneFrameGovernor`), 판정 `packages/features/src/3d/lib/frame-governor.ts`(테스트 대상) |
 | React 밖 프레임 요청 깔때기 | `packages/features/src/3d/model/scene-frame-request.ts`(`requestSceneFrame`, `isSceneFrameTickerActive`) |
 | 렌더 프리셋·GL 옵션·DPR·조명 적용 | `packages/features/src/3d/ui/scene-render-preset.tsx`(`SCENE_GL_OPTIONS`, `SCENE_DEFAULT_DPR`, `SceneLighting`) |
-| 낮 기준 조명값·밤 작업등·하늘 곡선 | `packages/features/src/3d/lib/sky-lighting.ts`(`SCENE_LIGHTING_BASE`, `SCENE_ENVIRONMENT_INTENSITY`, `YARD_LIGHT_*`, `FILL_LIGHT_*`, `NIGHT_*`) |
+| 낮 기준 조명값·밤 작업등·하늘 곡선 | `packages/features/src/3d/lib/sky-lighting.ts`(`SCENE_LIGHTING_BASE`, `SCENE_ENVIRONMENT_INTENSITY`, `YARD_LIGHT_*`, `FILL_LIGHT_*`, `NIGHT_*`, 밤 조명 visible 문턱 `NIGHT_LIGHT_VISIBLE_EPSILON`) |
+| 씬에 놓인 투광등(빛 슬롯·기구 글로우·SpotLight 환산·슬롯 배정) | `packages/features/src/3d/ui/scene-floodlights.tsx`(`SceneFloodlights`), `ui/scene-floodlight-fixture.tsx`(`SceneFloodlightFixture`·`SceneFloodlightPreview`), `lib/floodlight-spot.ts`(`FLOODLIGHT_SLOT_COUNT`, `resolveFloodlightSpot`), `lib/floodlight-slots.ts`(`assignFloodlightSlots`) — 둘 다 테스트 대상. 스키마·기하는 domain(`docs/agents/3d-editor.md`) |
 | 시각+위치 → 조명 스냅샷 합성 | `packages/features/src/3d/lib/solar-lighting.ts`(`KEY_LIGHT_ELEVATION_MIN`, `CELESTIAL_ANGLE_STEP`) |
 | 천문 계산 / 시간대 변환 / 씬 지역 → 현장 위경도·시간대 | `packages/domain/src/3d/lib/solar-position.ts`, `packages/core/src/lib/time-zone.ts`, `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteGeo`) |
 | 씬 시계·태양 UI 상태 | `packages/features/src/3d/model/use-scene-clock-store.ts`, `model/use-scene-sun-state.ts`, `model/scene-time-source.ts` |
@@ -83,9 +84,13 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - 현장 위치·시간대는 씬 지역(`SavedSceneInfo.siteLocation` — 에디터 배경 탭 시각 패널의 드롭다운, 미지정이면 region 기본 지역)으로 `scene-site-geo.ts` 의 `resolveSceneSiteGeo` 하나가 정한다. 지역 하나가 IANA 시간대와 그 시간대에 있는 조선소의 대표 좌표를 함께 갖는다(시간대만 바꾸면 벽시계와 하늘이 어긋난다). 표시 이름은 언어와 무관하게 시간대 이름이다(`formatSceneSiteLocation`). 씬 파일이 등록된 region 은 전부 기본 지역이 있어야 한다 — 테스트가 강제. 지역이 정해지지 않은 씬은 solar 설정이어도 manual 로 폴백하고 에디터 토글이 비활성. HUD 현장 시각·풍속도 같은 지역을 따른다.
 - 천문은 `solar-position.ts`(태양·달 방위/고도·달 위상·일출/일몰, Meeus 축약식, 의존성 0). 시간대 변환은 `time-zone.ts`(Intl 기반, 라이브러리 없음 — 폐쇄망).
 - 조명 곡선은 `sky-lighting.ts`: 고도 → 방향광 세기·색, 환경광, 하늘 배율. 낮 기준값 `SCENE_LIGHTING_BASE` 가 `SCENE_LIGHTING` 의 단일 소스, 환경맵 세기는 `SCENE_ENVIRONMENT_INTENSITY` 하나.
-- **밤은 야간 작업등이 밝힌다.** 해가 지면(`YARD_LIGHT_FADE`) 따뜻한 백색 투광등이 고정 마스트 방향(`YARD_LIGHT_AZIMUTH`/`YARD_LIGHT_ELEVATION`)에서 `YARD_LIGHT_INTENSITY_RATIO` 세기로 켜지고 환경광도 난색으로 오른다(`NIGHT_AMBIENT_INTENSITY_LIT`). 반대편(`FILL_LIGHT_*`)에 그림자 없는 보조 투광등과 위 남색·아래 난색의 반구광(`NIGHT_HEMISPHERE_INTENSITY_LIT`)이 더해져 그림자 면이 새까맣지 않다. 하늘(EXR)은 `NIGHT_SKY_INTENSITY` 로 어두워지고 그 위에 남색 틴트 돔(`NIGHT_SKY_TINT_*`, 카메라 추종 BackSide 구, EXR 있을 때만)이 덮인다. 밤 전용 요소는 낮에 전부 0 이라 한낮 화면은 수동 모드와 같다.
+- **밤의 전역광은 바닥값이고, 바닥은 씬에 놓은 투광등이 밝힌다.** 해가 지면(`YARD_LIGHT_FADE`) 따뜻한 백색 작업등이 고정 마스트 방향(`YARD_LIGHT_AZIMUTH`/`YARD_LIGHT_ELEVATION`)에서 `YARD_LIGHT_INTENSITY_RATIO` 세기로 켜지고 환경광은 난색 바닥값(`NIGHT_AMBIENT_INTENSITY_LIT`)이 된다. 반대편(`FILL_LIGHT_*`)에 그림자 없는 보조 투광등과 위 남색·아래 난색의 반구광(`NIGHT_HEMISPHERE_INTENSITY_LIT`)이 더해져 투광등이 닿지 않는 장비도 윤곽은 보인다. 조명 유무로 값을 나누지 않는다 — 조명을 놓지 않은 씬은 밤에 어둡다. 하늘(EXR)은 `NIGHT_SKY_INTENSITY` 로 어두워지고 그 위에 남색 틴트 돔(`NIGHT_SKY_TINT_*`, 카메라 추종 BackSide 구, EXR 있을 때만)이 덮인다. 밤 전용 요소는 낮에 전부 0 이라 한낮 화면은 수동 모드와 같다.
 - 방향광은 하나뿐이라 박명엔 태양·작업등 세기의 합을 세기로, 비율(`keyYardBlend`)로 방향·색을 섞어 그림자가 마스트 방향으로 돈다.
 - 작업등은 항상 켜진다(끄는 옵션이 없다). `NIGHT_*_DARK` 는 점등 전 박명의 바닥값이다. 달은 하늘 표식·위상 아이콘용이고 시계 패널에는 나오지 않는다.
+- **씬에 놓인 투광등**(`SavedSceneInfo.floodlights`, 에디터에서 놓는다 — `docs/agents/3d-editor.md`)이 밤의 바닥을 비춘다. 점등은 전역 작업등과 같은 곡선(`SkyLighting.floodlightOn` = `YARD_LIGHT_FADE` 의 점등 비율)이고, 보조 투광등이 `NIGHT_LIGHT_VISIBLE_EPSILON` 아래로 꺼지는 프레임에 함께 0 이 된다 — 슬롯·보조광의 visible 토글이 한 프레임에 모여 재컴파일이 한 번이다. `SceneLighting` 이 `publishFloodlightOn` 으로 `sceneLightingInfo.floodlightOn` 에 발행한다(manual 모드는 0 — 수동 태양은 낮).
+  - **빛은 `SceneFloodlights` 의 SpotLight 슬롯 `FLOODLIGHT_SLOT_COUNT` 개**(그림자 없음, `SceneLighting` 바로 다음에 마운트 — 같은 프레임의 점등 비율을 읽는다). 보이는 SpotLight 수는 three 프로그램 캐시 키라 바뀌는 프레임마다 전 머티리얼이 재컴파일된다(지도급 씬에서 수 초 멈춤). 그래서 슬롯 수는 점등 중에 바꾸지 않는다 — 관제·3D 플레이는 조명 수와 상한 중 작은 쪽(로드 뒤 고정), 에디터는 `reserveSlots` 로 상한을 처음부터 예약한다(`resolveFloodlightSlotCount`). 보임은 슬롯별 세기가 아니라 점등 비율 하나로 정해 빈 슬롯도 밤에는 세기 0 으로 보인다. 카메라 초점(`resolveShadowFocus`, `FLOODLIGHT_FOCUS_STEP` 격자로 양자화)에 조준점이 가까운 조명을 슬롯에 배정한다(`assignFloodlightSlots`). 낮에는 슬롯 전부 `visible=false` 라 조명 수에 들어가지 않고 점등·소등에 한 번(보조 투광등과 같은 프레임) 재컴파일된다. useFrame 안에서 invalidate 를 부르지 않는다(값은 그 프레임 렌더 전에 쓴다).
+  - 저장값 `intensity` 는 조준점 밝기 배율이다. `resolveFloodlightSpot` 이 조준 거리의 제곱을 곱해 칸델라로 바꾼다(three 조명은 물리 단위) — 마스트가 높아도 바닥 밝기가 같다. 기준 조도는 `FLOODLIGHT_AIM_IRRADIANCE`, 컷오프는 조준 거리 × `FLOODLIGHT_CUTOFF_RATIO`, 색은 전역 작업등과 같다.
+  - **기구는 `SceneFloodlightFixture`** — 글로우 스프라이트(가산, 점등 비율이 불투명도)는 슬롯과 무관하게 전부 그린다. 광원이 빛나 보이는 것이 "켜져 있다" 의 가장 강한 단서라 슬롯 밖의 먼 조명도 켜진 것으로 읽힌다. 바다 미러 패스·미니맵 캡처에서는 뺀다(`excludeFromReflection`). 관제 화면은 글로우만, 에디터는 기구 머리·기둥·선택 윤곽을 더 그린다. 바다 셰이더에는 조명 청크가 없어 투광등 빛은 물에 닿지 않는다.
 - **천체 방위는 지리 방위다.** 월드 방향으로 바꿀 때 씬 진북(`SavedSceneInfo.trueNorth`, `resolveTrueNorth`)만큼 돌린다 — `bearingToWorldAzimuth`(`packages/domain/src/3d/lib/true-north.ts`). 방향광의 태양 성분(`resolveSolarLighting` 의 `trueNorth` 옵션)과 하늘의 태양·달 표식·바다 태양, 수동 태양(`lighting.sunAzimuth` 도 지리 방위 — 패드의 북 = 진북, `SceneLighting`·미니맵 캡처가 돌린다)이 돌고, 작업등·보조 투광등 방향은 월드 기준 연출값이라 돌리지 않는다. 스냅샷의 `sun`·`moon` 방위는 지리 방위 그대로(시계 패널 표시), `keyAzimuth` 는 월드 방위다. 나침반(`docs/agents/monitoring-ui.md`)과 같은 북쪽이다.
 - 합성은 `solar-lighting.ts`: 시각+위치(+옵션) → 스냅샷. 방향광 고도 하한 `KEY_LIGHT_ELEVATION_MIN`, 방향은 `CELESTIAL_ANGLE_STEP` 격자로 양자화 — 정지 화면에서 shadow map 이 매 프레임 다시 그려지지 않는 근거.
 - 적용은 `scene-render-preset.tsx` 의 `SceneLighting`(`regionId`·`timeSource` prop — 세 캔버스가 넘긴다). useFrame 에서 초 단위로 재계산해 방향광·환경광·`scene.backgroundIntensity`·`environmentIntensity` 를 직접 쓴다. 바다는 미러 패스가 `backgroundIntensity` 가 적용된 EXR 을 그대로 반사해 배경과 같은 배율로 어두워지고, 태양 하이라이트는 `sceneLightingInfo.sunDirection/sunColor/sunIntensity` 를 따른다 — `SceneLighting` 이 manual·solar 두 모드 모두 `publishSunLight` 로 쓴다(solar 는 고도 클램프 없는 진짜 태양 방향·`sky.sunColor`·`sky.sunIntensity`, manual 은 수동 태양·백색·기준 세기). 하늘의 태양 글로우·달 표식은 카메라 추종 스프라이트로 EXR 배경이 있을 때만이며, 틴트 돔과 함께 `excludeFromReflection` 으로 바다 반사에서 뺀다. 모드를 떠나면 `resetToManualLook`. 태양 방향·색·세기(두 모드)는 `model/scene-lighting-info.ts` 의 mutable `sceneLightingInfo` 로 내보낸다(바다가 읽는다). 미니맵 캡처는 조명 상태를 읽지 않고 캡처 순간만 수동 모드 기준 조명(`applyCanonicalCaptureLighting`, 키 라이트는 `SCENE_KEY_LIGHT_NAME` 으로 찾는다)으로 바꾼다(`docs/agents/monitoring-ui.md`).
@@ -138,7 +143,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - `ocean-water.ts` 에 `gl_FragDepth`(logdepthbuf 청크)를 다시 넣거나 depthTest 를 켜지 않는다 — early stencil test 가 꺼져 절감이 사라진다.
 - **바다 반사에서 빼야 하는 객체(대형 객체, 메인 패스에서 이미 물 픽셀을 덮는 것)는 `OceanWater` 의 `excludedObjects`/`excludeFromReflection` 으로 뺀다.** 미러 카메라 `layers` 는 쓰지 않는다.
 - **직교 카메라로 씬 전체를 RT 에 그리는 새 경로는 반사 제외 객체를 숨기고, `OceanWater` 는 `applyCanonicalWaterUniforms` 로 반사 0 을 준 채 보이게 두며, 시각과 무관해야 하면 `applyCanonicalCaptureLighting` 으로 조명을 수동 모드 기준값으로 바꾼다(renderer `shadowMap` 플래그도 함께 끈다).** 직교 투영에선 미러 패스가 돌지 않아 반사 RT 에 낡은 원근 프레임이 남고, equirect 배경도 보이지 않으며(바다 영역은 물 원판이 덮는다), 틴트 돔은 카메라를 감싸 전체를 틴트한다. RT 는 Float 로 두고 readback 에 three 와 동일한 ACES(`acesFilmicToneMap`)를 건다(미니맵 캡처가 선례 — `docs/agents/monitoring-ui.md`).
-- **`sceneLightingInfo.sun*` 은 `SceneLighting` 만 쓴다(`publishSunLight`).** 다른 곳에서 쓰면 프레임마다 서로 되돌린다.
+- **`sceneLightingInfo.sun*`·`floodlightOn` 은 `SceneLighting` 만 쓴다(`publishSunLight`·`publishFloodlightOn`).** 다른 곳에서 쓰면 프레임마다 서로 되돌린다. 읽는 쪽(`SceneWater`·`SceneFloodlights`·`SceneFloodlightFixture`)은 `SceneLighting` 뒤에 마운트한다.
+- **씬에 투광등 빛을 더하는 경로는 `SceneFloodlights` 의 슬롯 하나다.** 조명마다 SpotLight 를 따로 마운트하지 않는다 — 조명 수가 곧 셰이더 조명 수가 되어 수십 개 씬에서 픽셀당 비용이 그만큼 늘고 추가·삭제마다 전 머티리얼이 재컴파일된다. 슬롯에는 그림자를 주지 않는다(shadow map 은 키 방향광 하나). 점등 중에 슬롯 수를 바꾸지 않는다 — 조명을 놓고 지우는 캔버스는 `reserveSlots` 를 켠다.
 - **바다에 씬을 비출지는 `resolveSeaMirror(sceneInfo)` 하나로 판정하고, 세 캔버스가 그 값을 `SceneEnvironment` 의 `seaMirror` 로 넘긴다.** 끈 씬도 미러 패스는 돈다 — 숨김은 `selectReflectionHidden` 이 고른 객체의 `visible` 토글 하나다.
 - **바다 유무는 `resolveSeaVisible(sceneInfo)` 하나로 판정한다.** 씬의 배경(`environment`)·EXR URL 로 바다를 유추하는 코드를 만들지 않는다.
 - **지도가 주변 지형인지는 씬 지도의 `role` 로 본다(`isContextMap`).** 그림자 제외·Lambert·바다 반사 제외가 전부 이 판정 하나를 쓴다. 파일 이름이나 자산 라이브러리로 묻지 않는다 — 런타임은 라이브러리를 읽지 않는다.
@@ -170,6 +176,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **EXR 을 시선 방향으로 샘플링하는 자체 바다 셰이더** — 하늘 사진 톤은 유지되지만 크레인·야드가 물에 비치지 않는다. 미러 반사 포크로 바꿨다.
 - **GroundedSkybox(EXR 하반구를 바닥 평면에 투영)** — EXR 의 바다는 시점 의존 프레넬 그라데이션이라 월드 한 점에 고정하면 어두운 점이 박히고 밝은 수평선이 방사형으로 늘어지며, 돔 밖으로 나가면 구멍이 난다.
 - **수면 아래를 프레임버퍼 복사로 블러하는 오버레이** — alpha:false 프레임버퍼·텍스처 포맷 호환에 취약해 선체가 검게 덮였다. 모델·지도 셰이더 패치(`sea-submersion.ts`)로 대신한다.
+- 조명 유무로 밤 전역광을 나누기(투광등 있는 씬만 바닥값) — 첫 조명을 놓거나 마지막을 지울 때 밤 전체 밝기가 점프한다. 밤 전역광은 항상 바닥값이다.
+- 투광등 SpotLight 슬롯을 조명 수만큼 늘리기(에디터) — 조명을 놓을 때마다 보이는 조명 수가 바뀌어 전 머티리얼이 재컴파일되고 화면이 멈춘다. 에디터는 상한을 예약한다.
 
 ## 미룬 것
 
@@ -178,4 +186,5 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - 타워크레인 데시메이션/LOD 확대, 지도 KTX2 전환(`docs/agents/assets-glb.md`), 바다만 애니메이션인 유휴(sea-only)를 `ANIMATING_FPS` 아래로 낮추는 거버너 단계.
 - 바다 미러 패스의 격프레임 갱신·`WATER_REFLECTION_SIZE` 축소 — 미러 패스는 머티리얼마다 RT/화면 프로그램 전환과 `updateMatrixWorld` 한 번이 더 도는 상시 비용이라 실측 뒤 부족하면 적용한다.
 - 실루엣 헐·마스크의 미러 RT 변형 프리컴파일 — `SilhouetteOutlineWarmup` 은 화면 변형만 컴파일해, 반사에 첫 선택·충돌 테두리가 나타나는 프레임에 일회성 동기 컴파일이 있다.
+- 투광등: 밤 바닥값(`YARD_LIGHT_INTENSITY_RATIO`·`NIGHT_AMBIENT_INTENSITY_LIT`·`NIGHT_HEMISPHERE_INTENSITY_LIT`)·`FLOODLIGHT_AIM_IRRADIANCE`·`FLOODLIGHT_SLOT_COUNT` 는 실측 전 값이다 — 밤 화면을 보고 맞춘다. 기구 글로우가 물에 비치는 것(지금은 미러 패스에서 뺀다), 분할 화면의 타일 카메라 기준 슬롯 배정(지금은 기본 카메라 초점), 볼류메트릭 콘, 야간 안개.
 - 바다 `time` 유니폼의 정밀도 — 예제와 같이 delta 를 무한 누적해 며칠 연속 가동하면 float32 정밀도로 파도가 거칠어진다(이전 셰이더도 같았다). 단순 wrap 은 노이즈 레이어 주기가 서로 소수라 어딘가에서 튄다 — 레이어별 uv 오프셋을 JS 에서 mod 로 계산해 넘기는 방식이 후보.

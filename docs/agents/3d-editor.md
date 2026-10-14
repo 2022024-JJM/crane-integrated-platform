@@ -25,6 +25,8 @@
 | 거리 눈금 스키마 / 방어 / 기하 / 렌더 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/sanitize-rulers.ts`, `packages/domain/src/3d/lib/ruler.ts`(테스트 대상), `packages/domain/src/3d/ui/scene-ruler.tsx` |
 | 화면을 향한 표시(모델 라벨·눈금)의 거리 축소·숨김 | `packages/domain/src/3d/lib/label-scale.ts`(테스트 대상) |
 | 거리 눈금 그리기 / 인스펙터 탭 / 편집 로직 | `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx`, `packages/widgets/src/3d/lib/ruler-editor.ts`(테스트 대상) |
+| 조명(투광등) 스키마 / 방어 / 기하 | `packages/domain/src/3d/model/floodlight-types.ts`, `packages/domain/src/3d/lib/sanitize-floodlights.ts`, `packages/domain/src/3d/lib/floodlight.ts`(테스트 대상 — 두 점 → 배치, 조준점, 콘 윤곽) |
+| 조명 배치 / 인스펙터 탭 / 편집 로직 | `packages/widgets/src/3d/ui/use-floodlight-place.ts`, `packages/widgets/src/3d/ui/floodlight-section.tsx`, `packages/widgets/src/3d/lib/floodlight-editor.ts`(테스트 대상). 렌더(빛·기구)는 `docs/agents/rendering-perf.md` |
 | 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx`(base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
 | 수치 입력 스테퍼 | `packages/ui/src/atoms/input-number.tsx`(`stepValue` 주입) |
 
@@ -133,7 +135,7 @@
 - **그리기**: 헤더의 눈금 버튼이 세션 스토어 `useSceneEditorViewStore.rulerDrawing` 을 켠다. 캔버스 루트가 클릭을 **캡처 단계**에서 받아 전파를 끊고(선택·`onPointerMissed` 가 함께 돌지 않게) 드롭과 같은 바닥 raycast(`resolveDropPosition`)로 점을 찍는다. 클릭 두 번이고, 누른 자리와 뗀 자리가 멀면 카메라 드래그로 보고 무시한다. 그리는 동안 마퀴는 쉬고, 켜는 순간 선택을 비운다. 눈금 하나를 그리거나 Esc 를 누르면 꺼진다.
 - 미리보기(`SceneRulerPreview`)는 훅 상태일 뿐 씬 데이터·레지스트리에 들어가지 않는다. 히스토리에는 추가 한 번만 남는다.
 - 새 눈금의 표시 옵션은 전부 기본값이고(`createSceneRuler`, 보조선 없음) 간격만 그린 길이에 맞춰 고른다(`pickRulerInterval`). 이름은 번역한 실제 값으로 저장한다.
-- **편집**: 표시 옵션은 인스펙터 눈금 탭(`updateSelectedRuler`), 배치는 트랜스폼 탭과 기즈모, 이름·잠금·삭제는 계층 목록이다. 선택·이름·잠금·트랜스폼·삭제는 모델·텍스트와 같은 공통 경로를 탄다.
+- **편집**: 표시 옵션은 인스펙터 눈금 탭(`updateSelectedRuler`), 배치는 트랜스폼 탭(첫 탭)과 기즈모, 이름·잠금·삭제는 계층 목록이다. 선택·이름·잠금·트랜스폼·삭제는 모델·텍스트와 같은 공통 경로를 탄다.
 - **크기(scale)는 없다.** 공통 트랜스폼 경로가 실어 온 scale 은 저장 전에 떼고, 눈금이 프라이머리일 때 크기 모드에서는 기즈모를 붙이지 않는다. 다중 선택 크기 드래그가 늘려 놓은 그룹은 렌더가 되돌린다.
 - **점과 숫자**는 DOM(drei `Html`)으로 그려 바닥 메시가 없다. 숫자는 화면을 향하고 그림자·테두리가 없다. 색과 크기는 점·글자 각각 따로 정한다. 크기는 세 단계(`RULER_SIZES`)이고 기본(`RULER_SIZE_DEFAULT`)이 ACMS 그림의 크기다. 픽셀 값은 `ruler.ts` 의 `RULER_DOT_SIZE_PX`·`RULER_TEXT_SIZE_PX`. 크기가 깨진 저장본은 눈금을 버리지 않고 기본 크기로 되돌린다.
 - **거리 축소**: 점과 숫자는 모델 라벨과 같은 규칙(`label-scale.ts`)으로 카메라가 멀어지면 줄고 같은 거리에서 사라진다. 축소의 기준점은 점의 중심(`rulerDotCenterPx`)이라 줄어도, 점 크기를 바꿔도 점이 눈금 자리를 벗어나지 않는다.
@@ -141,6 +143,16 @@
 - 숫자는 눈금마다 카메라 거리로 화면 간격을 구해 촘촘하면 건너뛴다(`rulerLabelStride`). 기준 간격은 글자 크기에 비례하고(`rulerLabelMinSpacingPx`) 거리로 줄어든 만큼 함께 줄인다. 눈금 개수는 `RULER_MAX_TICKS` 를 넘지 않게 렌더가 간격을 정수 배로 올린다(`resolveRulerInterval`).
 - 선택한 눈금은 시작점에서 끝점까지의 축선을 선택 색으로 보인다(`rulerAxisPoints`).
 - 마퀴 선택에서는 지도처럼 항상 제외한다. Ctrl 토글·전체 선택에는 참여한다. 관제 화면에서는 클릭을 받지 않는다.
+
+### 조명(투광등)
+
+바닥을 두 번 찍어 놓는 씬 객체다(`SavedSceneInfo.floodlights`, `SavedFloodlightInfo`). 첫 점 위로 마스트 높이(`FLOODLIGHT_HEIGHT_DEFAULT_M`, 씬 unit 으로 환산)만큼 올린 자리가 기구, 두 번째 점이 비추는 자리다. 밤에만 켜진다 — 빛·글로우·전역 밤 조명과의 관계는 `docs/agents/rendering-perf.md` 의 "씬에 놓인 투광등".
+
+- **데이터**: 기구 위치 `position` 과 기구 → 조준점 **오프셋** `aim`(월드 축). 회전·크기는 없다 — 방향은 `aim`, 크기는 콘 반각 `angle` 이 정한다. 기구를 옮기면(기즈모·인스펙터·다중 선택) 오프셋이 따라가 빛 웅덩이가 함께 움직인다. `angle`·`intensity`(기준 밝기 배율)는 기본값이면 저장하지 않는다. 조준 거리가 `FLOODLIGHT_MIN_AIM_DISTANCE` 보다 짧은 항목은 sanitize 가 버린다.
+- **배치**: 헤더의 조명 버튼이 세션 스토어 `useSceneEditorViewStore.floodlightPlacing` 을 켠다. 눈금 그리기와 같은 캡처 단계 클릭·바닥 raycast·스냅(`use-floodlight-place.ts`, 클릭 판정은 `ruler-editor.ts` 의 함수를 같이 쓴다). 같은 자리를 다시 찍으면 바로 아래를 비춘다. 미리보기(`SceneFloodlightPreview`)는 첫 클릭 뒤 마우스를 따라간다. 하나 놓거나 Esc 를 누르면 꺼진다. 눈금 그리기·조명 배치·조준 다시 찍기는 서로 배타다 — 하나를 켜면 나머지는 꺼진다(스토어가 보장).
+- **편집**: 기구 위치는 트랜스폼 탭(위치만)·이동 기즈모. 회전·크기 모드에서는 기즈모를 붙이지 않는다(눈금의 크기 모드와 같은 규칙). 인스펙터는 트랜스폼 탭이 먼저고, 조명 탭(`floodlight-section.tsx`)은 높이(조준점은 그대로 두고 기구만 오르내린다)·콘 각도·세기·조준점 월드 X/Z, 그리고 "조준점 다시 찍기"(`floodlightAimingId` — 켜진 동안 그 조명의 콘·조준선이 마우스를 따라가고(`aimHover`) 바닥 클릭 한 번이 조준점, 선택이 바뀌면 꺼진다. 안내 문구는 선택 컨텍스트 바 위에 뜬다). 값 갱신은 `floodlight-editor.ts` 의 `withFloodlight*` 로, 같은 값이면 같은 참조다. 이름·잠금·삭제는 계층 목록(아이콘 전구), 복제는 모델·텍스트와 같은 경로다.
+- **표시**: 에디터는 기구 머리(클릭 대상)·바닥까지의 기둥 선을 항상 그리고, 선택하면 조준선·콘 윤곽(`floodlightConeOutline`)을 선택 색으로 더한다. 밤 확인은 배경 탭의 시각 슬라이더로 한다 — 별도 미리보기 토글은 없다. 조명 탭 아래에 밤에만 켜지고 화면 중심에 가까운 동시 점등 슬롯(`FLOODLIGHT_SLOT_COUNT`) 개수만 바닥을 비춘다는 안내 한 줄이 있다.
+- 마퀴·Ctrl 토글·전체 선택에 참여한다(텍스트와 같은 규칙). 관제 화면에서는 클릭을 받지 않는다.
 
 ### 콤보박스 규약
 
@@ -171,6 +183,8 @@
 - 눈금의 점·글자 transform 은 React 가 아니라 렌더 코드가 DOM 에 직접 쓴다(`scene-ruler.tsx` 의 `writeLabelTransform`). 점의 중심을 바꾸는 옵션은 프레임을 기다리지 않고 렌더에서 바로 다시 쓴다 — 캔버스가 demand 라 다음 프레임이 바로 오지 않는다.
 - 모델 라벨과 눈금의 거리 축소·숨김 기준은 `label-scale.ts` 하나다. 한쪽만 다른 거리·배율을 쓰지 않는다.
 - 눈금 옵션을 고치는 함수는 값이 같으면 같은 참조를 돌려준다(`ruler-editor.ts` 의 `withRuler*`). 새 옵션도 같은 규칙으로 만든다 — 아니면 히스토리·dirty 가 오염된다.
+- `SavedFloodlightInfo` 에 필드를 추가하면 `sanitize-floodlights.ts` 와 `scene-snapshot.ts` 의 `isFloodlightInfoEqual` 을 함께 고친다. 기본값(콘 각도·세기 배율)은 저장하지 않는다. 조명의 방향은 `aim` 오프셋 하나다 — `rotation`·`scale` 을 저장하지 않고, 공통 transform 경로가 실어 온 둘은 `use-selected-scene-object-editor.ts` 가 뗀다.
+- 캔버스 클릭으로 놓는 모드(눈금 그리기·조명 배치·조준 다시 찍기)는 `useSceneEditorViewStore` 에 두고 서로 배타로 유지한다. 두 모드가 같은 클릭을 받으면 객체가 두 개 생긴다.
 - 눈금 보조선은 `renderOrder ≥ 0.5` 로 둔다(바다 위 오버레이 규칙, `docs/agents/rendering-perf.md`).
 
 ## 하지 않기로 한 것
@@ -195,3 +209,4 @@
 
 - 눈금: 끝점을 끌어서 길이 바꾸기, 복제, 지형 굴곡을 따라 붙이기, m 외 단위 환산.
 - 눈금은 미니맵 재캡처 조건에 없다 — 보조선은 캡처 시점의 것만 미니맵 배경에 찍힌다.
+- 조명: 조준점 핸들을 끌어서 옮기기(지금은 "조준점 다시 찍기" 클릭 한 번), 크레인 거더 아래처럼 모델 노드에 붙어 함께 움직이는 조명(영역처럼 모델 밑에 로컬 좌표로 두는 것이 후보), 색온도, 마스트 하나에 헤드 여러 개.

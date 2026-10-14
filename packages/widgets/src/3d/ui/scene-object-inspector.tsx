@@ -2,6 +2,7 @@ import {
   Bone,
   Camera,
   Eye,
+  Lightbulb,
   Palette,
   Radius,
   Ruler,
@@ -14,11 +15,16 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   type RigDefinition,
+  type SavedFloodlightInfo,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedRulerInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
+import {
+  FloodlightSection,
+  type FloodlightUpdater,
+} from './floodlight-section';
 import { RiggingSection, type RigUpdater } from './rigging-section';
 import { RulerSection, type RulerUpdater } from './ruler-section';
 import {
@@ -67,9 +73,10 @@ type InspectorTabKey =
   | 'textContent'
   | 'textColor'
   | 'ruler'
+  | 'floodlight'
   | 'camera';
 
-type InspectorObjectType = 'model' | 'text' | 'map' | 'ruler';
+type InspectorObjectType = 'model' | 'text' | 'map' | 'ruler' | 'floodlight';
 
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
@@ -80,6 +87,7 @@ const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   textContent: Type,
   textColor: Palette,
   ruler: Ruler,
+  floodlight: Lightbulb,
   camera: Camera,
 };
 
@@ -92,6 +100,7 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   textContent: 'monitoring:inspector.textContent',
   textColor: 'monitoring:inspector.textColor',
   ruler: 'monitoring:inspector.ruler.title',
+  floodlight: 'monitoring:inspector.floodlight.title',
   camera: 'monitoring:inspector.camera',
 };
 
@@ -99,7 +108,9 @@ const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
   model: ['transform', 'display', 'zones', 'tagMapping', 'rigging'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform', 'camera'],
-  ruler: ['ruler', 'transform'],
+  // 눈금·조명은 배치(트랜스폼)가 먼저, 고유 속성 탭이 다음이다.
+  ruler: ['transform', 'ruler'],
+  floodlight: ['transform', 'floodlight'],
 };
 
 function getTabsForType(
@@ -147,6 +158,14 @@ interface SceneObjectInspectorProps {
   /** 거리 눈금 선택 — 눈금 탭(표시 옵션)과 트랜스폼 탭(위치·회전). */
   selectedRuler?: SavedRulerInfo | null;
   onRulerChange?: (updater: RulerUpdater) => void;
+  /** 조명(투광등) 선택 — 조명 탭(높이·조준·각도·세기)과 트랜스폼 탭(위치). */
+  selectedFloodlight?: SavedFloodlightInfo | null;
+  onFloodlightChange?: (updater: FloodlightUpdater) => void;
+  /** 조준점 다시 찍기 모드가 선택 조명에 켜져 있는지와 토글. */
+  floodlightAiming?: boolean;
+  onFloodlightToggleAiming?: () => void;
+  /** 동시 점등 슬롯 수 — 조명 탭 안내 문구에 들어간다. */
+  floodlightSlotCount?: number;
   /**
    * 모델 안쪽 노드 선택. 노드는 읽기 전용이라 편집 섹션 없이 안내 문구만
    * 보이고, 바운딩 박스는 캔버스가 그린다.
@@ -221,8 +240,10 @@ interface TransformSectionProps {
     value: number,
     options?: { uniformScale?: boolean },
   ) => void;
-  /** 크기 그룹을 숨긴다 — 크기가 없는 객체(눈금). */
+  /** 크기 그룹을 숨긴다 — 크기가 없는 객체(눈금·조명). */
   hideScale?: boolean;
+  /** 회전 그룹을 숨긴다 — 방향을 조준점이 정하는 객체(조명). */
+  hideRotation?: boolean;
   t: (key: string) => string;
 }
 
@@ -232,6 +253,7 @@ function TransformSection({
   scale,
   onTransformChange,
   hideScale = false,
+  hideRotation = false,
   t,
 }: TransformSectionProps) {
   // 드래그 중에는 sceneInfo write가 끊긴 상태이므로 props로 받은 값이 멈춘다.
@@ -275,16 +297,18 @@ function TransformSection({
             }}
           />
         </TransformGroup>
-        <TransformGroup title={t('monitoring:inspector.rotation')}>
-          <RotationController
-            vec={displayRotation}
-            step={stepFor('rotation')}
-            stepValue={stepValue}
-            onChange={(axis, value) => {
-              onTransformChange('rotation', axis, value);
-            }}
-          />
-        </TransformGroup>
+        {hideRotation ? null : (
+          <TransformGroup title={t('monitoring:inspector.rotation')}>
+            <RotationController
+              vec={displayRotation}
+              step={stepFor('rotation')}
+              stepValue={stepValue}
+              onChange={(axis, value) => {
+                onTransformChange('rotation', axis, value);
+              }}
+            />
+          </TransformGroup>
+        )}
         {hideScale ? null : (
           <TransformGroup
             title={t('monitoring:inspector.scale')}
@@ -579,6 +603,62 @@ function RulerInspectorContent({
   );
 }
 
+const FLOODLIGHT_DISPLAY_ROTATION: Vector3Tuple = [0, 0, 0];
+
+function FloodlightInspectorContent({
+  selectedFloodlight,
+  activeTab,
+  onFloodlightChange,
+  aiming,
+  onToggleAiming,
+  slotCount,
+  onTransformChange,
+  metersPerUnit,
+  t,
+}: {
+  selectedFloodlight: SavedFloodlightInfo;
+  activeTab: InspectorTabKey;
+  onFloodlightChange?: (updater: FloodlightUpdater) => void;
+  aiming: boolean;
+  onToggleAiming?: () => void;
+  slotCount: number;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+    options?: { uniformScale?: boolean },
+  ) => void;
+  metersPerUnit?: number;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  if (activeTab === 'transform') {
+    // 조명은 위치만 — 방향은 조준점, 크기는 콘 각도가 정한다.
+    return (
+      <TransformSection
+        position={selectedFloodlight.position}
+        rotation={FLOODLIGHT_DISPLAY_ROTATION}
+        scale={RULER_DISPLAY_SCALE}
+        hideScale
+        hideRotation
+        onTransformChange={onTransformChange}
+        t={t}
+      />
+    );
+  }
+  if (!onFloodlightChange) return null;
+  return (
+    <FloodlightSection
+      light={selectedFloodlight}
+      onChange={onFloodlightChange}
+      metersPerUnit={metersPerUnit}
+      aiming={aiming}
+      onToggleAiming={onToggleAiming}
+      slotCount={slotCount}
+      t={t}
+    />
+  );
+}
+
 /**
  * 지도 인스펙터 — transform 과 카메라 탭.
  *
@@ -696,6 +776,11 @@ export function SceneObjectInspector({
   selectedText,
   selectedRuler = null,
   onRulerChange,
+  selectedFloodlight = null,
+  onFloodlightChange,
+  floodlightAiming = false,
+  onFloodlightToggleAiming,
+  floodlightSlotCount = 0,
   selectedMesh,
   selectedMap = null,
   multiSelectCount = 0,
@@ -720,8 +805,8 @@ export function SceneObjectInspector({
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  // 분기 순서 multi > mesh > model > text > ruler > map. 노드(mesh)는 편집
-  // 탭이 없어 타입 null 로 두고 아래에서 안내 문구만 그린다.
+  // 분기 순서 multi > mesh > model > text > ruler > floodlight > map. 노드
+  // (mesh)는 편집 탭이 없어 타입 null 로 두고 아래에서 안내 문구만 그린다.
   const selectedType: InspectorObjectType | null =
     multiSelectCount > 1 || selectedMesh
       ? null
@@ -731,9 +816,11 @@ export function SceneObjectInspector({
           ? 'text'
           : selectedRuler
             ? 'ruler'
-            : selectedMap
-              ? 'map'
-              : null;
+            : selectedFloodlight
+              ? 'floodlight'
+              : selectedMap
+                ? 'map'
+                : null;
 
   const tabs = selectedType
     ? getTabsForType(
@@ -814,6 +901,18 @@ export function SceneObjectInspector({
               selectedRuler={selectedRuler}
               activeTab={resolvedTab}
               onRulerChange={onRulerChange}
+              onTransformChange={onTransformChange}
+              metersPerUnit={metersPerUnit}
+              t={t}
+            />
+          ) : selectedFloodlight ? (
+            <FloodlightInspectorContent
+              selectedFloodlight={selectedFloodlight}
+              activeTab={resolvedTab}
+              onFloodlightChange={onFloodlightChange}
+              aiming={floodlightAiming}
+              onToggleAiming={onFloodlightToggleAiming}
+              slotCount={floodlightSlotCount}
               onTransformChange={onTransformChange}
               metersPerUnit={metersPerUnit}
               t={t}

@@ -6,10 +6,12 @@ import { SCENE_LIGHTING_BASE, type RgbTuple } from '../lib/sky-lighting';
  * 쓴다. useFrame 에서 쓰고 다른 useFrame 이 읽는 mutable 값이라 React 상태로
  * 두지 않는다(프레임 속도 setState 금지). 쓰는 쪽은 SceneLighting 하나뿐이다.
  *
- * 읽는 쪽은 바다(SceneWater)뿐이다: `sunDirection`/`sunColor`/`sunIntensity`
- * — 태양 하이라이트 유니폼. 튜플은 publishSunLight 가 값이 바뀔 때만 새로
- * 만드므로 읽는 쪽은 참조 비교로 변경을 감지한다. 미니맵 캡처는 기준(수동
- * 모드) 조명으로 찍어(lib/minimap-capture-lighting) 조명 상태를 읽지 않는다.
+ * 읽는 쪽은 둘이다. 바다(SceneWater)는 `sunDirection`/`sunColor`/
+ * `sunIntensity` — 태양 하이라이트 유니폼. 튜플은 publishSunLight 가 값이
+ * 바뀔 때만 새로 만드므로 읽는 쪽은 참조 비교로 변경을 감지한다. 씬에 놓인
+ * 투광등(SceneFloodlights·SceneFloodlightFixture)은 `floodlightOn` — 작업등
+ * 점등 비율로, 세기·글로우에 곱한다. 미니맵 캡처는 기준(수동 모드) 조명으로
+ * 찍어(lib/minimap-capture-lighting) 조명 상태를 읽지 않는다.
  */
 export interface SceneLightingInfo {
   /** 태양 방향(단위 벡터, 고도 클램프 없음). manual 은 수동 태양. */
@@ -18,6 +20,11 @@ export interface SceneLightingInfo {
   sunColor: RgbTuple;
   /** 태양 세기. manual 은 SCENE_LIGHTING_BASE.sunIntensity(배율 1). */
   sunIntensity: number;
+  /**
+   * 투광등 점등 비율 0(낮·manual)~1(밤). solar 모드는 sky-lighting 의
+   * `floodlightOn`, manual 모드는 항상 0 — 수동 태양은 낮이다.
+   */
+  floodlightOn: number;
 }
 
 /**
@@ -31,7 +38,24 @@ export const sceneLightingInfo: SceneLightingInfo = {
   sunDirection: [0, 1, 0],
   sunColor: [1, 1, 1],
   sunIntensity: SCENE_LIGHTING_BASE.sunIntensity,
+  floodlightOn: 0,
 };
+
+/**
+ * 투광등 점등 비율을 기록한다. 비유한 값은 0(꺼짐)으로 — 투광등은 밤의
+ * 더하기라 계산 오류로 켜지는 쪽보다 꺼지는 쪽이 안전하다.
+ *
+ * @returns 바뀌었는지.
+ */
+export function publishFloodlightOn(
+  info: SceneLightingInfo,
+  on: number,
+): boolean {
+  const next = Number.isFinite(on) ? Math.min(1, Math.max(0, on)) : 0;
+  if (info.floodlightOn === next) return false;
+  info.floodlightOn = next;
+  return true;
+}
 
 /**
  * 태양 방향·색·세기를 기록한다. 성분이 하나라도 다를 때만 **새 튜플**을

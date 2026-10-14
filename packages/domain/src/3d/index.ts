@@ -31,6 +31,29 @@ export {
   type RulerTick,
 } from './lib/ruler';
 export { sanitizeRulerFields, sanitizeRulerGuide } from './lib/sanitize-rulers';
+export { createSceneFloodlight } from './lib/create-scene-floodlight';
+export {
+  floodlightAimDistance,
+  floodlightAimPoint,
+  floodlightConeOutline,
+  floodlightConeRadius,
+  floodlightPlacementFromPoints,
+  resolveFloodlightAngle,
+  resolveFloodlightIntensity,
+  type FloodlightPlacement,
+} from './lib/floodlight';
+export { sanitizeFloodlightFields } from './lib/sanitize-floodlights';
+export {
+  FLOODLIGHT_ANGLE_DEFAULT,
+  FLOODLIGHT_ANGLE_MAX,
+  FLOODLIGHT_ANGLE_MIN,
+  FLOODLIGHT_HEIGHT_DEFAULT_M,
+  FLOODLIGHT_INTENSITY_DEFAULT,
+  FLOODLIGHT_INTENSITY_MAX,
+  FLOODLIGHT_INTENSITY_MIN,
+  FLOODLIGHT_MIN_AIM_DISTANCE,
+} from './model/floodlight-types';
+export type { SavedFloodlightInfo } from './model/floodlight-types';
 export {
   isLabelInRange,
   labelScaleAtDistance,
@@ -219,6 +242,8 @@ export {
 export {
   COLLISION_LINE_COLOR,
   COLLISION_LINE_WIDTH,
+  SELECTION_LINE_COLOR,
+  SELECTION_LINE_WIDTH,
 } from './lib/selection-style';
 export {
   capturePose,

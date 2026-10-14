@@ -4,6 +4,7 @@ import {
   SCENE_SUN_ELEVATION_MIN,
   SCENE_SUN_MODE_DEFAULT,
   SCENE_TRUE_NORTH_DEFAULT,
+  createSceneFloodlight,
   createSceneModel,
   createSceneRuler,
   createSceneText,
@@ -13,6 +14,7 @@ import {
   resolveSeaMirror,
   resolveTrueNorth,
   withSceneAssetVersion,
+  type FloodlightPlacement,
   type RulerPlacement,
   type SavedCameraInfo,
   type SavedEnvironmentInfo,
@@ -50,10 +52,13 @@ interface SceneManipulationDeps {
   selectText: (id: string) => void;
   selectMap: (id: string) => void;
   selectRuler: (id: string) => void;
+  selectFloodlight: (id: string) => void;
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
-  selectAll: (entries: Array<{ id: string; type: 'model' | 'text' }>) => void;
+  selectAll: (
+    entries: Array<{ id: string; type: 'model' | 'text' | 'floodlight' }>,
+  ) => void;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -64,6 +69,7 @@ export function createSceneManipulationActions({
   selectText,
   selectMap,
   selectRuler,
+  selectFloodlight,
   clearSelectedModel,
   selectedIds,
   sceneInfoRef,
@@ -155,6 +161,56 @@ export function createSceneManipulationActions({
       const { rulers: _removed, ...rest } = prev;
       void _removed;
       return next.length > 0 ? { ...rest, rulers: next } : rest;
+    });
+
+    if (selectedIds.has(id)) {
+      clearSelectedModel();
+    }
+  };
+
+  /**
+   * 투광등 추가 — 캔버스에서 두 점을 찍은 결과(placement). 각도·세기는
+   * 기본값이고 인스펙터 조명 탭에서 고친다. 곧바로 선택한다(addRuler 와 같은
+   * 규약). 이름은 호출자가 번역해 넘긴다("조명 1").
+   */
+  const addFloodlight = (placement: FloodlightPlacement, name: string) => {
+    const nextLight = createSceneFloodlight({ placement, name });
+
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        floodlights: [...(prev.floodlights ?? []), nextLight],
+      };
+    });
+
+    selectFloodlight(nextLight.id);
+  };
+
+  const selectPlacedFloodlight = (id: string) => {
+    selectFloodlight(id);
+  };
+
+  const deletePlacedFloodlight = (id: string) => {
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const floodlights = prev.floodlights ?? [];
+      // 잠긴 조명은 삭제 불가 — deletePlacedRuler 와 같은 이중 방어.
+      if (!floodlights.some((f) => f.id === id && !f.locked)) {
+        return prev;
+      }
+
+      const next = floodlights.filter((f) => f.id !== id);
+      // 마지막 조명을 지우면 필드째 뺀다(직렬화 diff 0).
+      const { floodlights: _removed, ...rest } = prev;
+      void _removed;
+      return next.length > 0 ? { ...rest, floodlights: next } : rest;
     });
 
     if (selectedIds.has(id)) {
@@ -530,7 +586,11 @@ export function createSceneManipulationActions({
 
     const newModelDuplicates: typeof scene.models = [];
     const newTextDuplicates: NonNullable<typeof scene.texts> = [];
-    const newEntries: Array<{ id: string; type: 'model' | 'text' }> = [];
+    const newFloodlightDuplicates: NonNullable<typeof scene.floodlights> = [];
+    const newEntries: Array<{
+      id: string;
+      type: 'model' | 'text' | 'floodlight';
+    }> = [];
 
     for (const id of selectedIds) {
       const modelSource = scene.models.find((m) => m.id === id);
@@ -567,10 +627,32 @@ export function createSceneManipulationActions({
             textSource.position[2],
           ] as [number, number, number],
         });
+        continue;
+      }
+
+      // 조명은 기구 자리만 옮긴다 — 조준 오프셋이 따라가 같은 모양으로 비춘다.
+      const lightSource = (scene.floodlights ?? []).find((f) => f.id === id);
+      if (lightSource) {
+        const newId = createId();
+        newEntries.push({ id: newId, type: 'floodlight' });
+        newFloodlightDuplicates.push({
+          ...lightSource,
+          id: newId,
+          locked: undefined,
+          position: [
+            lightSource.position[0] + 2,
+            lightSource.position[1],
+            lightSource.position[2],
+          ] as [number, number, number],
+        });
       }
     }
 
-    if (newModelDuplicates.length === 0 && newTextDuplicates.length === 0)
+    if (
+      newModelDuplicates.length === 0 &&
+      newTextDuplicates.length === 0 &&
+      newFloodlightDuplicates.length === 0
+    )
       return;
 
     updateScene((prev) => {
@@ -579,6 +661,13 @@ export function createSceneManipulationActions({
         ...prev,
         models: [...prev.models, ...newModelDuplicates],
         texts: [...(prev.texts ?? []), ...newTextDuplicates],
+        // 조명이 없던 씬에 빈 배열을 만들지 않는다(직렬화 diff 0).
+        ...(newFloodlightDuplicates.length > 0 && {
+          floodlights: [
+            ...(prev.floodlights ?? []),
+            ...newFloodlightDuplicates,
+          ],
+        }),
       };
     });
 
@@ -591,6 +680,9 @@ export function createSceneManipulationActions({
     addRuler,
     selectPlacedRuler,
     deletePlacedRuler,
+    addFloodlight,
+    selectPlacedFloodlight,
+    deletePlacedFloodlight,
     addSceneMap,
     updateSceneAsset,
     selectPlacedMap,

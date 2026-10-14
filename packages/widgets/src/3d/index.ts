@@ -17,3 +17,12 @@ export {
   getPlacedObjectItems,
   type PlacedObjectItem,
 } from './ui/placed-object-items';
+export {
+  floodlightHeightUnits,
+  floodlightUnitsToMeters,
+  withFloodlightAimAxisMeters,
+  withFloodlightAimPoint,
+  withFloodlightAngle,
+  withFloodlightHeightMeters,
+  withFloodlightIntensity,
+} from './lib/floodlight-editor';

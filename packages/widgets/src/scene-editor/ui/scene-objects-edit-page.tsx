@@ -1,4 +1,5 @@
 import {
+  type FloodlightPlacement,
   type RulerPlacement,
   type SavedCameraInfo,
   type SavedEnvironmentInfo,
@@ -18,6 +19,7 @@ import {
   resolveTrueNorth,
 } from '@crane/domain/3d';
 import {
+  FLOODLIGHT_SLOT_COUNT,
   SceneCompass,
   SceneLoadingOverlay,
   SceneViewBar,
@@ -72,6 +74,7 @@ import {
   PaletteViewSection,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
+  withFloodlightAimPoint,
   type SceneEditorCameraActions,
 } from '@crane/widgets/3d';
 
@@ -194,6 +197,18 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const setRulerDrawing = useSceneEditorViewStore(
     (state) => state.setRulerDrawing,
   );
+  const floodlightPlacing = useSceneEditorViewStore(
+    (state) => state.floodlightPlacing,
+  );
+  const setFloodlightPlacing = useSceneEditorViewStore(
+    (state) => state.setFloodlightPlacing,
+  );
+  const floodlightAimingId = useSceneEditorViewStore(
+    (state) => state.floodlightAimingId,
+  );
+  const setFloodlightAimingId = useSceneEditorViewStore(
+    (state) => state.setFloodlightAimingId,
+  );
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -222,6 +237,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectedText,
     selectedRuler,
     updateSelectedRuler,
+    selectedFloodlight,
+    updateSelectedFloodlight,
     selectedMesh,
     updateSelectedTagMappings,
     updateSelectedStatusTags,
@@ -237,12 +254,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     addModel,
     addText,
     addRuler,
+    addFloodlight,
     selectPlacedModel,
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
     selectPlacedRuler,
     deletePlacedRuler,
+    selectPlacedFloodlight,
+    deletePlacedFloodlight,
     deletePlacedMap,
     addSceneMap,
     updateSceneAsset,
@@ -269,6 +289,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     toggleText,
     toggleMap,
     toggleRuler,
+    toggleFloodlight,
     selectAll,
     updateMultiObjectTransforms,
     startTransformInteraction,
@@ -423,6 +444,55 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   };
   useEffect(() => () => setRulerDrawing(false), [setRulerDrawing]);
 
+  // 조명 배치 — 눈금 그리기와 같은 규칙(켤 때 선택 비움, 페이지를 떠나면 끔).
+  const handleToggleFloodlightPlacing = () => {
+    if (!sceneInfo) {
+      return;
+    }
+    if (!floodlightPlacing) {
+      selectAll([]);
+    }
+    setFloodlightPlacing(!floodlightPlacing);
+  };
+  const handleFloodlightPlace = (placement: FloodlightPlacement) => {
+    addFloodlight(
+      placement,
+      t('monitoring:editor.floodlightName', {
+        index: (sceneInfo?.floodlights?.length ?? 0) + 1,
+      }),
+    );
+    setFloodlightPlacing(false);
+  };
+  // 조준점 다시 찍기 — 인스펙터 조명 탭의 버튼이 켜고, 바닥 클릭 한 번에 끝난다.
+  const handleToggleFloodlightAiming = () => {
+    if (!selectedFloodlight) return;
+    setFloodlightAimingId(
+      floodlightAimingId === selectedFloodlight.id
+        ? null
+        : selectedFloodlight.id,
+    );
+  };
+  const handleFloodlightAim = (id: string, point: [number, number, number]) => {
+    if (selectedFloodlight?.id === id) {
+      updateSelectedFloodlight((light) => withFloodlightAimPoint(light, point));
+    }
+    setFloodlightAimingId(null);
+  };
+  // 선택이 바뀌면(삭제·다른 객체 클릭) 조준 모드도 끈다 — 대상이 없는 모드가
+  // 캔버스 클릭을 계속 삼키지 않게.
+  useEffect(() => {
+    if (floodlightAimingId && selectedFloodlight?.id !== floodlightAimingId) {
+      setFloodlightAimingId(null);
+    }
+  }, [floodlightAimingId, selectedFloodlight?.id, setFloodlightAimingId]);
+  useEffect(
+    () => () => {
+      setFloodlightPlacing(false);
+      setFloodlightAimingId(null);
+    },
+    [setFloodlightAimingId, setFloodlightPlacing],
+  );
+
   const hasSelection = selectedIds.size > 0;
   const canDuplicate = useMemo(
     () => hasDuplicableSelection(selectedIds, sceneInfo),
@@ -446,16 +516,26 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      // Esc = 눈금 그리기 취소. 아래 입력 대상 검사보다 먼저 본다 — 헤더
-      // 버튼으로 켠 직후에는 포커스가 그 버튼에 있어(isEditableTarget 이
-      // button 을 거른다) 뒤에 두면 Esc 가 먹지 않는다.
-      if (
-        event.code === 'Escape' &&
-        useSceneEditorViewStore.getState().rulerDrawing
-      ) {
-        event.preventDefault();
-        setRulerDrawing(false);
-        return;
+      // Esc = 눈금 그리기·조명 배치·조준 취소. 아래 입력 대상 검사보다 먼저
+      // 본다 — 헤더 버튼으로 켠 직후에는 포커스가 그 버튼에 있어
+      // (isEditableTarget 이 button 을 거른다) 뒤에 두면 Esc 가 먹지 않는다.
+      if (event.code === 'Escape') {
+        const view = useSceneEditorViewStore.getState();
+        if (view.rulerDrawing) {
+          event.preventDefault();
+          setRulerDrawing(false);
+          return;
+        }
+        if (view.floodlightPlacing) {
+          event.preventDefault();
+          setFloodlightPlacing(false);
+          return;
+        }
+        if (view.floodlightAimingId) {
+          event.preventDefault();
+          setFloodlightAimingId(null);
+          return;
+        }
       }
 
       if (isEditableTarget(event.target)) {
@@ -518,6 +598,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           ...(currentSceneInfo.rulers ?? [])
             .filter((r) => !r.locked)
             .map((r) => ({ id: r.id, type: 'ruler' as const })),
+          ...(currentSceneInfo.floodlights ?? [])
+            .filter((f) => !f.locked)
+            .map((f) => ({ id: f.id, type: 'floodlight' as const })),
           ...(currentSceneInfo.maps ?? [])
             .filter((m) => m.locked === false)
             .map((m) => ({ id: m.id, type: 'map' as const })),
@@ -579,6 +662,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     saveCurrentScene,
     saveDisabled,
     selectAll,
+    setFloodlightAimingId,
+    setFloodlightPlacing,
     setRulerDrawing,
     setTransformMode,
     undo,
@@ -678,6 +763,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               onAddText={handleAddTextAtView}
               rulerDrawing={rulerDrawing}
               onToggleRulerDrawing={handleToggleRulerDrawing}
+              floodlightPlacing={floodlightPlacing}
+              onToggleFloodlightPlacing={handleToggleFloodlightPlacing}
               transformSpace={transformSpace}
               onTransformSpaceChange={setTransformSpace}
               transformPivot={transformPivot}
@@ -744,6 +831,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 showGrid={showGrid}
                 rulerDrawing={rulerDrawing}
                 onRulerDraw={handleRulerDraw}
+                floodlightPlacing={floodlightPlacing}
+                onFloodlightPlace={handleFloodlightPlace}
+                floodlightAimingId={floodlightAimingId}
+                onFloodlightAim={handleFloodlightAim}
                 compassRef={compassRef}
                 axisGizmoTopOffset={
                   viewBarVisible ? VIEW_BAR_GIZMO_OFFSET_PX : 0
@@ -831,9 +922,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onDeletePlacedText={deletePlacedText}
                         onSelectPlacedRuler={selectPlacedRuler}
                         onDeletePlacedRuler={deletePlacedRuler}
+                        onSelectPlacedFloodlight={selectPlacedFloodlight}
+                        onDeletePlacedFloodlight={deletePlacedFloodlight}
                         onTogglePlacedModel={toggleModel}
                         onTogglePlacedText={toggleText}
                         onTogglePlacedRuler={toggleRuler}
+                        onTogglePlacedFloodlight={toggleFloodlight}
                         onTogglePlacedMap={toggleMap}
                         onSelectPlacedMap={selectPlacedMap}
                         onDeletePlacedMap={deletePlacedMap}
@@ -853,6 +947,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         selectedText={selectedText}
                         selectedRuler={selectedRuler}
                         onRulerChange={updateSelectedRuler}
+                        selectedFloodlight={selectedFloodlight}
+                        onFloodlightChange={updateSelectedFloodlight}
+                        floodlightAiming={
+                          floodlightAimingId !== null &&
+                          floodlightAimingId === selectedFloodlight?.id
+                        }
+                        onFloodlightToggleAiming={handleToggleFloodlightAiming}
+                        floodlightSlotCount={FLOODLIGHT_SLOT_COUNT}
                         selectedMesh={selectedMesh}
                         selectedMap={selectedMap}
                         multiSelectCount={selectedIds.size}
@@ -893,9 +995,12 @@ function HierarchyPanel({
   onDeletePlacedText,
   onSelectPlacedRuler,
   onDeletePlacedRuler,
+  onSelectPlacedFloodlight,
+  onDeletePlacedFloodlight,
   onTogglePlacedModel,
   onTogglePlacedText,
   onTogglePlacedRuler,
+  onTogglePlacedFloodlight,
   onTogglePlacedMap,
   onSelectPlacedMap,
   onDeletePlacedMap,
@@ -918,9 +1023,12 @@ function HierarchyPanel({
   onDeletePlacedText: (id: string) => void;
   onSelectPlacedRuler: (id: string) => void;
   onDeletePlacedRuler: (id: string) => void;
+  onSelectPlacedFloodlight: (id: string) => void;
+  onDeletePlacedFloodlight: (id: string) => void;
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
   onTogglePlacedRuler: (id: string) => void;
+  onTogglePlacedFloodlight: (id: string) => void;
   onTogglePlacedMap: (id: string) => void;
 }) {
   const [objectSearch, setObjectSearch] = useState('');
@@ -936,6 +1044,7 @@ function HierarchyPanel({
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
           placedRulers={sceneInfo?.rulers ?? []}
+          placedFloodlights={sceneInfo?.floodlights ?? []}
           placedMaps={sceneInfo?.maps ?? []}
           objectSearch={objectSearch}
           selectedIds={selectedIds}
@@ -945,9 +1054,12 @@ function HierarchyPanel({
           onDeletePlacedText={onDeletePlacedText}
           onSelectPlacedRuler={onSelectPlacedRuler}
           onDeletePlacedRuler={onDeletePlacedRuler}
+          onSelectPlacedFloodlight={onSelectPlacedFloodlight}
+          onDeletePlacedFloodlight={onDeletePlacedFloodlight}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
           onTogglePlacedRuler={onTogglePlacedRuler}
+          onTogglePlacedFloodlight={onTogglePlacedFloodlight}
           onTogglePlacedMap={onTogglePlacedMap}
           onSelectPlacedMap={onSelectPlacedMap}
           onDeletePlacedMap={onDeletePlacedMap}
@@ -1244,7 +1356,9 @@ function ProjectPalettePanel({
             </div>
             {blockedCount > 0 ? (
               <p className="border-border text-muted-foreground shrink-0 border-t px-1 pt-2 text-[10px] leading-relaxed">
-                {t('monitoring:palette.blockedSummary', { count: blockedCount })}{' '}
+                {t('monitoring:palette.blockedSummary', {
+                  count: blockedCount,
+                })}{' '}
                 <AppLink
                   to="/asset-library?kind=model&status=draft,in-review,approved,rejected,withdrawn"
                   className="text-foreground underline underline-offset-2"

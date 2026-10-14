@@ -1,5 +1,6 @@
 import {
   humanizeModelPath,
+  type SavedFloodlightInfo,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedRulerInfo,
@@ -9,7 +10,7 @@ import {
 export interface PlacedObjectItem {
   id: string;
   displayName: string;
-  type: 'model' | 'text' | 'map' | 'ruler';
+  type: 'model' | 'text' | 'map' | 'ruler' | 'floodlight';
   /**
    * 편집 잠금 — 씬 데이터(locked)에서 파생. 잠긴 행은 목록에서 선택되지
    * 않고 삭제 버튼도 숨긴다.
@@ -21,6 +22,7 @@ interface GetPlacedObjectItemsParams {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
   placedRulers?: SavedRulerInfo[];
+  placedFloodlights?: SavedFloodlightInfo[];
   placedMaps?: SavedMapInfo[];
   objectSearch: string;
 }
@@ -29,6 +31,7 @@ export function getPlacedObjectItems({
   placedModels,
   placedTexts = [],
   placedRulers = [],
+  placedFloodlights = [],
   placedMaps = [],
   objectSearch = '',
 }: GetPlacedObjectItemsParams): PlacedObjectItem[] {
@@ -65,7 +68,22 @@ export function getPlacedObjectItems({
     locked: ruler.locked === true,
   }));
 
-  const items = [...mapItems, ...modelItems, ...textItems, ...rulerItems];
+  const floodlightItems: PlacedObjectItem[] = placedFloodlights.map(
+    (light) => ({
+      id: light.id,
+      displayName: light.name.trim() || 'Light',
+      type: 'floodlight',
+      locked: light.locked === true,
+    }),
+  );
+
+  const items = [
+    ...mapItems,
+    ...modelItems,
+    ...textItems,
+    ...rulerItems,
+    ...floodlightItems,
+  ];
 
   if (!normalizedObjectSearch) {
     return items;

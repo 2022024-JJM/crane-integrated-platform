@@ -163,6 +163,16 @@
         "right": "오른쪽"
       },
       "guideColor": "색상"
+    },
+    "floodlight": {
+      "title": "조명",
+      "height": "높이",
+      "aimPoint": "조준점",
+      "reaim": "조준점 다시 찍기",
+      "reaimActive": "바닥을 클릭하세요",
+      "angle": "콘 각도",
+      "intensity": "세기",
+      "hint": "밤에만 활성화 되며, 화면 중심에 가까운 {{slots}}개만 바닥을 비춥니다."
     }
   },
   "transform": {
@@ -357,6 +367,11 @@
     "rulerDrawStartHint": "시작점을 클릭하세요",
     "rulerDrawEndHint": "끝점을 클릭하세요",
     "rulerDrawCancel": "취소",
+    "placeFloodlight": "조명 배치",
+    "floodlightName": "조명 {{index}}",
+    "floodlightPlaceStartHint": "조명 기구를 세울 자리를 클릭하세요",
+    "floodlightPlaceAimHint": "비출 지점을 클릭하세요 (같은 자리를 다시 클릭하면 바로 아래)",
+    "floodlightAimHint": "새 조준점을 클릭하세요",
     "views": {
       "mainSection": "메인 뷰",
       "mainClear": "메인 뷰 비우기",

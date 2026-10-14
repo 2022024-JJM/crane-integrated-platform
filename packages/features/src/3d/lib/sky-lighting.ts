@@ -109,6 +109,13 @@ export interface SkyLighting {
   sunVisibility: number;
   /** 달 표식 불투명도 0~1. */
   moonVisibility: number;
+  /**
+   * 작업등 점등 비율 0(낮)~1(완전 점등, YARD_LIGHT_FADE). 씬에 놓인 투광등
+   * (SceneFloodlights)이 세기·글로우에 곱하고, 0 보다 크면 슬롯을 visible 로
+   * 켠다. 보조 투광등이 NIGHT_LIGHT_VISIBLE_EPSILON 아래로 꺼지는 순간 함께
+   * 0 이 되어 두 조명이 같은 프레임에 토글된다(재컴파일 한 번).
+   */
+  floodlightOn: number;
 }
 
 /**
@@ -138,11 +145,14 @@ export const SKY_FADE: readonly [number, number] = [-8, 1];
  */
 export const YARD_LIGHT_FADE: readonly [number, number] = [-5, 2];
 /**
- * 작업등 세기 = 낮 태양 세기 × 이 비율(3.6 → 2.16). 낮보다 어둡되 장비가
- * 환하다. 0.45 로 시작했다가 "밤이 너무 어둡다" 피드백으로 올렸다
- * (2026-09-11, 보조 투광등·반구광과 함께).
+ * 작업등 세기 = 낮 태양 세기 × 이 비율. 밤의 전역 작업등은 **바닥값**이다 —
+ * 바닥을 밝히는 것은 씬에 놓은 투광등(SceneFloodlights)이고, 전역광이
+ * 밝으면 어디나 환해 투광등 웅덩이가 보이지 않는다. 0 으로 두지 않는 이유는
+ * "달빛만 둔 밤" 이 관제용으로 너무 어두웠던 전례(docs/agents/rendering-perf.md
+ * "하지 않기로 한 것")다 — 투광등이 닿지 않는 장비도 윤곽은 보여야 한다.
+ * 조명 유무로 값을 나누지 않는다(첫 조명·마지막 조명에서 밤 밝기가 점프한다).
  */
-export const YARD_LIGHT_INTENSITY_RATIO = 0.6;
+export const YARD_LIGHT_INTENSITY_RATIO = 0.2;
 /** 작업등 색 — 따뜻한 백색 LED/메탈할라이드. */
 export const YARD_LIGHT_COLOR: RgbTuple = [1, 0.93, 0.8];
 /**
@@ -161,8 +171,15 @@ export const FILL_LIGHT_AZIMUTH = 20;
 export const FILL_LIGHT_ELEVATION = 50;
 /** 보조 투광등 세기 = 주 작업등 세기 × 이 비율. */
 export const FILL_LIGHT_INTENSITY_RATIO = 0.5;
-/** 밤 반구광 세기 — 작업등 점등 후/점등 전. */
-export const NIGHT_HEMISPHERE_INTENSITY_LIT = 0.55;
+/**
+ * 밤 전용 조명(보조 투광등·반구광·투광등 슬롯)을 visible 로 켜는 세기 문턱.
+ * three 는 보이는 조명 수를 셰이더 프로그램 키로 쓰므로 토글마다 전
+ * 머티리얼이 재컴파일된다 — SceneLighting 과 SceneFloodlights 가 같은 문턱을
+ * 써 해 질 때·뜰 때 한 프레임에 한 번만 돈다.
+ */
+export const NIGHT_LIGHT_VISIBLE_EPSILON = 0.001;
+/** 밤 반구광 세기 — 작업등 점등 후(바닥값)/점등 전. */
+export const NIGHT_HEMISPHERE_INTENSITY_LIT = 0.25;
 export const NIGHT_HEMISPHERE_INTENSITY_DARK = 0.12;
 /** 밤 반구광 색 — 위는 하늘 남색, 아래는 조명 받은 바닥의 난색 반사. */
 export const NIGHT_HEMISPHERE_SKY_COLOR: RgbTuple = [0.4, 0.5, 0.8];
@@ -184,8 +201,8 @@ export const BODY_VISIBILITY_FADE: readonly [number, number] = [-1, 2];
  * 구름 결이 비칠 만큼 남긴다.
  */
 export const NIGHT_SKY_INTENSITY = 0.12;
-/** 작업등 켜진 밤의 환경광 — 난색, 낮과 거의 같은 세기(그림자 면이 죽지 않게). */
-export const NIGHT_AMBIENT_INTENSITY_LIT = 0.85;
+/** 작업등 켜진 밤의 환경광 — 난색 바닥값(투광등 밖 장비의 윤곽만 보일 만큼). */
+export const NIGHT_AMBIENT_INTENSITY_LIT = 0.3;
 export const NIGHT_AMBIENT_COLOR_LIT: RgbTuple = [0.96, 0.92, 0.85];
 /** 작업등 점등 전 박명의 환경광 — 달·별빛 수준의 푸른 바닥값. */
 export const NIGHT_AMBIENT_INTENSITY_DARK = 0.28;
@@ -350,6 +367,8 @@ export function resolveSkyLighting(
     skyTintOpacity,
     sunVisibility,
     moonVisibility,
+    // 보조 투광등이 꺼지는 프레임에 0 — 투광등 슬롯이 같은 프레임에 토글된다.
+    floodlightOn: fillIntensity > NIGHT_LIGHT_VISIBLE_EPSILON ? yardOn : 0,
   };
 }
 

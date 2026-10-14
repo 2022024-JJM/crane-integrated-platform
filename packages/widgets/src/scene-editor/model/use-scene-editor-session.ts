@@ -1,5 +1,6 @@
 import {
   humanizeModelPath,
+  type FloodlightPlacement,
   type RulerPlacement,
   type SavedCameraInfo,
   type SavedEnvironmentInfo,
@@ -41,6 +42,9 @@ interface UseSceneEditorSessionResult {
   selectedRuler: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['selectedRuler'];
+  selectedFloodlight: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['selectedFloodlight'];
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   /** 씬 파일을 읽는 중. 성공·실패 어느 쪽으로 끝나도 false 다. */
   isLoading: boolean;
@@ -82,6 +86,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedRuler: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedRuler'];
+  updateSelectedFloodlight: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedFloodlight'];
   updateSelectedTagMappings: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTagMappings'];
@@ -117,12 +124,16 @@ interface UseSceneEditorSessionResult {
     metersPerUnit: number,
     name: string,
   ) => void;
+  /** 캔버스에서 두 점을 찍어 놓은 조명(투광등)을 씬에 추가한다. */
+  addFloodlight: (placement: FloodlightPlacement, name: string) => void;
   selectPlacedModel: (id: string) => void;
   selectPlacedText: (id: string) => void;
   selectPlacedRuler: (id: string) => void;
+  selectPlacedFloodlight: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
   deletePlacedRuler: (id: string) => void;
+  deletePlacedFloodlight: (id: string) => void;
   deletePlacedMap: (id: string) => void;
   addSceneMap: (map: ScenePlaceableMap) => void;
   /** 씬에 놓인 자산을 다른 버전으로 갱신한다(같은 자산 전부, 히스토리 1회). */
@@ -160,6 +171,7 @@ interface UseSceneEditorSessionResult {
   toggleText: (id: string) => void;
   toggleMap: (id: string) => void;
   toggleRuler: (id: string) => void;
+  toggleFloodlight: (id: string) => void;
   selectAll: (entries: Array<{ id: string; type: SelectedObjectType }>) => void;
   updateMultiObjectTransforms: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -217,6 +229,12 @@ export function useSceneEditorSession({
   const toggleRuler = useSceneObjectSelectionStore(
     (state) => state.toggleRuler,
   );
+  const selectFloodlight = useSceneObjectSelectionStore(
+    (state) => state.selectFloodlight,
+  );
+  const toggleFloodlight = useSceneObjectSelectionStore(
+    (state) => state.toggleFloodlight,
+  );
   const selectAllStore = useSceneObjectSelectionStore(
     (state) => state.selectAll,
   );
@@ -229,6 +247,7 @@ export function useSceneEditorSession({
     selectedModel,
     selectedText,
     selectedRuler,
+    selectedFloodlight,
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
@@ -239,6 +258,7 @@ export function useSceneEditorSession({
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedRuler,
+    updateSelectedFloodlight,
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     updateSelectedStatusTags,
@@ -285,6 +305,7 @@ export function useSceneEditorSession({
         selectText,
         selectMap,
         selectRuler,
+        selectFloodlight,
         clearSelectedModel,
         selectedIds,
         sceneInfoRef,
@@ -298,6 +319,7 @@ export function useSceneEditorSession({
       selectText,
       selectMap,
       selectRuler,
+      selectFloodlight,
       clearSelectedModel,
       selectedIds,
       selectAllStore,
@@ -334,11 +356,13 @@ export function useSceneEditorSession({
       selectedModel?.equipName.trim() ||
       selectedText?.content.trim() ||
       selectedRuler?.name.trim() ||
+      selectedFloodlight?.name.trim() ||
       (selectedMap ? humanizeModelPath(selectedMap.path) : null) ||
       null,
     selectedModel,
     selectedText,
     selectedRuler,
+    selectedFloodlight,
     selectedMesh,
     isLoading,
     isSaving,
@@ -359,6 +383,7 @@ export function useSceneEditorSession({
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedRuler,
+    updateSelectedFloodlight,
     updateSelectedTagMappings,
     updateSelectedStatusTags,
     updateSelectedZones,
@@ -374,12 +399,15 @@ export function useSceneEditorSession({
     addModel: manipulation.addModel,
     addText: manipulation.addText,
     addRuler: manipulation.addRuler,
+    addFloodlight: manipulation.addFloodlight,
     selectPlacedModel: manipulation.selectPlacedModel,
     selectPlacedText: manipulation.selectPlacedText,
     selectPlacedRuler: manipulation.selectPlacedRuler,
+    selectPlacedFloodlight: manipulation.selectPlacedFloodlight,
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
     deletePlacedRuler: manipulation.deletePlacedRuler,
+    deletePlacedFloodlight: manipulation.deletePlacedFloodlight,
     deletePlacedMap: manipulation.deletePlacedMap,
     addSceneMap: manipulation.addSceneMap,
     updateSceneAsset: manipulation.updateSceneAsset,
@@ -406,6 +434,7 @@ export function useSceneEditorSession({
     toggleText,
     toggleMap,
     toggleRuler,
+    toggleFloodlight,
     selectAll: selectAllStore,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,

@@ -63,6 +63,7 @@ interface UseSceneTransformParams {
   sceneModels: { id: string }[] | undefined;
   sceneTexts?: { id: string }[] | undefined;
   sceneRulers?: { id: string }[] | undefined;
+  sceneFloodlights?: { id: string }[] | undefined;
   /** 잠금 해제된 지도만 넘어온다 — 잠긴 지도는 애초에 선택될 수 없다. */
   sceneMaps?: { id: string }[] | undefined;
   modelObjectRegistryRef: React.RefObject<Map<string, Object3D>>;
@@ -101,6 +102,7 @@ export function useSceneTransform({
   sceneModels,
   sceneTexts,
   sceneRulers,
+  sceneFloodlights,
   sceneMaps,
   modelObjectRegistryRef,
   onTransformVectorChange,
@@ -594,6 +596,7 @@ export function useSceneTransform({
       (sceneModels?.some((model) => model.id === primarySelectedId) ?? false) ||
       (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
       (sceneRulers?.some((r) => r.id === primarySelectedId) ?? false) ||
+      (sceneFloodlights?.some((f) => f.id === primarySelectedId) ?? false) ||
       (sceneMaps?.some((m) => m.id === primarySelectedId) ?? false);
 
     if (!isSelectedPresent) {
@@ -616,6 +619,7 @@ export function useSceneTransform({
     sceneModels,
     sceneTexts,
     sceneRulers,
+    sceneFloodlights,
     sceneMaps,
     primarySelectedId,
     modelObjectRegistryRef,

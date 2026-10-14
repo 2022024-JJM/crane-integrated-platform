@@ -74,6 +74,7 @@ function createHarness(initial: SavedSceneInfo | null = scene()) {
     selectText: vi.fn(),
     selectMap: vi.fn(),
     selectRuler: vi.fn(),
+    selectFloodlight: vi.fn(),
     clearSelectedModel: vi.fn(),
     selectedIds,
     sceneInfoRef,

@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import {
+  FLOODLIGHT_HEIGHT_DEFAULT_M,
   GltfModel,
   RULER_DEFAULT_COLOR,
   SceneRuler,
@@ -41,6 +42,7 @@ import {
   resolveSeaVisible,
   resolveTrueNorth,
   withBaseUrl,
+  type FloodlightPlacement,
   type RulerPlacement,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -60,6 +62,9 @@ import {
   SCENE_RAYCASTER_OPTIONS,
   CAMERA_MIN_SURFACE_DISTANCE,
   SceneEnvironment,
+  SceneFloodlightFixture,
+  SceneFloodlightPreview,
+  SceneFloodlights,
   SceneFrameGovernor,
   SceneLighting,
   sceneCanvasShadows,
@@ -90,6 +95,11 @@ import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
 import { useMarqueeSelection } from './use-marquee-selection';
 import { useRulerDraw } from './use-ruler-draw';
+import {
+  useFloodlightPlace,
+  type FloodlightPlaceMode,
+} from './use-floodlight-place';
+import { withFloodlightAimPoint } from '../lib/floodlight-editor';
 import { formatRulerLength } from '../lib/ruler-editor';
 import {
   computeTopViewFallbackPose,
@@ -207,6 +217,18 @@ function SelectionAwareSceneRuler(props: SelectionAwareSceneRulerProps) {
   return <SceneRuler {...props} isSelected={isSelected} />;
 }
 
+type SelectionAwareSceneFloodlightProps = Omit<
+  React.ComponentProps<typeof SceneFloodlightFixture>,
+  'isSelected' | 'editing'
+>;
+
+function SelectionAwareSceneFloodlight(
+  props: SelectionAwareSceneFloodlightProps,
+) {
+  const isSelected = useIsObjectSelected(props.id);
+  return <SceneFloodlightFixture {...props} isSelected={isSelected} editing />;
+}
+
 /** 도구 모음의 카메라 버튼이 호출하는 액션(focusSelectedRef 와 같은 방식). */
 export interface SceneEditorCameraActions {
   /** 마지막으로 로드/저장된 카메라(없으면 편집기 기본 시점)로 복귀. */
@@ -280,6 +302,15 @@ interface SceneObjectsEditCanvasProps {
   rulerDrawing?: boolean;
   onRulerDraw?: (placement: RulerPlacement) => void;
   /**
+   * 조명 배치 모드. 켜져 있는 동안 캔버스 클릭 두 번이 기구 자리·비출 자리가
+   * 되고 선택·마퀴는 쉰다(use-floodlight-place). 결과는 onFloodlightPlace.
+   */
+  floodlightPlacing?: boolean;
+  onFloodlightPlace?: (placement: FloodlightPlacement) => void;
+  /** 조준점 다시 찍기 대상 조명 id — 다음 바닥 클릭이 onFloodlightAim 으로. */
+  floodlightAimingId?: string | null;
+  onFloodlightAim?: (id: string, point: Vector3Tuple) => void;
+  /**
    * 방위 표시(캔버스 밖 DOM, 페이지가 좌상단에 둔다) 핸들. 넘기면 Canvas 안
    * 드라이버가 카메라 자세·씬 진북으로 자세를 쓴다 — 모니터링과 같은 짝.
    */
@@ -316,6 +347,10 @@ export function SceneObjectsEditCanvas({
   showGrid,
   rulerDrawing = false,
   onRulerDraw,
+  floodlightPlacing = false,
+  onFloodlightPlace,
+  floodlightAimingId = null,
+  onFloodlightAim,
   compassRef,
   axisGizmoTopOffset = 0,
 }: SceneObjectsEditCanvasProps) {
@@ -447,6 +482,12 @@ export function SceneObjectsEditCanvas({
   const toggleRuler = useSceneObjectSelectionStore(
     (state) => state.toggleRuler,
   );
+  const selectFloodlight = useSceneObjectSelectionStore(
+    (state) => state.selectFloodlight,
+  );
+  const toggleFloodlight = useSceneObjectSelectionStore(
+    (state) => state.toggleFloodlight,
+  );
   const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
@@ -515,6 +556,7 @@ export function SceneObjectsEditCanvas({
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
     sceneRulers: sceneInfo?.rulers,
+    sceneFloodlights: sceneInfo?.floodlights,
     sceneMaps: unlockedMaps,
     modelObjectRegistryRef,
     onTransformVectorChange,
@@ -631,6 +673,22 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectRuler, toggleRuler, setSelectedObject],
   );
 
+  const handleSelectFloodlight = useCallback(
+    (id: string) => {
+      if (dragJustEndedRef.current) return;
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
+      if (isCtrl) {
+        toggleFloodlight(id);
+      } else {
+        setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+        selectFloodlight(id);
+      }
+    },
+    [dragJustEndedRef, selectFloodlight, toggleFloodlight, setSelectedObject],
+  );
+
   // 지도 선택 — 잠금 해제된 지도는 Ctrl 토글로 다중 선택에 참여한다
   // (마퀴만 제외, selectMap 주석 참고). 더블클릭 drill-in은 두지 않는다 —
   // 지형 메시는 수만 개라 자식 단위 편집이 의미가 없다.
@@ -652,22 +710,30 @@ export function SceneObjectsEditCanvas({
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
 
-  // 마퀴는 레지스트리의 id만 알고 타입을 모른다. 여기서 텍스트/모델을
+  // 마퀴는 레지스트리의 id만 알고 타입을 모른다. 여기서 텍스트/조명/모델을
   // 분류해 넘겨야 단일 텍스트 선택이 'model'로 태깅돼 존재 검증에서
   // 풀리는 일이 없다. 지도·잠금 객체는 marqueeExcludedIds로 이미 제외.
   const textIdSet = useMemo(
     () => new Set((sceneInfo?.texts ?? []).map((t) => t.id)),
     [sceneInfo?.texts],
   );
+  const floodlightIdSet = useMemo(
+    () => new Set((sceneInfo?.floodlights ?? []).map((f) => f.id)),
+    [sceneInfo?.floodlights],
+  );
   const selectAllClassified = useCallback(
     (ids: string[]) =>
       selectAll(
         ids.map((id) => ({
           id,
-          type: textIdSet.has(id) ? ('text' as const) : ('model' as const),
+          type: textIdSet.has(id)
+            ? ('text' as const)
+            : floodlightIdSet.has(id)
+              ? ('floodlight' as const)
+              : ('model' as const),
         })),
       ),
-    [selectAll, textIdSet],
+    [selectAll, textIdSet, floodlightIdSet],
   );
 
   const {
@@ -681,8 +747,12 @@ export function SceneObjectsEditCanvas({
     modelObjectRegistryRef,
     isTransformDragging,
     dragJustEndedRef,
-    // 눈금을 그리는 동안에도 마퀴를 쉰다 — 왼쪽 클릭은 점 찍기다.
-    isDraggingExternalItem: !!draggingModelCatalogItem || rulerDrawing,
+    // 눈금·조명을 놓는 동안에도 마퀴를 쉰다 — 왼쪽 클릭은 점 찍기다.
+    isDraggingExternalItem:
+      !!draggingModelCatalogItem ||
+      rulerDrawing ||
+      floodlightPlacing ||
+      floodlightAimingId !== null,
     excludedIds: marqueeExcludedIds,
     selectAll: selectAllClassified,
     clearSelectedModel,
@@ -785,9 +855,16 @@ export function SceneObjectsEditCanvas({
       models: new Set(sceneInfo?.models.map((model) => model.id) ?? []),
       texts: new Set(sceneInfo?.texts?.map((text) => text.id) ?? []),
       rulers: new Set(sceneInfo?.rulers?.map((ruler) => ruler.id) ?? []),
+      floodlights: floodlightIdSet,
       maps: new Set(sceneInfo?.maps?.map((map) => map.id) ?? []),
     }),
-    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.rulers, sceneInfo?.texts],
+    [
+      floodlightIdSet,
+      sceneInfo?.maps,
+      sceneInfo?.models,
+      sceneInfo?.rulers,
+      sceneInfo?.texts,
+    ],
   );
 
   const metersPerUnit = getSceneMetersPerUnit(regionId);
@@ -816,11 +893,54 @@ export function SceneObjectsEditCanvas({
     lastPointerDownRef: lastPointerEventRef,
     onDraw: handleRulerDraw,
   });
-  // 눈금에는 크기가 없다 — 크기 모드에서는 기즈모를 붙이지 않는다.
-  const isRulerScaleTarget =
-    transformMode === 'scale' &&
+  // 조명 배치 — 클릭 두 번(기구 자리·비출 자리) 또는 조준점 다시 찍기 한 번.
+  // 눈금과 같은 바닥 raycast·스냅·클릭 판정이다.
+  const floodlightPlaceMode: FloodlightPlaceMode = floodlightPlacing
+    ? 'place'
+    : floodlightAimingId
+      ? 'aim'
+      : null;
+  const handleFloodlightPlace = useCallback(
+    (placement: FloodlightPlacement) => onFloodlightPlace?.(placement),
+    [onFloodlightPlace],
+  );
+  const handleFloodlightAim = useCallback(
+    (point: Vector3Tuple) => {
+      if (floodlightAimingId) onFloodlightAim?.(floodlightAimingId, point);
+    },
+    [floodlightAimingId, onFloodlightAim],
+  );
+  const floodlightPlace = useFloodlightPlace({
+    mode: floodlightPlaceMode,
+    height: FLOODLIGHT_HEIGHT_DEFAULT_M / metersPerUnit,
+    resolvePoint: resolveDropPosition,
+    snapStep: snapEnabled ? snapStepFor('position', snapStep) : 0,
+    lastPointerDownRef: lastPointerEventRef,
+    onPlace: handleFloodlightPlace,
+    onAim: handleFloodlightAim,
+  });
+  // 조준점 다시 찍기 미리보기 — 조준 중인 조명의 콘·조준선이 마우스를 따라간다.
+  // 값은 클릭이 저장할 것과 같은 함수로 만든다(너무 가까운 점은 저장되지
+  // 않으니 미리보기도 현재 조준점에 머문다).
+  const aimingLight = floodlightAimingId
+    ? ((sceneInfo?.floodlights ?? []).find(
+        (light) => light.id === floodlightAimingId,
+      ) ?? null)
+    : null;
+  const aimPreview =
+    aimingLight && floodlightPlace.aimHover
+      ? withFloodlightAimPoint(aimingLight, floodlightPlace.aimHover).aim
+      : null;
+  const isPlacingByClick = rulerDrawing || floodlightPlaceMode !== null;
+
+  // 눈금에는 크기가, 조명에는 회전·크기가 없다 — 그 모드에서는 기즈모를
+  // 붙이지 않는다.
+  const isGizmoSuppressed =
     primarySelectedId !== null &&
-    sceneObjectIds.rulers.has(primarySelectedId);
+    ((transformMode === 'scale' &&
+      sceneObjectIds.rulers.has(primarySelectedId)) ||
+      (transformMode !== 'translate' &&
+        sceneObjectIds.floodlights.has(primarySelectedId)));
 
   // F 포커스 — 모델·텍스트·지도·드릴인 메시 모두 대상. 조회 순서는
   // use-scene-transform과 같다(캔버스 로컬 registry → 도메인 전역 registry;
@@ -844,6 +964,7 @@ export function SceneObjectsEditCanvas({
           !sceneObjectIds.models.has(id) &&
           !sceneObjectIds.texts.has(id) &&
           !sceneObjectIds.rulers.has(id) &&
+          !sceneObjectIds.floodlights.has(id) &&
           !sceneObjectIds.maps.has(id)
         ) {
           continue;
@@ -989,13 +1110,20 @@ export function SceneObjectsEditCanvas({
     <div
       ref={combinedRootRef}
       tabIndex={0}
-      className={`border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background) outline-none ${rulerDrawing ? 'cursor-crosshair' : ''}`}
+      className={`border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background) outline-none ${isPlacingByClick ? 'cursor-crosshair' : ''}`}
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
         lastPointerEventRef.current = event.nativeEvent;
       }}
-      onClickCapture={rulerDraw.handleClickCapture}
-      onPointerMove={rulerDraw.handlePointerMove}
+      // 두 배치 모드는 배타적이라(view store) 한쪽만 클릭을 받는다.
+      onClickCapture={(event) => {
+        rulerDraw.handleClickCapture(event);
+        floodlightPlace.handleClickCapture(event);
+      }}
+      onPointerMove={(event) => {
+        rulerDraw.handlePointerMove(event);
+        floodlightPlace.handlePointerMove(event);
+      }}
       onDragOver={handleSceneDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleSceneDrop}
@@ -1044,6 +1172,10 @@ export function SceneObjectsEditCanvas({
         {/* regionId 는 solar 모드(현장 시각 낮/밤)의 위치·시간대 키 — 뷰어와
             같은 하늘을 편집 중에도 본다. */}
         <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
+        {/* 투광등 빛 — SceneLighting 바로 다음(점등 비율을 같은 프레임에 읽는다).
+            슬롯은 상한만큼 예약한다 — 조명을 놓고 지울 때 보이는 SpotLight 수가
+            바뀌면 전 머티리얼이 재컴파일되어 화면이 멈춘다. */}
+        <SceneFloodlights floodlights={sceneInfo?.floodlights} reserveSlots />
         <RigDriver sceneInfo={sceneInfo} />
         {/* 영역 침범 검출·링 — 드라이버 바로 다음(useFrame 실행 순서 = 마운트
             순), 검출기 뒤에 링(같은 틱 상태). 충돌 검출기는 두지 않는다 —
@@ -1125,7 +1257,7 @@ export function SceneObjectsEditCanvas({
         </GizmoHelper>
         {/* 바닥 격자 — 높이·범위 규칙은 EditorGroundGrid 주석 참고. */}
         {showGrid ? <EditorGroundGrid /> : null}
-        {transformTarget && !isRulerScaleTarget ? (
+        {transformTarget && !isGizmoSuppressed ? (
           <TransformControls
             key={transformTarget.uuid}
             ref={transformControlsRef}
@@ -1285,6 +1417,31 @@ export function SceneObjectsEditCanvas({
             )}
           />
         ) : null}
+        {/* 투광등 기구 — 머리를 클릭해 선택한다. 잠긴 조명은 선택 해제. */}
+        {(sceneInfo?.floodlights ?? []).map((light) => (
+          <SelectionAwareSceneFloodlight
+            key={light.id}
+            id={light.id}
+            position={light.position}
+            aim={
+              aimPreview && light.id === floodlightAimingId
+                ? aimPreview
+                : light.aim
+            }
+            angle={light.angle}
+            onSelect={
+              light.locked ? handleClearSelection : handleSelectFloodlight
+            }
+            onObjectReady={handleModelObjectReady}
+          />
+        ))}
+        {/* 놓는 중의 미리보기 — 씬 데이터가 아니다(use-floodlight-place). */}
+        {floodlightPlace.preview ? (
+          <SceneFloodlightPreview
+            position={floodlightPlace.preview.position}
+            aim={floodlightPlace.preview.aim}
+          />
+        ) : null}
         {pendingDropPosition ? (
           <mesh
             position={[
@@ -1317,6 +1474,29 @@ export function SceneObjectsEditCanvas({
                 rulerDraw.hasStart
                   ? 'monitoring:editor.rulerDrawEndHint'
                   : 'monitoring:editor.rulerDrawStartHint',
+              )}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <Kbd>Esc</Kbd>
+            <span>{t('monitoring:editor.rulerDrawCancel')}</span>
+          </p>
+        </div>
+      ) : null}
+      {/* 조명 배치·조준 안내 — 눈금과 같은 자리·같은 취소 표기. 조준 다시
+          찍기는 조명이 선택된 채라 하단 중앙의 선택 컨텍스트 바(28px 버튼 +
+          테두리, bottom-1.5) 위로 올린다. */}
+      {floodlightPlaceMode ? (
+        <div
+          className={`pointer-events-none absolute inset-x-0 z-10 flex justify-center ${floodlightPlaceMode === 'aim' ? 'bottom-11' : 'bottom-1.5'}`}
+        >
+          <p className="bg-card/95 border-border text-foreground flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs shadow-sm">
+            <span>
+              {t(
+                floodlightPlaceMode === 'aim'
+                  ? 'monitoring:editor.floodlightAimHint'
+                  : floodlightPlace.hasStart
+                    ? 'monitoring:editor.floodlightPlaceAimHint'
+                    : 'monitoring:editor.floodlightPlaceStartHint',
               )}
             </span>
             <span className="text-muted-foreground">·</span>

@@ -1,4 +1,5 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { SavedFloodlightInfo } from './floodlight-types';
 import type { RigBinding, RigDefinition } from './rig-types';
 import type { SavedRulerInfo } from './ruler-types';
 import type { SceneSiteLocation } from './scene-site-geo';
@@ -62,6 +63,12 @@ export interface SavedSceneInfo {
    * 빠져 기존 저장본과 diff 가 없다.
    */
   rulers?: SavedRulerInfo[];
+  /**
+   * 투광등(조명) — 에디터에서 놓은 씬 객체(floodlight-types.ts). 밤에만
+   * 켜지고 모니터링·3D 플레이·에디터가 같은 목록을 읽는다. 없으면 필드
+   * 자체가 빠져 기존 저장본과 diff 가 없다.
+   */
+  floodlights?: SavedFloodlightInfo[];
   camera?: SavedCameraInfo | null;
   /**
    * 여러 region 이 한 씬 파일을 공유할 때(scene-file-map.ts) region 별

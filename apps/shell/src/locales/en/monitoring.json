@@ -163,6 +163,16 @@
         "right": "Right"
       },
       "guideColor": "Color"
+    },
+    "floodlight": {
+      "title": "Light",
+      "height": "Height",
+      "aimPoint": "Aim point",
+      "reaim": "Re-pick aim point",
+      "reaimActive": "Click the ground",
+      "angle": "Cone angle",
+      "intensity": "Intensity",
+      "hint": "Active only at night; the {{slots}} lights nearest the view center light the ground."
     }
   },
   "transform": {
@@ -357,6 +367,11 @@
     "rulerDrawStartHint": "Click the start point",
     "rulerDrawEndHint": "Click the end point",
     "rulerDrawCancel": "to cancel",
+    "placeFloodlight": "Place light",
+    "floodlightName": "Light {{index}}",
+    "floodlightPlaceStartHint": "Click where the light mast stands",
+    "floodlightPlaceAimHint": "Click the spot to light (click the same spot to aim straight down)",
+    "floodlightAimHint": "Click the new aim point",
     "views": {
       "mainSection": "Main view",
       "mainClear": "Clear main view",

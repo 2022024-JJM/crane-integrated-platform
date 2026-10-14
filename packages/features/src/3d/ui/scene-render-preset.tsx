@@ -41,6 +41,7 @@ import { sunDirectionFromAngles } from '../lib/sun-direction';
 import {
   FILL_LIGHT_AZIMUTH,
   FILL_LIGHT_ELEVATION,
+  NIGHT_LIGHT_VISIBLE_EPSILON,
   NIGHT_SKY_TINT_COLOR,
   SCENE_ENVIRONMENT_INTENSITY,
   SCENE_LIGHTING_BASE,
@@ -62,6 +63,7 @@ import {
 } from '../model/scene-time-source';
 import {
   SCENE_KEY_LIGHT_NAME,
+  publishFloodlightOn,
   publishSunLight,
   sceneLightingInfo,
 } from '../model/scene-lighting-info';
@@ -631,7 +633,6 @@ export function SceneLighting({
     lighting?.sunMode === 'solar' && regionId
       ? resolveSceneSiteGeo(regionId, sceneInfo)
       : null;
-
   const mapCorners = useMapShadowCorners(sceneInfo);
   // anchor는 시점 추종 초점의 폴백으로만, radius는 frustum 상한으로 쓴다.
   const { anchor, radius: maxRadius } = useSunAnchor(sceneInfo, mapCorners);
@@ -763,6 +764,8 @@ export function SceneLighting({
     let waterSunDir = manualSunDir;
     let waterSunColor = MANUAL_SUN_COLOR;
     let waterSunIntensity = SCENE_LIGHTING.directionalIntensity;
+    // 씬에 놓인 투광등의 점등 비율 — manual 은 낮이라 0.
+    let floodlightOn = 0;
     if (solarGeo) {
       const solar = solarRef.current;
       const timeMs = readSceneTimeMs(
@@ -827,6 +830,7 @@ export function SceneLighting({
         waterSunDir = solar.sunDir;
         waterSunColor = sky.sunColor;
         waterSunIntensity = sky.sunIntensity;
+        floodlightOn = sky.floodlightOn;
         // 세기·색·하늘 밝기 — 값이 다를 때만 쓴다(R3F 리렌더의 prop 재적용도
         // 여기서 다시 잡힌다).
         if (light.intensity !== sky.keyIntensity) {
@@ -842,10 +846,12 @@ export function SceneLighting({
         }
         // 밤 전용 조명은 세기가 0 이면 visible 도 끈다 — three 는 보이는
         // 조명만 셰이더에 넣으므로 낮에는 두 광원분 프래그먼트 비용이 빠진다.
-        // 전환(해 뜰 때·질 때·작업등 토글)마다 머티리얼이 한 번 재컴파일된다.
+        // 전환(해 뜰 때·질 때)마다 머티리얼이 한 번 재컴파일된다. 투광등 슬롯
+        // (SceneFloodlights)은 같은 문턱으로 토글된다 — sky.floodlightOn 이
+        // 보조 투광등과 같은 프레임에 0 이 되어 재컴파일이 한 번에 모인다.
         const fill = fillRef.current;
         if (fill) {
-          const on = sky.fillIntensity > 0.001;
+          const on = sky.fillIntensity > NIGHT_LIGHT_VISIBLE_EPSILON;
           if (fill.visible !== on) fill.visible = on;
           if (fill.intensity !== sky.fillIntensity) {
             fill.intensity = sky.fillIntensity;
@@ -854,7 +860,7 @@ export function SceneLighting({
         }
         const hemisphere = hemisphereRef.current;
         if (hemisphere) {
-          const on = sky.hemisphereIntensity > 0.001;
+          const on = sky.hemisphereIntensity > NIGHT_LIGHT_VISIBLE_EPSILON;
           if (hemisphere.visible !== on) hemisphere.visible = on;
           if (hemisphere.intensity !== sky.hemisphereIntensity) {
             hemisphere.intensity = sky.hemisphereIntensity;
@@ -916,6 +922,9 @@ export function SceneLighting({
       waterSunColor,
       waterSunIntensity,
     );
+    // 씬에 놓인 투광등(SceneFloodlights·기구 글로우)이 읽는 점등 비율. 같은
+    // 프레임의 뒤쪽 useFrame(마운트 순)이 읽는다.
+    publishFloodlightOn(sceneLightingInfo, floodlightOn);
 
     // 1) 초점 = 시선과 지면(y=0)의 교점(lib/scene-shadow resolveShadowFocus).
     //    수평·상향 시선이면 카메라 바로 아래(폴백은 씬 앵커가 아니라 카메라 —

@@ -195,6 +195,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts` — `docs/agents/3d-editor.md` |
+| 씬에 놓는 조명(투광등) — 스키마·배치·인스펙터 / 밤 점등·SpotLight 슬롯·기구 글로우 | 스키마 `SavedFloodlightInfo`(`packages/domain/src/3d/model/floodlight-types.ts`), 기하 `packages/domain/src/3d/lib/floodlight.ts`, 배치 `packages/widgets/src/3d/ui/use-floodlight-place.ts`, 편집 `packages/widgets/src/3d/lib/floodlight-editor.ts` — `docs/agents/3d-editor.md`; 렌더 `packages/features/src/3d/ui/{scene-floodlights,scene-floodlight-fixture}.tsx`, `lib/floodlight-{spot,slots}.ts` — `docs/agents/rendering-perf.md` |
 | 태그 맵핑 스키마·방어 / 값 버스 / 편집 UI | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/tag-mapping-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 가상 태그 정의 / 스토어·러너 / 관리 페이지 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/virtual-tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
@@ -274,6 +275,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 모델·노드를 새 경로로 움직이면 `invalidateShadows()` 를 부른다. shadow map 은 온디맨드라 빼먹으면 그림자가 안전망 주기까지 동결된다 (rendering-perf).
 - 씬을 매 프레임 바꾸는 새 경로는 `SceneFrameGovernor` 소스 목록에 넣거나 스스로 `invalidate()`/`requestSceneFrame()` 한다. 캔버스가 전부 `frameloop='demand'` 다 (rendering-perf).
 - `SceneLighting` 에는 `regionId` 를 반드시 넘긴다. 조명·하늘 밝기 기준값은 `lib/sky-lighting.ts` 상수만 고치고 다른 곳에서 같은 값을 세팅하지 않는다 (rendering-perf).
+- 투광등 빛은 `SceneFloodlights` 의 SpotLight 슬롯만 쓰고 점등 중에 슬롯 수를 바꾸지 않는다 — 조명을 놓고 지우는 캔버스는 `reserveSlots` 를 켠다. 보이는 조명 수가 셰이더 프로그램 키라 바뀌는 프레임마다 전 머티리얼이 재컴파일된다 (rendering-perf).
 - 새 GLTF 로드 경로는 `extendGltfLoaderWithKtx2` 를 걸고, 불투명 머티리얼이면 `markSceneOpaqueStencil` 을 켠다. 바다 위에 보여야 하는 불투명 오버레이는 `renderOrder ≥ 0.5` (assets-glb, rendering-perf).
 - 바다 표시 판정은 `resolveSeaVisible(sceneInfo)` 한 곳이다. 배경 유무로 바다를 유추하는 코드를 다른 곳에 두지 않는다 (rendering-perf).
 - 수면 아래 잠김 안개는 바다가 닿는 위치(바다 도달 마스크)에만 낀다. 안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않고, 마스크 유니폼은 `publishSeaReachMask` 로 값만 바꾼다 (rendering-perf).
