@@ -30,6 +30,7 @@ import {
   extendGltfLoaderWithKtx2,
   getMeshPath,
   isContextMap,
+  resolveMapShading,
   getSceneMetersPerUnit,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
@@ -1313,8 +1314,9 @@ export function SceneObjectsEditCanvas({
                 // ground 지도는 그림자를 드리운다(기본값) — GLB에 건물 포함.
                 castShadow={!contextMap}
                 receiveShadow={!contextMap}
-                // 주변 지형 Lambert — 모니터링과 같은 규칙(저작 화면 = 실제 화면).
-                shading={contextMap ? 'lambert' : 'standard'}
+                // 주변 지형 Lambert·그 외 지도 무광 — 모니터링과 같은 함수
+                // (저작 화면 = 실제 화면).
+                shading={resolveMapShading(m)}
                 // 수면 아래 지형 잠김 — 모니터링과 같은 규칙.
                 seaSubmersion={seaVisible}
                 onSelect={

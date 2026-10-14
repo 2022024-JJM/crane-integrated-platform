@@ -7,11 +7,11 @@ import type {
   EquipmentOutlineState,
 } from '@crane/core/types/status';
 import {
-  type ModelShading,
   ModelMesh,
   useClonedModel,
   useModelLabelLocalAnchor,
 } from './model-mesh';
+import type { ModelShading } from '../lib/model-shading';
 import {
   ModelLabel,
   type AlarmHighlightSeverity,
@@ -77,8 +77,8 @@ interface GltfModelProps {
   /** 그림자를 받을지. 기본 true. 컨텍스트 지형만 false — model-mesh.tsx 주석. */
   receiveShadow?: boolean;
   /**
-   * 셰이딩 등급. 기본 'standard'(PBR). 컨텍스트 지형만 'lambert' —
-   * model-mesh.tsx 의 ModelShading 주석.
+   * 셰이딩 등급. 기본 'standard'(PBR). 지도는 resolveMapShading 이 정한다
+   * (컨텍스트 지형 'lambert', 그 외 지도 'matte') — lib/model-shading.ts.
    */
   shading?: ModelShading;
   meshOverrides?: SavedMeshOverride[];

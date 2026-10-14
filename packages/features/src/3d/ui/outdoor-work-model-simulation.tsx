@@ -9,6 +9,7 @@ import {
   SceneText,
   buildLabelReadings,
   isContextMap,
+  resolveMapShading,
   getSceneMetersPerUnit,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
@@ -474,9 +475,9 @@ export function OutdoorWorkModelSimulation({
               // 구워져 있어 끄면 건물 그림자가 통째로 사라진다.
               castShadow={!contextMap}
               receiveShadow={!contextMap}
-              // 주변 지형은 PBR 대신 Lambert — 관제 대상이 아닌 수 km 도시의
-              // 픽셀 비용을 뺀다(model-mesh.tsx ModelShading). 에디터도 같은 규칙.
-              shading={contextMap ? 'lambert' : 'standard'}
+              // 주변 지형은 Lambert, 그 외 지도는 무광(태양·하늘 반사 제거) —
+              // 판정은 domain resolveMapShading 하나. 에디터도 같은 함수.
+              shading={resolveMapShading(m)}
               // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 바다가 닿지
               // 않는 곳(드라이독)은 셰이더가 마스크로 거른다.
               seaSubmersion={seaVisible}

@@ -22,6 +22,8 @@ import {
   type MeshMaterialBinding,
 } from '../lib/mesh-material-binding';
 import { toLambertMaterials } from '../lib/lambert-material';
+import { toMatteMaterials } from '../lib/matte-material';
+import type { ModelShading } from '../lib/model-shading';
 import { markSceneOpaqueStencils } from '../lib/scene-stencil';
 import { useThree } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -139,15 +141,9 @@ export interface ClonedModel {
   originalTransforms: Map<Object3D, OriginalTransform>;
 }
 
-/**
- * 머티리얼 셰이딩 등급. 'standard' = GLTF 의 PBR 그대로(기본, 야드 지도·
- * 크레인). 'lambert' = clone 시점에 PBR 을 Lambert 로 바꾼다(lib/
- * lambert-material.ts) — 관제와 무관한 컨텍스트 지형(지도의 role
- * 'context')용. 조명·낮/밤에는 똑같이 반응하고 스펙큘러·환경맵 radiance
- * 샘플링만 없어 수 km 지형의 픽셀 비용이 준다. 호출부(outdoor-work-model-
- * simulation·에디터)가 kind 로 판정한다 — 두 화면이 같아야 한다.
- */
-export type ModelShading = 'standard' | 'lambert';
+// 머티리얼 셰이딩 등급(standard·lambert·matte)과 지도의 등급 판정은
+// lib/model-shading.ts 가 소유한다 — 타입은 호환을 위해 재노출.
+export type { ModelShading };
 
 export interface ClonedModelOptions {
   shading?: ModelShading;
@@ -199,11 +195,14 @@ export function useClonedModel(
         return;
       }
 
-      // 저비용 셰이딩(컨텍스트 지형)은 바인딩을 만들기 전에 바꾼다 —
-      // 바인딩·opacity clone·바다 잠김 패치가 전부 바뀐 머티리얼 기준으로
-      // 돈다. 변환본은 원본당 하나로 캐시돼 clone 간 공유된다.
+      // 셰이딩 변환본(컨텍스트 지형 Lambert·환경 객체 무광)은 바인딩을
+      // 만들기 전에 바꿔 끼운다 — 바인딩·opacity clone·바다 잠김 패치가 전부
+      // 바뀐 머티리얼 기준으로 돈다. 변환본은 원본당 하나로 캐시돼 clone 간
+      // 공유되고, 원본(GLTF 캐시)은 그대로라 다른 캔버스는 파일대로 본다.
       if (shading === 'lambert') {
         child.material = toLambertMaterials(child.material);
+      } else if (shading === 'matte') {
+        child.material = toMatteMaterials(child.material);
       }
       // "불투명 씬 메시가 그려졌다" 스텐실 표식 — 바다 평면이 이 비트가 없는
       // 픽셀에서만 그려진다(lib/scene-stencil.ts). 원본(GLTF 캐시 공유)에

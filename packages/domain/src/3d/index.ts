@@ -263,6 +263,13 @@ export {
   sampleMapsSurfaceY,
 } from './lib/map-surface-raycast';
 export { toLambertMaterial, toLambertMaterials } from './lib/lambert-material';
+export {
+  MATTE_ROUGHNESS_MIN,
+  isMatteMaterial,
+  toMatteMaterial,
+  toMatteMaterials,
+} from './lib/matte-material';
+export { resolveMapShading, type ModelShading } from './lib/model-shading';
 export { isContextMap, resolveGroundMaps } from './lib/resolve-ground-map';
 export {
   collectCameraBoundsBox,
@@ -375,7 +382,6 @@ export type {
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
 export type { ModelLabelTitles } from './ui/model-label';
-export type { ModelShading } from './ui/model-mesh';
 export { ModelSelectionBox } from './ui/model-selection-box';
 export { ObjectSilhouetteOutline } from './ui/object-silhouette-outline';
 export { SilhouetteOutlineWarmup } from './ui/silhouette-outline-warmup';
