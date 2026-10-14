@@ -311,7 +311,9 @@
     "minimapShow": "Show minimap",
     "minimapHide": "Hide minimap",
     "minimapHint": "Press or drag to move the camera",
-    "minimapMove": "Drag to move the minimap"
+    "minimapMove": "Drag to move the minimap",
+    "controlRoomOn": "Control-room view",
+    "controlRoomOff": "Photoreal view"
   },
   "undo": "Undo"
 }

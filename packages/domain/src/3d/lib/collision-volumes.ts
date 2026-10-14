@@ -161,18 +161,111 @@ export function meshesWithinDistance(
   // maxThreshold 는 탐색 가지치기용일 뿐 결과를 걸러 주지 않는다 — 한계 밖의
   // 최근접점도 그대로 돌려주므로 거리는 직접 비교한다(정확값 포함). 가지치기가
   // `dist < maxThreshold` 라 정확값이 잘리지 않게 한 ulp 더 준다.
+  //
+  // minThreshold 도 같은 값이다 — 답은 "한계 이하인 쌍이 하나라도 있는가" 라
+  // 그런 삼각형 쌍을 처음 만나는 순간 탐색을 끝낸다. 0 으로 두면 최근접점을
+  // 정확히 찾느라 관통한 큰 메쉬 쌍(타워크레인 붐끼리)에서 수십~수백 ms 가
+  // 걸려 억제 쌍의 분리 판정이 매 틱 롱태스크를 만들었다(실측: 옥포 유휴
+  // CPU 의 절반).
   const threshold = limit + Math.max(limit, 1) * Number.EPSILON * 4;
+  // 관통한 쌍(억제 중 분리 재판정의 대부분)은 교차 판정이 첫 교차 삼각형에서
+  // 끝나 최근접점 탐색보다 훨씬 싸다 — 교차하면 당연히 한계 안이다.
+  if (ga.boundsTree.intersectsGeometry(gb, _toA)) return true;
   const hit = ga.boundsTree.closestPointToGeometry(
     gb,
     _toA,
     _hitA,
     _hitB,
-    0,
+    threshold,
     threshold,
   );
   // 1.05 - 1 = 0.050000000000000044 같은 부동소수 잡음이 경계 정확값을
   // "넘김" 으로 뒤집지 않게 상대 허용치를 둔다.
   return hit !== null && hit.distance <= limit + Math.max(limit, 1) * 1e-9;
+}
+
+/**
+ * 두 메쉬 삼각형 사이 최단 거리의 **하한** — `probe` 안에 있으면 그 거리(정확값),
+ * 밖이면 `probe` 를 돌려준다. 양쬭 BVH 가 없으면 null. 런타임이 "떨어진 쌍" 의
+ * 여유 거리(clearance)를 한 번 재어 두고, 두 메쉬의 누적 이동 한계가 그 거리를
+ * 넘기 전까지 삼각형 교차 검사를 건너뛰는 데 쓴다. maxThreshold 가 `probe` 라
+ * 멀리 있는 쌍은 가지치기만으로 빨리 끝난다.
+ */
+export function meshesClearance(
+  a: Mesh,
+  b: Mesh,
+  probe: number,
+  floor = 0,
+): number | null {
+  const ga = a.geometry as BvhGeometry;
+  const gb = b.geometry as BvhGeometry;
+  if (!ga.boundsTree || !gb.boundsTree) return null;
+  const limit = Number.isFinite(probe) && probe > 0 ? probe : 0;
+  if (limit === 0) return 0;
+  // `floor` 아래는 "거의 붙음" 이라 정확값이 필요 없다 — 그보다 가까운 쌍을
+  // 처음 만나면 탐색을 끝내고 0 을 돌려준다(관통한 큰 메쉬 쌍에서 최근접점을
+  // 끝까지 찾는 비용 회피).
+  const min = Number.isFinite(floor) && floor > 0 ? Math.min(floor, limit) : 0;
+  _toA.copy(a.matrixWorld).invert().multiply(b.matrixWorld);
+  const hit = ga.boundsTree.closestPointToGeometry(
+    gb,
+    _toA,
+    _hitA,
+    _hitB,
+    min,
+    limit,
+  );
+  if (hit === null || !Number.isFinite(hit.distance)) return limit;
+  if (hit.distance < min) return 0;
+  return Math.min(limit, Math.max(0, hit.distance));
+}
+
+/**
+ * 두 AABB 의 최근접점 쌍 — 축마다 구간이 겹치면 겹친 구간의 중점을 둘 다
+ * 쓰고, 떨어져 있으면 서로를 향한 면을 쓴다. 거리 선의 양 끝점용.
+ */
+export function closestPointsBetweenBoxes(
+  a: Box3,
+  b: Box3,
+  outA: Vector3,
+  outB: Vector3,
+): void {
+  for (const axis of ['x', 'y', 'z'] as const) {
+    const lo = Math.max(a.min[axis], b.min[axis]);
+    const hi = Math.min(a.max[axis], b.max[axis]);
+    if (lo <= hi) {
+      const mid = (lo + hi) / 2;
+      outA[axis] = mid;
+      outB[axis] = mid;
+    } else if (a.max[axis] < b.min[axis]) {
+      outA[axis] = a.max[axis];
+      outB[axis] = b.min[axis];
+    } else {
+      outA[axis] = a.min[axis];
+      outB[axis] = b.max[axis];
+    }
+  }
+}
+
+/** 두 AABB 사이의 유클리드 간격. 겹치면 0. */
+export function boxesDistance(a: Box3, b: Box3): number {
+  const dx = Math.max(0, a.min.x - b.max.x, b.min.x - a.max.x);
+  const dy = Math.max(0, a.min.y - b.max.y, b.min.y - a.max.y);
+  const dz = Math.max(0, a.min.z - b.max.z, b.min.z - a.max.z);
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+/**
+ * 메쉬 로컬 원점에서 가장 먼 정점까지의 거리(로컬 단위) — 강체 이동 한계
+ * 계산용(|Δt| + ‖ΔR‖·r). boundingSphere 중심이 원점에서 벗어나 있어도
+ * 덮도록 중심 거리 + 반지름.
+ */
+export function meshLocalReach(mesh: Mesh): number {
+  const geometry = mesh.geometry as BufferGeometry;
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+  const sphere = geometry.boundingSphere;
+  if (!sphere || !Number.isFinite(sphere.radius)) return 0;
+  return sphere.center.length() + sphere.radius;
 }
 
 /**

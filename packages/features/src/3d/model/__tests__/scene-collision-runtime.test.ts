@@ -14,6 +14,7 @@ import {
   BASELINE_SETTLE_MS,
   BVH_RETRY_MS,
   SEPARATION_MARGIN,
+  SUPPRESSED_RECHECK_MS,
 } from '../../lib/scene-collision-pairs';
 
 type BvhGeometry = BufferGeometry & { boundsTree?: MeshBVH };
@@ -56,6 +57,13 @@ function moveTo(root: Object3D, x: number) {
 
 let clockNow = 0;
 const clock = () => clockNow;
+/**
+ * 억제 쌍의 분리 재판정은 SUPPRESSED_RECHECK_MS 마다다 — 기준선(settle) 뒤
+ * 억제된 쌍을 다시 보려면 그 시각을 넘긴 now 로 tick 해야 한다. T 는 어느
+ * 기준선 억제의 재판정 시각보다도 뒤이고, 연속 판정은 R 만큼 띄운다.
+ */
+const R = SUPPRESSED_RECHECK_MS;
+const T = BASELINE_SETTLE_MS + 10 + R;
 
 function makeRuntime() {
   return new SceneCollisionRuntime(clock);
@@ -142,10 +150,11 @@ describe('SceneCollisionRuntime — 기본 흐름', () => {
     expect(rt.tick(30, 100)?.key).toBe('a|c');
     rt.suppress('a|c');
     // a 가 멀리 빠졌다가 b 에 다시 닿으면 새 hit.
+    // a|b 는 tick(20) 에 "붙음" 으로 판정돼 R 뒤에 다시 본다.
     moveTo(a.root, -10);
-    expect(rt.tick(40, 100)).toBeNull();
+    expect(rt.tick(20 + R, 100)).toBeNull();
     moveTo(a.root, 4.6);
-    expect(rt.tick(50, 100)?.key).toBe('a|b');
+    expect(rt.tick(20 + R + 10, 100)?.key).toBe('a|b');
   });
 
   it('hit 이 난 tick 에 큐에 남아 있던 다른 쌍은 다음 tick 에 검사된다', () => {
@@ -202,17 +211,17 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
 
     // margin 정확값만큼 떨어짐 → 아직 억제. (간격 = margin)
     moveTo(a.root, -0.5 - SEPARATION_MARGIN);
-    expect(rt.tick(10, 100)).toBeNull();
+    expect(rt.tick(T, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(true);
 
     // margin 보다 조금 더 → 해제.
     moveTo(a.root, -0.5 - SEPARATION_MARGIN - 0.01);
-    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.tick(T + R, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
 
     // 다시 접근 → 보고.
     moveTo(a.root, 0.2);
-    expect(rt.tick(30, 100)?.key).toBe('a|b');
+    expect(rt.tick(T + R + 10, 100)?.key).toBe('a|b');
   });
 
   it('suppress(key) 로 닫은 쌍은 재무장 뒤에도 분리 전까지 보고하지 않고, 없는 키는 no-op', () => {
@@ -233,13 +242,13 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
     expect(rt.currentPhase).toBe('scanning');
     // 조금 더 파고들어도(여전히 겹침) 보고 없음.
     moveTo(a.root, 4.7);
-    expect(rt.tick(30, 100)).toBeNull();
+    expect(rt.tick(T, 100)).toBeNull();
     // 분리 → 해제 → 재접근 시 보고.
     moveTo(a.root, 0);
-    expect(rt.tick(40, 100)).toBeNull();
+    expect(rt.tick(T + R, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
     moveTo(a.root, 4.6);
-    expect(rt.tick(50, 100)?.key).toBe('a|b');
+    expect(rt.tick(T + R + 10, 100)?.key).toBe('a|b');
   });
 
   it('모델 AABB 가 계속 겹쳐 있어도 메쉬가 떨어지면 억제가 풀리고, 다시 붙이면 새 hit', () => {
@@ -291,7 +300,7 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
     const b = modelObjectRegistry.get('b') as Object3D;
     b.position.set(1.2, 0, 1.2);
     b.updateMatrixWorld(true);
-    expect(rt.tick(10, 100)).toBeNull();
+    expect(rt.tick(T, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
   });
 
@@ -331,12 +340,149 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
     const b = modelObjectRegistry.get('b') as Object3D;
     b.position.x = 0;
     b.updateMatrixWorld(true);
-    expect(rt.tick(10, 100)).toBeNull();
+    expect(rt.tick(T, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(true);
     b.position.x = 10;
     b.updateMatrixWorld(true);
-    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.tick(T + R, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
+  });
+
+  it('억제 쌍의 분리 재판정은 SUPPRESSED_RECHECK_MS 간격이다 — 그 안에 떨어져도 다음 재판정 때 풀리고, 움직임이 없어도 때가 되면 본다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    rt.sync([model('a'), model('b', 5)]);
+    rt.arm();
+    settle(rt);
+    moveTo(a.root, 4.5);
+    expect(rt.tick(T, 100)?.key).toBe('a|b');
+    rt.suppress('a|b');
+    // 억제 쌍은 움직임(dirty)이 있는 tick 에 재판정된다 — 더 파고들어 "붙음"
+    // 으로 판정되면 다음 재판정은 R 뒤다.
+    moveTo(a.root, 4.6);
+    expect(rt.tick(T + 10, 100)).toBeNull();
+    moveTo(a.root, -10);
+    // R 안에는 떨어졌어도 억제가 남는다(아직 안 봄).
+    expect(rt.tick(T + 10 + R - 1, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    // 움직임이 없는 tick 이어도 재판정 시각이 되면 풀린다 — 큐에 남겨 두기 때문.
+    expect(rt.tick(T + 10 + R, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+  });
+
+  it('여유 거리 컬링 — 모델 AABB 는 겹치지만 메쉬 AABB 가 떨어진 쌍은 누적 이동 한계가 간격을 넘기 전까지 검사를 건너뛰고, 넘으면 다시 검사해 충돌을 놓치지 않는다', () => {
+    const rt = makeRuntime();
+    // a = 두 메쉬(x=-5, x=+5 의 1-큐브). 모델 AABB 는 -5.5~5.5 로 b 를 늘 품지만
+    // 메쉬 AABB 는 b(원점 1-큐브)와 4 떨어져 있다 → 여유 거리 = min(probe 2, 4) = 2.
+    const a = mountModel('a', 0);
+    a.body.position.x = -5;
+    const second = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+    second.name = 'Body2';
+    second.position.x = 5;
+    (second.geometry as BvhGeometry).boundsTree = new MeshBVH(second.geometry);
+    a.root.add(second);
+    a.root.updateMatrixWorld(true);
+    const b = mountModel('b', 0);
+    rt.sync([model('a'), model('b')]);
+    rt.arm();
+    settle(rt);
+    expect(rt.currentPhase).toBe('scanning');
+    expect(rt.suppressedKeys.size).toBe(0);
+    const tested = rt.exactTests;
+
+    // 0.1 씩 10번(누적 1.0 < 2) — 메쉬 단계(AABB·OBB·삼각형) 어디에도 들어가지 않는다.
+    for (let i = 1; i <= 10; i += 1) {
+      moveTo(b.root, i * 0.1);
+      expect(rt.tick(T + i * 10, 100)).toBeNull();
+    }
+    expect(rt.exactTests).toBe(tested);
+
+    // 누적이 2 를 넘으면 다시 본다(b 는 x=2.1, 아직 2.4 떨어져 있어 hit 없음,
+    // 메쉬 AABB 는 여전히 떨어져 있으니 삼각형 검사도 없다).
+    for (let i = 11; i <= 21; i += 1) {
+      moveTo(b.root, i * 0.1);
+      expect(rt.tick(T + i * 10, 100)).toBeNull();
+    }
+    expect(rt.exactTests).toBe(tested);
+
+    // 관통(두 번째 메쉬 x=4.5~5.5 로) → hit. 놓치지 않는다.
+    moveTo(b.root, 4.8);
+    expect(rt.tick(T + 300, 100)?.key).toBe('a|b');
+    expect(rt.exactTests).toBeGreaterThan(tested);
+  });
+
+  it('여유 거리 컬링 — 회전도 이동 한계에 들어간다(긴 붐이 제자리에서 돌아 닿는 경우)', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    a.body.geometry = new BoxGeometry(6, 0.2, 0.2); // 긴 붐, 반길이 3
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    mountModel('b', 0); // 1×1×1 상자를 (0,0,2.5) 에 — 붐을 z 축으로 돌리면 닿는다
+    const b = modelObjectRegistry.get('b') as Object3D;
+    b.position.set(0, 0, 2.5);
+    b.updateMatrixWorld(true);
+    rt.sync([model('a'), model('b')]);
+    rt.arm();
+    settle(rt);
+    expect(rt.suppressedKeys.size).toBe(0);
+    // 붐을 90° 돌려 상자를 관통 — 평행이동은 0 이지만 회전 한계가 여유 거리를 넘겨 검사된다.
+    a.root.rotation.y = Math.PI / 2;
+    a.root.updateMatrixWorld(true);
+    expect(rt.tick(T, 100)?.key).toBe('a|b');
+  });
+
+  it('nearestPairs — AABB 간격이 maxGap 이하인 쌍을 가까운 순으로, 끝점은 최근접 면, 겹치면 0; idle 이면 빈 배열', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 3); // 간격 2
+    mountModel('c', 20); // 간격 19
+    mountModel('d', 0.5); // a 와 겹침
+    rt.sync([model('a'), model('b', 3), model('c', 20), model('d', 0.5)]);
+    expect(rt.nearestPairs(100, 10)).toEqual([]);
+    rt.arm();
+    settle(rt);
+    const near = rt.nearestPairs(5, 10);
+    expect(near.map((p) => [p.key, +p.gap.toFixed(3)])).toEqual([
+      ['a|d', 0],
+      ['b|d', 1.5],
+      ['a|b', 2],
+    ]);
+    const ab = near.find((p) => p.key === 'a|b')!;
+    expect(ab.from[0]).toBeCloseTo(0.5, 5);
+    expect(ab.to[0]).toBeCloseTo(2.5, 5);
+    expect(rt.nearestPairs(5, 1)).toHaveLength(1);
+    expect(rt.nearestPairs(100, 10).map((p) => p.key)).toContain('a|c');
+    // include 로 거른 모델이 낀 쌍은 나오지 않는다.
+    expect(
+      rt.nearestPairs(100, 10, (m) => m.id !== 'a').map((p) => p.key),
+    ).toEqual(['b|d', 'b|c', 'c|d']);
+  });
+
+  it('nearestPairs — 간격은 메쉬 상자 쌍의 최소로 잰다(모델 상자가 겹쳐도 메쉬가 떨어져 있으면 0 이 아니다)', () => {
+    const rt = makeRuntime();
+    // a: 바닥(0~1)과 높은 상부(y 10~11) 두 메쉬 — 모델 상자는 y 0~11.
+    const a = mountModel('a', 0);
+    const top = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+    top.name = 'Top';
+    top.position.y = 10;
+    (top.geometry as BvhGeometry).boundsTree = new MeshBVH(top.geometry);
+    a.root.add(top);
+    a.root.updateMatrixWorld(true);
+    // b: a 바로 옆 x=0.5 에 y 0~1 — 모델 상자는 a 와 겹친다(간격 0).
+    mountModel('b', 0.5);
+    rt.sync([model('a'), model('b', 0.5)]);
+    rt.arm();
+    settle(rt);
+    const [pair] = rt.nearestPairs(100, 10);
+    expect(pair?.key).toBe('a|b');
+    // 바닥 메쉬끼리는 겹친다(0) — 최소라 0.
+    expect(pair?.gap).toBe(0);
+    // b 를 y 5 로 올리면 바닥(0~1)·상부(10~11) 어느 메쉬와도 떨어져 4 가 된다.
+    const b = modelObjectRegistry.get('b') as Object3D;
+    b.position.y = 5;
+    b.updateMatrixWorld(true);
+    rt.tick(T, 100);
+    expect(rt.nearestPairs(100, 10)[0]?.gap).toBeCloseTo(4, 6);
   });
 
   it('disarm 은 억제 집합까지 비운다', () => {
@@ -610,10 +756,11 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     expect(rt.suppressedKeys.has('a|b')).toBe(true);
 
     moveTo(a.root, -10);
-    expect(rt.tick(retryAt + 10, 100)).toBeNull();
+    // 미결 hit 의 억제도 R 뒤에 다시 본다.
+    expect(rt.tick(retryAt + R, 100)).toBeNull();
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
     moveTo(a.root, 0);
-    expect(rt.tick(retryAt + 20, 100)?.key).toBe('a|b');
+    expect(rt.tick(retryAt + R + 10, 100)?.key).toBe('a|b');
   });
 
   it('미결 쌍이 BVH 없이 떨어지면 미결이 풀린다 — 그 뒤의 접근은 억제 없이 보고된다', () => {
@@ -630,9 +777,9 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     moveTo(a.root, 0);
     // 기준선에서 잡힌 BVH 재시도 시각은 그대로다 — 그 전엔 다시 보지 않는다.
     expect(rt.tick(BASELINE_SETTLE_MS + 200, 100)).toBeNull();
-    expect(
-      rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key,
-    ).toBe('a|b');
+    expect(rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key).toBe(
+      'a|b',
+    );
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
   });
 

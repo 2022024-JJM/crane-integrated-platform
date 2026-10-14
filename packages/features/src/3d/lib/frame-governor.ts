@@ -24,6 +24,17 @@
  */
 
 export const ANIMATING_FPS = 30;
+/**
+ * 바다만 움직이는 유휴(sea-only) — 재생·수신·드래그가 없고 파도·반사만 있을
+ * 때의 fps. 관제 화면은 대부분의 시간이 이 상태라 유휴 CPU·GPU 의 대부분이
+ * 여기서 나온다. 20fps 면 파도는 여전히 흐르고 비용은 30fps 의 2/3 다.
+ */
+export const SEA_IDLE_FPS = 20;
+/**
+ * 맥동만 있는 상태(관제 모드의 위험 링) — 위험 쌍이 오래 머물러도(겹친 채
+ * 멈춤) 30fps 를 붙들지 않게, 1초 남짓 주기의 맥동이 매끄러워 보이는 하한.
+ */
+export const PULSE_FPS = 12;
 export const SLOW_FPS = 0.2;
 /**
  * 애니메이션 소스가 멈춘 뒤에도 프레임을 잇는 유예(ms) — 값 저장소 스무딩
@@ -33,8 +44,12 @@ export const SLOW_FPS = 0.2;
 export const ANIMATION_GRACE_MS = 1500;
 
 export interface FrameGovernorInput {
-  /** 지금 화면을 계속 바꾸는 소스가 있는지(유예 포함은 호출자가 판단). */
+  /** 지금 화면을 계속 바꾸는 소스가 있는지(유예 포함은 호출자가 판단). 바다는 뺀다. */
   animating: boolean;
+  /** 바다가 켜진 씬(파도·반사 상시). 다른 소스가 없으면 SEA_IDLE_FPS. */
+  sea?: boolean;
+  /** 맥동 표시(위험 링)만 있는지. animating 다음, sea 앞. */
+  pulse?: boolean;
   /** 느린 변화 소스(태양 위치)가 있는지. */
   slow: boolean;
   /** document.visibilityState === 'hidden'. */
@@ -45,6 +60,8 @@ export interface FrameGovernorInput {
 export function resolveGovernorFps(input: FrameGovernorInput): number {
   if (input.hidden) return 0;
   if (input.animating) return ANIMATING_FPS;
+  if (input.sea) return SEA_IDLE_FPS;
+  if (input.pulse) return PULSE_FPS;
   if (input.slow) return SLOW_FPS;
   return 0;
 }

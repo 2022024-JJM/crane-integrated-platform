@@ -51,6 +51,18 @@ describe('scene-frame-request', () => {
     expect(sceneFrameRequesterCount()).toBe(0);
   });
 
+  it('거버너 틱 중에는 requestSceneFrame 이 아무 캔버스도 깨우지 않고, 틱이 끝나면 다시 깨운다', () => {
+    const a = vi.fn();
+    registerSceneFrameRequester(a);
+    registered.push(a);
+    setSceneFrameTickerActive(true);
+    requestSceneFrame();
+    expect(a).not.toHaveBeenCalled();
+    setSceneFrameTickerActive(false);
+    requestSceneFrame();
+    expect(a).toHaveBeenCalledTimes(1);
+  });
+
   it('거버너 틱 플래그 — 기본 false, 켜고 끈 값을 그대로 돌려준다', () => {
     expect(isSceneFrameTickerActive()).toBe(false);
     setSceneFrameTickerActive(true);

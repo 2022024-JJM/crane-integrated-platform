@@ -11,7 +11,7 @@ import {
   SILHOUETTE_OUTLINE_RENDER_ORDER,
   createSilhouetteMaskMesh,
   createSilhouetteOutlineHull,
-  createSilhouetteOutlineMaterial,
+  acquireSilhouetteOutlineMaterial,
   outlineOffsetFactor,
 } from '../lib/silhouette-outline';
 import { useSceneViewportHeight } from '../model/scene-viewports-context';
@@ -126,13 +126,13 @@ export function ObjectSilhouetteOutline({
   thicknessPx = SILHOUETTE_OUTLINE_PX,
   renderOrder = SILHOUETTE_OUTLINE_RENDER_ORDER,
 }: ObjectSilhouetteOutlineProps) {
-  // 헐 공유 머티리얼 — 이 표시 단위의 모든 헐 메시가 하나를 쓴다. 색이
-  // 바뀌면 새로 만든다(실제로는 용도별 상수라 수명 내 불변).
+  // 헐 공유 머티리얼 — 색·두께별 풀(lib)에서 받는다. 외곽선 종류가 바뀌어
+  // 색이 바뀌면 풀의 다른 머티리얼로 갈아탄다 — 만들지도 dispose 하지도
+  // 않는다(프로그램 재링크 방지).
   const material = useMemo(
-    () => createSilhouetteOutlineMaterial(color),
-    [color],
+    () => acquireSilhouetteOutlineMaterial(color, thicknessPx),
+    [color, thicknessPx],
   );
-  useEffect(() => () => material.dispose(), [material]);
 
   // 화면 두께(px) → 오프셋 계수. 훅 의존성인 material 을 effect 에서 직접
   // 변경하면 react-hooks/immutability 에 걸리므로 uniform 객체만 ref 로

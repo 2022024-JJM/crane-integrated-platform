@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 
 import { getRuntimeAlarmDictionary } from '@crane/domain/alarm';
+import { retryDelayMs } from '../lib/alarm-dictionary-retry';
 import { useRealtimeAlarmStore } from '../model/use-realtime-alarm-store';
-
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 5_000;
 
 export function RuntimeAlarmDictionaryPreload() {
   useEffect(() => {
@@ -19,14 +17,12 @@ export function RuntimeAlarmDictionaryPreload() {
         })
         .catch((error) => {
           if (cancelled) return;
+          const delay = retryDelayMs(attempt);
           console.error(
-            `[ALARM DICTIONARY] load failed (attempt ${attempt}/${MAX_RETRIES})`,
+            `[ALARM DICTIONARY] load failed (attempt ${attempt}, retry in ${delay}ms)`,
             error,
           );
-
-          if (attempt < MAX_RETRIES) {
-            retryTimer = setTimeout(() => load(attempt + 1), RETRY_DELAY_MS);
-          }
+          retryTimer = setTimeout(() => load(attempt + 1), delay);
         });
     }
 

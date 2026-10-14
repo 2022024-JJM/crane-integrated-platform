@@ -27,10 +27,14 @@ const REALTIME_ACTIVE_MS = 1500;
 
 interface SceneFrameGovernorProps {
   /**
-   * 호출자가 아는 상시 애니메이션 — 바다가 켜진 씬(resolveSeaVisible)은
-   * 파도·미러 패스가 항상 움직인다. 스토어로 알 수 없는 소스는 여기로 준다.
+   * 호출자가 아는 상시 애니메이션 — 스토어로 알 수 없는 소스. 바다는 `sea`
+   * 로 따로 준다(다른 소스가 없을 때 SEA_IDLE_FPS 로 내려간다).
    */
   animating?: boolean;
+  /** 바다가 켜진 씬(resolveSeaVisible) — 파도·미러 패스가 항상 움직인다. */
+  sea?: boolean;
+  /** 맥동 표시만 있는 상태(관제 모드 위험 링) — PULSE_FPS. */
+  pulse?: boolean;
   /** 느린 변화 소스(solar 모드 태양)가 있는지. */
   slow?: boolean;
 }
@@ -51,6 +55,8 @@ interface SceneFrameGovernorProps {
  */
 export function SceneFrameGovernor({
   animating = false,
+  sea = false,
+  pulse = false,
   slow = false,
 }: SceneFrameGovernorProps) {
   const invalidate = useThree((s) => s.invalidate);
@@ -101,6 +107,8 @@ export function SceneFrameGovernor({
       applyFps(
         resolveGovernorFps({
           animating: active || now < graceUntil,
+          sea,
+          pulse,
           slow,
           hidden: document.visibilityState === 'hidden',
         }),
@@ -116,7 +124,7 @@ export function SceneFrameGovernor({
       if (ticker !== null) clearInterval(ticker);
       setSceneFrameTickerActive(false);
     };
-  }, [animating, slow, invalidate]);
+  }, [animating, sea, pulse, slow, invalidate]);
 
   return null;
 }

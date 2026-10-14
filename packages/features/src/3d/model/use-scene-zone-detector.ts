@@ -6,6 +6,7 @@ import {
   subscribeRunnerResume,
   type SceneCollisionRunner,
 } from './scene-collision-hold';
+import { isSceneFrameTickerActive } from './scene-frame-request';
 import { sceneZoneRuntime } from './scene-zone-runtime';
 import { useSceneZoneStore } from './use-scene-zone-store';
 
@@ -21,7 +22,10 @@ import { useSceneZoneStore } from './use-scene-zone-store';
  * demand 프레임루프: `gl.render` 가 useFrame 뒤에 matrixWorld 를 갱신하므로
  * 여기서 읽는 행렬은 한 프레임 늦다. 무언가 움직였으면(`moved`) 다음 프레임을
  * 한 번 더 요청해 마지막 자세가 미검사로 남지 않게 하고, 전이가 있으면
- * 링·배지가 다시 그려지게 한 번 더 요청한다.
+ * 링·배지가 다시 그려지게 한 번 더 요청한다. 단 거버너가 주기 틱을 돌리는
+ * 중(`isSceneFrameTickerActive()`)엔 다음 틱이 그리므로 부르지 않는다 —
+ * useFrame 안의 invalidate 는 rAF 루프를 주사율로 자체 지속시켜 30fps
+ * 상한을 깬다(scene-frame-request 주석).
  */
 export function useSceneZoneDetector({
   sceneInfo,
@@ -79,11 +83,12 @@ export function useSceneZoneDetector({
     lastScanRef.current = now;
 
     const result = sceneZoneRuntime.tick(now, ZONE_SCAN_BUDGET_MS);
-    if (result.moved) invalidate();
+    const ticking = isSceneFrameTickerActive();
+    if (result.moved && !ticking) invalidate();
     if (result.transitions.length === 0) return;
     useSceneZoneStore
       .getState()
       .applyTransitions(result.transitions, runnerRef.current !== 'realtime');
-    invalidate();
+    if (!ticking) invalidate();
   });
 }

@@ -1,5 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { RestClientError, RestClientTimeoutError } from '../api/errors';
+import {
+  autoResetDelayMs,
+  claimChunkReload,
+  isChunkLoadError,
+} from './route-error-recovery';
 
 interface RouteErrorBoundaryProps {
   children: ReactNode;
@@ -11,11 +16,22 @@ interface RouteErrorBoundaryState {
   error: Error | null;
 }
 
+/**
+ * 라우트 에러 바운더리 — 무인 관제용 자동 복구.
+ *
+ * - 에러마다 지수 백오프(`autoResetDelayMs`)로 스스로 리셋한다. 연속 실패
+ *   횟수는 성공적으로 렌더된 뒤 다음 에러까지 유지되어 폭주를 막는다.
+ * - 동적 import(청크) 실패는 리셋으로 안 낫는다(재배포 뒤 옛 index.html) —
+ *   `claimChunkReload` 간격 안에서 한 번 새로 고친다.
+ * - "다시 시도" 버튼은 그대로 — 사람이 있으면 바로 누를 수 있다.
+ */
 export class RouteErrorBoundary extends Component<
   RouteErrorBoundaryProps,
   RouteErrorBoundaryState
 > {
   state: RouteErrorBoundaryState = { error: null };
+  private attempts = 0;
+  private resetTimer: ReturnType<typeof setTimeout> | null = null;
 
   static getDerivedStateFromError(error: Error): RouteErrorBoundaryState {
     return { error };
@@ -23,12 +39,44 @@ export class RouteErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     this.props.onError?.(error, info);
-    if (import.meta.env?.DEV) {
-      console.error('[RouteErrorBoundary]', error, info);
+    console.error('[RouteErrorBoundary]', error, info.componentStack);
+    if (
+      isChunkLoadError(error) &&
+      typeof window !== 'undefined' &&
+      claimChunkReload(
+        Date.now(),
+        typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+      )
+    ) {
+      window.location.reload();
+      return;
+    }
+    this.attempts += 1;
+    this.scheduleReset(autoResetDelayMs(this.attempts));
+  }
+
+  componentWillUnmount() {
+    this.clearResetTimer();
+  }
+
+  private clearResetTimer() {
+    if (this.resetTimer !== null) {
+      clearTimeout(this.resetTimer);
+      this.resetTimer = null;
     }
   }
 
+  private scheduleReset(delayMs: number) {
+    this.clearResetTimer();
+    this.resetTimer = setTimeout(() => {
+      this.resetTimer = null;
+      this.setState({ error: null });
+    }, delayMs);
+  }
+
   reset = () => {
+    this.clearResetTimer();
+    this.attempts = 0;
     this.setState({ error: null });
   };
 

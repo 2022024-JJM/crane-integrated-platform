@@ -1,5 +1,5 @@
 import { OrbitControls } from '@react-three/drei';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import {
   Binoculars,
   House,
@@ -22,8 +22,11 @@ import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import {
+  computeLocalTopViewPose,
   computeTopViewPose,
   ensureTopViewTilt,
+  fovDistanceScale,
+  isPlanDirection,
 } from '@crane/core/lib/top-view-pose';
 import { PortalContainerProvider } from '../molecules/portal-container';
 import {
@@ -57,6 +60,20 @@ interface ThreeSceneViewerCameraPreset {
    * 없거나 비어 있으면 기존 프리셋 경로.
    */
   getTopViewBounds?: () => Box3 | null;
+  /**
+   * 탑뷰에서 쓸 수직 fov(도). 주면 탑뷰 이동 때 카메라 fov 를 이 값으로
+   * 좁혀(망원) 원근 왜곡을 줄여 평면도처럼 보이게 하고, 카메라가 충분히
+   * 기울면(core isPlanDirection 밖) 원래 fov 로 돌아간다.
+   */
+  topViewFov?: number;
+  /**
+   * 탑뷰를 **지금 보는 자리 위**로 — 궤도 타깃을 중심으로 같은 축척(타깃
+   * 거리 유지)의 평면. 전체 범위(`getTopViewBounds`)는 타깃이 없을 때의
+   * 폴백이 된다. 관제 화면은 구역 단위로 보므로 켠다.
+   */
+  topViewFromCurrent?: boolean;
+  /** 구역 탑뷰의 거리 배율(기본 1) — 보던 것보다 넓게 담으려면 1 보다 크게. */
+  topViewDistanceScale?: number;
 }
 
 interface ThreeSceneViewerProps {
@@ -169,6 +186,15 @@ function topViewMaxDistance(
   return Math.max(0, maxDistance - halfHeight);
 }
 
+const _viewDirection = new Vector3();
+
+// 훅이 돌려준 카메라를 콜백·useFrame 에서 직접 고치지 않는다
+// (react-hooks/immutability) — 평범한 함수가 쓴다.
+function applyCameraFov(camera: PerspectiveCamera, fov: number): void {
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
+}
+
 function toVector3([x, y, z]: Vector3Tuple) {
   return new Vector3(x, y, z);
 }
@@ -236,20 +262,59 @@ function SceneControlsBridge({
   }, [applyCameraState, defaultPosition, defaultTarget]);
 
   const getTopViewBounds = cameraPreset.getTopViewBounds;
+  const topViewFov = cameraPreset.topViewFov;
+  const topViewFromCurrent = cameraPreset.topViewFromCurrent ?? false;
+  const topViewDistanceScale = cameraPreset.topViewDistanceScale ?? 1;
+  // 탑뷰 fov 를 좁혔을 때의 원래 fov — 기울이면 돌려놓는다(아래 useFrame).
+  const fovOverrideRef = useRef<number | null>(null);
   const moveToTopView = useCallback(() => {
     const bounds = getTopViewBounds?.();
     const perspective = camera as PerspectiveCamera;
     const controls = controlsRef.current;
+    let maxDistance = controls?.maxDistance;
+    // fov 를 바꾸기 전의 타깃 거리 — 같은 축척을 유지하려면 fov 배율을 곱한다.
+    const currentDistance = controls
+      ? perspective.position.distanceTo(controls.target)
+      : Number.NaN;
+    let localDistance = currentDistance * topViewDistanceScale;
+    if (
+      topViewFov !== undefined &&
+      perspective.isPerspectiveCamera &&
+      fovOverrideRef.current === null
+    ) {
+      // 망원 탑뷰 — 같은 범위를 더 멀리서 좁게 본다. 거리 상한도 같은 배율로
+      // (SceneCameraLimits 는 다음 프레임에 fov 로 다시 계산한다).
+      const scale = fovDistanceScale(perspective.fov, topViewFov);
+      fovOverrideRef.current = perspective.fov;
+      applyCameraFov(perspective, topViewFov);
+      localDistance = currentDistance * topViewDistanceScale * scale;
+      if (maxDistance !== undefined) {
+        maxDistance *= scale;
+        // controls.update 가 같은 프레임에 반경을 clamp 하므로 지금 늘려 둔다
+        // (SceneCameraLimits 가 다음 프레임에 fov 기준으로 다시 쓴다).
+        if (controls) controls.maxDistance = maxDistance;
+      }
+    }
     // 지도 XZ가 세로 fov 기준으로 화면에 꽉 차는 높이(편집기와 같은 함수).
     // 상한은 controls.maxDistance(features 의 SceneCameraLimits 가 지도
     // 크기로 정한 값) — 포즈의 궤도 반경은 거리 + 박스 반높이라 그만큼 빼서
     // 넘긴다. 넘기지 않으면 다음 update 의 반경 clamp 로 카메라가 튄다.
-    const pose =
-      bounds && perspective.isPerspectiveCamera
-        ? computeTopViewPose(bounds, perspective.aspect, perspective.fov, {
-            maxDistance: topViewMaxDistance(bounds, controls?.maxDistance),
-          })
+    // 보던 자리 위(구역 탑뷰) — 타깃·거리가 유효할 때. 아니면 범위 프레이밍.
+    const local =
+      topViewFromCurrent && controls
+        ? computeLocalTopViewPose(
+            [controls.target.x, controls.target.y, controls.target.z],
+            localDistance,
+            { maxDistance },
+          )
         : null;
+    const pose =
+      local ??
+      (bounds && perspective.isPerspectiveCamera
+        ? computeTopViewPose(bounds, perspective.aspect, perspective.fov, {
+            maxDistance: topViewMaxDistance(bounds, maxDistance),
+          })
+        : null);
     if (pose) {
       applyCameraState(pose.position, pose.target);
       return;
@@ -259,6 +324,9 @@ function SceneControlsBridge({
     applyCameraState,
     camera,
     getTopViewBounds,
+    topViewFov,
+    topViewFromCurrent,
+    topViewDistanceScale,
     topViewPosition,
     topViewTarget,
   ]);
@@ -353,6 +421,20 @@ function SceneControlsBridge({
     moveTo,
     getPose,
   ]);
+
+  // 망원 탑뷰에서 기울이면 원래 fov 로 — 평면이 아닌 시점에서 망원은 조작감이
+  // 낯설다(궤도 회전이 크게 느껴진다).
+  useFrame(() => {
+    const original = fovOverrideRef.current;
+    if (original === null) return;
+    const perspective = camera as PerspectiveCamera;
+    if (!perspective.isPerspectiveCamera) return;
+    perspective.getWorldDirection(_viewDirection);
+    if (isPlanDirection(_viewDirection.y)) return;
+    fovOverrideRef.current = null;
+    applyCameraFov(perspective, original);
+    invalidate();
+  });
 
   return (
     <OrbitControls

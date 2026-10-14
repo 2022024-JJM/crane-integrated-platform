@@ -327,6 +327,48 @@ describe('OceanWater.onBeforeRender — 미러 패스', () => {
     expect(renderer.clear).not.toHaveBeenCalled();
   });
 
+  it('reflectionIntervalMs — 카메라가 그대로면 간격 안에선 다시 그리지 않고, 간격이 지나거나 카메라가 움직이면 그린다(eye 는 매 프레임)', () => {
+    let tick = 1000;
+    const fx = createFixture({
+      water: { reflectionIntervalMs: 66, now: () => tick },
+    });
+    const { water, scene, gl, renderer } = fx;
+    const camera = cameraAbove();
+    water.onBeforeRender(gl, scene, camera);
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    tick += 33;
+    water.onBeforeRender(gl, scene, camera);
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    tick += 33; // 66 경과
+    water.onBeforeRender(gl, scene, camera);
+    expect(renderer.render).toHaveBeenCalledTimes(2);
+    // 간격 안이라도 카메라가 움직이면 바로.
+    tick += 10;
+    camera.position.x += 1;
+    camera.updateMatrixWorld();
+    water.onBeforeRender(gl, scene, camera);
+    expect(renderer.render).toHaveBeenCalledTimes(3);
+    expect(water.uniforms.eye.value.x).toBeCloseTo(1, 9);
+    // 건너뛴 프레임에도 eye 는 갱신된다.
+    tick += 1;
+    camera.position.x += 1;
+    camera.updateMatrixWorld();
+    water.onBeforeRender(gl, scene, camera); // 움직였으니 그림(4)
+    camera.position.x += 0; // 그대로
+    tick += 1;
+    water.onBeforeRender(gl, scene, camera);
+    expect(renderer.render).toHaveBeenCalledTimes(4);
+    expect(water.uniforms.eye.value.x).toBeCloseTo(2, 9);
+  });
+
+  it('reflectionIntervalMs 가 0(기본)이면 매 프레임 그린다', () => {
+    const fx = createFixture();
+    const camera = cameraAbove();
+    fx.water.onBeforeRender(fx.gl, fx.scene, camera);
+    fx.water.onBeforeRender(fx.gl, fx.scene, camera);
+    expect(fx.renderer.render).toHaveBeenCalledTimes(2);
+  });
+
   it('원래 꺼져 있던 플래그는 꺼진 채로 원복된다(하드코딩 true 가 아니다)', () => {
     const { water, scene, renderer, gl, snapshots } = createFixture({
       flags: { xr: false, shadow: false, autoReset: false },

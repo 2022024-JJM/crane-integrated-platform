@@ -115,3 +115,37 @@ export function formatPerfLine(sample: ScenePerfSample): string {
   if (sample.heapMB === null || !Number.isFinite(sample.heapMB)) return base;
   return `${base} · ${Math.round(sample.heapMB)}MB`;
 }
+
+/** 수신 통계 줄의 입력 — IngestStats 중 HUD 가 보는 것만(누계). */
+export interface IngestLineSample {
+  receivedTotal: number;
+  droppedTotal: number;
+  deliveredTotal: number;
+  transportBusyRatio: number;
+}
+
+/**
+ * 수신 통계 줄 — `rx 27.1k/s · drop 99.9% · worker 34%`. 두 샘플의 누계 차를
+ * 간격(ms)으로 나눠 초당 값을 만든다. 간격이 0 이하거나 수신이 없으면 null
+ * (HUD 가 줄을 숨긴다).
+ */
+export function formatIngestLine(
+  prev: IngestLineSample,
+  next: IngestLineSample,
+  intervalMs: number,
+): string | null {
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) return null;
+  const received = next.receivedTotal - prev.receivedTotal;
+  if (received <= 0) return null;
+  const perSec = (received * 1000) / intervalMs;
+  const dropped = next.droppedTotal - prev.droppedTotal;
+  const dropPct = Math.round((dropped / received) * 100);
+  const busyPct = Math.round(
+    Math.min(1, Math.max(0, next.transportBusyRatio)) * 100,
+  );
+  const rate =
+    perSec >= 1000
+      ? `${(perSec / 1000).toFixed(1)}k/s`
+      : `${Math.round(perSec)}/s`;
+  return `rx ${rate} · drop ${dropPct}% · worker ${busyPct}%`;
+}

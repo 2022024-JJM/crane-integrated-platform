@@ -19,6 +19,7 @@ import {
   BVH_RETRY_MS,
   FLASH_MS,
   SCAN_INTERVAL_MS,
+  SUPPRESSED_RECHECK_MS,
 } from '../../lib/scene-collision-pairs';
 import { rigValueStore } from '../rig-value-store';
 import { sceneCollisionRuntime } from '../scene-collision-runtime';
@@ -113,7 +114,11 @@ beforeEach(() => {
     baselinePending: false,
   });
   useVirtualTagStore.setState({ isRunning: true });
-  useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
+  useRealtimeStore.setState({
+    isRunning: true,
+    held: false,
+    buffer: new Map(),
+  });
   useActiveTransformStore.getState().end();
   captured.frameCallback = null;
 });
@@ -430,8 +435,10 @@ describe('useSceneCollisionDetector — 정지 안 함 모드', () => {
     expect(state.activeRecordId).toBeNull();
     expect(state.history).toHaveLength(1);
 
-    // 분리 뒤 재접근 → 새 기록.
+    // 분리 뒤 재접근 → 새 기록. 억제 쌍의 분리 재판정은 SUPPRESSED_RECHECK_MS
+    // 간격이라(4.7 로 파고든 스캔이 "붙음" 으로 판정한 뒤) 그만큼 지나야 풀린다.
     moveX(a, -10);
+    nowMs += SUPPRESSED_RECHECK_MS;
     scan();
     moveX(a, 4.6);
     scan();

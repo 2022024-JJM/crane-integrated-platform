@@ -1,5 +1,14 @@
 import type { IUniform, Material } from 'three';
 import { SEA_LEVEL_Y } from '../model/sea-level';
+import {
+  LOOK_FRAGMENT_DECLARE,
+  sceneLookUniforms,
+  lookFragmentInject,
+  lookMetalnessInject,
+  lookRoughnessInject,
+  sceneLookUniformFor,
+  type SceneLookGroup,
+} from './scene-look';
 import { seaReachUniforms } from './sea-reach-uniforms';
 
 /**
@@ -56,6 +65,8 @@ export const SEA_WATER_COLOR: readonly [number, number, number] = [
 export const SEA_REACH_EDGE: readonly [number, number] = [0.4, 0.6];
 
 const CACHE_KEY = 'sea-submersion';
+/** 잠김 안개 없이 룩(무채색) 유니폼만 주입한 변형 — 바다 없는 씬. */
+const LOOK_ONLY_CACHE_KEY = 'scene-look';
 
 const glslFloat = (v: number) => v.toFixed(4);
 
@@ -98,8 +109,9 @@ const FRAGMENT_INJECT = /* glsl */ `
     seaFog
   );
 }
-#include <tonemapping_fragment>
 `;
+/** 안개 본문 — 톤매핑 include 는 applySeaSubmersion 이 룩 뒤에 붙인다. */
+const FRAGMENT_INJECT_BODY = FRAGMENT_INJECT;
 
 type PatchableMaterial = Material & {
   onBeforeCompile: (shader: {
@@ -110,21 +122,58 @@ type PatchableMaterial = Material & {
   customProgramCacheKey: () => string;
 };
 
-export function applySeaSubmersion(material: Material): void {
+export interface SceneLookPatchOptions {
+  /** 잠김 안개 주입 여부. 기본 true. false = 룩(무채색) 유니폼만. */
+  fog?: boolean;
+  /** 룩 그룹(환경/장비) — 어느 무채색 유니폼을 물릴지. 기본 environment. */
+  group?: SceneLookGroup;
+}
+
+/** 패치 변형의 캐시 키 — fog·group 조합마다 프로그램이 다르다. */
+export function sceneLookCacheKey(fog: boolean, group: SceneLookGroup): string {
+  return `${fog ? CACHE_KEY : LOOK_ONLY_CACHE_KEY}:${group}`;
+}
+
+/**
+ * 머티리얼 패치 — 잠김 안개(`fog`)와 씬 룩(무채색, 항상)을 함께 주입한다.
+ * 둘 다 톤매핑 전(linear)에 들어가고, 룩은 안개 뒤에 온다(물 색도 함께
+ * 회색이 된다). 유니폼은 전역 객체를 물려 주어 재컴파일 없이 값만 바뀐다.
+ */
+export function applySeaSubmersion(
+  material: Material,
+  options: SceneLookPatchOptions = {},
+): void {
+  const fog = options.fog !== false;
+  const group = options.group ?? 'environment';
   const target = material as PatchableMaterial;
   target.onBeforeCompile = (shader) => {
-    // 값이 아니라 유니폼 객체를 물려 준다 — 마스크가 바뀌면 전 머티리얼이
-    // 다음 프레임에 새 값을 본다.
-    shader.uniforms.seaReachMask = seaReachUniforms.seaReachMask;
-    shader.uniforms.seaReachTransform = seaReachUniforms.seaReachTransform;
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', VERTEX_DECLARE)
-      .replace('#include <worldpos_vertex>', VERTEX_INJECT);
+    shader.uniforms.uSceneMute = sceneLookUniformFor(group);
+    shader.uniforms.uSceneDim = sceneLookUniforms.dim;
+    if (fog) {
+      // 값이 아니라 유니폼 객체를 물려 준다 — 마스크가 바뀌면 전 머티리얼이
+      // 다음 프레임에 새 값을 본다.
+      shader.uniforms.seaReachMask = seaReachUniforms.seaReachMask;
+      shader.uniforms.seaReachTransform = seaReachUniforms.seaReachTransform;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', VERTEX_DECLARE)
+        .replace('#include <worldpos_vertex>', VERTEX_INJECT);
+    }
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', FRAGMENT_DECLARE)
-      .replace('#include <tonemapping_fragment>', FRAGMENT_INJECT);
+      .replace(
+        '#include <common>',
+        (fog ? FRAGMENT_DECLARE : '#include <common>') + LOOK_FRAGMENT_DECLARE,
+      )
+      // PBR(Standard/Physical)에만 있는 청크 — Lambert 는 치환 대상이 없어 그대로.
+      .replace('#include <roughnessmap_fragment>', lookRoughnessInject(group))
+      .replace('#include <metalnessmap_fragment>', lookMetalnessInject(group))
+      .replace(
+        '#include <tonemapping_fragment>',
+        (fog ? FRAGMENT_INJECT_BODY : '') +
+          lookFragmentInject(group) +
+          '\n#include <tonemapping_fragment>',
+      );
   };
-  target.customProgramCacheKey = () => CACHE_KEY;
+  target.customProgramCacheKey = () => sceneLookCacheKey(fog, group);
   target.needsUpdate = true;
 }
 
@@ -135,7 +184,9 @@ export function applySeaSubmersion(material: Material): void {
  */
 export function clearSeaSubmersion(material: Material): void {
   const target = material as PatchableMaterial;
-  if (target.customProgramCacheKey() !== CACHE_KEY) return;
+  const key = target.customProgramCacheKey();
+  if (!key.startsWith(CACHE_KEY) && !key.startsWith(LOOK_ONLY_CACHE_KEY))
+    return;
   target.onBeforeCompile = () => {};
   target.customProgramCacheKey = () => '';
   target.needsUpdate = true;

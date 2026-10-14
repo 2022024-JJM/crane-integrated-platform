@@ -311,7 +311,9 @@
     "minimapShow": "Tabulam minimam ostende",
     "minimapHide": "Tabulam minimam cela",
     "minimapHint": "Preme vel trahe ut cameram moveas",
-    "minimapMove": "Trahe ut tabulam minimam moveas"
+    "minimapMove": "Trahe ut tabulam minimam moveas",
+    "controlRoomOn": "Modus moderationis",
+    "controlRoomOff": "Modus verus"
   },
   "undo": "Revoca"
 }

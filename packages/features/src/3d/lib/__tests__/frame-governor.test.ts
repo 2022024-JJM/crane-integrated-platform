@@ -2,13 +2,51 @@ import { describe, expect, it } from 'vitest';
 import {
   ANIMATING_FPS,
   ANIMATION_GRACE_MS,
+  SEA_IDLE_FPS,
   SLOW_FPS,
   extendAnimationGrace,
   governorIntervalMs,
+  PULSE_FPS,
   resolveGovernorFps,
 } from '../frame-governor';
 
 describe('resolveGovernorFps', () => {
+  it('맥동만 있으면 PULSE_FPS — 바다·animating 이 있으면 그쪽이 우선, 숨김은 0', () => {
+    expect(
+      resolveGovernorFps({
+        animating: false,
+        pulse: true,
+        slow: false,
+        hidden: false,
+      }),
+    ).toBe(PULSE_FPS);
+    expect(
+      resolveGovernorFps({
+        animating: false,
+        pulse: true,
+        sea: true,
+        slow: false,
+        hidden: false,
+      }),
+    ).toBe(SEA_IDLE_FPS);
+    expect(
+      resolveGovernorFps({
+        animating: true,
+        pulse: true,
+        slow: false,
+        hidden: false,
+      }),
+    ).toBe(ANIMATING_FPS);
+    expect(
+      resolveGovernorFps({
+        animating: false,
+        pulse: true,
+        slow: false,
+        hidden: true,
+      }),
+    ).toBe(0);
+  });
+
   it('애니메이션 중이면 ANIMATING_FPS — slow 여부와 무관', () => {
     expect(
       resolveGovernorFps({ animating: true, slow: false, hidden: false }),
@@ -16,6 +54,35 @@ describe('resolveGovernorFps', () => {
     expect(
       resolveGovernorFps({ animating: true, slow: true, hidden: false }),
     ).toBe(ANIMATING_FPS);
+  });
+
+  it('바다만 있는 유휴는 SEA_IDLE_FPS — 다른 소스가 생기면 ANIMATING_FPS, 숨김이면 0', () => {
+    expect(
+      resolveGovernorFps({
+        animating: false,
+        sea: true,
+        slow: true,
+        hidden: false,
+      }),
+    ).toBe(SEA_IDLE_FPS);
+    expect(
+      resolveGovernorFps({
+        animating: true,
+        sea: true,
+        slow: false,
+        hidden: false,
+      }),
+    ).toBe(ANIMATING_FPS);
+    expect(
+      resolveGovernorFps({
+        animating: false,
+        sea: true,
+        slow: false,
+        hidden: true,
+      }),
+    ).toBe(0);
+    expect(SEA_IDLE_FPS).toBeLessThan(ANIMATING_FPS);
+    expect(SEA_IDLE_FPS).toBeGreaterThanOrEqual(15);
   });
 
   it('정지 화면 + 느린 소스(태양)면 SLOW_FPS', () => {

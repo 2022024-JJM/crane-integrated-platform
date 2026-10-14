@@ -87,6 +87,7 @@
       "root": "(radix exemplaris)",
       "channel": "Genus",
       "axis": "Axis",
+      "pivot": "Centrum",
       "joint": "Articulus",
       "tag": "Tag",
       "tagPlaceholder": "Tag selige",
@@ -576,6 +577,7 @@
       "open": "Coniunctum",
       "connecting": "Coniungitur",
       "closed": "Disiunctum",
+      "stalled": "Nihil receptum",
       "held": "Suspensum",
       "play3dPlaying": "Ludens",
       "play3dPaused": "Pausatum"
@@ -725,5 +727,9 @@
     "update": "Renova",
     "hint": "Renovando omnia quae ex ea re in hac scaena posita sunt ad novam versionem transeunt. Collocatio et notarum nexus manent; in scaena inspice et serva ut in monitorio valeat.",
     "unmanaged": "{{count}} res ex fasciculis positae sunt qui in bibliotheca rerum non exstant. Novae versiones nuntiari non possunt."
+  },
+  "proximity": {
+    "title": "Propinquitas",
+    "overlap": "contactus"
   }
 }

@@ -23,16 +23,22 @@ export const LABEL_MIN_SCALE = 0.45;
 /** 축소 배율의 눈금 — 이 단위로 끊어 매 프레임 style 재작성을 막는다. */
 const LABEL_SCALE_STEPS = 50;
 
-export function isLabelInRange(distance: number): boolean {
-  return distance <= LABEL_VISIBILITY_DISTANCE;
+export function isLabelInRange(
+  distance: number,
+  maxDistance: number = LABEL_VISIBILITY_DISTANCE,
+): boolean {
+  return distance <= maxDistance;
 }
 
-/** 카메라 거리 → 표시 배율 [LABEL_MIN_SCALE, 1]. 거리를 모르면 1. */
-export function labelScaleAtDistance(distance: number): number {
+/** 카메라 거리 → 표시 배율 [minScale, 1]. 거리를 모르면 1. */
+export function labelScaleAtDistance(
+  distance: number,
+  minScale: number = LABEL_MIN_SCALE,
+): number {
   if (!Number.isFinite(distance) || distance <= 0) return 1;
   const raw = Math.min(1, LABEL_SCALE_REF_DISTANCE / distance);
   return Math.max(
-    LABEL_MIN_SCALE,
+    minScale,
     Math.round(raw * LABEL_SCALE_STEPS) / LABEL_SCALE_STEPS,
   );
 }

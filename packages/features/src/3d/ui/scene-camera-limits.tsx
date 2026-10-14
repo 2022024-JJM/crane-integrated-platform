@@ -105,6 +105,7 @@ interface LimitCache {
   usedBoundsMaps: readonly SavedMapInfo[] | null;
   boundsObjects: (Object3D | undefined)[];
   aspect: number;
+  fov: number;
   bounds: Box3 | null;
   /** 마지막으로 잰 바닥 y 와 그때의 카메라 XZ. */
   floorY: number;
@@ -164,6 +165,7 @@ export function SceneCameraLimits({
     usedBoundsMaps: null,
     boundsObjects: [],
     aspect: NaN,
+    fov: NaN,
     bounds: null,
     floorY: SEA_LEVEL_Y,
     floorX: NaN,
@@ -227,6 +229,7 @@ export function SceneCameraLimits({
     let stale =
       boundsMaps !== cache.usedBoundsMaps ||
       aspect !== cache.aspect ||
+      fov !== cache.fov ||
       boundsMaps.length !== cache.boundsObjects.length;
     if (!stale) {
       // 레지스트리 객체 참조 비교 — 지도 GLB 가 등록되는 프레임을 잡는다.
@@ -242,6 +245,7 @@ export function SceneCameraLimits({
     if (stale) {
       cache.usedBoundsMaps = boundsMaps;
       cache.aspect = aspect;
+      cache.fov = fov;
       cache.boundsObjects = boundsMaps.map((m) =>
         modelObjectRegistry.get(m.id),
       );

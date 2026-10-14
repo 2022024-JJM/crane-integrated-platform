@@ -13,7 +13,8 @@ import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
 import { seedRestPose } from '../lib/rest-pose-cache';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
-import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
+import { applySeaSubmersion } from '../lib/sea-submersion';
+import type { SceneLookGroup } from '../lib/scene-look';
 import {
   assignSharedSeaMaterials,
   createMeshMaterialBinding,
@@ -50,6 +51,19 @@ interface ModelMeshProps {
    * 바다가 닿지 않는 위치(드라이독 등)는 셰이더가 마스크로 거른다.
    */
   seaSubmersion?: boolean;
+  /**
+   * 배치가 바뀌지 않는 객체(모니터링의 지도·지형). 서브트리 전체의
+   * `matrixAutoUpdate` 를 끄고 배치 props·meshOverrides 가 바뀔 때만 행렬을
+   * 한 번 다시 합성한다 — three 는 매 프레임 씬 그래프 모든 노드의 로컬
+   * 행렬을 다시 합성하는데, 건물 수백 노드가 든 지도에서 그 비용이 렌더
+   * 프레임의 눈에 띄는 몫이었다. 기즈모로 끄는 화면(에디터)에선 켜지 않는다.
+   */
+  staticTransform?: boolean;
+  /**
+   * 관제 모드 무채색의 그룹 — 'equipment'(기본, 장비: 채도 일부 유지) 또는
+   * 'environment'(지도·지형: 완전 무채색). lib/scene-look.ts.
+   */
+  lookGroup?: SceneLookGroup;
   /**
    * 그림자를 드리울지. 기본 true. ground 지도도 드리운다 — GLB에 건물이 함께
    * 구워져 있어 끄면 건물 그림자가 통째로 사라진다. 예외는 컨텍스트 지형
@@ -338,6 +352,8 @@ export function ModelMesh({
   opacity = 1,
   alarmSeverity = null,
   seaSubmersion = false,
+  staticTransform = false,
+  lookGroup = 'equipment',
   castShadow = true,
   receiveShadow = true,
   position = [0, 0, 0],
@@ -436,12 +452,10 @@ export function ModelMesh({
     const needsIndividual = opacity < 1 || alarmSeverity !== null;
 
     if (!needsIndividual) {
+      // 공유 variant 는 항상 — 바다 씬은 잠김 안개 + 룩, 아니면 룩(관제 모드
+      // 무채색)만. 원본 reference 를 그대로 쓰는 상태는 이제 없다.
       for (const binding of meshBindings) {
-        if (seaSubmersion) {
-          assignSharedSeaMaterials(binding);
-        } else {
-          restoreOriginalMaterials(binding);
-        }
+        assignSharedSeaMaterials(binding, seaSubmersion, lookGroup);
       }
       invalidate();
       return;
@@ -449,7 +463,11 @@ export function ModelMesh({
 
     // 개별 클론 경로: 이 instance만 lazy clone하여 mutate.
     for (const binding of meshBindings) {
-      const materials = ensureClonedMaterials(binding, seaSubmersion);
+      const materials = ensureClonedMaterials(
+        binding,
+        seaSubmersion,
+        lookGroup,
+      );
       for (const material of materials) {
         const mat = material as Material & {
           opacity: number;
@@ -474,11 +492,7 @@ export function ModelMesh({
 
         // 클론 생성 후 seaSubmersion prop 이 뒤바뀐 경우의 패치 갱신 —
         // 생성 시 패치는 ensureClonedMaterials 가 했다(멱등).
-        if (seaSubmersion) {
-          applySeaSubmersion(mat);
-        } else {
-          clearSeaSubmersion(mat);
-        }
+        applySeaSubmersion(mat, { fog: seaSubmersion, group: lookGroup });
 
         mat.needsUpdate = true;
       }
@@ -602,7 +616,11 @@ export function ModelMesh({
           // 잠김 공유 중이던 바인딩도 여기서 개별로 승격된다 — 승격은
           // 원본에서 clone 하므로 seaSubmersion 을 넘겨 잠김 패치를 다시
           // 건다(안 넘기면 이 메시만 안개가 빠지는 회귀).
-          const materials = ensureClonedMaterials(binding, seaSubmersion);
+          const materials = ensureClonedMaterials(
+            binding,
+            seaSubmersion,
+            lookGroup,
+          );
           for (const material of materials) {
             const mat = material as Material & {
               opacity: number;
@@ -701,6 +719,25 @@ export function ModelMesh({
       invalidateShadows();
     };
   }, [clone, position, rotation, scale, meshOverrides, castShadow]);
+
+  // 정적 객체: 서브트리의 자동 행렬 합성을 끄고 지금 자세로 한 번 굳힌다.
+  // 위 meshOverrides·배치 props 효과 뒤에 있어 같은 커밋의 변경이 반영된
+  // 상태로 합성한다. 끄면(또는 언마운트) 자동 갱신으로 되돌린다.
+  useEffect(() => {
+    if (!staticTransform) return;
+    clone.traverse((child) => {
+      child.matrixAutoUpdate = false;
+    });
+    clone.traverse((child) => {
+      child.updateMatrix();
+    });
+    clone.updateMatrixWorld(true);
+    return () => {
+      clone.traverse((child) => {
+        child.matrixAutoUpdate = true;
+      });
+    };
+  }, [clone, position, rotation, scale, meshOverrides, staticTransform]);
 
   // 각 geometry에 BVH(boundsTree)를 빌드해 클릭 hit-test raycast를 가속한다.
   // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가

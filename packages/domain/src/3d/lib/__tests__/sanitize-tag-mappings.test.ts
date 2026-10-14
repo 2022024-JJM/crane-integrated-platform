@@ -56,6 +56,32 @@ describe('sanitizeTagMappings', () => {
     ).toEqual([node('m1', { tagKey: 'C_1:z', scale: 0.1 })]);
   });
 
+  it('선회 중심(pivot)은 회전 채널의 유한수 3개만 살리고, 다른 채널·깨진 값은 버린다', () => {
+    const rot = (pivot: unknown, channel = 'rotation') => ({
+      id: 'r',
+      tagKey: 'C_1:slew',
+      target: { kind: 'node', node: '[0]Top', channel, axis: 'y', pivot },
+    });
+    expect(sanitizeTagMappings([rot([0, 59.2, 0])])?.[0]?.target).toEqual({
+      kind: 'node',
+      node: '[0]Top',
+      channel: 'rotation',
+      axis: 'y',
+      pivot: [0, 59.2, 0],
+    });
+    for (const bad of [[0, 1], [0, 'a', 0], [0, NaN, 0], 'x', null, {}]) {
+      expect(sanitizeTagMappings([rot(bad)])?.[0]?.target).toEqual({
+        kind: 'node',
+        node: '[0]Top',
+        channel: 'rotation',
+        axis: 'y',
+      });
+    }
+    expect(
+      sanitizeTagMappings([rot([1, 2, 3], 'position')])?.[0]?.target,
+    ).toEqual({ kind: 'node', node: '[0]Top', channel: 'position', axis: 'y' });
+  });
+
   it('id 없음·중복, 빈 tagKey, 깨진 target 은 개별로 버린다', () => {
     const out = sanitizeTagMappings([
       node('m1'),

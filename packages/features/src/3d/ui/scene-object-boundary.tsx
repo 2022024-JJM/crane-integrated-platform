@@ -1,4 +1,13 @@
-import { Component, Suspense, type ErrorInfo, type ReactNode } from 'react';
+import {
+  Component,
+  Fragment,
+  Suspense,
+  type ErrorInfo,
+  type ReactNode,
+} from 'react';
+import { useGLTF } from '@react-three/drei';
+import { withBaseUrl } from '@crane/core/lib/asset-url';
+import { OBJECT_RETRY_DELAYS_MS } from '../lib/scene-object-retry';
 
 /**
  * 씬 객체 하나를 격리하는 경계 — 실패해도 **그 객체만** 사라진다.
@@ -24,19 +33,30 @@ interface SceneObjectBoundaryProps {
   label?: string;
   /** 이 객체만의 Suspense를 둘지. 기본 false — 아래 주석 참고. */
   isolateSuspense?: boolean;
+  /**
+   * 이 객체가 로드하는 GLB 경로(씬 JSON 의 path). 주면 실패 뒤
+   * OBJECT_RETRY_DELAYS_MS 간격으로 drei 캐시의 실패 항목을 비우고 다시
+   * 마운트한다 — useGLTF 는 실패도 캐시해 두어 그냥 리셋하면 같은 에러가
+   * 즉시 다시 난다.
+   */
+  assetPath?: string;
 }
 
 interface SceneObjectBoundaryState {
   hasError: boolean;
+  /** 재시도마다 올라가는 마운트 키 — 자식을 새로 만든다. */
+  generation: number;
 }
 
 class SceneObjectErrorBoundary extends Component<
-  { children: ReactNode; label?: string },
+  { children: ReactNode; label?: string; assetPath?: string },
   SceneObjectBoundaryState
 > {
-  state: SceneObjectBoundaryState = { hasError: false };
+  state: SceneObjectBoundaryState = { hasError: false, generation: 0 };
+  private failures = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  static getDerivedStateFromError(): SceneObjectBoundaryState {
+  static getDerivedStateFromError(): Partial<SceneObjectBoundaryState> {
     return { hasError: true };
   }
 
@@ -48,11 +68,40 @@ class SceneObjectErrorBoundary extends Component<
       error,
       info.componentStack,
     );
+    this.scheduleRetry();
+  }
+
+  componentWillUnmount() {
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+  }
+
+  private scheduleRetry() {
+    const { assetPath } = this.props;
+    if (!assetPath) return;
+    const delay = OBJECT_RETRY_DELAYS_MS[this.failures];
+    if (delay === undefined) return;
+    this.failures += 1;
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      try {
+        useGLTF.clear(withBaseUrl(assetPath));
+      } catch {
+        // 캐시에 없으면 그만 — 재마운트는 그대로 간다.
+      }
+      this.setState((prev) => ({
+        hasError: false,
+        generation: prev.generation + 1,
+      }));
+    }, delay);
   }
 
   render() {
     if (this.state.hasError) return null;
-    return this.props.children;
+    // key 로 자식을 통째로 다시 만든다 — 실패한 useGLTF 호출이 새로 돈다.
+    return (
+      <Fragment key={this.state.generation}>{this.props.children}</Fragment>
+    );
   }
 }
 
@@ -76,9 +125,10 @@ export function SceneObjectBoundary({
   children,
   label,
   isolateSuspense = false,
+  assetPath,
 }: SceneObjectBoundaryProps) {
   return (
-    <SceneObjectErrorBoundary label={label}>
+    <SceneObjectErrorBoundary label={label} assetPath={assetPath}>
       {isolateSuspense ? (
         <Suspense fallback={null}>{children}</Suspense>
       ) : (

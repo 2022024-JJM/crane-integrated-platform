@@ -6,6 +6,7 @@ import {
   STATUS_TAG_ROLES,
   type ModelStatusTags,
   type SavedModelInfo,
+  type SavedSceneInfo,
   type StatusTagRole,
 } from '@crane/domain/3d';
 import {
@@ -69,6 +70,25 @@ export function collectModelStatusKeys(
     liveness.push(key);
   }
   return { motion, liveness, status };
+}
+
+/**
+ * 씬이 실시간으로 읽는 태그 키 전부(맵핑 + 상태 태그, 중복 제거, 등장 순).
+ * 수신 클라이언트의 관심 키로 넘겨 그 밖의 태그는 Worker 가 버리게 한다.
+ */
+export function collectSceneLiveTagKeys(
+  sceneInfo: SavedSceneInfo | null | undefined,
+): string[] {
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  for (const model of sceneInfo?.models ?? []) {
+    for (const key of collectModelStatusKeys(model).liveness) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      keys.push(key);
+    }
+  }
+  return keys;
 }
 
 /** 비트 값 — 키가 없거나 아직 못 받았거나 값이 유한수가 아니면 null(모름). */

@@ -9,6 +9,7 @@ import {
   formatTris,
   updateEma,
   type ScenePerfSample,
+  formatIngestLine,
 } from '../perf-stats';
 
 describe('updateEma', () => {
@@ -180,5 +181,29 @@ describe('formatFps', () => {
     expect(formatFps(0)).toBe('0fps');
     expect(formatFps(-1)).toBe('0fps');
     expect(formatFps(Number.NaN)).toBe('0fps');
+  });
+});
+
+describe('formatIngestLine', () => {
+  const at = (receivedTotal: number, droppedTotal: number, busy = 0) => ({
+    receivedTotal,
+    droppedTotal,
+    deliveredTotal: receivedTotal - droppedTotal,
+    transportBusyRatio: busy,
+  });
+  it('누계 차를 초당으로, 버림 비율·사용률은 정수 %', () => {
+    expect(formatIngestLine(at(0, 0), at(13_550, 13_500, 0.34), 500)).toBe(
+      'rx 27.1k/s · drop 100% · worker 34%',
+    );
+    expect(formatIngestLine(at(100, 10), at(200, 60, 0.05), 1000)).toBe(
+      'rx 100/s · drop 50% · worker 5%',
+    );
+  });
+  it('수신이 없거나 간격이 0 이하면 null, 사용률은 0~1 로 자른다', () => {
+    expect(formatIngestLine(at(5, 0), at(5, 0), 500)).toBeNull();
+    expect(formatIngestLine(at(0, 0), at(10, 0), 0)).toBeNull();
+    expect(formatIngestLine(at(0, 0), at(10, 0, 7), 1000)).toBe(
+      'rx 10/s · drop 0% · worker 100%',
+    );
   });
 });

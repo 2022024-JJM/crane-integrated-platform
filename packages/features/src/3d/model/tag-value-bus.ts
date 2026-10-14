@@ -109,12 +109,18 @@ export function publishTagValue(
   if (typeof key !== 'string' || key.length === 0) return;
   if (!Number.isFinite(value)) return;
   const now = Date.now();
+  // 기존 엔트리는 제자리 수정 — 초당 수만 publish 에서 엔트리 객체를 매번
+  // 새로 만들면 그만큼 GC 압박이다. 외부엔 읽기만 열려 있다(readTagLiveValue).
   const prev = liveValues.get(key);
-  liveValues.set(key, {
-    value,
-    at: now,
-    changedAt: prev && prev.value === value ? prev.changedAt : now,
-  });
+  if (prev) {
+    if (prev.value !== value) {
+      prev.value = value;
+      prev.changedAt = now;
+    }
+    prev.at = now;
+  } else {
+    liveValues.set(key, { value, at: now, changedAt: now });
+  }
   tagIngest?.(key, value, options);
   for (const listener of listeners) listener(key, value, now);
 }

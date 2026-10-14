@@ -12,6 +12,7 @@ import {
   useClonedModel,
   useModelLabelLocalAnchor,
 } from './model-mesh';
+import type { SceneLookGroup } from '../lib/scene-look';
 import {
   ModelLabel,
   type AlarmHighlightSeverity,
@@ -27,7 +28,7 @@ import type {
 import { SELECTION_LINE_COLOR } from '../lib/selection-style';
 import {
   STATUS_OUTLINE_COLORS,
-  STATUS_OUTLINE_PX,
+  statusOutlineThicknessPx,
   isStatusOutlineVisible,
   statusOutlineRenderOrder,
 } from '../lib/status-outline-style';
@@ -70,6 +71,10 @@ interface GltfModelProps {
   readLabelValue?: ModelLabelValueReader;
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델·지도(model-mesh.tsx). */
   seaSubmersion?: boolean;
+  /** 배치가 바뀌지 않는 객체 — ModelMesh.staticTransform. */
+  staticTransform?: boolean;
+  /** 관제 모드 무채색 그룹 — ModelMesh.lookGroup. */
+  lookGroup?: SceneLookGroup;
   /**
    * 그림자를 드리울지. 기본 true. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
    */
@@ -141,6 +146,8 @@ export const GltfModel = memo(function GltfModel({
   equipName,
   opacity = 1,
   seaSubmersion = false,
+  staticTransform = false,
+  lookGroup = 'equipment',
   castShadow = true,
   receiveShadow = true,
   shading = 'standard',
@@ -210,6 +217,8 @@ export const GltfModel = memo(function GltfModel({
       opacity={opacity}
       alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
       seaSubmersion={seaSubmersion}
+      staticTransform={staticTransform}
+      lookGroup={lookGroup}
       castShadow={castShadow}
       receiveShadow={receiveShadow}
       shading={shading}
@@ -231,7 +240,7 @@ export const GltfModel = memo(function GltfModel({
         <ObjectSilhouetteOutline
           objects={statusOutlineObjects}
           color={STATUS_OUTLINE_COLORS[statusOutline]}
-          thicknessPx={STATUS_OUTLINE_PX}
+          thicknessPx={statusOutlineThicknessPx(statusOutline)}
           renderOrder={statusOutlineRenderOrder(statusOutline)}
         />
       ) : null}

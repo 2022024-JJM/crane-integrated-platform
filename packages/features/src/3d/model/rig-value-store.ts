@@ -327,8 +327,12 @@ export function createTagBindingSource(
     },
     ingest(key, value, options) {
       if (!sink || !Number.isFinite(value)) return;
+      const targets = resolve(key);
+      // 맵핑되지 않은 키(실서버는 씬이 쓰는 태그보다 훨씬 많이 보낸다)는
+      // 옵션 객체도 만들지 않고 돌아간다.
+      if (targets.length === 0) return;
       const setOptions = tagSetOptions(options?.smoothTime);
-      for (const target of resolve(key)) {
+      for (const target of targets) {
         sink.set(
           target.address,
           target.offset + value * target.scale,

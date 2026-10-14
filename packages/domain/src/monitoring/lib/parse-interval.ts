@@ -8,9 +8,7 @@ function toTimestampMs(value: string) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-export function getReplayFrameDurationsMs(
-  frames: ReplayLiteFrame[],
-): number[] {
+export function getReplayFrameDurationsMs(frames: ReplayLiteFrame[]): number[] {
   if (frames.length === 0) {
     return [];
   }

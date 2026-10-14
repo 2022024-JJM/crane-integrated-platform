@@ -10,7 +10,7 @@
 |---|---|
 | 기하 판정(AABB → OBB → three-mesh-bvh 삼각형) | `packages/domain/src/3d/lib/collision-volumes.ts` |
 | 런타임(React 밖 싱글턴, dirty 쌍 검사·기준선·억제·시간 예산) | `packages/features/src/3d/model/scene-collision-runtime.ts` |
-| 상수(스캔 주기·예산·`BASELINE_SETTLE_MS`·`SEPARATION_MARGIN`·`HISTORY_MAX`) | `packages/features/src/3d/lib/scene-collision-pairs.ts` |
+| 상수(스캔 주기 `SCAN_INTERVAL_MS`(10Hz — 감지 지연 상한)·예산·`BASELINE_SETTLE_MS`·`SEPARATION_MARGIN`·`SUPPRESSED_RECHECK_MS`·`CLEARANCE_PROBE`·`CLEARANCE_MIN`·`HISTORY_MAX`)·이동 한계 `displacementBound` | `packages/features/src/3d/lib/scene-collision-pairs.ts` |
 | 스토어(on/off·정지 여부·기록·활성 쌍·`baselinePending`) | `packages/features/src/3d/model/use-scene-collision-store.ts` |
 | 검출기 훅 / Canvas 컴포넌트 | `packages/features/src/3d/model/use-scene-collision-detector.ts`, `ui/scene-collision-detector.tsx` |
 | 러너 정지·재개 단일 경로 | `packages/features/src/3d/model/scene-collision-hold.ts` |
@@ -36,12 +36,13 @@
 
 - 대상은 씬 모델 **인스턴스 간** 관통이다. 판정은 AABB → OBB → three-mesh-bvh 삼각형 순으로 좁힌다. BVH 는 `collision-volumes.ts` 에서만 접근하고 여기서 빌드하지 않는다(빌드는 워밍업 큐, `docs/agents/rendering-perf.md`).
 - 메쉬 수집은 `collectCollidableMeshes` 다. `visible=false` 서브트리는 빼되 LOD 는 가시성과 무관하게 **항상 LOD0** 을 모은다 — LOD>0 사본은 BVH 가 없고, LOD0 은 `SceneTerrainLod` 가 거리에 따라 숨겨도 대상이다(raycast 와 같은 계약).
-- 억제 해제(분리 판정)는 모델 AABB 가 아니라 **메쉬 단위**다. 런타임의 `meshPairsSeparated` 가 AABB+margin → OBB → 삼각형 최단 거리(`meshesWithinDistance`)로 보므로, 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 `SEPARATION_MARGIN` 이상 떨어지면 다시 보고된다.
+- **여유 거리 컬링**: clear 로 판정된 쌍은 그때 두 모델 사이 최단 거리의 하한(`clearance` — 모델 AABB 가 떨어져 있으면 그 간격, 겹치면 **메쉬 AABB 쌍 간격의 최소**, `CLEARANCE_PROBE` 상한, `CLEARANCE_MIN` 아래는 0)을 기억하고, 그 뒤 매 tick 두 모델의 **강체 이동 한계**(`displacementBound` = |Δ평행이동| + ‖ΔR‖_F·`meshLocalReach`, 메쉬별 최대)를 누적해 그 합이 여유 거리를 넘기 전까지는 큐에 넣지도 않는다. 한계가 보수적이라 놓치는 충돌은 없고, 지오메트리가 바뀐 메쉬는 한계를 Infinity 로 둬 반드시 검사한다. 어느 메쉬 AABB 쌍이든 겹치면 여유 거리는 0 이고 그 쌍은 예전처럼 매 스캔 교차 검사를 받는다(단일 메쉬 크레인끼리는 대개 이 경우). `exactTests` 카운터로 효과를 본다.
+- 억제 해제(분리 판정)는 모델 AABB 가 아니라 **메쉬 단위**다. 런타임의 `meshPairsSeparated` 가 AABB+margin → OBB → 삼각형 최단 거리(`meshesWithinDistance`)로 보므로, 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 `SEPARATION_MARGIN` 이상 떨어지면 다시 보고된다. 삼각형 거리 질의는 "한계 이하 쌍이 하나라도 있는가" 만 답하면 되므로 BVH `closestPointToGeometry` 의 `minThreshold` 를 한계와 같게 주어 그런 쌍을 처음 만나면 탐색을 끝낸다(0 으로 두면 관통한 큰 메쉬 쌍에서 최근접점을 끝까지 찾느라 수백 ms). 억제 쌍의 분리 재판정은 매 스캔이 아니라 `SUPPRESSED_RECHECK_MS` 간격이다 — 직전 판정이 "붙음" 이면 그만큼 뒤로 미루고 그동안은 큐에만 남긴다(움직임이 멈춰도 때가 되면 본다). 분리를 알아채는 데 최대 그 간격만큼 늦고, 그 안에 떼었다 다시 붙인 재충돌은 보고되지 않는다 — 허용된 부작용.
 
 ### 런타임(scene-collision-runtime)
 
 - React 밖 싱글턴. 모델 오브젝트 레지스트리의 루트를 항목으로 들고, 메쉬 `matrixWorld` 변화로 dirty 가 된 쌍만 검사한다. 한 틱에 쓰는 시간 예산이 있어 큰 씬에서도 프레임을 세우지 않는다.
-- **기준선(baseline)**: 스캔을 시작(재개)하는 전이에서 현재 겹침을 기준선으로 잡고 보고하지 않는다. 기준선은 dirty 큐가 빈 뒤에도 `BASELINE_SETTLE_MS` 안정화 창이 지나야 scanning 상태가 된다. BVH 재시도 대기 쌍은 큐에 있어도 기다리지 않는다 — 그 쌍은 `baselineDeferred` 로 넘어가 BVH 가 생긴 뒤의 첫 hit 을 보고 대신 억제하고, 그 전에 떨어지면 미결이 풀린다. 그래서 정지 중 기즈모·인스펙터·슬라이더로 만든 겹침, 드래그로 놓은 겹침, 로딩 배치, 재생 시작 스무딩은 보고 대신 억제되고, 시뮬레이션이 그 쌍을 떼었다가 다시 붙여야 보고된다. 안정화 창 안에서 시뮬레이션이 만든 겹침도 분리 전까지 보고되지 않으며, 재생 중 편집(opacity 만 바꿔도 참조 교체)마다 짧은 blind 가 생기는 것은 허용된 부작용이다.
+- **기준선(baseline)**: 스캔을 시작(재개)하는 전이에서 현재 겹침을 기준선으로 잡고 보고하지 않는다. 기준선은 dirty 큐가 빈 뒤에도 `BASELINE_SETTLE_MS` 안정화 창이 지나야 scanning 상태가 된다. BVH 재시도 대기 쌍과 분리 재판정을 기다리는 억제 쌍은 큐에 있어도 기다리지 않는다 — 그 쌍은 `baselineDeferred` 로 넘어가 BVH 가 생긴 뒤의 첫 hit 을 보고 대신 억제하고, 그 전에 떨어지면 미결이 풀린다. 그래서 정지 중 기즈모·인스펙터·슬라이더로 만든 겹침, 드래그로 놓은 겹침, 로딩 배치, 재생 시작 스무딩은 보고 대신 억제되고, 시뮬레이션이 그 쌍을 떼었다가 다시 붙여야 보고된다. 안정화 창 안에서 시뮬레이션이 만든 겹침도 분리 전까지 보고되지 않으며, 재생 중 편집(opacity 만 바꿔도 참조 교체)마다 짧은 blind 가 생기는 것은 허용된 부작용이다.
 - 재기준선 시점: 스캔 재개 전이와 기록 복원(`selectRecord`)은 검출기가 `rebaseline()` 을 부르고, 새 모델 항목(첫 마운트·리마운트·참조 교체)은 런타임 tick 이 스스로 기준선 상태로 되돌린다.
 - 런타임은 hit 을 돌려줄 뿐 스스로 멈추지 않는다. 정지 판단은 검출기·스토어 몫이다.
 
@@ -96,5 +97,9 @@
 - 캔버스 위 충돌 오버레이 패널(지점·쌍 목록)은 두지 않는다 — 비네트만.
 - 실시간 자동 정지는 넣지 않는다 — 장비는 멈추지 않는데 화면만 얼린다.
 - 분리 판정을 모델 AABB 로 하지 않는다 — 단일 메쉬 크레인은 OBB 가 늘 겹쳐 재보고가 영영 나지 않았다.
+- 여유 거리를 삼각형 최단 거리(BVH `closestPointToGeometry`, `meshesClearance`)로 재지 않는다 — 옥포 타워크레인처럼 삼각형이 조밀한 큰 메쉬 쌍은 질의 하나가 수 초라 화면이 1 fps 로 떨어졌다(floor·예산·백오프를 넣어도 첫 측정 자체가 문제). 메쉬 AABB 간격만 쓴다.
 - 기준선 없이 즉시 보고하지 않는다 — 정지 중 편집·로딩 배치·재생 시작 스무딩이 전부 충돌로 찍혔다.
 - 에디터 지도의 선택 표시를 실루엣으로 하지 않는다 — 지형 메시를 매 프레임 두 번 더 그린다.
+
+### 분리 재판정의 빠른 길
+`meshesWithinDistance` 는 최근접점 탐색 전에 `intersectsGeometry` 를 먼저 본다 — 억제 중인 쌍은 대부분 관통 상태라 첫 교차 삼각형에서 끝나고, 붙은 채 움직이는 쌍 6개가 수신 중 메인 스레드의 7% 를 쓰던 것이 상위 목록에서 사라졌다. 재판정 간격은 `SUPPRESSED_RECHECK_MS`(떨어짐은 늦게 알아도 되는 소식).

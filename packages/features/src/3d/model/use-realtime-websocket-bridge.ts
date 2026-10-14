@@ -1,39 +1,44 @@
 import { useEffect } from 'react';
-import {
-  isRealtimeCraneLiteMessage,
-  toTagNumber,
-} from '@crane/domain/monitoring';
-import { cranesLiteWebSocketClient } from '@crane/core/ws';
+import { cranesLiteIngestClient } from '@crane/domain/monitoring';
 import { useRealtimeStore } from './use-realtime-store';
 
 /**
- * 실시간 모드일 때 cranesLiteWebSocketClient를 구독하여
- * 수신된 크레인 값을 useRealtimeStore 버퍼에 push한다.
+ * 실시간 모드일 때 수신 클라이언트(cranesLiteIngestClient)를 잡고, 배치로
+ * 들어오는 태그 값을 useRealtimeStore 버퍼에 넣는다.
  *
- * 키 포맷: `${craneId}:${tagCode}` (use-replay-player-store와 동일)
- * craneId는 '-'를 '_'로 정규화한다.
+ * 파싱·숫자 변환·키 조립·같은 키 병합은 전부 수신 Worker 가 끝내고 온다 —
+ * 여기서는 키 사전으로 id 를 키로 바꿔 Map 에 넣는 것뿐이다. 키 포맷은
+ * `${craneId}:${tagCode}`(craneId 의 `-` 는 `_`, use-replay-player-store 와
+ * 동일).
  *
- * 값은 `toTagNumber` 로 숫자로 맞춘다 — 상태 비트(boolean)는 0/1 로 들어가
- * 모델의 상태 태그(statusTags)가 읽는다. 숫자로 못 바꾸는 값만 버린다.
+ * `interestKeys` 는 이 화면이 실제로 쓰는 태그 키(씬의 맵핑·상태 태그).
+ * 주면 Worker 가 그 밖의 태그를 버려 메인 스레드가 받는 양이 서버 태그
+ * 수에서 씬 태그 수로 준다. null/생략 = 전부 받기.
  *
  * 이 훅은 R3F Canvas 밖(일반 React 컴포넌트)에서 호출해야 한다.
  */
-export function useRealtimeWebSocketBridge(enabled: boolean) {
+export function useRealtimeWebSocketBridge(
+  enabled: boolean,
+  interestKeys: readonly string[] | null = null,
+) {
+  useEffect(() => {
+    if (!enabled) return;
+    cranesLiteIngestClient.setInterestKeys(interestKeys);
+    return () => {
+      cranesLiteIngestClient.setInterestKeys(null);
+    };
+  }, [enabled, interestKeys]);
+
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = cranesLiteWebSocketClient.subscribeAll((message) => {
-      const payload = message.payload;
-      if (!isRealtimeCraneLiteMessage(payload)) return;
-      const value = toTagNumber(payload.value);
-      if (value === null) return;
-
-      const craneId = payload.craneId.replace(/-/g, '_');
-      const key = `${craneId}:${payload.tagCode}`;
-      useRealtimeStore.getState().pushValue(key, value);
+    const unsubscribe = cranesLiteIngestClient.subscribeTagBatch((batch) => {
+      useRealtimeStore
+        .getState()
+        .pushBatch(batch.keys, batch.ids, batch.values, batch.count);
     });
 
-    const release = cranesLiteWebSocketClient.acquire();
+    const release = cranesLiteIngestClient.acquire();
 
     return () => {
       unsubscribe();

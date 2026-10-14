@@ -15,6 +15,7 @@
  * 체인을 유지한다(use-rig-driver·scene-surface-camera).
  */
 const requesters = new Set<() => void>();
+let tickerActive = false;
 
 export function registerSceneFrameRequester(invalidate: () => void): void {
   requesters.add(invalidate);
@@ -24,8 +25,17 @@ export function unregisterSceneFrameRequester(invalidate: () => void): void {
   requesters.delete(invalidate);
 }
 
-/** 등록된 모든 캔버스에 한 프레임을 요청한다. 등록이 없으면 no-op. */
+/**
+ * 등록된 모든 캔버스에 한 프레임을 요청한다. 등록이 없으면 no-op.
+ *
+ * 거버너가 주기 틱을 돌리는 중(`isSceneFrameTickerActive()`)이면 **부르지
+ * 않는다** — 다음 틱이 어차피 그린다. 실시간·리플레이 값은 useFrame 안에서
+ * publish 되어 여기로 오는데, useFrame 안의 invalidate 는 R3F 가 `frames=2`
+ * 로 두어 rAF 루프가 주사율로 자체 지속되므로 틱 중에 부르면 30fps 상한이
+ * 무력화된다(실측: 수신 중 렌더 67fps).
+ */
 export function requestSceneFrame(): void {
+  if (tickerActive) return;
   for (const invalidate of requesters) invalidate();
 }
 
@@ -33,8 +43,6 @@ export function requestSceneFrame(): void {
 export function sceneFrameRequesterCount(): number {
   return requesters.size;
 }
-
-let tickerActive = false;
 
 /**
  * 거버너가 주기 틱(30fps 등)을 돌리는 중인지. `SceneFrameGovernor` 가 켜고

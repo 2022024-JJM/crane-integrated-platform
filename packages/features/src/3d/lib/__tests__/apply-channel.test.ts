@@ -86,3 +86,67 @@ describe('addChannelDelta — 누적', () => {
     expect(n.quaternion.angleTo(new Quaternion())).toBeLessThan(1e-9);
   });
 });
+
+describe('addChannelDelta — 선회 중심(orbit)', () => {
+  it('pivot 을 주면 위치가 pivot 둘레를 돌고(pivot + R·(p − pivot)) 회전은 그대로 쌓인다', () => {
+    const n = new Object3D();
+    n.position.set(10, 5, 0); // 노드 원점이 선회축(x=0,z=0)에서 10 떨어진 Top
+    seedRestPose(n);
+    const rest = getRestPose(n);
+    beginNodePose(n, rest);
+    addChannelDelta(n, 'rotation', 'y', 90, {
+      pivot: [0, 5, 0],
+      rest: rest.quaternion,
+    });
+    // y 축 +90° 회전: (10,0,0) → (0,0,-10)
+    expect(n.position.x).toBeCloseTo(0, 9);
+    expect(n.position.y).toBeCloseTo(5, 9);
+    expect(n.position.z).toBeCloseTo(-10, 9);
+    expect(
+      (2 * Math.atan2(n.quaternion.y, n.quaternion.w) * 180) / Math.PI,
+    ).toBeCloseTo(90, 9);
+  });
+
+  it('orbit 없이 같은 Δ 를 주면 위치는 움직이지 않는다(기존 동작)', () => {
+    const n = new Object3D();
+    n.position.set(10, 5, 0);
+    seedRestPose(n);
+    beginNodePose(n, getRestPose(n));
+    addChannelDelta(n, 'rotation', 'y', 90);
+    expect(n.position.toArray()).toEqual([10, 5, 0]);
+  });
+
+  it('rest 회전이 있으면 축을 부모 프레임으로 옮겨 돈다 — rest 가 z 축 90° 면 로컬 y 는 부모 −x', () => {
+    const n = new Object3D();
+    n.position.set(0, 10, 0);
+    n.rotation.set(0, 0, Math.PI / 2);
+    seedRestPose(n);
+    const rest = getRestPose(n);
+    beginNodePose(n, rest);
+    addChannelDelta(n, 'rotation', 'y', 90, {
+      pivot: [0, 0, 0],
+      rest: rest.quaternion,
+    });
+    // 부모 −x 축 둘레 +90°: (0,10,0) → (0,0,−10)
+    expect(n.position.x).toBeCloseTo(0, 9);
+    expect(n.position.y).toBeCloseTo(0, 9);
+    expect(n.position.z).toBeCloseTo(-10, 9);
+  });
+
+  it('Δ 0·비유한은 orbit 이 있어도 아무것도 바꾸지 않는다', () => {
+    const n = new Object3D();
+    n.position.set(10, 5, 0);
+    seedRestPose(n);
+    const rest = getRestPose(n);
+    beginNodePose(n, rest);
+    addChannelDelta(n, 'rotation', 'y', 0, {
+      pivot: [0, 0, 0],
+      rest: rest.quaternion,
+    });
+    addChannelDelta(n, 'rotation', 'y', NaN, {
+      pivot: [0, 0, 0],
+      rest: rest.quaternion,
+    });
+    expect(n.position.toArray()).toEqual([10, 5, 0]);
+  });
+});

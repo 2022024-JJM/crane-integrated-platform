@@ -35,14 +35,16 @@
 
 세 캔버스 모두 `frameloop='demand'` 다. 프레임은 `SceneFrameGovernor` 가 만든다.
 
-- 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 가상 태그 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 바다가 켜진 씬(`resolveSeaVisible`), 영역 침범 활성.
+- 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 가상 태그 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 영역 침범 활성. 바다가 켜진 씬(`resolveSeaVisible`, 거버너의 `sea` prop)은 다른 소스가 없을 때 `SEA_IDLE_FPS` 로 내려간다 — 파도·반사만 움직이는 관제 유휴가 대부분의 시간이라 유휴 비용의 1/3 이 빠진다.
 - 소스가 멈춘 뒤 `ANIMATION_GRACE_MS` 동안은 계속 틱을 돌려 스무딩이 정착하게 한다.
 - solar 태양만 있으면 `SLOW_FPS` 로 드물게 그린다. 정지 씬은 틱이 없다.
 - 조작(OrbitControls·표면 카메라)은 스스로 `invalidate` 해 주사율로 그려진다. drei `OrbitControls`·`TransformControls`·`Text` 와 R3F 리컨실러(prop 변경·마운트)도 스스로 invalidate 한다.
 
-React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestSceneFrame()` 을 부른다. 거버너가 자기 `invalidate` 를 여기에 등록한다. 이미 배선된 곳: `rigValueStore` 의 set/reset/restore, `SceneLighting` 의 조명 설정·씬 시계 구독, `SceneEnvironment` 의 배경 교체. 스무딩 잔여는 `useRigDriver` 가 `hasPendingSmoothing()` 으로 프레임마다 다음 프레임을 스스로 요청해 러너 없이 들어온 값도 끝까지 수렴한다 — 단 거버너가 주기 틱을 돌리는 동안(`isSceneFrameTickerActive()`)은 부르지 않는다. useFrame 안에서 부른 invalidate 는 R3F 가 `frames=2` 로 두어 rAF 루프가 주사율로 자체 지속되므로, 이 가드가 없으면 재생 중 fps 상한이 무력화된다.
+React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestSceneFrame()` 을 부른다. 거버너가 자기 `invalidate` 를 여기에 등록한다. 이미 배선된 곳: `rigValueStore` 의 set/reset/restore, `SceneLighting` 의 조명 설정·씬 시계 구독, `SceneEnvironment` 의 배경 교체. `requestSceneFrame()` 은 거버너가 주기 틱을 돌리는 동안(`isSceneFrameTickerActive()`)은 아무것도 하지 않는다 — 다음 틱이 그린다. 실시간·리플레이 값은 useFrame 안(러너)에서 publish 되어 값 저장소 set 으로 여기에 닿는데, useFrame 안에서 부른 invalidate 는 R3F 가 `frames=2` 로 두어 rAF 루프가 주사율로 자체 지속되므로 이 가드가 없으면 수신·재생 중 fps 상한이 무력화된다(실측: 수신 중 45fps → 가드 뒤 30fps). 같은 이유로 영역 검출기(`use-scene-zone-detector.ts`)와 드라이버의 스무딩 self-invalidate(`hasPendingSmoothing()`)도 틱 중엔 부르지 않는다.
 
-성능 확인은 `localStorage crane:perf-hud='1'` 로 켜는 HUD(드로우콜·삼각형·프레임 ms·fps — demand 루프라 fps 는 실제로 그린 빈도). 드로우콜·삼각형은 shadow pass 뒤 메인 패스 + 바다 미러 패스의 합이다(shadow pass 는 three 가 그 뒤 `info.reset()` 을 불러 빠진다). 에디터 perf HUD 의 드로우콜·삼각형은 GizmoHelper 의 Hud 가 마지막으로 그린 기즈모 씬 값이라 참고하지 않고 fps·ms 만 본다.
+스무딩 잔여는 `useRigDriver` 가 `hasPendingSmoothing()` 으로 프레임마다 다음 프레임을 스스로 요청해 러너 없이 들어온 값도 끝까지 수렴한다. 수렴은 유한하다 — `smoothDampStep`(`lib/smooth-damp.ts`) 이 값·속도가 `SMOOTH_SETTLE_EPS` 아래로 들어온 스텝에 target 으로 스냅하므로 `value === target` 정착 판정이 반드시 참이 된다. 스냅이 없으면 지수 수렴이 영원히 남아 거버너 유예 뒤에도 드라이버가 프레임마다 다음 프레임을 요청해 유휴 화면이 주사율로 그려진다.
+
+성능 확인은 `localStorage crane:perf-hud='1'` 로 켜는 HUD(드로우콜·삼각형·프레임 ms·fps — demand 루프라 fps 는 실제로 그린 빈도. 실시간 수신이 있으면 둘째 줄에 수신 Worker 의 msg/s·관심 밖 버림 비율·Worker 사용률 — `cranesLiteIngestClient.getStats()`, 2초 창 `INGEST_WINDOW_POLLS`, 포맷 `formatIngestLine`). 드로우콜·삼각형은 shadow pass 뒤 메인 패스 + 바다 미러 패스의 합이다(shadow pass 는 three 가 그 뒤 `info.reset()` 을 불러 빠진다). 에디터 perf HUD 의 드로우콜·삼각형은 GizmoHelper 의 Hud 가 마지막으로 그린 기즈모 씬 값이라 참고하지 않고 fps·ms 만 본다.
 
 ### 절감은 핵심이 아니라 주변에서
 
@@ -52,7 +54,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - 컨텍스트 지형(씬 지도의 `role: 'context'` — `isContextMap`)은 `GltfModel shading='lambert'` 로 PBR 대신 Lambert 다(`lambert-material.ts`, 원본 머티리얼당 변환본 캐시). 조명·낮/밤엔 똑같이 반응하고 스펙큘러·radiance 샘플링만 없다. 모니터링·에디터 같은 규칙.
 - 타일 LOD 임계는 `TERRAIN_LOD_THRESHOLD_PX`(device px). 컨텍스트 지형과 LOD 체인이 붙은 모델에만 LOD 가 있다(생성 절차는 `docs/agents/assets-glb.md`).
 - 씬의 미러 표시(`seaMirror`, `resolveSeaMirror`)를 끄면 미러 패스가 씬 최상위 객체를 전부 빼고 하늘만 그린다 — 씬을 한 번 더 그리는 정점·드로우콜이 빠지고 크레인·야드·지도가 물에 비치지 않는다. 씬별 저작값이며 스위치는 `docs/agents/3d-editor.md`.
-- 바다 미러 패스는 컨텍스트 지형 루트·밤하늘 틴트 돔·태양/달 스프라이트를 빼고 그린다(`OceanWater` 의 `excludedObjects` — `resolveReflectionExcludedMapIds` + `excludeFromReflection`). 지형 루트 하나를 숨기면 three 가 서브트리를 통째로 건너뛰어 LOD 타일 전부가 빠진다. 반사 RT 크기는 `scene-water.tsx` 의 `WATER_REFLECTION_SIZE`, 비친 하늘의 밝기는 `WATER_REFLECTION_INTENSITY`(포크 유니폼 `reflectionIntensity`, 예제엔 없다 — 예제는 렌더러 노출 0.1 로 HDR 하늘을 숨기지만 이 씬은 조명 전체가 노출 1 기준이라 물에서만 누그러뜨린다), 태양 확산 회색항의 배율은 `WATER_SUN_DIFFUSE_INTENSITY`(포크 유니폼 `sunDiffuseIntensity`, 예제 원값이면 낮에 산란색을 덮어 물이 회색이 된다) 하나씩.
+- 바다 미러 패스는 컨텍스트 지형 루트·밤하늘 틴트 돔·태양/달 스프라이트를 빼고 그린다(`OceanWater` 의 `excludedObjects` — `resolveReflectionExcludedMapIds` + `excludeFromReflection`). 지형 루트 하나를 숨기면 three 가 서브트리를 통째로 건너뛰어 LOD 타일 전부가 빠진다. 반사 RT 는 카메라가 그대로면 `WATER_REFLECTION_INTERVAL_MS`(15Hz) 마다만 다시 그리고 그 사이 프레임은 지난 RT·textureMatrix 를 그대로 쓴다(`OceanWater` 의 `reflectionIntervalMs` — 카메라가 움직이면 매 프레임, `eye` 유니폼은 항상 매 프레임). 미러 패스가 본 패스만큼 비싸서 30fps 틱에서 그 절반이 빠진다. 반사 RT 크기는 `scene-water.tsx` 의 `WATER_REFLECTION_SIZE`, 비친 하늘의 밝기는 `WATER_REFLECTION_INTENSITY`(포크 유니폼 `reflectionIntensity`, 예제엔 없다 — 예제는 렌더러 노출 0.1 로 HDR 하늘을 숨기지만 이 씬은 조명 전체가 노출 1 기준이라 물에서만 누그러뜨린다), 태양 확산 회색항의 배율은 `WATER_SUN_DIFFUSE_INTENSITY`(포크 유니폼 `sunDiffuseIntensity`, 예제 원값이면 낮에 산란색을 덮어 물이 회색이 된다) 하나씩.
 
 ### 바다는 미러 반사 + 불투명 패스 뒤 스텐실
 
@@ -107,7 +109,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 |---|---|
 | 지형·모델 LOD(`node.visible` 은 씬에 하나) | `TerrainLodController` 가 카메라 키마다 이동 게이트·현재 레벨을 따로 두고, 게이트에 걸려도 가시성은 매번 다시 쓴다. 렌더러가 타일 렌더 직전에 타일 높이(device px)로 적용 |
 | shadow frustum(시선 초점 추종) | `SceneLighting` 의 `shadowFocus` prop — 타일 구도들의 초점(`resolveShadowFocusForPose`) 합집합(`unionShadowFocus`)으로 고정. shadow pass 는 첫 타일 렌더가 `needsUpdate` 를 소비해 프레임당 1회 |
-| drei `Html` 표시(모델 라벨·눈금 숫자·영역 배지·충돌 표지) | `PerViewport`/`ViewportAnchor` 가 타일마다 R3F portal(state 의 camera·size 를 타일 것으로)로 복제하고 DOM 은 타일 컨테이너(`portal`)에 붙인다. 포털 key 에 타일 크기·컨테이너 uuid 가 들어가 리사이즈에 재마운트된다. 타일 라벨은 클릭·hover 를 받지 않는다 |
+| DOM 표시(모델 라벨 — 자체 DOM, `docs/agents/monitoring-ui.md`; 눈금 숫자·영역 배지·충돌 표지 — drei `Html`) | `PerViewport`/`ViewportAnchor` 가 타일마다 R3F portal(state 의 camera·size 를 타일 것으로)로 복제하고 DOM 은 타일 컨테이너(`portal`)에 붙인다. 포털 key 에 타일 크기·컨테이너 uuid 가 들어가 리사이즈에 재마운트된다. 타일 라벨은 클릭·hover 를 받지 않는다 |
 | 실루엣 테두리 두께(캔버스 세로 px 기준) | `useSceneViewportHeight` — 분할이면 타일 높이(타일은 전부 같은 높이) |
 | 바다 미러 패스 | 수정 없음 — `OceanWater.onBeforeRender` 가 그리는 카메라 기준이라 타일마다 맞게 돌고 비용만 타일 수만큼(미러 표시를 끈 씬은 타일마다 하늘만) |
 | 태양·달 스프라이트·밤하늘 틴트 돔(기본 카메라 추종) | 그대로 둔다 — 각각 `CELESTIAL_DISTANCE`·`SKY_TINT_RADIUS` 거리라 타일 카메라가 몇 km 어긋나도 눈에 띄지 않는다 |
@@ -147,10 +149,14 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **바다 도달 마스크의 유니폼은 객체를 바꾸지 않고 값만 바꾼다(`publishSeaReachMask`·`resetSeaReachMask`).** 머티리얼이 유니폼 객체를 참조로 들고 있어 객체를 갈면 이미 컴파일된 머티리얼이 옛 값을 본다.
 - **마스크는 삼각형을 직접 찍어 만든다.** GPU 탑뷰 렌더로 바꾸지 않는다 — 두께 없는 도크 게이트는 위에서 본 면적이 없어 렌더에 남지 않고, 도크가 통째로 바다로 샌다.
 - three 를 올리면 `ocean-water.ts` 를 새 버전의 `examples/jsm/objects/Water.js` 와 대조한다 — 포크라 자동으로 따라가지 않는다.
-- `SceneFrameGovernor` 주기 틱 중에는 useFrame 안에서 `requestSceneFrame()`/`invalidate()` 를 부르지 않는다(`isSceneFrameTickerActive()` 가드) — 30fps 상한이 무력화된다.
+- useFrame 안에서 "다음 프레임에 다시 본다" 식으로 `invalidate()` 를 거는 재시도는 상한(프레임 수)을 둔다 — 조건이 영영 안 되는 씬에서 캔버스가 주사율로 돈다(미니맵 캡처 `BOUNDS_RETRY_FRAMES` 가 선례).
+- 모니터링의 지도·지형은 `GltfModel`/`ModelMesh` 의 `staticTransform` 으로 서브트리 `matrixAutoUpdate` 를 끈다 — three 는 매 프레임 씬 그래프 모든 노드의 로컬 행렬을 다시 합성하므로 건물 수백 노드가 든 지도에서 그 몫이 빠진다(배치 props·meshOverrides 가 바뀔 때만 한 번 합성). 기즈모로 끄는 에디터에선 켜지 않는다.
+- `SceneFrameGovernor` 주기 틱 중에는 useFrame 안에서 `invalidate()` 를 부르지 않는다(`isSceneFrameTickerActive()` 가드) — 30fps 상한이 무력화된다. `requestSceneFrame()` 은 스스로 가드하므로 그대로 부른다.
+- 스무딩의 정착 판정은 `value === target` 이고 그것을 보장하는 것은 `SMOOTH_SETTLE_EPS` 스냅이다. 정착 판정에 별도 임계를 두지 않는다.
 - `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 의 DPR 기본값은 함께 바꾼다.
 - `bvh-build-queue` 의 `cancel` 은 `enqueue` 와 같은 옵션(`outline`)으로 부른다.
-- 새 캔버스를 만들면 `SceneLighting`(regionId)·`SceneFrameGovernor`·`SceneTerrainLod`·`SilhouetteOutlineWarmup` 을 기존 세 캔버스와 같이 마운트한다.
+- 새 캔버스를 만들면 `SceneLighting`(regionId)·`SceneFrameGovernor`·`SceneContextRecovery`·`SceneTerrainLod`·`SilhouetteOutlineWarmup` 을 기존 세 캔버스와 같이 마운트한다.
+- WebGL 컨텍스트 유실은 `SceneContextRecovery`(`ui/scene-context-recovery.tsx`)가 받는다 — `webglcontextlost` 에 preventDefault(복원 허용), `webglcontextrestored` 에 그림자 무효화 + 프레임 요청(demand 루프라 아무도 안 그리면 검은 채로 남는다), `CONTEXT_RESTORE_TIMEOUT_MS` 안에 복원이 없으면 새로 고침.
 - **기본 카메라(`useThree().camera`, useFrame 의 `camera`)나 캔버스 크기(`size`)로 화면 배치를 계산하는 새 코드는 분할 화면을 고려한다** — DOM 표시는 `PerViewport`/`ViewportAnchor`, 세로 px 는 `useSceneViewportHeight`, 씬 전역 가시성을 카메라로 정하는 것은 렌더 직전 타일 카메라로 다시 쓴다. 위 "분할 화면 렌더" 표에 더한다.
 - `useFrame` 에 양수 priority 를 쓰는 것은 분할 렌더러(와 drei GizmoHelper 의 Hud)뿐이다. 하나 더 두면 서로 렌더를 뺏는다.
 
@@ -175,7 +181,15 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 - 바다 도달 마스크의 한계: 바다와 마른 분지 사이의 한 칸짜리 벽(도크 게이트)은 바다 쪽 면에도 안개가 끼지 않는다. 선체 내부처럼 모델이 스스로 물을 막는 공간은 지도 기반이라 가리지 못한다. 격자 밖 주변 지형의 육지 안 저지대는 바다로 본다. 바다가 켜진 캔버스 둘이 서로 다른 씬을 동시에 그리면 나중에 올린 마스크가 이긴다.
 
-- 타워크레인 데시메이션/LOD 확대, 지도 KTX2 전환(`docs/agents/assets-glb.md`), 바다만 애니메이션인 유휴(sea-only)를 `ANIMATING_FPS` 아래로 낮추는 거버너 단계.
+- 타워크레인 데시메이션/LOD 확대, 지도 KTX2 전환(`docs/agents/assets-glb.md`).
 - 바다 미러 패스의 격프레임 갱신·`WATER_REFLECTION_SIZE` 축소 — 미러 패스는 머티리얼마다 RT/화면 프로그램 전환과 `updateMatrixWorld` 한 번이 더 도는 상시 비용이라 실측 뒤 부족하면 적용한다.
 - 실루엣 헐·마스크의 미러 RT 변형 프리컴파일 — `SilhouetteOutlineWarmup` 은 화면 변형만 컴파일해, 반사에 첫 선택·충돌 테두리가 나타나는 프레임에 일회성 동기 컴파일이 있다.
 - 바다 `time` 유니폼의 정밀도 — 예제와 같이 delta 를 무한 누적해 며칠 연속 가동하면 float32 정밀도로 파도가 거칠어진다(이전 셰이더도 같았다). 단순 wrap 은 노이즈 레이어 주기가 서로 소수라 어딘가에서 튄다 — 레이어별 uv 오프셋을 JS 에서 mod 로 계산해 넘기는 방식이 후보.
+
+### 관제 모드의 바다
+관제 모드(`useSceneLookStore.controlRoom`)에선 `OceanWater.reflectionEnabled` 를 꺼 미러 패스를 건너뛰고(반사 세기 0), 파도 시간을 멈춘다(`WaterFrameState.frozen`). 그래서 모니터링 뷰는 거버너에 `sea` 를 관제 모드가 아닐 때만 준다 — 유휴 틱이 바다 때문에 돌지 않는다. 위험 링 맥동은 거버너의 `pulse` 소스(`PULSE_FPS`)가 따로 돌린다.
+
+### 셰이더 재링크를 만드는 것
+- drei `<Line>` 은 points 가 바뀔 때 geometry 와 함께 **material 을 dispose** 하고 같은 material 을 계속 쓴다 → three 가 다음 프레임에 프로그램을 다시 링크한다. 끝점이 움직이는 선(근접 거리 선)은 `@crane/domain/3d` 의 `StableLine` 을 쓴다. 선택 박스·눈금·텍스트의 drei Line 은 points 가 드물게 바뀌어 그대로다.
+- 실루엣 헐 ShaderMaterial 은 색·두께별 풀(`acquireSilhouetteOutlineMaterial`)에서 받고 버리지 않는다. 외곽선 종류가 바뀔 때 만들고 dispose 하면 프로그램이 풀렸다 다시 링크된다.
+- 진단: 수신 중 `WebGL2RenderingContext.prototype.linkProgram` 호출 수가 늘면 재링크다(Playwright 로 `linkProgram` 을 래핑해 15초 동안 세는 프로브로 잡았다).

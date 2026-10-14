@@ -3,6 +3,7 @@ import { Matrix4 } from 'three';
 import {
   computeCollisionViewPose,
   copyMatrix,
+  displacementBound,
   matrixChanged,
   pairKey,
 } from '../scene-collision-pairs';
@@ -82,5 +83,30 @@ describe('computeCollisionViewPose', () => {
     const pose = computeCollisionViewPose(contact, 1, null);
     expect(pose.target).not.toBe(contact);
     expect(pose.target).toEqual(contact);
+  });
+});
+
+describe('displacementBound — 강체 이동으로 점이 움직일 수 있는 거리의 상한', () => {
+  const snapshot = (m: Matrix4) => Float64Array.from(m.elements);
+  it('첫 관측(prev NaN)은 Infinity, 변화 없으면 0', () => {
+    const m = new Matrix4();
+    expect(displacementBound(new Float64Array(16).fill(Number.NaN), m, 1)).toBe(
+      Number.POSITIVE_INFINITY,
+    );
+    expect(displacementBound(snapshot(m), m, 5)).toBe(0);
+  });
+  it('평행이동은 그 길이, 회전은 ‖ΔR‖_F·reach 이고 실제 점 이동보다 작지 않다', () => {
+    const prev = new Matrix4();
+    const moved = new Matrix4().makeTranslation(3, 4, 0);
+    expect(displacementBound(snapshot(prev), moved, 10)).toBeCloseTo(5, 9);
+    const rotated = new Matrix4().makeRotationY(Math.PI / 2);
+    const reach = 2;
+    const bound = displacementBound(snapshot(prev), rotated, reach);
+    // 반지름 2 의 점이 90° 돌면 2√2 이동 — 상한은 그 이상.
+    expect(bound).toBeGreaterThanOrEqual(2 * Math.SQRT2 - 1e-9);
+    const scaled = new Matrix4().makeScale(2, 2, 2);
+    expect(displacementBound(snapshot(prev), scaled, 1)).toBeGreaterThanOrEqual(
+      Math.sqrt(3) - 1e-9,
+    );
   });
 });

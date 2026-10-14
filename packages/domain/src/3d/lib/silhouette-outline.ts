@@ -211,6 +211,33 @@ export function createSilhouetteOutlineMaterial(color: string): ShaderMaterial {
 }
 
 /**
+ * 헐 머티리얼 풀 — 색·두께가 같은 표시 단위끼리 하나를 공유하고 **버리지
+ * 않는다**. 외곽선 종류(윤곽↔근접↔위험)가 바뀔 때마다 머티리얼을 새로 만들고
+ * 옛것을 dispose 하면 three 가 프로그램을 놓았다 다시 링크한다 — 관제 모드
+ * 수신 중 실측 12초에 38회 컴파일. 두께는 같은 캔버스에서 uOffsetFactor 가
+ * 같은 값이 되도록 키에 넣는다(컴포넌트가 effect 로 쓴다).
+ */
+const outlineMaterialPool = new Map<string, ShaderMaterial>();
+
+export function acquireSilhouetteOutlineMaterial(
+  color: string,
+  thicknessPx: number,
+): ShaderMaterial {
+  const key = `${color}|${thicknessPx}`;
+  let material = outlineMaterialPool.get(key);
+  if (!material) {
+    material = createSilhouetteOutlineMaterial(color);
+    outlineMaterialPool.set(key, material);
+  }
+  return material;
+}
+
+/** 테스트·진단용 — 풀 크기. */
+export function silhouetteOutlineMaterialPoolSize(): number {
+  return outlineMaterialPool.size;
+}
+
+/**
  * 대상 메시에 자식으로 붙일 스텐실 마스크 메시. geometry 는 대상과 공유하고
  * 머티리얼은 모듈 싱글턴이라 지울 때 dispose 할 것이 없다.
  */

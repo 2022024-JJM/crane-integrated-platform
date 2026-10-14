@@ -7,6 +7,10 @@ import {
   TOP_VIEW_PADDING,
   TOP_VIEW_TILT,
   type BoundsLike,
+  computeLocalTopViewPose,
+  fovDistanceScale,
+  isPlanDirection,
+  TOP_VIEW_PLAN_MIN_DOWN,
 } from '../top-view-pose';
 import type { Vector3Tuple } from '../../types/math';
 
@@ -234,5 +238,43 @@ describe('ensureTopViewTilt', () => {
   it('computeTopViewPose 결과는 이미 정규 포즈라 통과해도 변하지 않는다', () => {
     const pose = computeTopViewPose(box(100, 10, 100), 1, FOV)!;
     expect(ensureTopViewTilt(pose.position, pose.target)).toBe(pose.position);
+  });
+});
+
+describe('isPlanDirection / fovDistanceScale', () => {
+  it('문턱 정확값은 평면, 덜 수직은 아님, NaN 은 아님', () => {
+    expect(isPlanDirection(-TOP_VIEW_PLAN_MIN_DOWN)).toBe(true);
+    expect(isPlanDirection(-TOP_VIEW_PLAN_MIN_DOWN + 1e-6)).toBe(false);
+    expect(isPlanDirection(NaN)).toBe(false);
+  });
+  it('좁은 fov 로 가면 배율 > 1, 같은 fov 는 1, 잘못된 값은 1', () => {
+    expect(fovDistanceScale(75, 75)).toBeCloseTo(1, 9);
+    expect(fovDistanceScale(75, 20)).toBeCloseTo(
+      Math.tan((75 * Math.PI) / 360) / Math.tan((20 * Math.PI) / 360),
+      9,
+    );
+    expect(fovDistanceScale(0, 20)).toBe(1);
+    expect(fovDistanceScale(75, NaN)).toBe(1);
+  });
+});
+
+describe('computeLocalTopViewPose', () => {
+  it('타깃 위 거리만큼, tilt 포함, 상·하한으로 자른다', () => {
+    const pose = computeLocalTopViewPose([10, 2, 30], 100)!;
+    expect(pose.target).toEqual([10, 2, 30]);
+    expect(pose.position[0]).toBe(10);
+    expect(pose.position[1]).toBe(102);
+    expect(pose.position[2]).toBeCloseTo(30 + 100 * TOP_VIEW_TILT, 9);
+    expect(
+      computeLocalTopViewPose([0, 0, 0], 100, { maxDistance: 40 })!.position[1],
+    ).toBe(40);
+    expect(
+      computeLocalTopViewPose([0, 0, 0], 10, { minDistance: 50 })!.position[1],
+    ).toBe(50);
+  });
+  it('비유한 타깃·0 이하 거리는 null', () => {
+    expect(computeLocalTopViewPose([NaN, 0, 0], 100)).toBeNull();
+    expect(computeLocalTopViewPose([0, 0, 0], 0)).toBeNull();
+    expect(computeLocalTopViewPose([0, 0, 0], Infinity)).toBeNull();
   });
 });

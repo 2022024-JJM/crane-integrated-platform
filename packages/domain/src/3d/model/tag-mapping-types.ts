@@ -1,3 +1,4 @@
+import type { Vector3Tuple } from '@crane/core/types/math';
 import type { RigAxis, RigDefinition, RigNodePath } from './rig-types';
 
 /**
@@ -31,6 +32,15 @@ export interface TagMappingNodeTarget {
   node: RigNodePath;
   channel: TagMappingChannel;
   axis: RigAxis;
+  /**
+   * 회전 채널의 선회 중심 — 노드의 **부모 프레임** 좌표(GLB 로컬 단위). 주면
+   * 노드가 자기 원점이 아니라 이 점을 지나는 축(rest 자세의 로컬 축을 부모
+   * 프레임으로 옮긴 것) 둘레를 돈다: `position = pivot + R(θ)·(position − pivot)`.
+   * GLB 노드 원점이 선회축에서 벗어난 모델(타워크레인 Top 의 원점이 지브
+   * 무게중심에 있어 마스트에서 수십 m 떨어짐)에 쓴다. 생략 = 노드 원점.
+   * position·scale 채널은 무시한다.
+   */
+  pivot?: Vector3Tuple;
 }
 
 export interface TagMappingJointTarget {
@@ -70,9 +80,9 @@ export const TAG_MAPPING_CAPTION_MAX = 12;
  * 의 first-wins 가 같은 함수를 쓴다.
  */
 export function getTagMappingTargetKey(target: TagMappingTarget): string {
-  return target.kind === 'joint'
-    ? `joint:${target.jointId}`
-    : `node:${target.node}:${target.channel}:${target.axis}`;
+  if (target.kind === 'joint') return `joint:${target.jointId}`;
+  const pivot = target.pivot ? `:${target.pivot.join(',')}` : '';
+  return `node:${target.node}:${target.channel}:${target.axis}${pivot}`;
 }
 
 export type TagMappingUnit = 'deg' | 'm' | '';

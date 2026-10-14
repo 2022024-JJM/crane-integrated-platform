@@ -46,7 +46,9 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 렌더는 useFrame 안에서 한다 — 그 시점엔 씬의 matrixWorld 가 이 프레임
  * 기준으로 갱신돼 있고, R3F 는 useFrame 뒤에 메인 프레임을 그리므로 렌더
  * 타깃 전환을 되돌려 두기만 하면 화면에 영향이 없다. demand 루프라 캡처를
- * 무장(arm)할 때 invalidate 로 프레임 하나를 요청한다.
+ * 무장(arm)할 때 invalidate 로 프레임 하나를 요청한다. 기준 지도가 없는
+ * 씬은 무장하지 않고, 지도가 등록될 때까지의 재시도는 BOUNDS_RETRY_FRAMES
+ * 로 끊는다 — 무한 재시도는 demand 캔버스를 주사율로 돌린다.
  *
  * 조명은 캡처 순간만 **기준(수동 모드) 값**으로 바꾼다(lib/minimap-capture-
  * lighting applyCanonicalCaptureLighting — 키 방향광을 씬의 수동 태양 방향·
@@ -93,6 +95,13 @@ const SNAPSHOT_MAX_PX = 512;
 const CAMERA_CLEARANCE_ABOVE = 400;
 /** 지도 최저점 아래로 보는 깊이(m) — 바다·드라이독 바닥. */
 const CAMERA_DEPTH_BELOW = 200;
+/**
+ * 기준 지도가 레지스트리에 아직 없을 때 다음 프레임을 다시 요청하는 상한
+ * (프레임 수). 넘기면 캡처를 포기한다 — 지도 로드 실패·지도가 등록되지 않는
+ * 씬에서 매 프레임 invalidate 가 영원히 이어지면 demand 캔버스가 주사율로
+ * 돌아 유휴 CPU 를 다 먹는다(실측: 지도 없는 실내 씬 유휴 120fps).
+ */
+const BOUNDS_RETRY_FRAMES = 600;
 
 interface SceneMinimapCaptureProps {
   sceneInfo: SavedSceneInfo | null;
@@ -119,6 +128,7 @@ export function SceneMinimapCapture({
   const sunElevation =
     sceneInfo?.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
   const pendingRef = useRef(false);
+  const retriesRef = useRef(0);
   const boundsMapsRef = useRef(boundsMaps);
   const sunDirectionRef = useRef<Vector3>(new Vector3(0, 1, 0));
 
@@ -128,8 +138,13 @@ export function SceneMinimapCapture({
   useEffect(() => {
     boundsMapsRef.current = boundsMaps;
     sunDirectionRef.current = sunDirectionFromAngles(sunAzimuth, sunElevation);
-    if (!ready || assetsActive) return;
+    // 기준 지도가 없는 씬(실내)은 찍을 것이 없다 — 무장하지 않는다.
+    if (!ready || assetsActive || boundsMaps.length === 0) {
+      pendingRef.current = false;
+      return;
+    }
     pendingRef.current = true;
+    retriesRef.current = 0;
     invalidate();
     // boundsMaps 는 boundsKey 가 같으면 같은 지도 목록이다(id 로 판정).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,7 +161,12 @@ export function SceneMinimapCapture({
       boundsMapsRef.current.map((m) => modelObjectRegistry.get(m.id)),
     );
     if (!bounds) {
-      // 기준 지도가 아직 등록 전 — 다음 프레임에 다시 본다.
+      // 기준 지도가 아직 등록 전 — 상한 안에서 다음 프레임에 다시 본다.
+      retriesRef.current += 1;
+      if (retriesRef.current > BOUNDS_RETRY_FRAMES) {
+        pendingRef.current = false;
+        return;
+      }
       invalidate();
       return;
     }
@@ -248,11 +268,7 @@ function captureTopView(
     target.dispose();
   }
 
-  const display = toDisplayPixels(
-    toLinearFloatPixels(pixels),
-    width,
-    height,
-  );
+  const display = toDisplayPixels(toLinearFloatPixels(pixels), width, height);
   if (!display) return null;
 
   const canvas = document.createElement('canvas');

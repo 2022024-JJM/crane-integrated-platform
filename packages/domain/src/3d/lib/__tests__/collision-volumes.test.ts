@@ -12,7 +12,10 @@ import {
 import { MeshBVH } from 'three-mesh-bvh';
 import {
   approxContactPoint,
+  boxesDistance,
   boxesSeparated,
+  meshLocalReach,
+  meshesClearance,
   collectCollidableMeshes,
   hasBoundsTree,
   isCollidableMesh,
@@ -332,5 +335,59 @@ describe('boxesSeparated', () => {
   it('한 축만 떨어져 있어도 분리다', () => {
     const above = new Box3(new Vector3(0, 2, 0), new Vector3(1, 3, 1));
     expect(boxesSeparated(a, above, 0.5)).toBe(true);
+  });
+});
+
+describe('meshesClearance / boxesDistance / meshLocalReach — 여유 거리 컬링 프리미티브', () => {
+  it('probe 안이면 정확한 최단 거리, 밖이면 probe, BVH 가 없으면 null', () => {
+    const a = placed(cube(1), [0, 0, 0]);
+    const b = placed(cube(1), [3, 0, 0]); // 면 사이 간격 2
+    for (const m of [a, b]) {
+      (m.geometry as BvhGeometry).boundsTree = new MeshBVH(m.geometry);
+    }
+    expect(meshesClearance(a, b, 5)).toBeCloseTo(2, 6);
+    expect(meshesClearance(a, b, 1)).toBe(1);
+    expect(meshesClearance(a, b, 2)).toBeCloseTo(2, 6);
+    const noBvh = placed(cube(1), [3, 0, 0]);
+    expect(meshesClearance(a, noBvh, 5)).toBeNull();
+  });
+
+  it('관통·접촉이면 0, probe 가 0·음수·NaN 이면 0', () => {
+    const a = placed(cube(1), [0, 0, 0]);
+    const b = placed(cube(1), [0.5, 0, 0]);
+    for (const m of [a, b]) {
+      (m.geometry as BvhGeometry).boundsTree = new MeshBVH(m.geometry);
+    }
+    expect(meshesClearance(a, b, 5)).toBe(0);
+    expect(meshesClearance(a, b, 0)).toBe(0);
+    expect(meshesClearance(a, b, -1)).toBe(0);
+    expect(meshesClearance(a, b, Number.NaN)).toBe(0);
+  });
+
+  it('boxesDistance — 겹치면 0, 축 간격의 유클리드 합성', () => {
+    const a = new Box3(new Vector3(0, 0, 0), new Vector3(1, 1, 1));
+    expect(
+      boxesDistance(
+        a,
+        new Box3(new Vector3(0.5, 0.5, 0.5), new Vector3(2, 2, 2)),
+      ),
+    ).toBe(0);
+    expect(
+      boxesDistance(a, new Box3(new Vector3(4, 0, 0), new Vector3(5, 1, 1))),
+    ).toBe(3);
+    expect(
+      boxesDistance(a, new Box3(new Vector3(4, 5, 0), new Vector3(5, 6, 1))),
+    ).toBeCloseTo(5, 9); // 3-4-5
+    expect(
+      boxesDistance(a, new Box3(new Vector3(1, 0, 0), new Vector3(2, 1, 1))),
+    ).toBe(0); // 접촉
+  });
+
+  it('meshLocalReach — 원점에서 가장 먼 정점 거리(중심 오프셋 포함)', () => {
+    const m = cube(2); // 반지름 √3
+    expect(meshLocalReach(m)).toBeCloseTo(Math.sqrt(3), 6);
+    m.geometry.translate(10, 0, 0);
+    m.geometry.computeBoundingSphere();
+    expect(meshLocalReach(m)).toBeCloseTo(10 + Math.sqrt(3), 6);
   });
 });
