@@ -15,6 +15,18 @@ export const SCAN_BUDGET_MS = 3;
 /** BVH 가 아직 없는 메쉬 쌍을 다시 볼 때까지의 대기. ModelMesh 가 유휴 시간에 빌드한다. */
 export const BVH_RETRY_MS = 1000;
 /**
+ * 억제된 쌍(닿아 있는 채 감시 중)의 분리 재검사 간격. 분리 판정은 삼각형
+ * 최단거리 질의라 관통 판정보다 훨씬 비싸다 — 장비 수십 대가 동시에 움직이면
+ * dirty 틱마다 돌려서는 메인 스레드가 선다. 이 간격 안에서는 다시 보지 않는다.
+ */
+export const SUPPRESSED_RECHECK_MS = 250;
+/**
+ * 분리 재검사(삼각형 거리, `SeparationQuery`)가 한 tick 에 쓰는 예산. 질의는
+ * BVH 리프 단위로 이어서 하므로 트러스가 엇갈린 쌍도 한 tick 에 이만큼만
+ * 쓰고 다음 tick 에 계속한다 — 한 호출이 수백 ms 였던 것을 프레임 안에 가둔다.
+ */
+export const SEPARATION_STEP_BUDGET_MS = 1;
+/**
  * 기준선(baseline) 안정화 창 — 스캔 재개·새 모델 항목·기록 복원으로 기준선을
  * 다시 잡은 뒤, 큐가 비어도 이 시간이 지나야 scanning 으로 넘어간다. 그 동안
  * 발견된 겹침은 보고 대신 억제된다(시뮬레이션 이외의 움직임 흡수).

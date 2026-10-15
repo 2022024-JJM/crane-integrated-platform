@@ -7,7 +7,12 @@ import {
   type Object3D,
 } from 'three';
 import { OBB } from 'three/examples/jsm/math/OBB.js';
-import type { HitPointInfo, MeshBVH } from 'three-mesh-bvh';
+import {
+  ExtendedTriangle,
+  OrientedBox,
+  type HitPointInfo,
+  type MeshBVH,
+} from 'three-mesh-bvh';
 
 /**
  * 씬 객체 충돌 감지의 기하 프리미티브 — 3단계(AABB → OBB → 삼각형) 각각의
@@ -33,6 +38,10 @@ const _hitB = {} as HitPointInfo;
 const _boxA = new Box3();
 const _boxB = new Box3();
 const _center = new Vector3();
+const _toB = new Matrix4();
+const _leafBox = new OrientedBox(new Vector3(), new Vector3());
+const _nodeBox = new Box3();
+const _bOrientedInA = new OrientedBox(new Vector3(), new Vector3());
 
 /**
  * drei `<Line>`(three-stdlib Line2/LineSegments2)은 Mesh 파생이라 순회에
@@ -207,3 +216,160 @@ export function boxesSeparated(a: Box3, b: Box3, margin: number): boolean {
     b.max.z + m < a.min.z
   );
 }
+
+/**
+ * 분리 재검사를 **이어서 하는** 삼각형 거리 질의 — "두 메쉬의 삼각형 사이에
+ * `margin` 이하로 가까운 쌍이 하나라도 있는가" 를 A 의 BVH 리프 단위로
+ * 쪼개 `step` 마다 예산 안에서만 진행한다. `meshesWithinDistance` 와 답은
+ * 같지만(정확값 포함, 관통은 거리 0) 한 호출이 프레임을 넘기지 않는다.
+ *
+ * 왜 필요한가: three-mesh-bvh 의 `closestPointToGeometry` 는 쪼갤 수 없고,
+ * 트러스끼리 엇갈려 들어간 크레인 쌍은 노드 쌍이 수천 개라 한 번에 수백 ms
+ * 다. 억제된 쌍은 OBB 가 겹치는 동안 주기적으로 이 판정을 받으므로 그
+ * 비용이 그대로 프레임 멈춤이 됐다.
+ *
+ * 진행 단위는 A 리프 하나: 리프 박스(margin 만큼 부풀림)를 B 로컬 OBB 로
+ * 보내 B BVH 를 가지치기하고, 닿는 B 리프의 삼각형과 A 리프 삼각형의 거리를
+ * 잰다. `margin` 이하가 하나라도 나오면 즉시 'near'. 변환은 step 마다 현재
+ * matrixWorld 로 다시 읽으므로, 여러 틱에 걸친 결과는 "각 리프를 본 시점의
+ * 자세" 기준이다 — margin 히스테리시스가 그 사이 미세 이동을 덮고, 틀리면
+ * 다음 dirty 틱의 교차 판정이 바로잡는다.
+ *
+ * 거리는 B 로컬 프레임에서 잰다(`meshesWithinDistance` 는 A 로컬). 모델
+ * 스케일이 1 이 아니면 margin 도 그만큼 스케일된다 — 기존과 같은 한계다.
+ */
+export type SeparationStep = 'near' | 'separated' | 'pending';
+
+export class SeparationQuery {
+  private a: Mesh | null = null;
+  private b: Mesh | null = null;
+  private margin = 0;
+  /** A 리프 [offset, count, offset, count, …] — B 전체 OBB 근처만. */
+  private readonly leaves: number[] = [];
+  private cursor = 0;
+  private readonly tris: ExtendedTriangle[] = [];
+  private triCount = 0;
+
+  get active(): boolean {
+    return this.a !== null;
+  }
+
+  /** 진행 중인 질의를 버린다. */
+  reset(): void {
+    this.a = null;
+    this.b = null;
+    this.leaves.length = 0;
+    this.cursor = 0;
+  }
+
+  /**
+   * 새 질의를 연다. 한쪽이라도 BVH 가 없으면 false(판정 불가 — 호출자가
+   * 보수적으로 "붙음" 으로 둔다). 리프 수집은 박스 판정뿐이라 싸다.
+   */
+  begin(a: Mesh, b: Mesh, margin: number): boolean {
+    this.reset();
+    const ga = a.geometry as BvhGeometry;
+    const gb = b.geometry as BvhGeometry;
+    if (!ga.boundsTree || !gb.boundsTree) return false;
+    if (!gb.boundingBox) gb.computeBoundingBox();
+    this.a = a;
+    this.b = b;
+    this.margin = Number.isFinite(margin) && margin > 0 ? margin : 0;
+    const m = this.margin;
+    // B 의 로컬 박스(margin 부풀림)를 A 로컬 OBB 로 — A 리프 가지치기.
+    _toA.copy(a.matrixWorld).invert().multiply(b.matrixWorld);
+    const bb = gb.boundingBox as Box3;
+    _bOrientedInA.set(
+      _boxB.min.copy(bb.min).subScalar(m),
+      _boxB.max.copy(bb.max).addScalar(m),
+      _toA,
+    );
+    _bOrientedInA.needsUpdate = true;
+    const leaves = this.leaves;
+    ga.boundsTree.shapecast({
+      intersectsBounds: (box) => _bOrientedInA.intersectsBox(box),
+      intersectsRange: (offset, count) => {
+        leaves.push(offset, count);
+        return false;
+      },
+    });
+    return true;
+  }
+
+  /**
+   * 리프를 하나 이상 진행한다. 첫 리프는 항상 보고, 그 뒤로는 `clock()` 이
+   * 시작 시각 + `budgetMs` 에 닿으면 'pending' 으로 돌아온다. 'near' 와
+   * 'separated' 는 질의를 닫는다(다시 쓰려면 begin).
+   */
+  step(budgetMs: number, clock: () => number): SeparationStep {
+    const a = this.a;
+    const b = this.b;
+    if (a === null || b === null) return 'separated';
+    const t0 = clock();
+    const bvhA = (a.geometry as BvhGeometry).boundsTree as MeshBVH;
+    const bvhB = (b.geometry as BvhGeometry).boundsTree as MeshBVH;
+    // A 로컬 → B 로컬. step 마다 현재 자세로.
+    _toB.copy(b.matrixWorld).invert().multiply(a.matrixWorld);
+    const m = this.margin;
+    const tolerance = m + Math.max(m, 1) * 1e-9;
+    const leaves = this.leaves;
+    while (this.cursor < leaves.length) {
+      const offset = leaves[this.cursor];
+      const count = leaves[this.cursor + 1];
+      this.cursor += 2;
+      this.loadLeaf(bvhA, offset, count);
+      if (this.triCount === 0) continue;
+      const hit = bvhB.shapecast({
+        intersectsBounds: (box) => {
+          _nodeBox.copy(box).expandByScalar(m);
+          return _leafBox.intersectsBox(_nodeBox);
+        },
+        intersectsTriangle: (tri) => {
+          for (let i = 0; i < this.triCount; i += 1) {
+            if (this.tris[i].distanceToTriangle(tri) <= tolerance) return true;
+          }
+          return false;
+        },
+      });
+      if (hit) {
+        this.reset();
+        return 'near';
+      }
+      if (clock() - t0 >= budgetMs) return 'pending';
+    }
+    this.reset();
+    return 'separated';
+  }
+
+  /** A 리프의 삼각형을 B 로컬로 옮겨 tris 에, 리프 OBB(margin 포함)를 _leafBox 에. */
+  private loadLeaf(bvh: MeshBVH, offset: number, count: number): void {
+    const geometry = bvh.geometry;
+    // 0.8 의 d.ts 에 빠진 공개 메서드 — indirect 빌드면 간접 버퍼를 거친다.
+    const resolve = (
+      bvh as unknown as { resolveTriangleIndex(i: number): number }
+    ).resolveTriangleIndex;
+    const pos = geometry.getAttribute('position');
+    const index = geometry.index;
+    while (this.tris.length < count) this.tris.push(new ExtendedTriangle());
+    _boxA.makeEmpty();
+    for (let i = 0; i < count; i += 1) {
+      const t = resolve.call(bvh, offset + i);
+      const tri = this.tris[i];
+      const i0 = index ? index.getX(3 * t) : 3 * t;
+      const i1 = index ? index.getX(3 * t + 1) : 3 * t + 1;
+      const i2 = index ? index.getX(3 * t + 2) : 3 * t + 2;
+      tri.a.fromBufferAttribute(pos, i0).applyMatrix4(_toB);
+      tri.b.fromBufferAttribute(pos, i1).applyMatrix4(_toB);
+      tri.c.fromBufferAttribute(pos, i2).applyMatrix4(_toB);
+      tri.needsUpdate = true;
+      _boxA.expandByPoint(tri.a).expandByPoint(tri.b).expandByPoint(tri.c);
+    }
+    this.triCount = count;
+    _boxA.expandByScalar(this.margin);
+    // 이미 B 로컬 좌표라 단위 행렬.
+    _leafBox.set(_boxA.min, _boxA.max, _identity);
+    _leafBox.needsUpdate = true;
+  }
+}
+
+const _identity = new Matrix4();

@@ -4,10 +4,10 @@ import {
   collectCollidableMeshes,
   getMeshPath,
   meshesIntersectExact,
-  meshesWithinDistance,
   meshObbsIntersect,
   meshWorldBox,
   modelObjectRegistry,
+  SeparationQuery,
   type SavedModelInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -19,6 +19,8 @@ import {
   MIN_MESH_EXTENT,
   pairKey,
   SEPARATION_MARGIN,
+  SEPARATION_STEP_BUDGET_MS,
+  SUPPRESSED_RECHECK_MS,
 } from '../lib/scene-collision-pairs';
 
 /**
@@ -90,11 +92,26 @@ interface PairJob {
   state: PairState;
   /** BVH 미준비로 미룬 경우 이 시각 전엔 다시 보지 않는다. */
   bvhRetryAt: number;
+  /** 억제 상태의 분리 재검사를 이 시각 전엔 시작하지 않는다(SUPPRESSED_RECHECK_MS). */
+  recheckAt: number;
+  /**
+   * 진행 중인 분리 재검사 — 후보 메쉬 쌍 목록과 커서, 현재 쌍의 삼각형 질의.
+   * null 이면 진행 중이 아니다. 질의가 tick 예산을 넘기면 다음 tick 에 이어서
+   * 한다(SEPARATION_STEP_BUDGET_MS).
+   */
+  separation: SeparationProgress | null;
   /**
    * 기준선 단계에서 BVH 가 없어 판정을 못 내린 쌍 — 기준선은 이 쌍을 기다리지
    * 않고 끝나며, 뒤늦게 난 첫 hit 은 기준선 겹침으로 보고 억제한다.
    */
   baselineDeferred: boolean;
+}
+
+interface SeparationProgress {
+  /** [a, b, a, b, …] — AABB·OBB(margin) 가 겹치는 후보 메쉬 쌍만. */
+  readonly candidates: MeshEntry[];
+  cursor: number;
+  readonly query: SeparationQuery;
 }
 
 export type SceneCollisionRuntimePhase =
@@ -298,7 +315,26 @@ export class SceneCollisionRuntime {
       const job = pending[i];
 
       if (job.state === 'suppressed') {
-        if (this.meshPairsSeparated(job)) {
+        // 모델 AABB 가 margin 보다 떨어졌으면 즉시 해제(공짜). 아니면 삼각형
+        // 단계는 비싸므로 재검사 간격을 두고 시작하고(간격 안이면 이번 틱은
+        // 건너뛴다 — dirty 면 다음 틱에 다시 큐에 든다), 시작한 재검사는
+        // tick 예산만큼만 진행하고 끝날 때까지 매 tick 이어서 한다.
+        let separated = this.modelBoxesSeparated(job);
+        if (!separated) {
+          if (job.separation === null) {
+            if (job.recheckAt > now) continue;
+            job.recheckAt = now + SUPPRESSED_RECHECK_MS;
+            job.separation = this.beginSeparation(job);
+          }
+          const result = this.stepSeparation(job);
+          if (result === 'pending') {
+            this.enqueue(job);
+            continue;
+          }
+          separated = result === 'separated';
+        }
+        if (separated) {
+          job.separation = null;
           this.suppressed.delete(job.key);
           job.state = 'untested';
         }
@@ -366,9 +402,18 @@ export class SceneCollisionRuntime {
    * 실루엣 전체를 감싸 두 OBB 가 늘 겹치므로 삼각형 단계가 최종 판정이다.
    * margin 이 경계 떨림을 막는 히스테리시스다.
    */
-  private meshPairsSeparated(job: PairJob): boolean {
+  private modelBoxesSeparated(job: PairJob): boolean {
     _marginBox.copy(job.b.box).expandByScalar(SEPARATION_MARGIN);
-    if (!job.a.box.intersectsBox(_marginBox)) return true;
+    return !job.a.box.intersectsBox(_marginBox);
+  }
+
+  /**
+   * 분리 재검사 시작 — 후보 메쉬 쌍(AABB margin 겹침 + OBB margin 교차)을
+   * 모아 둔다. 삼각형 단계는 stepSeparation 이 tick 예산 안에서 이어 간다.
+   */
+  private beginSeparation(job: PairJob): SeparationProgress {
+    const candidates: MeshEntry[] = [];
+    _marginBox.copy(job.b.box).expandByScalar(SEPARATION_MARGIN);
     _candA.length = 0;
     _candB.length = 0;
     for (const m of job.a.meshes) {
@@ -383,13 +428,43 @@ export class SceneCollisionRuntime {
       for (const mb of _candB) {
         if (!_marginBox.intersectsBox(mb.box)) continue;
         if (!meshObbsIntersect(ma.mesh, mb.mesh, SEPARATION_MARGIN)) continue;
-        // OBB 는 실루엣 전체를 감싸므로(단일 메쉬 크레인) 삼각형 거리로 확정한다.
-        // BVH 가 아직 없으면 보수적으로 "붙음" — 빌드되면 다음 dirty 틱에 다시 본다.
-        const near = meshesWithinDistance(ma.mesh, mb.mesh, SEPARATION_MARGIN);
-        if (near === null || near) return false;
+        candidates.push(ma, mb);
       }
     }
-    return true;
+    return { candidates, cursor: 0, query: new SeparationQuery() };
+  }
+
+  /**
+   * 후보 쌍을 차례로 삼각형 거리 질의에 건다. 한 쌍이라도 margin 이하면
+   * "붙음"(near) — 나머지는 보지 않는다. BVH 가 없는 쌍은 보수적으로 붙음
+   * (빌드되면 다음 dirty 틱에 다시 본다). 예산을 넘기면 pending 으로 돌아오고
+   * 진행 상태는 job 에 남는다.
+   */
+  private stepSeparation(job: PairJob): 'near' | 'separated' | 'pending' {
+    const progress = job.separation;
+    if (progress === null) return 'separated';
+    const { candidates, query } = progress;
+    const t0 = this.clock();
+    while (progress.cursor < candidates.length || query.active) {
+      if (!query.active) {
+        const ma = candidates[progress.cursor];
+        const mb = candidates[progress.cursor + 1];
+        progress.cursor += 2;
+        if (!query.begin(ma.mesh, mb.mesh, SEPARATION_MARGIN)) {
+          job.separation = null;
+          return 'near';
+        }
+      }
+      const remaining = SEPARATION_STEP_BUDGET_MS - (this.clock() - t0);
+      const r = query.step(remaining, this.clock);
+      if (r === 'near') {
+        job.separation = null;
+        return 'near';
+      }
+      if (r === 'pending') return 'pending';
+    }
+    job.separation = null;
+    return 'separated';
   }
 
   /** 모델 AABB 가 겹친 쌍의 메쉬 단위 검사. 'hit' 이면 hitMeshA/B 가 채워진다. */
@@ -524,6 +599,8 @@ export class SceneCollisionRuntime {
               ? prev.state
               : 'untested',
           bvhRetryAt: prev?.bvhRetryAt ?? 0,
+          recheckAt: prev?.recheckAt ?? 0,
+          separation: null,
           baselineDeferred:
             prev !== undefined && prev.a === a && prev.b === b
               ? prev.baselineDeferred

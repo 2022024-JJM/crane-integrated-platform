@@ -15,7 +15,12 @@ import {
   type SavedModelInfo,
   type TagMappingNodeTarget,
 } from '@crane/domain/3d';
-import { clampJointValue, jointChannel, jointDelta } from '../lib/apply-joint';
+import {
+  applyJointPivot,
+  clampJointValue,
+  jointChannel,
+  jointDelta,
+} from '../lib/apply-joint';
 import {
   accumulatedParentScale,
   addChannelDelta,
@@ -405,6 +410,16 @@ export function useRigDriver({
         beginNodePose(node, driven.rest);
         for (const { channel, axis, delta: d } of entries.values()) {
           addChannelDelta(node, channel, axis, d);
+        }
+        // 피벗 hinge — 회전은 위에서 적용됐고 위치만 피벗 둘레로 보정한다.
+        for (const { joint, node: jointNode } of instance.joints) {
+          if (jointNode !== node || !joint.pivot) continue;
+          applyJointPivot(
+            node,
+            driven.rest,
+            joint,
+            jointDelta(joint, values.get(joint.id) ?? 0),
+          );
         }
         if (driven.isRoot) {
           if (driven.lastApplied) {

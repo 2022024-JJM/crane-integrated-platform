@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useRealtimeStore } from './use-realtime-store';
 import { publishTagValue } from './tag-value-bus';
+import { recordRealtimeDrain } from './realtime-ingest-stats';
 
 /**
  * 실시간 WebSocket 값을 R3F 렌더 루프(useFrame)에 동기화한다.
@@ -21,7 +22,9 @@ export function useRealtimeRunner() {
     if (!isRunning) return;
 
     const store = useRealtimeStore.getState();
+    const depth = store.buffer.length;
     const entries = store.drainBuffer();
+    recordRealtimeDrain(depth, entries.length);
     if (entries.length === 0 || store.held) return;
 
     for (const { key, value } of entries) {

@@ -36,7 +36,7 @@
 
 - 대상은 씬 모델 **인스턴스 간** 관통이다. 판정은 AABB → OBB → three-mesh-bvh 삼각형 순으로 좁힌다. BVH 는 `collision-volumes.ts` 에서만 접근하고 여기서 빌드하지 않는다(빌드는 워밍업 큐, `docs/agents/rendering-perf.md`).
 - 메쉬 수집은 `collectCollidableMeshes` 다. `visible=false` 서브트리는 빼되 LOD 는 가시성과 무관하게 **항상 LOD0** 을 모은다 — LOD>0 사본은 BVH 가 없고, LOD0 은 `SceneTerrainLod` 가 거리에 따라 숨겨도 대상이다(raycast 와 같은 계약).
-- 억제 해제(분리 판정)는 모델 AABB 가 아니라 **메쉬 단위**다. 런타임의 `meshPairsSeparated` 가 AABB+margin → OBB → 삼각형 최단 거리(`meshesWithinDistance`)로 보므로, 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 `SEPARATION_MARGIN` 이상 떨어지면 다시 보고된다.
+- 억제 해제(분리 판정)는 모델 AABB 가 아니라 **메쉬 단위**다. 모델 AABB 가 margin 보다 떨어진 분리는 즉시(공짜) 풀린다. 그 밖에는 쌍마다 `SUPPRESSED_RECHECK_MS` 간격으로 재검사를 **시작**한다 — 런타임의 `beginSeparation` 이 AABB+margin → OBB 로 후보 메쉬 쌍을 모으고, `stepSeparation` 이 `SeparationQuery`(`@crane/domain/3d` collision-volumes)로 삼각형 최단 거리가 `SEPARATION_MARGIN` 이하인 쌍이 있는지 본다. 질의는 A 의 BVH 리프 단위로 이어서 하는(resumable) 구조라 한 tick 에 `SEPARATION_STEP_BUDGET_MS` 만 쓰고 'pending' 이면 쌍을 다음 tick 에 재큐해 계속한다(dirty 와 무관). 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 margin 이상 떨어지면 다시 보고되고, 트러스가 엇갈린 쌍(three-mesh-bvh `closestPointToGeometry` 한 호출이 수백 ms)도 프레임을 멈추지 않는다. 여러 tick 에 걸친 답은 각 리프를 본 시점의 자세 기준이며(step 마다 현재 matrixWorld 를 읽는다), 틀리면 다음 dirty 틱의 관통 판정이 바로잡는다. `meshesWithinDistance` 는 같은 답을 한 번에 내는 함수로 테스트·단발 판정용이다.
 
 ### 런타임(scene-collision-runtime)
 
@@ -96,5 +96,6 @@
 - 캔버스 위 충돌 오버레이 패널(지점·쌍 목록)은 두지 않는다 — 비네트만.
 - 실시간 자동 정지는 넣지 않는다 — 장비는 멈추지 않는데 화면만 얼린다.
 - 분리 판정을 모델 AABB 로 하지 않는다 — 단일 메쉬 크레인은 OBB 가 늘 겹쳐 재보고가 영영 나지 않았다.
+- 분리 재검사를 `closestPointToGeometry` 한 호출로 끝내기(재검사 간격만 두기) — 엇갈린 트러스 쌍은 한 호출이 수백 ms 라 간격을 둬도 그 길이의 멈춤이 주기적으로 났다(유휴 중 롱태스크 최대 575ms). 리프 단위로 쪼개 tick 예산 안에서 이어 간다.
 - 기준선 없이 즉시 보고하지 않는다 — 정지 중 편집·로딩 배치·재생 시작 스무딩이 전부 충돌로 찍혔다.
 - 에디터 지도의 선택 표시를 실루엣으로 하지 않는다 — 지형 메시를 매 프레임 두 번 더 그린다.

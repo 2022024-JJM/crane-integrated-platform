@@ -8,12 +8,14 @@ import {
   Object3D,
 } from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { modelObjectRegistry, type SavedModelInfo } from '@crane/domain/3d';
 import { SceneCollisionRuntime } from '../scene-collision-runtime';
 import {
   BASELINE_SETTLE_MS,
   BVH_RETRY_MS,
   SEPARATION_MARGIN,
+  SUPPRESSED_RECHECK_MS,
 } from '../../lib/scene-collision-pairs';
 
 type BvhGeometry = BufferGeometry & { boundsTree?: MeshBVH };
@@ -55,7 +57,13 @@ function moveTo(root: Object3D, x: number) {
 }
 
 let clockNow = 0;
-const clock = () => clockNow;
+/** 호출마다 시계를 이만큼 전진 — 분리 재검사의 tick 예산(SEPARATION_STEP_BUDGET_MS)을 넘기는 테스트용. */
+let clockAdvance = 0;
+const clock = () => {
+  const now = clockNow;
+  clockNow += clockAdvance;
+  return now;
+};
 
 function makeRuntime() {
   return new SceneCollisionRuntime(clock);
@@ -76,6 +84,7 @@ function settle(rt: SceneCollisionRuntime, now = 0, ticks = 5) {
 
 beforeEach(() => {
   clockNow = 0;
+  clockAdvance = 0;
   modelObjectRegistry.clear();
 });
 
@@ -213,6 +222,87 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
     // 다시 접근 → 보고.
     moveTo(a.root, 0.2);
     expect(rt.tick(30, 100)?.key).toBe('a|b');
+  });
+
+  it('억제 쌍의 삼각형 분리 재검사는 SUPPRESSED_RECHECK_MS 간격으로만 돌고, AABB 분리는 즉시 풀린다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    a.body.geometry = new BoxGeometry(4, 4, 4);
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    const b = mountModel('b', 10);
+    b.body.geometry = new BoxGeometry(0.5, 0.5, 0.5);
+    (b.body.geometry as BvhGeometry).boundsTree = new MeshBVH(b.body.geometry);
+    rt.sync([model('a'), model('b', 10)]);
+    rt.arm();
+    settle(rt);
+
+    moveTo(b.root, 2); // 면 관통 → hit → 억제
+    expect(rt.tick(10, 100)?.key).toBe('a|b');
+    rt.suppress('a|b');
+    moveTo(b.root, 1.9); // 여전히 관통 — 삼각형 재검사 1회(recheckAt = 15 + MS)
+    expect(rt.tick(15, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+
+    // 상자 안쪽(삼각형은 떨어졌지만 AABB 는 겹침) — 간격 안이면 재검사를 건너뛴다.
+    moveTo(b.root, 0);
+    expect(rt.tick(15 + SUPPRESSED_RECHECK_MS - 1, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    // 간격이 차면 재검사 → 해제.
+    moveTo(b.root, 0.01); // dirty 로 만들기
+    expect(rt.tick(15 + SUPPRESSED_RECHECK_MS, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+
+    // 반면 AABB 가 margin 보다 떨어지는 분리는 간격과 무관하게 즉시 풀린다.
+    moveTo(b.root, 2);
+    expect(rt.tick(15 + SUPPRESSED_RECHECK_MS + 1, 100)?.key).toBe('a|b');
+    rt.suppress('a|b');
+    moveTo(b.root, 1.9); // 재검사 → recheckAt 갱신
+    expect(rt.tick(15 + SUPPRESSED_RECHECK_MS + 2, 100)).toBeNull();
+    moveTo(b.root, 20); // AABB 분리
+    expect(rt.tick(15 + SUPPRESSED_RECHECK_MS + 3, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+  });
+
+  it('분리 재검사가 tick 예산을 넘기면 pending 으로 다음 tick 에 이어지고, 그 동안 억제는 유지된다', () => {
+    const rt = makeRuntime();
+    // A: 잘게 나눈 상자(리프 여러 개). B: 속이 빈 상대 — 경계 박스는 A 를 품지만 삼각형은 멀다.
+    const a = mountModel('a', 0);
+    a.body.geometry = new BoxGeometry(1, 1, 1, 4, 4, 4);
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    const b = mountModel('b', 10);
+    b.body.geometry = mergeGeometries([
+      new BoxGeometry(1, 1, 1).translate(-2, 0, 0),
+      new BoxGeometry(1, 1, 1).translate(2, 0, 0),
+    ])!;
+    (b.body.geometry as BvhGeometry).boundsTree = new MeshBVH(b.body.geometry);
+    rt.sync([model('a'), model('b', 10)]);
+    rt.arm();
+    settle(rt);
+
+    moveTo(b.root, 1.98); // 왼쪽 상자가 A 에 관통 → hit → 억제
+    expect(rt.tick(10, 100)?.key).toBe('a|b');
+    rt.suppress('a|b');
+
+    // A 가 B 의 빈 가운데로 — 모델 AABB 는 겹치지만 삼각형은 떨어졌다.
+    // 시계가 호출마다 1 전진하면 리프 하나마다 예산이 차서 pending 이 된다.
+    moveTo(b.root, 0);
+    clockAdvance = 1;
+    clockNow = 20;
+    expect(rt.tick(clockNow, 1000)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    // 쌍은 dirty 없이도 재큐돼 다음 tick 들에서 이어진다 — 재검사 간격과 무관.
+    let ticks = 0;
+    while (rt.suppressedKeys.has('a|b') && ticks < 200) {
+      rt.tick(clockNow, 1000);
+      ticks += 1;
+    }
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+    expect(ticks).toBeGreaterThan(1);
+    expect(ticks).toBeLessThan(200);
+    // 해제된 뒤 다시 붙이면 새 hit.
+    clockAdvance = 0;
+    moveTo(b.root, 1.98);
+    expect(rt.tick(clockNow + SUPPRESSED_RECHECK_MS + 1, 100)?.key).toBe('a|b');
   });
 
   it('suppress(key) 로 닫은 쌍은 재무장 뒤에도 분리 전까지 보고하지 않고, 없는 키는 no-op', () => {
@@ -630,9 +720,9 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     moveTo(a.root, 0);
     // 기준선에서 잡힌 BVH 재시도 시각은 그대로다 — 그 전엔 다시 보지 않는다.
     expect(rt.tick(BASELINE_SETTLE_MS + 200, 100)).toBeNull();
-    expect(
-      rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key,
-    ).toBe('a|b');
+    expect(rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key).toBe(
+      'a|b',
+    );
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
   });
 

@@ -276,8 +276,14 @@ function isRigJointEqual(a: RigJoint, b: RigJoint): boolean {
     a.axis === b.axis &&
     a.min === b.min &&
     a.max === b.max &&
-    (a.sign ?? 1) === (b.sign ?? 1)
+    (a.sign ?? 1) === (b.sign ?? 1) &&
+    isPivotEqual(a.pivot, b.pivot)
   );
+}
+
+function isPivotEqual(a: RigJoint['pivot'], b: RigJoint['pivot']): boolean {
+  if (!a || !b) return a === b;
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
 function isRigConstraintEqual(a: RigConstraint, b: RigConstraint): boolean {

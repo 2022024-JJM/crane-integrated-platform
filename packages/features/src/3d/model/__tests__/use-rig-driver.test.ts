@@ -114,6 +114,71 @@ describe('useRigDriver — 관절', () => {
     expect(hand.position.y).toBeCloseTo(2.5, 9);
   });
 
+  it('pivot 이 있는 hinge 는 피벗 둘레로 공전하며 자기 자세도 같이 돈다', () => {
+    // Arm 은 rest (0,1,0). 피벗 (2,1,0) 을 중심으로 z 축 90° 회전하면
+    // 원점은 (2,-1,0) 으로 간다: pivot + R(90°)·(-2,0,0) = (2,1,0)+(0,-2,0).
+    const { arm } = mountModel('m1');
+    renderHook(() =>
+      useRigDriver({
+        rigs: [
+          rig({
+            joints: [
+              {
+                id: 'arm',
+                node: '[0]Arm',
+                type: 'hinge',
+                axis: 'z',
+                pivot: [2, 1, 0],
+              },
+            ],
+          }),
+        ],
+        models: [model()],
+      }),
+    );
+    rigValueStore.set('m1/arm', 90);
+    frame();
+    expect(zDeg(arm)).toBeCloseTo(90, 6);
+    expect(arm.position.x).toBeCloseTo(2, 9);
+    expect(arm.position.y).toBeCloseTo(-1, 9);
+    expect(arm.position.z).toBeCloseTo(0, 9);
+
+    // 값 0 이면 피벗과 무관하게 rest 그대로.
+    rigValueStore.set('m1/arm', 0);
+    frame();
+    expect(arm.position.x).toBeCloseTo(0, 9);
+    expect(arm.position.y).toBeCloseTo(1, 9);
+  });
+
+  it('pivot hinge 와 같은 노드의 slide Δ 는 서로 지우지 않는다', () => {
+    const { arm } = mountModel('m1');
+    renderHook(() =>
+      useRigDriver({
+        rigs: [
+          rig({
+            joints: [
+              {
+                id: 'arm',
+                node: '[0]Arm',
+                type: 'hinge',
+                axis: 'z',
+                pivot: [2, 1, 0],
+              },
+              { id: 'lift', node: '[0]Arm', type: 'slide', axis: 'z' },
+            ],
+          }),
+        ],
+        models: [model()],
+      }),
+    );
+    rigValueStore.set('m1/arm', 90);
+    rigValueStore.set('m1/lift', 0.5);
+    frame();
+    expect(arm.position.x).toBeCloseTo(2, 9);
+    expect(arm.position.y).toBeCloseTo(-1, 9);
+    expect(arm.position.z).toBeCloseTo(0.5, 9);
+  });
+
   it('한계를 넘는 값은 클램프된다(경계 정확값 통과, +1 거부)', () => {
     const { arm } = mountModel('m1');
     renderHook(() => useRigDriver({ rigs: [rig()], models: [model()] }));

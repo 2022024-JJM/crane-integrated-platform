@@ -43,6 +43,13 @@ export interface RigJoint {
   max?: number;
   /** 축 방향 뒤집기. 생략 시 1. */
   sign?: 1 | -1;
+  /**
+   * hinge 전용 — 회전 중심. 노드의 **부모 프레임** 좌표(노드 position 과 같은
+   * 공간, 로컬 단위). 생략하면 노드 원점이 중심이다. Blender 가 원점을 기하
+   * 중심에 두고 내보낸 노드(타워크레인 상부처럼 마스트에서 벗어난 것)를
+   * 마스트 축으로 돌릴 때 쓴다. slide 에는 의미가 없어 sanitize 가 버린다.
+   */
+  pivot?: [number, number, number];
 }
 
 /**

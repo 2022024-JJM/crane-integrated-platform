@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   approxContactPoint,
   boxesSeparated,
@@ -20,6 +21,7 @@ import {
   meshesWithinDistance,
   meshObbsIntersect,
   meshWorldBox,
+  SeparationQuery,
 } from '../collision-volumes';
 
 type BvhGeometry = BufferGeometry & { boundsTree?: MeshBVH };
@@ -286,6 +288,107 @@ describe('meshesWithinDistance', () => {
         Number.NaN,
       ),
     ).toBe(false);
+  });
+});
+
+describe('SeparationQuery', () => {
+  const clock = () => 0;
+  /** 예산을 넉넉히 줘 한 번에 끝낸 답. */
+  const resolve = (a: Mesh, b: Mesh, margin: number) => {
+    const q = new SeparationQuery();
+    if (!q.begin(a, b, margin)) return null;
+    let r = q.step(Number.POSITIVE_INFINITY, clock);
+    while (r === 'pending') r = q.step(Number.POSITIVE_INFINITY, clock);
+    return r;
+  };
+
+  it('meshesWithinDistance 와 같은 답 — 한계 이하(정확값 포함) near, 넘으면 separated, 관통은 near', () => {
+    const a = withBvh(placed(cube(), [0, 0, 0]));
+    expect(resolve(a, withBvh(placed(cube(), [1.03, 0, 0])), 0.05)).toBe('near');
+    expect(resolve(a, withBvh(placed(cube(), [1.05, 0, 0])), 0.05)).toBe('near');
+    expect(resolve(a, withBvh(placed(cube(), [1.06, 0, 0])), 0.05)).toBe(
+      'separated',
+    );
+    expect(resolve(a, withBvh(placed(cube(), [0.5, 0, 0])), 0.05)).toBe('near');
+  });
+
+  it('OBB·AABB 는 겹치지만 삼각형은 먼 배치(큰 상자 안의 작은 상자, 회전 판)는 separated', () => {
+    const big = withBvh(placed(cube(4), [0, 0, 0]));
+    const inside = withBvh(placed(cube(0.5), [0, 0, 0]));
+    expect(resolve(big, inside, 0.05)).toBe('separated');
+    expect(resolve(inside, big, 0.05)).toBe('separated');
+    const plank = new Mesh(new BoxGeometry(4, 1, 0.1), new MeshBasicMaterial());
+    withBvh(placed(plank, [0, 0, 0], Math.PI / 4));
+    const small = withBvh(placed(cube(0.4), [1.2, 0, 1.2]));
+    expect(resolve(plank, small, 0.05)).toBe('separated');
+    expect(resolve(small, plank, 0.05)).toBe('separated');
+  });
+
+  it('한쪽이라도 BVH 가 없으면 begin 이 false, 한계 0·음수·NaN 은 접촉(거리 0)만 near', () => {
+    const a = withBvh(placed(cube(), [0, 0, 0]));
+    const q = new SeparationQuery();
+    expect(q.begin(a, placed(cube(), [0.5, 0, 0]), 0.05)).toBe(false);
+    expect(q.active).toBe(false);
+    const touching = withBvh(placed(cube(), [1, 0, 0]));
+    expect(resolve(a, touching, 0)).toBe('near');
+    expect(resolve(a, touching, -1)).toBe('near');
+    expect(resolve(a, withBvh(placed(cube(), [1.001, 0, 0])), Number.NaN)).toBe(
+      'separated',
+    );
+  });
+
+  /** 속이 빈 상대 — 정육면체 둘을 x=±2 에 합친 지오메트리. 경계 박스는 넓고 가운데는 비었다. */
+  function hollow(): Mesh {
+    const left = new BoxGeometry(1, 1, 1).translate(-2, 0, 0);
+    const right = new BoxGeometry(1, 1, 1).translate(2, 0, 0);
+    return new Mesh(mergeGeometries([left, right])!, new MeshBasicMaterial());
+  }
+
+  it('예산 0 이면 step 마다 리프 하나만 보고 pending — 이어서 끝까지 가면 같은 답, 끝나면 비활성', () => {
+    const fine = new Mesh(new BoxGeometry(1, 1, 1, 4, 4, 4), new MeshBasicMaterial());
+    const a = withBvh(placed(fine, [0, 0, 0]));
+    const b = withBvh(placed(hollow(), [0, 0, 0]));
+    const q = new SeparationQuery();
+    expect(q.begin(a, b, 0.05)).toBe(true);
+    expect(q.active).toBe(true);
+    let steps = 0;
+    let r = q.step(0, clock);
+    while (r === 'pending') {
+      steps += 1;
+      expect(q.active).toBe(true);
+      r = q.step(0, clock);
+    }
+    expect(r).toBe('separated');
+    expect(steps).toBeGreaterThan(1);
+    expect(q.active).toBe(false);
+    // 같은 인스턴스를 다시 열어 near 도 조기 종료로 끝난다.
+    expect(q.begin(a, withBvh(placed(cube(), [1.02, 0, 0])), 0.05)).toBe(true);
+    r = q.step(0, clock);
+    while (r === 'pending') r = q.step(0, clock);
+    expect(r).toBe('near');
+  });
+
+  it('진행 중 상대가 움직이면 다음 step 은 현재 자세로 본다', () => {
+    const fine = new Mesh(new BoxGeometry(1, 1, 1, 4, 4, 4), new MeshBasicMaterial());
+    const a = withBvh(placed(fine, [0, 0, 0]));
+    const b = withBvh(placed(hollow(), [0, 0, 0]));
+    const q = new SeparationQuery();
+    q.begin(a, b, 0.05);
+    expect(q.step(0, clock)).toBe('pending');
+    // 왼쪽 정육면체(-2.5..-1.5)가 A(-0.5..0.5) 에 닿도록.
+    placed(b, [1.98, 0, 0]);
+    let r = q.step(0, clock);
+    while (r === 'pending') r = q.step(0, clock);
+    expect(r).toBe('near');
+  });
+
+  it('reset 은 진행 중 질의를 버리고 step 은 separated 를 돌려준다', () => {
+    const a = withBvh(placed(cube(), [0, 0, 0]));
+    const q = new SeparationQuery();
+    q.begin(a, withBvh(placed(cube(), [0.5, 0, 0])), 0.05);
+    q.reset();
+    expect(q.active).toBe(false);
+    expect(q.step(0, clock)).toBe('separated');
   });
 });
 

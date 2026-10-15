@@ -223,6 +223,8 @@ export {
   meshesWithinDistance,
   meshObbsIntersect,
   meshWorldBox,
+  SeparationQuery,
+  type SeparationStep,
 } from './lib/collision-volumes';
 export {
   circleIntersectsBoxXZ,

@@ -18,7 +18,9 @@
     "optimize:glb": "node scripts/optimize-glb.mjs",
     "optimize:map": "node scripts/optimize-map.mjs",
     "perf:scene": "node scripts/scene-perf-report.mjs",
-    "assets:stats": "node scripts/asset-library-stats.mjs"
+    "assets:stats": "node scripts/asset-library-stats.mjs",
+    "load-sim": "node scripts/load-sim/server.mjs",
+    "load-sim:client": "node scripts/load-sim/client.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -148,6 +148,39 @@ describe('sanitizeRigDefinition — 관절', () => {
     expect(j.max).toBe(3);
   });
 
+  it('pivot 은 hinge 의 유한수 3개 배열일 때만 남긴다', () => {
+    const out = sanitizeRigDefinition(
+      rig({
+        joints: [
+          {
+            id: 'a',
+            node: '',
+            type: 'hinge',
+            axis: 'y',
+            pivot: [0.3, 34.5, 0],
+          },
+          {
+            id: 'b',
+            node: '',
+            type: 'slide',
+            axis: 'y',
+            pivot: [0.3, 34.5, 0],
+          },
+          { id: 'c', node: '', type: 'hinge', axis: 'y', pivot: [0, NaN, 0] },
+          { id: 'd', node: '', type: 'hinge', axis: 'y', pivot: [1, 2] },
+          { id: 'e', node: '', type: 'hinge', axis: 'y', pivot: '0,0,0' },
+        ],
+      }),
+    );
+    expect(out?.joints.map((j) => j.pivot)).toEqual([
+      [0.3, 34.5, 0],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
   it('sign 은 -1 일 때만 남기고 그 외(1, 문자열, 0)는 생략한다', () => {
     const joints = sanitizeRigDefinition(
       rig({

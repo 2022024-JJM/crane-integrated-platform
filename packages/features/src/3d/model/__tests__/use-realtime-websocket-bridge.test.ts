@@ -70,12 +70,19 @@ describe('useRealtimeWebSocketBridge', () => {
 
   it("상태 비트는 0/1 로 쌓는다 — boolean 과 'true'/'false' 문자열", () => {
     renderHook(() => useRealtimeWebSocketBridge(true));
-    socket.handler?.(message(true));
-    socket.handler?.(message(false));
-    socket.handler?.(message('true'));
-    socket.handler?.(message('false'));
-    expect(buffer().map((entry) => entry.value)).toEqual([1, 0, 1, 0]);
-    expect(buffer()[0]?.key).toBe('C_171:crane_control_on');
+    // 같은 키는 프레임 사이에 마지막 값만 남으므로(coalesce) 하나씩 비우며 본다.
+    const values: number[] = [];
+    for (const raw of [true, false, 'true', 'false']) {
+      socket.handler?.(message(raw));
+      expect(buffer()[0]?.key).toBe('C_171:crane_control_on');
+      values.push(
+        ...useRealtimeStore
+          .getState()
+          .drainBuffer()
+          .map((e) => e.value),
+      );
+    }
+    expect(values).toEqual([1, 0, 1, 0]);
   });
 
   it('숫자로 못 바꾸는 값은 버린다 — null·숫자 문자열·그 밖의 문자열', () => {

@@ -72,6 +72,36 @@ describe('useRealtimeStore — buffer', () => {
     ]);
   });
 
+  it('같은 키가 프레임 사이에 여러 번 오면 마지막 값만 남고 버퍼는 고유 키 수를 넘지 않는다', () => {
+    const s = useRealtimeStore.getState();
+    for (let i = 0; i < 1000; i += 1) {
+      s.pushValue('c1:a', i);
+      s.pushValue('c1:b', -i);
+    }
+    expect(useRealtimeStore.getState().buffer).toEqual([
+      { key: 'c1:a', value: 999 },
+      { key: 'c1:b', value: -999 },
+    ]);
+    // drain 뒤엔 같은 키가 새 항목으로 다시 들어간다.
+    useRealtimeStore.getState().drainBuffer();
+    s.pushValue('c1:b', 7);
+    s.pushValue('c1:a', 8);
+    expect(useRealtimeStore.getState().buffer).toEqual([
+      { key: 'c1:b', value: 7 },
+      { key: 'c1:a', value: 8 },
+    ]);
+  });
+
+  it('외부에서 buffer 를 통째로 갈아끼워도(setState) 키 색인이 어긋나지 않는다', () => {
+    useRealtimeStore.getState().pushValue('c1:a', 1);
+    useRealtimeStore.setState({ buffer: [] });
+    useRealtimeStore.getState().pushValue('c1:a', 2);
+    useRealtimeStore.getState().pushValue('c1:a', 3);
+    expect(useRealtimeStore.getState().buffer).toEqual([
+      { key: 'c1:a', value: 3 },
+    ]);
+  });
+
   it('drainBuffer 는 쌓인 배열을 넘기고 새 빈 배열로 바꾸며, 비었으면 참조 유지', () => {
     const empty = useRealtimeStore.getState();
     expect(empty.drainBuffer()).toBe(empty.buffer);

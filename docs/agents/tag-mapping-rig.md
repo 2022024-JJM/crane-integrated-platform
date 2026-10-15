@@ -6,24 +6,24 @@
 
 ## 진입점
 
-| 관심사 | 위치 |
-|---|---|
-| 태그 맵핑 스키마 / 방어 / 레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/domain/src/3d/lib/sanitize-tag-mappings.ts` |
-| 라벨의 태그 값 줄(목록 구성·표기 / 값 읽기 / 표시) | `packages/domain/src/3d/lib/label-reading.ts`(테스트 대상), `packages/features/src/3d/model/tag-value-bus.ts`(`readTagLiveValue`), `packages/domain/src/3d/ui/model-label.tsx` |
-| 상태 태그 스키마 / 방어 / 편집 로직 / 미리보기 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/3d/lib/sanitize-status-tags.ts`, `packages/widgets/src/3d/lib/status-tag-editor.ts`, `packages/features/src/3d/model/use-label-preview-store.ts` |
-| 서버 값 → 버스 숫자 | `packages/domain/src/monitoring/lib/tag-number.ts` (`toTagNumber`) |
-| 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스 | `packages/features/src/3d/model/tag-value-bus.ts`, `packages/features/src/3d/lib/tag-mapping-index.ts`, `packages/features/src/3d/model/use-tag-binding-source.ts` |
-| 채널 Δ 적용 / 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/apply-channel.ts`, `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts` |
-| 태그 맵핑 편집 UI(인스펙터 탭) | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`, `packages/widgets/src/3d/ui/tag-key-combobox.tsx`, `packages/widgets/src/3d/lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상) |
-| 가상 태그 정의·파형·방어·시나리오·한계 | `packages/domain/src/virtual-tag/model/types.ts`, `packages/domain/src/virtual-tag/lib/tag-pattern.ts`, `packages/domain/src/virtual-tag/lib/sanitize-virtual-tags.ts`, `packages/domain/src/virtual-tag/lib/scenario.ts`, `packages/domain/src/virtual-tag/lib/rate-limit.ts` |
-| 가상 태그 영속화 어댑터 / 배포 파일 | `packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts`, `apps/shell/public/simulation/virtual-tags.json` |
-| 가상 태그 스토어 · 러너 · 카탈로그 · 종료 | `packages/features/src/3d/model/use-virtual-tag-store.ts`, `packages/features/src/3d/model/virtual-tag-runner.ts`, `packages/features/src/3d/model/use-tag-catalog.ts`, `packages/features/src/3d/model/stop-simulation.ts` |
-| 시뮬레이션 UI | 공용 패널 `packages/features/src/3d/ui/scene-simulation-panel.tsx`, 배지 `packages/features/src/3d/ui/scene-simulation-badge.tsx`, HUD 라벨 `packages/features/src/3d/lib/sim-clock.ts` |
-| 가상 태그 관리 페이지 / 시나리오 편집 | `packages/widgets/src/virtual-tags/ui/virtual-tags-page.tsx`, `packages/widgets/src/virtual-tags/ui/scenario-section.tsx` |
-| 리깅 스키마(관절·구속조건) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
-| 리깅 런타임(값 저장소·드라이버·readout) | `packages/features/src/3d/model/rig-value-store.ts`, `packages/features/src/3d/model/use-rig-driver.ts`, `packages/features/src/3d/model/rig-live-readouts.ts` |
-| 관절 적용 / 스무딩 / rest 캐시 / 노드 경로 | `packages/features/src/3d/lib/apply-joint.ts`, `packages/features/src/3d/lib/smooth-damp.ts`, `packages/domain/src/3d/lib/rest-pose-cache.ts`, `packages/domain/src/3d/lib/mesh-path.ts` |
-| 리깅 편집 UI(인스펙터 탭·계층 노드 트리) | `packages/widgets/src/3d/ui/rigging-section.tsx`, `packages/widgets/src/3d/lib/model-node-tree.ts` |
+| 관심사                                             | 위치                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 태그 맵핑 스키마 / 방어 / 레거시 변환              | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/domain/src/3d/lib/sanitize-tag-mappings.ts`                                                                                                                                                                     |
+| 라벨의 태그 값 줄(목록 구성·표기 / 값 읽기 / 표시) | `packages/domain/src/3d/lib/label-reading.ts`(테스트 대상), `packages/features/src/3d/model/tag-value-bus.ts`(`readTagLiveValue`), `packages/domain/src/3d/ui/model-label.tsx`                                                                                                 |
+| 상태 태그 스키마 / 방어 / 편집 로직 / 미리보기     | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/3d/lib/sanitize-status-tags.ts`, `packages/widgets/src/3d/lib/status-tag-editor.ts`, `packages/features/src/3d/model/use-label-preview-store.ts`                                                      |
+| 서버 값 → 버스 숫자                                | `packages/domain/src/monitoring/lib/tag-number.ts` (`toTagNumber`)                                                                                                                                                                                                             |
+| 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스           | `packages/features/src/3d/model/tag-value-bus.ts`, `packages/features/src/3d/lib/tag-mapping-index.ts`, `packages/features/src/3d/model/use-tag-binding-source.ts`                                                                                                             |
+| 채널 Δ 적용 / 루트 Δ 벗기기 / 배치 프레임          | `packages/features/src/3d/lib/apply-channel.ts`, `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts`                                                                                                                     |
+| 태그 맵핑 편집 UI(인스펙터 탭)                     | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`, `packages/widgets/src/3d/ui/tag-key-combobox.tsx`, `packages/widgets/src/3d/lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상)                                                                                    |
+| 가상 태그 정의·파형·방어·시나리오·한계             | `packages/domain/src/virtual-tag/model/types.ts`, `packages/domain/src/virtual-tag/lib/tag-pattern.ts`, `packages/domain/src/virtual-tag/lib/sanitize-virtual-tags.ts`, `packages/domain/src/virtual-tag/lib/scenario.ts`, `packages/domain/src/virtual-tag/lib/rate-limit.ts` |
+| 가상 태그 영속화 어댑터 / 배포 파일                | `packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts`, `apps/shell/public/simulation/virtual-tags.json`                                                                                                                                                                 |
+| 가상 태그 스토어 · 러너 · 카탈로그 · 종료          | `packages/features/src/3d/model/use-virtual-tag-store.ts`, `packages/features/src/3d/model/virtual-tag-runner.ts`, `packages/features/src/3d/model/use-tag-catalog.ts`, `packages/features/src/3d/model/stop-simulation.ts`                                                    |
+| 시뮬레이션 UI                                      | 공용 패널 `packages/features/src/3d/ui/scene-simulation-panel.tsx`, 배지 `packages/features/src/3d/ui/scene-simulation-badge.tsx`, HUD 라벨 `packages/features/src/3d/lib/sim-clock.ts`                                                                                        |
+| 가상 태그 관리 페이지 / 시나리오 편집              | `packages/widgets/src/virtual-tags/ui/virtual-tags-page.tsx`, `packages/widgets/src/virtual-tags/ui/scenario-section.tsx`                                                                                                                                                      |
+| 리깅 스키마(관절·구속조건) / 방어                  | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts`                                                                                                                                                                                      |
+| 리깅 런타임(값 저장소·드라이버·readout)            | `packages/features/src/3d/model/rig-value-store.ts`, `packages/features/src/3d/model/use-rig-driver.ts`, `packages/features/src/3d/model/rig-live-readouts.ts`                                                                                                                 |
+| 관절 적용 / 스무딩 / rest 캐시 / 노드 경로         | `packages/features/src/3d/lib/apply-joint.ts`, `packages/features/src/3d/lib/smooth-damp.ts`, `packages/domain/src/3d/lib/rest-pose-cache.ts`, `packages/domain/src/3d/lib/mesh-path.ts`                                                                                       |
+| 리깅 편집 UI(인스펙터 탭·계층 노드 트리)           | `packages/widgets/src/3d/ui/rigging-section.tsx`, `packages/widgets/src/3d/lib/model-node-tree.ts`                                                                                                                                                                             |
 
 ## 동작
 
@@ -103,13 +103,23 @@
 - manual 슬라이더·리셋은 즉시(텔레포트). seek 는 재시뮬레이션이라 한계를 지킨 값이 나온다.
 - 배포 필리 태그에 한계가 들어 있어 sine 파형은 한계에 잘려 평평해진다(의도 — 순간이동 방지).
 
+### 실시간 수신 부하 테스트
+
+실서버 계약을 흉내 내는 시뮬레이터가 `scripts/load-sim/server.mjs`(의존성 0, REST `/api/{sites,tags,alarms/runtime,playback}` + WS `/ws/cranes-lite/all`)다. `apps/shell/.env.local` 의 dev 프록시를 `127.0.0.1:33500` 으로 돌리면 프론트는 무수정으로 붙는다. 속도·크레인당 태그 수·형식(`per-tag` = 메시지 1건이 태그 1건, `batch` = tick 마다 JSON 배열 1프레임)·tick 을 옵션으로 바꾼다. 전송량은 타이머 횟수가 아니라 흐른 시간으로 정한다(Windows `setInterval` 은 15.6ms 단위라 횟수로 세면 속도가 안 나온다). `backlog` 가 자라면 서버·소켓·브라우저 수신 중 어딘가가 못 받아 가는 것이다.
+
+- 서버 자체 검증: `scripts/load-sim/client.mjs`(Node 내장 WebSocket). 서버 `sent/s` = 클라이언트 `recv/s` 면 서버는 병목이 아니다.
+- 프론트 계측: `model/realtime-ingest-stats.ts`. 브리지가 메시지마다 수용·거부·핸들러 시간을, 러너가 프레임마다 버퍼 깊이·drain 수를 기록한다. dev 콘솔 `__craneRealtimeStats()`, `localStorage['crane:realtime-stats']='1'` 이면 5초마다 콘솔 출력. `bufferMax` 는 고유 키 수를 넘지 않는다 — 스토어가 같은 키의 값을 프레임 사이에 마지막 것만 남기므로(coalesce, `use-realtime-store.ts`) 탭이 가려져 rAF 가 멈춰도 버퍼가 수신량만큼 자라지 않는다. `longTasks/s` 가 붙으면 메인 스레드가 막히는 것이다(수신 파싱이 아니면 감지 계통을 의심 — 감지 설정에서 충돌 감지를 끄고 비교한다).
+- 브리지는 배열 payload 를 배치로 받아 항목마다 같은 가드를 태운다. 서버가 보내는 형식은 아직 정해지지 않았다.
+- 씬의 크레인 전부를 움직이게 하는 맵핑·리그는 `scripts/load-sim/bind-scene-tags.mjs` 가 만든다(`map-sim-*`·`rig-sim-*`, 멱등). 루트 주행축은 씬 배치에서 **월드** 기준으로 정한다 — 루트 position Δ 는 부모(월드) 축에 더해지므로 배치 회전을 보면 안 되고, 같은 레일의 크레인은 x 나 z 한 좌표를 공유한다. 루트 rotation 맵핑은 만들지 않는다(레일을 벗어난다). TC 는 고정식이라 루트 주행도 만들지 않고 상부 선회만 둔다(`FIXED_FAMILY`). 상부 선회·트롤리는 GLB 별 리그 표(`SIM_RIGS`)로 넣는다 — TC·TTC 상부는 원점이 지브 중앙이라 `pivot` 으로 마스트 축을 준다. TC·TTC GLB 에는 트롤리 노드가 없어 트롤리는 골리앗만 움직인다.
+
 ### 리깅(관절 연동)
 
 - 정의 `RigDefinition` = 관절 `hinge|slide` + 구속조건 `linear`("출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로). 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다.
 - 정의는 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 만 가진다. 관절 ← 태그는 `tagMappings` 의 joint 대상.
+- hinge 의 `pivot`(부모 프레임 좌표)은 회전 중심을 노드 원점 대신 그 점으로 옮긴다 — 드라이버가 회전을 적용한 뒤 `applyJointPivot`(`lib/apply-joint.ts`) 으로 원점을 피벗 둘레로 공전시킨다. Blender 가 원점을 기하 중심에 둔 노드용이며 slide 에는 sanitize 가 버린다. 리깅 편집 UI 에는 아직 입력란이 없어 씬 JSON 으로만 넣는다.
 - 관절 값은 **항상 rest pose 기준 Δ** 다. `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로.
 - 값 소스는 `JointValueSource` 하나로 통한다. 에디터 슬라이더는 `manualJointSource`(씬 데이터·히스토리에 남지 않음), 태그는 `createTagBindingSource`. 시뮬레이션 재생 중 태그가 꽂힌 관절의 슬라이더는 잠긴다.
-- 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본(루트 scale 을 `scripts/unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1)이다. 옥포 OC(`okpo_oc.glb`)는 `okpo.json` 의 `rigs[]` 에 리그가 있다 — 입력 관절 `Link_Upper.001` 하나에 나머지 5개(`Link_Upper.002/003`·`Connector`·`Link_Lower.001`·`Link_End`)가 디자이너 비율의 선형 구속으로 매달리며, 모든 Empty 의 로컬 X 가 러핑 평면 법선이라 관절 축은 전부 `x` 다. 옥포 Goliath·TC·TTC 는 `Trolly_*`·`*_Top` 노드를 노드 맵핑 대상으로 쓸 수 있다. 그 외 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. 모델 최적화 파이프라인(`scripts/optimize-glb.mjs`)은 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
+- 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본(루트 scale 을 `scripts/unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1)이다. 옥포 OC(`okpo_oc.glb`)는 `okpo.json` 의 `rigs[]` 에 리그가 있다 — 입력 관절 `Link_Upper.001` 하나에 나머지 5개(`Link_Upper.002/003`·`Connector`·`Link_Lower.001`·`Link_End`)가 디자이너 비율의 선형 구속으로 매달리며, 모든 Empty 의 로컬 X 가 러핑 평면 법선이라 관절 축은 전부 `x` 다. 옥포 Goliath 의 `Trolly_*` 는 slide 관절, TC·TTC 의 `*_Top` 은 pivot 을 준 hinge 관절로 쓴다(원점이 마스트가 아니라 노드 맵핑으로 돌리면 마스트를 벗어난다). 그 외 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. 모델 최적화 파이프라인(`scripts/optimize-glb.mjs`)은 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
 - 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
 - 관절·맵핑 정의 편집으로 드라이버 인스턴스가 해체·재생성되면 rest 점프가 생기므로 그림자 무효화가 배선돼 있다 — `docs/agents/rendering-perf.md`.
 

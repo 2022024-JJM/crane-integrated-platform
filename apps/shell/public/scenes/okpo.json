@@ -104,7 +104,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-1",
+          "target": {
+            "kind": "joint",
+            "jointId": "trolley"
+          },
+          "tagKey": "GC_02:trolley",
+          "caption": "trolley"
+        },
+        {
+          "id": "map-sim-2",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_02:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-goliath"
     },
     {
       "id": "0d0818cb-3eeb-4832-98fd-2944e778c940",
@@ -130,7 +153,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-3",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-4",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-5",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "f1ffd800-3265-462a-ad61-91ba60e25876",
@@ -156,7 +210,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-6",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_5876:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-7",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_5876:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-8",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "OC_5876:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "54aba53a-2c2b-47fd-905b-75a5bdca01ee",
@@ -181,7 +266,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-9",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "181492b6-122e-4afe-a680-809928707c06",
@@ -206,7 +303,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-10",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-11",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "f37f44b8-1a5e-41b1-8b6a-b5d776720846",
@@ -231,7 +351,30 @@
         1.55,
         1.1,
         1.55
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-12",
+          "target": {
+            "kind": "joint",
+            "jointId": "trolley"
+          },
+          "tagKey": "GC_01:trolley",
+          "caption": "trolley"
+        },
+        {
+          "id": "map-sim-13",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_01:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-goliath"
     },
     {
       "id": "a777d569-a381-43c4-b556-a039907b5141",
@@ -257,7 +400,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-14",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_03:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-15",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_03:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-16",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC_03:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "0f7d5737-9896-41f6-9fc9-89212e132630",
@@ -282,7 +456,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-17",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_7:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-18",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_7:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "5e97b639-9840-48da-b1a6-90920cad44e5",
@@ -307,7 +504,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-19",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_06:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-20",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_06:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "75041f21-af60-461d-828a-2dcefd671874",
@@ -332,7 +552,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-21",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_16:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-22",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_16:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "d53386df-ff1c-4550-8736-c3c20d42d9d9",
@@ -357,7 +600,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-23",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_17:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-24",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_17:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "d67b651c-cb64-4c9a-b7ee-87e23ac66c57",
@@ -382,7 +648,39 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-25",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_12:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-26",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_12:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-27",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC_12:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "50f57d5c-c177-47f2-a1d4-649e0b3ca397",
@@ -407,7 +705,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-28",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_13:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-29",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_13:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "36e16a8d-cd53-456d-b00e-9e346a144e82",
@@ -432,7 +753,39 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-30",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_13:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-31",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_13:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-32",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC_13:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "6f2a2b72-e5ba-4383-9dd1-3283895ace35",
@@ -457,7 +810,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-33",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_09:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-34",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_09:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "2f7cd750-c352-419c-934e-183b5224cd97",
@@ -482,7 +858,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-35",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_14:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-36",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_14:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "536b842e-7905-4704-a983-c55fc649b77f",
@@ -507,7 +906,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-37",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_10:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-38",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_10:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "cc6d4cfe-c29b-4cd9-8c99-ecaee3309fa6",
@@ -532,7 +954,30 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-39",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_15:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-40",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_15:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "725fc603-c8c9-446a-9a9b-3df80284e94a",
@@ -557,7 +1002,39 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-41",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OKPO_OC:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-42",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OKPO_OC:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-43",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OKPO_OC:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "d2e92e27-e5f7-4b5d-a1d5-06ceac82774c",
@@ -582,7 +1059,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-44",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_54:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "3fc01bfc-7b61-4a45-9a49-c6039bb30882",
@@ -607,7 +1096,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-45",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_35:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "84998952-60c5-43c3-980b-a64a1e39a512",
@@ -632,7 +1133,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-46",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_77:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "67cd54a4-0879-4f9a-95eb-1106c3fd2add",
@@ -657,7 +1170,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-47",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_48:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "588ffba6-a399-45b6-a997-48e4c1554c4e",
@@ -683,7 +1208,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-48",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_02:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-49",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_02:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-50",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC_02:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "949b3f39-08db-4f4d-b5c7-c20794ea018a",
@@ -709,7 +1265,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-51",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_01:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-52",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_01:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-53",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC_01:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "2d8ba966-6e40-4adc-9081-099d088d8d49",
@@ -735,7 +1322,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-54",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "CC_02:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-55",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "CC_02:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-56",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "CC_02:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "c58d8d19-ecd4-44b6-afc3-66f342f756b9",
@@ -760,7 +1378,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-57",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_39:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "4158fb43-24ff-42c3-a6ec-8cea66907c23",
@@ -785,7 +1415,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-58",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_64:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "8f15a6ad-4b33-48c1-a9c0-b1554484fa9f",
@@ -810,7 +1452,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-59",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_96:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "d96086c3-4f7b-4678-88de-0411b37bdee8",
@@ -835,7 +1489,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-60",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_94:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "36d94b6e-1137-458c-8a97-81a8a6e6c7c0",
@@ -860,7 +1526,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-61",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_93:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "790f7bb4-0f93-4bf9-87cb-bb1c3f9bfb44",
@@ -886,7 +1564,38 @@
         1,
         1
       ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "tagMappings": [
+        {
+          "id": "map-sim-62",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_03_FB44:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-63",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_03_FB44:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-64",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "OC_03_FB44:gantry_position",
+          "caption": "주행"
+        }
+      ]
     },
     {
       "id": "4c4d4d0e-759a-4342-a3b1-9c7e637fc6fd",
@@ -911,7 +1620,30 @@
         0.9,
         1.1,
         0.9
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-65",
+          "target": {
+            "kind": "joint",
+            "jointId": "trolley"
+          },
+          "tagKey": "GC_03:trolley",
+          "caption": "trolley"
+        },
+        {
+          "id": "map-sim-66",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_03:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-goliath"
     },
     {
       "id": "6ed3c526-663e-4968-9e35-0f3175d5c943",
@@ -936,7 +1668,30 @@
         1.2,
         1.3,
         1.3
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-67",
+          "target": {
+            "kind": "joint",
+            "jointId": "trolley"
+          },
+          "tagKey": "GC_05:trolley",
+          "caption": "trolley"
+        },
+        {
+          "id": "map-sim-68",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_05:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-goliath"
     },
     {
       "id": "cc8b7687-3c60-445a-9360-8f190473b4b1",
@@ -961,7 +1716,30 @@
         0.7,
         0.7,
         0.7
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-69",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_24:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-70",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "TTC_24:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "ac814c7f-bf77-4c5c-a550-1587809a86b5",
@@ -986,7 +1764,30 @@
         0.7,
         0.7,
         0.7
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-71",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_23:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-72",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "TTC_23:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "a38bc42f-f3ef-4222-922a-5b1cf37ef2c5",
@@ -1011,7 +1812,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-73",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_70:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "34db2131-205b-40df-88a4-47ca8514719b",
@@ -1036,7 +1849,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-74",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_75:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "8b98e9e5-10ce-4765-8fec-c7f3e069179a",
@@ -1061,7 +1886,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-75",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_74:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "64a7aa63-f1dc-496c-b71e-dfc9620bf763",
@@ -1086,7 +1923,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-76",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_80:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "b7b150e9-8c17-4fdc-acc6-67dbc1d92a4e",
@@ -1111,7 +1960,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-77",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_83:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "5a90fb3b-c638-4434-b1a4-c7de003aae59",
@@ -1136,7 +1997,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-78",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_73:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "5945ec78-aeda-4c67-94f5-3f6d0aedd324",
@@ -1161,7 +2034,19 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-79",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TC_72:slew",
+          "caption": "slew"
+        }
+      ],
+      "rigId": "rig-sim-okpo-tc"
     },
     {
       "id": "4f872382-fbda-4ae3-81d5-7aa0c5d66e23",
@@ -1186,7 +2071,30 @@
         0.7,
         0.7,
         0.7
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-80",
+          "target": {
+            "kind": "joint",
+            "jointId": "slew"
+          },
+          "tagKey": "TTC_22:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-81",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "TTC_22:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-sim-okpo-ttc"
     },
     {
       "id": "b755ad32-bee6-486b-87ed-f44888d74dde",
@@ -1211,7 +2119,39 @@
         1,
         1,
         1
-      ]
+      ],
+      "tagMappings": [
+        {
+          "id": "map-sim-82",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-dc5f2798"
+          },
+          "tagKey": "OC_22:link_upper001",
+          "caption": "Link_Upper.0"
+        },
+        {
+          "id": "map-sim-83",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-sim-slew"
+          },
+          "tagKey": "OC_22:slew",
+          "caption": "slew"
+        },
+        {
+          "id": "map-sim-84",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "OC_22:gantry_position",
+          "caption": "주행"
+        }
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     }
   ],
   "texts": [],
@@ -1276,6 +2216,15 @@
           "type": "hinge",
           "axis": "x",
           "label": "Link_End"
+        },
+        {
+          "id": "joint-sim-slew",
+          "label": "slew",
+          "node": "[0]OC_크레인/[0]Base/[0]Top",
+          "type": "hinge",
+          "axis": "y",
+          "min": -180,
+          "max": 180
         }
       ],
       "constraints": [
@@ -1315,6 +2264,114 @@
           "factor": -0.937815385
         }
       ]
+    },
+    {
+      "id": "rig-sim-okpo-tc",
+      "name": "TC (sim)",
+      "joints": [
+        {
+          "id": "slew",
+          "label": "slew",
+          "node": "[0]TC_크레인/[1]TC_Top",
+          "type": "hinge",
+          "axis": "y",
+          "min": -180,
+          "max": 180,
+          "pivot": [
+            0.3,
+            34.5,
+            0
+          ]
+        }
+      ],
+      "constraints": [],
+      "modelPath": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb"
+    },
+    {
+      "id": "rig-sim-okpo-ttc",
+      "name": "TTC (sim)",
+      "joints": [
+        {
+          "id": "slew",
+          "label": "slew",
+          "node": "[0]TTC_크레인/[1]TTC_Top",
+          "type": "hinge",
+          "axis": "y",
+          "min": -180,
+          "max": 180,
+          "pivot": [
+            0,
+            59.2,
+            0
+          ]
+        }
+      ],
+      "constraints": [],
+      "modelPath": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb"
+    },
+    {
+      "id": "rig-sim-okpo-goliath",
+      "name": "Goliath (sim)",
+      "joints": [
+        {
+          "id": "trolley",
+          "label": "trolley",
+          "node": "[0]Goliath/[1]Trolly_Goliath_001",
+          "type": "slide",
+          "axis": "z",
+          "min": -25,
+          "max": 110
+        },
+        {
+          "id": "hoist",
+          "label": "hoist",
+          "node": "[0]Goliath/[2]Trolly_Goliath_002",
+          "type": "slide",
+          "axis": "z"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "linear",
+          "id": "hoist-follows",
+          "input": "trolley",
+          "output": "hoist",
+          "factor": 1
+        }
+      ],
+      "modelPath": "/asset-library/files/okpo-goliath/v3/Okpo_Goliath.glb"
+    },
+    {
+      "id": "rig-sim-goliath",
+      "name": "Goliath (sim)",
+      "joints": [
+        {
+          "id": "trolley",
+          "label": "trolley",
+          "node": "[0]Goliath/[1]Goliath_Crane_Trolley_01",
+          "type": "slide",
+          "axis": "x",
+          "min": -95,
+          "max": 15
+        },
+        {
+          "id": "hoist",
+          "label": "hoist",
+          "node": "[0]Goliath/[2]Goliath_Crane_Trolley_02",
+          "type": "slide",
+          "axis": "x"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "linear",
+          "id": "hoist-follows",
+          "input": "trolley",
+          "output": "hoist",
+          "factor": 1
+        }
+      ],
+      "modelPath": "/models/goliath_crane.glb"
     }
   ],
   "rulers": [

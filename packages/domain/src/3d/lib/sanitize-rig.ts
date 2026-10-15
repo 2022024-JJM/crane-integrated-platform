@@ -60,6 +60,14 @@ function sanitizeRigJoint(raw: unknown, seenIds: Set<string>): RigJoint | null {
     if (max !== undefined) joint.max = max;
   }
   if (j.sign === -1) joint.sign = -1;
+  if (
+    joint.type === 'hinge' &&
+    Array.isArray(j.pivot) &&
+    j.pivot.length === 3 &&
+    j.pivot.every(isFiniteNumber)
+  ) {
+    joint.pivot = [j.pivot[0], j.pivot[1], j.pivot[2]];
+  }
   seenIds.add(joint.id);
   return joint;
 }

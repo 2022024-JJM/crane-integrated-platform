@@ -29,6 +29,15 @@ interface RealtimeState {
   drainBuffer: () => RealtimeEntry[];
 }
 
+/**
+ * 키 → buffer 안의 위치. 같은 키가 프레임 사이에 여러 번 오면 마지막 값만
+ * 남긴다(coalesce) — 러너는 어차피 최신 값만 노드에 적용하므로 중간 값을
+ * 보존할 이유가 없고, 탭이 가려져 rAF 가 멈춘 동안 버퍼가 수신량에 비례해
+ * 무한히 자라는 것을 막는다(크기 ≤ 고유 키 수). 모듈 전역이라 외부에서
+ * `setState({ buffer: [] })` 로 갈아끼워도 pushValue 가 키 대조로 자가 복구한다.
+ */
+const bufferIndex = new Map<string, number>();
+
 export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
   isRunning: false,
   held: false,
@@ -49,7 +58,14 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
     // buffer는 useFrame 루프에서만 drain되므로 in-place push로 충분하다.
     // zustand set()을 호출하면 매 메시지마다 구독자 리렌더가 발생하므로
     // 배열을 직접 mutate하고 React 상태 변경은 일으키지 않는다.
-    get().buffer.push({ key, value });
+    const buffer = get().buffer;
+    const at = bufferIndex.get(key);
+    if (at !== undefined && at < buffer.length && buffer[at].key === key) {
+      buffer[at].value = value;
+    } else {
+      bufferIndex.set(key, buffer.length);
+      buffer.push({ key, value });
+    }
     get().activity.lastMessageAt = performance.now();
   },
 
@@ -57,6 +73,7 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
     const current = get().buffer;
     if (current.length === 0) return current;
     // swap: 새 빈 배열로 교체하고 이전 배열을 반환
+    bufferIndex.clear();
     set({ buffer: [] });
     return current;
   },
