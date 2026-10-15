@@ -21,7 +21,7 @@
 | 탑뷰 포즈(진입·복귀·정수직 회피 tilt, 뷰어·에디터 공용) / 직교 탑뷰 토글 훅 | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewEntryPose`, `computeTopViewExitPose`, `ensureTopViewTilt`, 테스트 대상), `packages/ui/src/organisms/use-ortho-top-view.ts` |
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
 | 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts`, `packages/features/src/3d/model/use-rig-driver.ts` |
-| 선택 표시(박스·실루엣) | `packages/domain/src/3d/lib/selection-bounding-box.ts`, `packages/domain/src/3d/lib/silhouette-outline.ts`, `packages/domain/src/3d/ui/gltf-model.tsx`, `packages/domain/src/3d/ui/model-mesh.tsx` |
+| 선택 표시(박스·실루엣) | `packages/domain/src/3d/lib/selection-bounding-box.ts`, 박스 바닥 방향 `packages/domain/src/3d/lib/xz-footprint.ts`(둘 다 테스트 대상), `packages/domain/src/3d/lib/silhouette-outline.ts`, `packages/domain/src/3d/ui/gltf-model.tsx`, `packages/domain/src/3d/ui/model-mesh.tsx` |
 | 안쪽 노드 선택(부모 판정·노드 트리·계층 목록) | `packages/domain/src/3d/lib/scene-node-parent.ts`(`resolveSceneNodeParent`), `packages/widgets/src/3d/lib/model-node-tree.ts`(전부 테스트 대상), `packages/widgets/src/3d/ui/palette-placed-objects.tsx` |
 | 거리 눈금 스키마 / 방어 / 기하 / 렌더 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/sanitize-rulers.ts`, `packages/domain/src/3d/lib/ruler.ts`(테스트 대상), `packages/domain/src/3d/ui/scene-ruler.tsx` |
 | 화면을 향한 표시(모델 라벨·눈금)의 거리 축소·숨김 | `packages/domain/src/3d/lib/label-scale.ts`(테스트 대상) |
@@ -131,6 +131,8 @@
 - 선택한 안쪽 노드는 **읽기 전용**이다. 인스펙터는 안내 문구만 보이고 기즈모는 붙지 않으며, 노드 선택은 항상 단일 선택(Ctrl 토글 없음)이다.
 - 모델 노드의 표시는 모델 선택과 같은 실루엣 테두리이며 대상만 그 노드 서브트리로 좁힌다 — `GltfModel` 의 `selectedMeshTarget` 이 `ObjectSilhouetteOutline` 대상이 된다(`selectionStyle='outline'` 인 에디터 한정). 실루엣 자체는 `docs/agents/3d-collision.md`.
 - `selectionStyle='box'` 인 캔버스(에디터의 지도, 모니터링·리플레이·존 뷰어)는 노드 바운딩 박스다. 박스 점은 `selection-bounding-box.ts` 가 마운트 대상의 로컬 좌표로 계산하고, 노드 박스는 `createPortal` 로 노드 자식에 마운트해 리그·기즈모 움직임을 씬 그래프 상속으로 따라간다.
+- 박스 높이는 로컬 Y 축 그대로이고, 바닥은 정점 발자국(XZ 볼록 껍질)의 최소 면적 사각형 방향으로 눕는다. 그 사각형이 축 정렬보다 `ORIENTED_BOX_MIN_GAIN` 이상 작을 때만 돌리므로 축에 나란히 만든 모델은 축 정렬 박스 그대로다. 지도 GLB 는 건물 방향이 노드 회전이 아니라 정점에 들어 있고 북쪽이 로컬 −Z 라, 축 정렬 박스면 건물을 사선으로 감싸 몇 배 넓어진다.
+- 발자국 껍질은 위치 속성별로 캐시한다(클론·LOD 사본이 속성을 공유). 지도 전체를 처음 감쌀 때만 수백만 정점을 돌고 그 뒤 노드·전체 박스는 껍질 점만 옮긴다. 양자화(정수) 위치는 정수 그대로 묶어 정렬하는 빠른 길을 탄다(`convexHullOfStrided`).
 - 포털은 `target.uuid` key 로 재마운트해야 한다 — R3F `Portal` 이 컨테이너 교체 시 이전 노드에 붙는 문제가 있다(파일 주석). 실루엣 쪽도 같은 이유로 `node.uuid`·`mesh.uuid` 를 key 로 쓴다.
 - 하위에 메시가 없는 리프 Empty 노드는 그릴 것이 없어 아무 표시도 나오지 않는다.
 - 저장 씬의 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 새로 만들지 않는다.
@@ -208,6 +210,7 @@
 - `server.watch.ignored` 로 dev 저장 디렉토리 무시 — 기동 후 생긴 파일이 404.
 - 안쪽 노드에 기즈모·다중 선택·`meshOverrides` 생성 — 읽기 전용으로 유지.
 - 지도 노드의 실루엣 테두리 — 건물 지도 루트·지형 타일 같은 큰 노드는 클릭 순간 헐 생성(동기 `toCreasedNormals`)으로 화면이 멈칫한다. 지도 선택과 같은 박스로 둔다.
+- 비스듬한 지도를 박스에 맞추려고 GLB 를 축 정렬로 다시 export — "북쪽 = 로컬 −Z" 규약이 깨지고, 같은 좌표계의 지도들 회전·진북을 함께 바꿔야 하며, 격자와 다른 방향의 건물은 그래도 어긋난다. 박스 쪽이 발자국에 맞춘다.
 - 에디터에서 `meshOverrides` 를 새로 만드는 것 — 렌더 전용 데이터.
 - 눈금을 누른 채 끌어서 그리기 — 왼쪽 드래그는 마퀴, 가운데·오른쪽 드래그는 카메라라 겹치고, 긴 레일은 시작점을 찍은 뒤 카메라를 옮겨야 끝점을 찍을 수 있다.
 - 뷰를 계층 목록의 씬 객체(카메라 기즈모)로 두기 — 선택·기즈모·id 발급까지 끌려 들어온다. 뷰 탭의 목록으로 충분하다.
