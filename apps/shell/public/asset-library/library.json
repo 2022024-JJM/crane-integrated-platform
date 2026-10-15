@@ -127,9 +127,44 @@
             "lodLevels": 1,
             "animations": 0
           }
+        },
+        {
+          "version": 3,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/okpo-goliath/v3/Okpo_Goliath.glb"
+            },
+            "fileName": "Okpo_Goliath.glb",
+            "format": "glb",
+            "sizeBytes": 830236,
+            "contentHash": "sha256:0220b25f12f10a35015440844f807576122b9f7af3631c4eff34a1acb163fe85",
+            "originalSizeBytes": 4703192
+          },
+          "note": "트롤리 수정",
+          "createdAt": "2026-10-15T02:14:01.364Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 95272,
+            "vertices": 128136,
+            "meshes": 11,
+            "materials": 8,
+            "textures": 1,
+            "drawCalls": 11,
+            "nodes": 16,
+            "textureMemoryBytes": 5578424,
+            "size": [
+              49.83020857281472,
+              111.36845588643337,
+              155.19308471679688
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 2,
+      "currentVersion": 3,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -151,7 +186,7 @@
         }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
-      "updatedAt": "2026-10-14T23:35:59.461Z",
+      "updatedAt": "2026-10-15T02:14:16.810Z",
       "history": [
         {
           "id": "296a86a3-5c6d-439b-8ddd-01a5d3362dc4",
@@ -207,6 +242,49 @@
           "at": "2026-10-14T23:36:28.939Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
+        },
+        {
+          "id": "3da28227-8753-49b2-bee5-f19e1301b64e",
+          "at": "2026-10-15T02:14:01.364Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 3
+        },
+        {
+          "id": "51076a17-3d41-4be5-9849-4fac4fd88521",
+          "at": "2026-10-15T02:14:07.994Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 3,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "097f0e4c-7c20-4660-8b07-d2c617d4a8a5",
+          "at": "2026-10-15T02:14:08.193Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 3,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "88a30668-19ae-4ce9-80bd-92fee4b6c06d",
+          "at": "2026-10-15T02:14:08.411Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 3,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "f849539e-3772-45ad-bc4a-0ee080830246",
+          "at": "2026-10-15T02:14:16.810Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 3,
+          "from": "2",
+          "to": "3"
         }
       ]
     },

@@ -230,6 +230,27 @@
       "animations": 0
     }
   },
+  "/asset-library/files/okpo-goliath/v3/Okpo_Goliath.glb": {
+    "hash": "cd958511",
+    "bytes": 830236,
+    "stats": {
+      "triangles": 95272,
+      "vertices": 128136,
+      "meshes": 11,
+      "materials": 8,
+      "textures": 1,
+      "drawCalls": 11,
+      "nodes": 4,
+      "textureMemoryBytes": 5578424,
+      "size": [
+        49.83,
+        111.368,
+        155.193
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb": {
     "hash": "68aba85c",
     "bytes": 1168704,
