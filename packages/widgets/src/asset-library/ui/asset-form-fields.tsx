@@ -2,6 +2,10 @@ import { Plus, X } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ASSET_CATEGORY_MAX, ASSET_CATEGORIES_MAX } from '@crane/domain/asset-library';
+import {
+  isImeComposing,
+  useImeSafeBlur,
+} from '@crane/core/lib/use-ime-safe-blur';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
 import {
@@ -104,6 +108,16 @@ export function CategoryEditor({
     setDraft('');
     if (next.length !== value.length) onChange(next);
   };
+  const blurHandlers = useImeSafeBlur<HTMLInputElement>(
+    ({ value: typed, relatedTarget }) => {
+      // 권하는 카테고리로 초점이 옮겨 간 것이면 치던 글자를 카테고리로 만들지
+      // 않는다 — 그 글자는 목록을 거르려고 친 것이다.
+      if (suggestionsRef.current?.contains(relatedTarget as Node | null)) {
+        return;
+      }
+      if (typed.trim()) commit(typed);
+    },
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -145,21 +159,12 @@ export function CategoryEditor({
           if (next.includes(',')) commit(next);
           else setDraft(next);
         }}
-        onBlur={(event) => {
-          // 권하는 카테고리로 초점이 옮겨 간 것이면 치던 글자를 카테고리로 만들지
-          // 않는다 — 그 글자는 목록을 거르려고 친 것이다.
-          if (
-            suggestionsRef.current?.contains(event.relatedTarget as Node | null)
-          ) {
-            return;
-          }
-          if (draft.trim()) commit(draft);
-        }}
+        {...blurHandlers}
         onKeyDown={(event) => {
           // 한글처럼 조합해 넣는 글자는 Enter 가 두 번 온다 — 조합을 끝내는
           // Enter 와 그 뒤의 진짜 Enter. 앞의 것에서 확정하면 입력란을 비운
           // 뒤에 조합 중이던 마지막 글자가 다시 들어와 카테고리가 하나 더 생긴다.
-          if (event.nativeEvent.isComposing) return;
+          if (isImeComposing(event.nativeEvent)) return;
           if (event.key === 'Enter') {
             event.preventDefault();
             if (draft.trim()) commit(draft);
@@ -245,19 +250,19 @@ export function CommitInput({
   // 고친 값이라 그대로 두면 취소가 저장이 된다 — 취소했다는 표시를 남긴다.
   const cancelledRef = useRef(false);
 
-  const commit = () => {
+  const blurHandlers = useImeSafeBlur<HTMLInputElement>(({ value: typed }) => {
     if (cancelledRef.current) {
       cancelledRef.current = false;
       setDraft(value);
       return;
     }
-    const next = draft.trim();
+    const next = typed.trim();
     if (next === value || (required && next === '')) {
       setDraft(value);
       return;
     }
     onCommit(next);
-  };
+  });
 
   return (
     <Input
@@ -270,8 +275,10 @@ export function CommitInput({
       list={listId}
       className={cn(QUIET_FIELD, 'h-8 text-[13px]', className)}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
+      {...blurHandlers}
       onKeyDown={(event) => {
+        // 조합을 끝내는 Enter·Esc 는 확정·취소가 아니다 — 뒤에 한 번 더 온다.
+        if (isImeComposing(event.nativeEvent)) return;
         if (event.key === 'Enter') event.currentTarget.blur();
         if (event.key === 'Escape') {
           cancelledRef.current = true;
@@ -304,6 +311,13 @@ export function CommitTextArea({
     setSynced(value);
     setDraft(value);
   }
+  const blurHandlers = useImeSafeBlur<HTMLTextAreaElement>(
+    ({ value: typed }) => {
+      const next = typed.trim();
+      if (next === value) setDraft(value);
+      else onCommit(next);
+    },
+  );
 
   return (
     <TextArea
@@ -314,11 +328,7 @@ export function CommitTextArea({
       disabled={disabled}
       className={cn(QUIET_FIELD, 'text-[13px]')}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={() => {
-        const next = draft.trim();
-        if (next === value) setDraft(value);
-        else onCommit(next);
-      }}
+      {...blurHandlers}
     />
   );
 }

@@ -1,5 +1,5 @@
 import { FolderPlus, Star, Trash2 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ASSET_ATTENTION_KINDS,
@@ -12,6 +12,10 @@ import {
   type AssetQuery,
   type AssetTree as AssetTreeData,
 } from '@crane/domain/asset-library';
+import {
+  isImeComposing,
+  useImeSafeBlur,
+} from '@crane/core/lib/use-ime-safe-blur';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
 import { AssetAttentionIcon } from './asset-attention';
@@ -134,17 +138,29 @@ export function AssetFilterRail({
     (kind) => attention[kind] > 0 || query.attention === kind,
   );
 
-  const submitCollection = async () => {
-    const name = draftName.trim();
+  // 만드는 중에는 다시 보내지 않는다 — Enter 로 보낸 뒤 저장이 끝나기 전에
+  // 초점을 빼면 blur 가 같은 이름을 또 보내 이미 있는 이름으로 거절된다.
+  const submittingRef = useRef(false);
+  const submitCollection = async (raw: string) => {
+    if (submittingRef.current) return;
+    const name = raw.trim();
     if (!name) {
       setCreating(false);
       return;
     }
-    if (await onCreateCollection(name)) {
-      setDraftName('');
-      setCreating(false);
+    submittingRef.current = true;
+    try {
+      if (await onCreateCollection(name)) {
+        setDraftName('');
+        setCreating(false);
+      }
+    } finally {
+      submittingRef.current = false;
     }
   };
+  const nameBlurHandlers = useImeSafeBlur<HTMLInputElement>(({ value }) => {
+    void submitCollection(value);
+  });
 
   return (
     <nav
@@ -245,11 +261,11 @@ export function AssetFilterRail({
               placeholder={t('asset-library:rail.collectionName')}
               className="h-7 text-xs"
               onChange={(event) => setDraftName(event.target.value)}
-              onBlur={() => void submitCollection()}
+              {...nameBlurHandlers}
               onKeyDown={(event) => {
                 // 조합 중인 글자(한글)를 끝내는 Enter 는 확정이 아니다.
-                if (event.nativeEvent.isComposing) return;
-                if (event.key === 'Enter') void submitCollection();
+                if (isImeComposing(event.nativeEvent)) return;
+                if (event.key === 'Enter') void submitCollection(draftName);
                 if (event.key === 'Escape') {
                   setDraftName('');
                   setCreating(false);
