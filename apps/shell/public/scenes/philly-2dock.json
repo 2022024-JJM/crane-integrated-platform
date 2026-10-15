@@ -28,11 +28,11 @@
     },
     {
       "id": "9ddc366c-ffa8-4386-a96b-a2541b3bb7ac",
-      "path": "/maps/philly-area-1.glb",
+      "path": "/asset-library/files/map-philly-area-1/v2/Philly_Area-1.glb",
       "locked": true,
       "asset": {
         "id": "map-philly-area-1",
-        "version": 1
+        "version": 2
       },
       "role": "ground",
       "cameraBounds": true,
@@ -55,11 +55,11 @@
     },
     {
       "id": "9546994b-ffc3-4ef5-b18e-f4a7dd6a827b",
-      "path": "/maps/philly-area-2.glb",
+      "path": "/asset-library/files/map-philly-area-2/v2/Philly_Area-2.glb",
       "locked": true,
       "asset": {
         "id": "map-philly-area-2",
-        "version": 1
+        "version": 2
       },
       "role": "ground",
       "cameraBounds": true,
@@ -79,6 +79,33 @@
         1
       ],
       "name": "Philly Area 2"
+    },
+    {
+      "id": "1b2a13b1-3a4d-4ffb-9181-0bf2b7bb59d7",
+      "path": "/asset-library/files/philly-building/v1/Philly_Building.glb",
+      "locked": true,
+      "asset": {
+        "id": "philly-building",
+        "version": 1
+      },
+      "role": "ground",
+      "cameraBounds": true,
+      "position": [
+        264.72,
+        0,
+        -6.609
+      ],
+      "rotation": [
+        0,
+        354.4,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "name": "Philly Building"
     }
   ],
   "models": [
@@ -142,10 +169,10 @@
     {
       "id": "id-mt0riz7x-bxncy0uk",
       "equipName": "LLC-002",
-      "path": "/models/LLC_002.glb",
+      "path": "/asset-library/files/llc-002/v2/LLC_Rigged_20260822.glb",
       "asset": {
         "id": "llc-002",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -206,10 +233,10 @@
     {
       "id": "id-mt0rka4j-lfz5p217",
       "equipName": "LLC-002",
-      "path": "/models/LLC_002.glb",
+      "path": "/asset-library/files/llc-002/v2/LLC_Rigged_20260822.glb",
       "asset": {
         "id": "llc-002",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -343,14 +370,14 @@
   "texts": [],
   "camera": {
     "position": [
-      -524.6208836015995,
-      158.25246840247632,
-      223.78236653418435
+      -600.1678981582568,
+      238.5222265041746,
+      207.20999250828183
     ],
     "target": [
-      -655.7510997216646,
-      -8.899319092613126,
-      64.98376476465636
+      -598.4347051245375,
+      3.593302818268527,
+      -25.900730814767307
     ]
   },
   "rigs": [
@@ -429,6 +456,25 @@
       ]
     }
   ],
+  "views": [
+    {
+      "id": "690f7410-47a6-42c3-9934-bed1382b347e",
+      "name": "4도크",
+      "position": [
+        -524.6208836015995,
+        158.25246840247632,
+        223.78236653418435
+      ],
+      "target": [
+        -655.7510997216646,
+        -8.899319092613126,
+        64.98376476465636
+      ]
+    }
+  ],
+  "mainViewByRegion": {
+    "philly-dock-2": "690f7410-47a6-42c3-9934-bed1382b347e"
+  },
   "environment": {
     "path": "/scenes/sky-blue-open-water-web.exr",
     "asset": {
@@ -437,6 +483,7 @@
     }
   },
   "sea": true,
+  "siteLocation": "america-new-york",
   "trueNorth": 5.6,
   "lighting": {
     "shadows": true,

@@ -4,7 +4,7 @@
     {
       "id": "goliath-crane",
       "kind": "model",
-      "name": "Goliath Crane",
+      "name": "Philly Goliath",
       "description": "",
       "categories": [
         "outdoor",
@@ -41,7 +41,7 @@
         "updatedAt": "2026-10-01T08:04:30.618Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-10-02T01:45:29.480Z",
+      "updatedAt": "2026-10-14T23:34:23.562Z",
       "history": [
         {
           "id": "id-muqawrpk-u9z4qlzv",
@@ -50,6 +50,15 @@
           "action": "metadata",
           "fields": [
             "categories"
+          ]
+        },
+        {
+          "id": "4d3cb5d7-5ab1-4fc7-a9ff-0f1689db43ff",
+          "at": "2026-10-14T23:34:23.562Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "name"
           ]
         }
       ]
@@ -83,20 +92,55 @@
           "note": "",
           "createdAt": "2026-09-23T07:45:15.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/okpo-goliath/v2/Goliath-Crane_Okpo.glb"
+            },
+            "fileName": "Goliath-Crane_Okpo.glb",
+            "format": "glb",
+            "sizeBytes": 718472,
+            "contentHash": "sha256:f47ae54886550e841c0cbc6ebcf0d801bfd3bb3deedd2e4ef4117b66c9738319",
+            "originalSizeBytes": 4181992
+          },
+          "note": "오리진 수정",
+          "createdAt": "2026-10-14T23:35:06.356Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 95258,
+            "vertices": 112107,
+            "meshes": 5,
+            "materials": 4,
+            "textures": 1,
+            "drawCalls": 5,
+            "nodes": 8,
+            "textureMemoryBytes": 5578424,
+            "size": [
+              49.83020857281472,
+              111.36845588643337,
+              155.19308471679688
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
           "path": "/asset-library/thumbnails/okpo-goliath.png"
         },
-        "updatedAt": "2026-10-08T00:00:24.407Z",
+        "updatedAt": "2026-10-14T23:36:28.939Z",
         "view": {
           "direction": [
-            0.672602922448889,
-            0.43238759300285684,
-            -0.600538323615079
+            0.6726029224488891,
+            0.4323875930028569,
+            -0.6005383236150791
           ],
           "distance": 3.824335951936498,
           "targetOffset": [
@@ -107,11 +151,60 @@
         }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
-      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-10-14T23:35:59.461Z",
       "history": [
         {
           "id": "296a86a3-5c6d-439b-8ddd-01a5d3362dc4",
           "at": "2026-10-08T00:00:24.407Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "2df26d55-4bcc-4cec-b36f-01e9ffad6c2f",
+          "at": "2026-10-14T23:35:06.356Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "3d971692-1804-4286-9ee9-e5f558ea0dcc",
+          "at": "2026-10-14T23:35:10.095Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "19547d9e-42ae-4e7a-a02c-03a1ab3c5bb0",
+          "at": "2026-10-14T23:35:58.112Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "4065860d-a464-472a-9251-314f15a624b7",
+          "at": "2026-10-14T23:35:58.461Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "914129d0-2df5-44b4-a7a1-2dcc452a5b14",
+          "at": "2026-10-14T23:35:59.461Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "4051d5ec-4651-483b-a781-a5d96af425e7",
+          "at": "2026-10-14T23:36:28.939Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
         }
@@ -146,9 +239,44 @@
           "note": "",
           "createdAt": "2026-09-23T07:45:15.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb"
+            },
+            "fileName": "OC-Crane_Okpo.glb",
+            "format": "glb",
+            "sizeBytes": 1168704,
+            "contentHash": "sha256:8ce25665b42f83347dc5b0cecfcb4b1720c00692b33e4d66c70065dbfcda2e2c",
+            "originalSizeBytes": 5693444
+          },
+          "note": "오리진 수정",
+          "createdAt": "2026-10-14T23:37:51.896Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 88076,
+            "vertices": 151904,
+            "meshes": 13,
+            "materials": 5,
+            "textures": 3,
+            "drawCalls": 13,
+            "nodes": 26,
+            "textureMemoryBytes": 16735272,
+            "size": [
+              84.94499478882564,
+              78.31318311957703,
+              29.878419130586522
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -170,13 +298,56 @@
         }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
-      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-10-14T23:39:36.212Z",
       "history": [
         {
           "id": "01d48e19-92f9-43c2-9226-4fd7dbe6aac6",
           "at": "2026-10-08T00:00:29.854Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
+        },
+        {
+          "id": "edbf90b3-012f-4d17-80f8-ce324280e1d9",
+          "at": "2026-10-14T23:37:51.896Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "75315e20-92f4-405c-84c8-e97d58e43c2f",
+          "at": "2026-10-14T23:37:55.296Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "cc8b40ae-27aa-4570-8339-d58b65e05451",
+          "at": "2026-10-14T23:37:57.178Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "ab9e5cfe-3cf1-4acb-a9e9-aac36e6b6574",
+          "at": "2026-10-14T23:37:57.446Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "5747506a-65ed-45b9-bdd1-463e515fe883",
+          "at": "2026-10-14T23:37:57.945Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
         }
       ]
     },
@@ -209,9 +380,44 @@
           "note": "",
           "createdAt": "2026-09-23T07:45:15.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb"
+            },
+            "fileName": "TC-Crane_Okpo.glb",
+            "format": "glb",
+            "sizeBytes": 2408124,
+            "contentHash": "sha256:142111d47058fd5b85afd1cd71d2eecfc60832051a384634572df69fe6100a9c",
+            "originalSizeBytes": 7088152
+          },
+          "note": "오리진 수정",
+          "createdAt": "2026-10-14T23:41:46.165Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 68926,
+            "vertices": 117153,
+            "meshes": 6,
+            "materials": 5,
+            "textures": 8,
+            "drawCalls": 6,
+            "nodes": 10,
+            "textureMemoryBytes": 44627392,
+            "size": [
+              72.60737991333008,
+              52.994218175432394,
+              9.909861188748788
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -233,13 +439,56 @@
         }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
-      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-10-14T23:41:52.345Z",
       "history": [
         {
           "id": "fc1e01fa-f127-4193-8fa2-d8c9d107df2b",
           "at": "2026-10-08T00:00:34.517Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
+        },
+        {
+          "id": "11432f64-58de-4228-b97b-de4b6921fd10",
+          "at": "2026-10-14T23:41:46.165Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "ce3cb15c-eb2e-4f78-ac86-39b84f44ef88",
+          "at": "2026-10-14T23:41:48.997Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "276bf99a-6a73-464f-acdf-5eb002cd41c5",
+          "at": "2026-10-14T23:41:49.328Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "bcf9f57d-96a2-4fdc-863c-20423839354e",
+          "at": "2026-10-14T23:41:49.545Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "f7416d67-2226-4c24-a83e-ae3031c70783",
+          "at": "2026-10-14T23:41:52.345Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
         }
       ]
     },
@@ -272,9 +521,44 @@
           "note": "",
           "createdAt": "2026-09-23T07:45:15.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb"
+            },
+            "fileName": "TTC-Crane_Okpo.glb",
+            "format": "glb",
+            "sizeBytes": 1996656,
+            "contentHash": "sha256:4504bd7144680f84dee9aec9e1723f3149e2605f5e15e8ecc00a564160b364cb",
+            "originalSizeBytes": 6084536
+          },
+          "note": "오리진 수정",
+          "createdAt": "2026-10-14T23:42:48.193Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 72716,
+            "vertices": 93019,
+            "meshes": 5,
+            "materials": 4,
+            "textures": 7,
+            "drawCalls": 5,
+            "nodes": 9,
+            "textureMemoryBytes": 39048968,
+            "size": [
+              137.59608840942383,
+              99.7440157068126,
+              16.6354973653198
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -296,13 +580,56 @@
         }
       },
       "createdAt": "2026-09-23T07:45:15.000Z",
-      "updatedAt": "2026-09-23T07:45:15.000Z",
+      "updatedAt": "2026-10-14T23:42:52.029Z",
       "history": [
         {
           "id": "93684333-9ce9-44dc-bed7-dbba8a8c74b4",
           "at": "2026-10-08T00:00:39.595Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
+        },
+        {
+          "id": "eaa2f180-db7e-4f18-9b4f-d18553cc4fd8",
+          "at": "2026-10-14T23:42:48.193Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "4aab488c-68c7-47a0-8017-c3bf3b3d4c44",
+          "at": "2026-10-14T23:42:50.112Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "34c1589c-3b50-40c4-acca-e94619c2c678",
+          "at": "2026-10-14T23:42:51.594Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "d02bd41e-a986-4d4b-9045-8431ddd4594b",
+          "at": "2026-10-14T23:42:51.796Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "57639b93-8f45-43a6-9a12-ae55032dd09d",
+          "at": "2026-10-14T23:42:52.029Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
         }
       ]
     },
@@ -335,18 +662,66 @@
           "note": "",
           "createdAt": "2026-09-23T07:45:15.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/llc-002/v2/LLC_Rigged_20260822.glb"
+            },
+            "fileName": "LLC_Rigged_20260822.glb",
+            "format": "glb",
+            "sizeBytes": 984184,
+            "contentHash": "sha256:aca8cd05e4acf759be57432de4673d8ec8c2bf0803805fb47799318531f3d433",
+            "originalSizeBytes": 10401236
+          },
+          "note": "오리진 수정",
+          "createdAt": "2026-10-14T23:32:04.749Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 54008,
+            "vertices": 97812,
+            "meshes": 9,
+            "materials": 4,
+            "textures": 4,
+            "drawCalls": 9,
+            "nodes": 19,
+            "textureMemoryBytes": 39048969,
+            "size": [
+              11.564679217460458,
+              53.22401473973834,
+              60.69308848255085
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
           "path": "/asset-library/thumbnails/llc-002.png"
         },
-        "updatedAt": "2026-10-01T08:04:57.941Z"
+        "updatedAt": "2026-10-14T23:36:38.252Z",
+        "view": {
+          "direction": [
+            0.6005383236150794,
+            0.4323875930028569,
+            0.6726029224488889
+          ],
+          "distance": 3.824335951936498,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-10-02T01:45:29.481Z",
+      "updatedAt": "2026-10-14T23:32:15.129Z",
       "history": [
         {
           "id": "id-muqawrpk-w9btgk3l",
@@ -356,6 +731,55 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "c897674b-aa39-4142-b430-982086995778",
+          "at": "2026-10-14T23:32:04.749Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "13303ebd-b4e1-410f-b08d-50364f7abf79",
+          "at": "2026-10-14T23:32:08.780Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "35d66eb8-3c51-4fa6-96af-17ee4a1d14e1",
+          "at": "2026-10-14T23:32:09.430Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "0c0d1219-cfc9-43dd-9bdb-de53f3d285c4",
+          "at": "2026-10-14T23:32:09.730Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "efa8a33e-220e-4082-a2e8-c701dcc294ea",
+          "at": "2026-10-14T23:32:15.129Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "47b3ae9a-bed0-43b3-9753-42ffa18bfe60",
+          "at": "2026-10-14T23:36:38.252Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
         }
       ]
     },
@@ -520,9 +944,9 @@
         "updatedAt": "2026-10-08T00:00:02.010Z",
         "view": {
           "direction": [
-            0.6726029224488886,
-            0.43238759300285706,
-            -0.6005383236150793
+            0.6726029224488888,
+            0.4323875930028571,
+            -0.6005383236150794
           ],
           "distance": 3.824335951936497,
           "targetOffset": [
@@ -1623,7 +2047,7 @@
     {
       "id": "map-okpo",
       "kind": "map",
-      "name": "Okpo",
+      "name": "Okpo Yard",
       "description": "",
       "categories": [
         "okpo"
@@ -1654,22 +2078,57 @@
           "note": "",
           "createdAt": "2026-09-27T14:03:32.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/map-okpo/v2/Okpo_Yard.glb"
+            },
+            "fileName": "Okpo_Yard.glb",
+            "format": "glb",
+            "sizeBytes": 12698572,
+            "contentHash": "sha256:cd4e2b090c68cb2b54307a219169745d8414f7e8a00a3bb9bae8d59f4be51af6",
+            "originalSizeBytes": 332872152
+          },
+          "note": "건물 제거",
+          "createdAt": "2026-10-15T00:04:51.388Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 43239,
+            "vertices": 56461,
+            "meshes": 17,
+            "materials": 17,
+            "textures": 19,
+            "drawCalls": 17,
+            "nodes": 19,
+            "textureMemoryBytes": 351440812,
+            "size": [
+              3344.189745137066,
+              17.88088399246956,
+              3804.564453125
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
           "path": "/asset-library/thumbnails/map-okpo.png"
         },
-        "updatedAt": "2026-10-08T00:54:06.481Z",
+        "updatedAt": "2026-10-15T00:06:00.403Z",
         "view": {
           "direction": [
             0,
-            0.9999988750018984,
-            0.0014999983125020468
+            0.9999988750018982,
+            0.0014999983125760599
           ],
-          "distance": 3.824335951936498,
+          "distance": 3.8243359519364994,
           "targetOffset": [
             0,
             0,
@@ -1678,7 +2137,7 @@
         }
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "updatedAt": "2026-10-15T00:05:53.431Z",
       "history": [
         {
           "id": "45511873-b29c-417e-8cbd-2079dcfdda29",
@@ -1692,6 +2151,64 @@
         {
           "id": "4b998e73-af20-4545-82ab-85efd0169b77",
           "at": "2026-10-08T00:54:06.481Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "1c7c178d-ba01-4c6a-a962-70290acc1783",
+          "at": "2026-10-15T00:04:51.388Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "8384c2fb-5dfc-4c69-a004-654ff1738101",
+          "at": "2026-10-15T00:05:05.121Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "c8341a63-7c94-4eb2-899f-3bb8fc79eb4c",
+          "at": "2026-10-15T00:05:06.021Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "2977263b-54b0-4ba8-9a03-1f9bb7d0b211",
+          "at": "2026-10-15T00:05:06.305Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "8ac7efe5-dc0d-4451-85bd-ac2ab968dc13",
+          "at": "2026-10-15T00:05:06.522Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "437c698a-0c4d-44df-8d6e-48e7da0b3932",
+          "at": "2026-10-15T00:05:53.431Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "5fc3c7b4-0181-49e6-9146-8faad19ab4f6",
+          "at": "2026-10-15T00:06:00.403Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
         }
@@ -1745,8 +2262,8 @@
         "view": {
           "direction": [
             0,
-            0.9999988750018983,
-            0.0014999983125020449
+            0.9999988750018984,
+            0.001499998312502045
           ],
           "distance": 3.824335951936498,
           "targetOffset": [
@@ -1757,7 +2274,7 @@
         }
       },
       "createdAt": "2026-09-21T00:43:32.000Z",
-      "updatedAt": "2026-10-06T04:21:27.106Z",
+      "updatedAt": "2026-10-15T00:20:12.890Z",
       "history": [
         {
           "id": "d0333ee4-b9f8-4890-9067-9953a4ba47dc",
@@ -1773,6 +2290,20 @@
           "at": "2026-10-08T00:53:53.803Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
+        },
+        {
+          "id": "59bff06d-6964-4bde-9243-2238edeb7388",
+          "at": "2026-10-15T00:17:46.533Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "471a4951-be09-472e-a0b6-c3e40c9aa7b2",
+          "at": "2026-10-15T00:20:12.890Z",
+          "actor": "crane.ocean",
+          "action": "version-removed",
+          "version": 2
         }
       ]
     },
@@ -1823,9 +2354,9 @@
         "updatedAt": "2026-10-08T00:53:47.933Z",
         "view": {
           "direction": [
-            7.970970124073467e-10,
-            0.9999988733227984,
-            0.0015011172950325597
+            7.970970124073468e-10,
+            0.9999988733227985,
+            0.00150111729503256
           ],
           "distance": 3.8243359519364986,
           "targetOffset": [
@@ -1858,7 +2389,7 @@
     {
       "id": "map-philly-area-1",
       "kind": "map",
-      "name": "Philly Area 1",
+      "name": "Philly Yard1",
       "description": "",
       "categories": [
         "philly"
@@ -1882,20 +2413,55 @@
           "note": "",
           "createdAt": "2026-09-27T14:03:32.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/map-philly-area-1/v2/Philly_Area-1.glb"
+            },
+            "fileName": "Philly_Area-1.glb",
+            "format": "glb",
+            "sizeBytes": 1665876,
+            "contentHash": "sha256:9d5e85b4998f7e8c87f2be20815522e2a2011d0d993ac9b5605558d5b92f0bd2",
+            "originalSizeBytes": 31427600
+          },
+          "note": "건물 제거",
+          "createdAt": "2026-10-15T00:06:42.156Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 94866,
+            "vertices": 212713,
+            "meshes": 22,
+            "materials": 22,
+            "textures": 12,
+            "drawCalls": 22,
+            "nodes": 24,
+            "textureMemoryBytes": 100412146,
+            "size": [
+              823.4678566313592,
+              55.371969953841955,
+              1083.8550415039062
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
           "path": "/asset-library/thumbnails/map-philly-area-1.png"
         },
-        "updatedAt": "2026-10-08T00:04:13.670Z",
+        "updatedAt": "2026-10-15T00:07:17.446Z",
         "view": {
           "direction": [
             0,
             0.9999988750018982,
-            0.00149999831257606
+            0.0014999983126500747
           ],
           "distance": 3.824335951936499,
           "targetOffset": [
@@ -1906,7 +2472,7 @@
         }
       },
       "createdAt": "2026-09-10T23:33:53.000Z",
-      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "updatedAt": "2026-10-15T00:07:43.498Z",
       "history": [
         {
           "id": "2bc93567-4743-429a-809f-002eea319666",
@@ -1922,13 +2488,71 @@
           "at": "2026-10-08T00:04:13.670Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
+        },
+        {
+          "id": "2484db38-178e-4db5-a203-c132425c5369",
+          "at": "2026-10-15T00:06:42.156Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "38e2c588-209f-4e1c-811c-94224c7df054",
+          "at": "2026-10-15T00:06:43.737Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "dc3a66d3-f4f5-4256-8dd9-95c3ff4544e9",
+          "at": "2026-10-15T00:06:46.904Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "f3ca2924-f28d-43ae-89ea-8f72b62192dc",
+          "at": "2026-10-15T00:06:47.204Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "6141738d-1392-4d2a-9cc2-25964668b516",
+          "at": "2026-10-15T00:06:50.871Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "30a2d9fc-0662-43b9-9332-803a64f55770",
+          "at": "2026-10-15T00:07:17.446Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "0f528aeb-1896-4e3f-be0b-f8ad04794e34",
+          "at": "2026-10-15T00:07:43.498Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "name"
+          ]
         }
       ]
     },
     {
       "id": "map-philly-area-2",
       "kind": "map",
-      "name": "Philly Area 2",
+      "name": "Philly Yard 2",
       "description": "",
       "categories": [
         "philly"
@@ -1952,20 +2576,55 @@
           "note": "",
           "createdAt": "2026-09-27T14:03:32.000Z",
           "createdBy": "정종민"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/map-philly-area-2/v2/Philly_Area-2.glb"
+            },
+            "fileName": "Philly_Area-2.glb",
+            "format": "glb",
+            "sizeBytes": 4187220,
+            "contentHash": "sha256:27e25876a092c9807e51b7078d5cdc84e05423a06f2d58e93c5e53b4da645b49",
+            "originalSizeBytes": 58042572
+          },
+          "note": "건물 제거",
+          "createdAt": "2026-10-15T00:08:12.280Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 291189,
+            "vertices": 691099,
+            "meshes": 17,
+            "materials": 17,
+            "textures": 9,
+            "drawCalls": 17,
+            "nodes": 19,
+            "textureMemoryBytes": 122725503,
+            "size": [
+              1625.0168762207031,
+              42.84843229635571,
+              1483.2302235178317
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
           "path": "/asset-library/thumbnails/map-philly-area-2.png"
         },
-        "updatedAt": "2026-10-08T00:04:10.645Z",
+        "updatedAt": "2026-10-15T00:08:25.399Z",
         "view": {
           "direction": [
             0,
             0.9999988750018984,
-            0.0014999983125020449
+            0.001499998312502042
           ],
           "distance": 3.8243359519364977,
           "targetOffset": [
@@ -1976,7 +2635,7 @@
         }
       },
       "createdAt": "2026-09-10T23:33:53.000Z",
-      "updatedAt": "2026-10-06T04:21:19.890Z",
+      "updatedAt": "2026-10-15T00:08:21.052Z",
       "history": [
         {
           "id": "eaf48a56-7ed7-4623-8a0c-9bd6fa36b3c8",
@@ -1990,6 +2649,64 @@
         {
           "id": "4df6fb4b-bb4b-4947-a9dd-6d24c3a182ad",
           "at": "2026-10-08T00:04:10.645Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "c1ced517-bf7f-4f85-b275-aec6264ea976",
+          "at": "2026-10-15T00:07:54.585Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "3b95e8fc-9a48-40b1-9df9-f74273d47655",
+          "at": "2026-10-15T00:08:12.280Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "adfa6961-8457-428e-a489-c4ade4b45298",
+          "at": "2026-10-15T00:08:19.319Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "dd73de52-d866-47ef-983e-59791562268c",
+          "at": "2026-10-15T00:08:19.585Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "178919eb-b372-4dad-840c-3f2abb052853",
+          "at": "2026-10-15T00:08:19.904Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "32523371-2db3-432b-942c-e0914d7d1312",
+          "at": "2026-10-15T00:08:21.052Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "9923d1a1-dafb-4f2e-9fc9-3fa1ee7398d1",
+          "at": "2026-10-15T00:08:25.399Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
         }
@@ -2043,8 +2760,8 @@
         "view": {
           "direction": [
             0,
-            0.9999988750018981,
-            0.0014999983126500747
+            0.9999988750018982,
+            0.0014999983126500749
           ],
           "distance": 3.8243359519364986,
           "targetOffset": [
@@ -2111,8 +2828,8 @@
         "view": {
           "direction": [
             0,
-            0.9999988750018983,
-            0.0014999983124280298
+            0.9999988750018984,
+            0.00149999831242803
           ],
           "distance": 3.8243359519364986,
           "targetOffset": [
@@ -2179,8 +2896,8 @@
         "view": {
           "direction": [
             0,
-            0.9999988750018981,
-            0.0014999983125760599
+            0.9999988750018982,
+            0.00149999831257606
           ],
           "distance": 3.824335951936499,
           "targetOffset": [
@@ -3331,7 +4048,7 @@
         "updatedAt": "2026-10-06T04:13:42.051Z"
       },
       "createdAt": "2026-10-06T04:13:41.176Z",
-      "updatedAt": "2026-10-06T04:13:45.275Z",
+      "updatedAt": "2026-10-14T23:52:52.876Z",
       "history": [
         {
           "id": "464309c8-2063-4bc9-9e16-878ebcb0d2a1",
@@ -3366,6 +4083,16 @@
           "version": 1,
           "from": "approved",
           "to": "published"
+        },
+        {
+          "id": "96a73180-c862-45bb-9d73-cf14c9e58146",
+          "at": "2026-10-14T23:52:52.876Z",
+          "actor": "crane.ocean",
+          "action": "metadata",
+          "fields": [
+            "description",
+            "name"
+          ]
         }
       ]
     },
@@ -3627,9 +4354,44 @@
             "lodLevels": 1,
             "animations": 0
           }
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/truck/v2/Truck.glb"
+            },
+            "fileName": "Truck.glb",
+            "format": "glb",
+            "sizeBytes": 5778824,
+            "contentHash": "sha256:cef735bd49da12bd25bfaa672d8f1261fae41d16ebfbcb26f760cdc490c97f38",
+            "originalSizeBytes": 18941444
+          },
+          "note": "오리진 수정",
+          "createdAt": "2026-10-15T00:02:11.212Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 175202,
+            "vertices": 227261,
+            "meshes": 53,
+            "materials": 32,
+            "textures": 36,
+            "drawCalls": 53,
+            "nodes": 72,
+            "textureMemoryBytes": 191920458,
+            "size": [
+              2.9097423916711875,
+              3.688934735733476,
+              10.683216512203217
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -3638,7 +4400,7 @@
         "updatedAt": "2026-10-06T04:16:04.061Z"
       },
       "createdAt": "2026-10-06T04:16:03.152Z",
-      "updatedAt": "2026-10-06T04:16:12.956Z",
+      "updatedAt": "2026-10-15T00:03:43.072Z",
       "history": [
         {
           "id": "5c9fa567-7051-4b54-818c-ba3c00353f04",
@@ -3671,6 +4433,49 @@
           "actor": "crane.ocean",
           "action": "status",
           "version": 1,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "04498d23-534d-4c51-8b8f-b72d491fdd2d",
+          "at": "2026-10-15T00:02:11.212Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "808ba164-c64d-4960-b2d3-5d0277c362cb",
+          "at": "2026-10-15T00:03:09.890Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "c8e1b349-7917-435e-bd42-4a857f4db70d",
+          "at": "2026-10-15T00:03:41.971Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "a0d5da3c-e66a-4fa2-b07a-e92b68eccb05",
+          "at": "2026-10-15T00:03:42.270Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "716e8caa-d34b-49c1-a4a4-b4d84cd659b4",
+          "at": "2026-10-15T00:03:43.072Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
           "from": "approved",
           "to": "published"
         }
@@ -3857,9 +4662,9 @@
         "updatedAt": "2026-10-08T00:01:56.874Z",
         "view": {
           "direction": [
-            0.6005383236150792,
-            0.432387593002857,
-            0.6726029224488888
+            0.6005383236150793,
+            0.43238759300285706,
+            0.6726029224488889
           ],
           "distance": 3.824335951936497,
           "targetOffset": [
@@ -3960,31 +4765,66 @@
             "lodLevels": 1,
             "animations": 0
           }
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/oil-tanker/v2/Asset_Oil-Tanker.glb"
+            },
+            "fileName": "Asset_Oil-Tanker.glb",
+            "format": "glb",
+            "sizeBytes": 1646636,
+            "contentHash": "sha256:aefe1224ae7da7bc5f94315e59179b9dfa0857dba9c22131d96f5e6671ee23dc",
+            "originalSizeBytes": 6424680
+          },
+          "note": "프로펠러 제거, 오리진 수정",
+          "createdAt": "2026-10-15T00:00:58.118Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 80058,
+            "vertices": 158171,
+            "meshes": 8,
+            "materials": 8,
+            "textures": 2,
+            "drawCalls": 8,
+            "nodes": 10,
+            "textureMemoryBytes": 2959963,
+            "size": [
+              68.14398373587902,
+              71.87339913429958,
+              377.17419765155
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
           "path": "/asset-library/thumbnails/oil-tanker.png"
         },
-        "updatedAt": "2026-10-08T00:03:18.551Z",
+        "updatedAt": "2026-10-15T00:01:30.113Z",
         "view": {
           "direction": [
-            -0.6005377799409393,
-            0.43238169513623564,
+            -0.6005377799409392,
+            0.43238169513623553,
             -0.6726071993182378
           ],
           "distance": 3.824335951936496,
           "targetOffset": [
-            -2.395879674319463e-12,
-            7.698227897747159e-12,
-            7.087801772569417e-12
+            -2.3958796743201233e-12,
+            7.698238648659863e-12,
+            7.0878017725688935e-12
           ]
         }
       },
       "createdAt": "2026-10-06T04:17:56.948Z",
-      "updatedAt": "2026-10-06T04:18:37.505Z",
+      "updatedAt": "2026-10-15T00:01:13.689Z",
       "history": [
         {
           "id": "0aa28b0c-d673-486c-a396-1a7c51927f8b",
@@ -4038,6 +4878,283 @@
         {
           "id": "2bb4a828-f3de-488e-9451-b56ec9f17336",
           "at": "2026-10-08T00:03:18.551Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "7759aa5c-91a1-443d-baf5-d66729e28e10",
+          "at": "2026-10-15T00:00:58.118Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "6d511c26-6b2c-4761-a7cf-4ee7f214feae",
+          "at": "2026-10-15T00:01:04.957Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "26ba60c9-bbbd-4523-a861-d942e54cb6f8",
+          "at": "2026-10-15T00:01:05.154Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "f28246c4-cec1-4c59-b840-142901d3b79c",
+          "at": "2026-10-15T00:01:05.371Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "6ae56ebe-820b-434b-a8f8-395bf2c23188",
+          "at": "2026-10-15T00:01:13.689Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        },
+        {
+          "id": "46b64881-f9be-48c3-8d60-5945b1014aa0",
+          "at": "2026-10-15T00:01:30.113Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        }
+      ]
+    },
+    {
+      "id": "okpo-building",
+      "kind": "map",
+      "name": "Okpo Building",
+      "description": "",
+      "categories": [
+        "okpo",
+        "building"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/okpo-building/v1/Okpo_Building.glb"
+            },
+            "fileName": "Okpo_Building.glb",
+            "format": "glb",
+            "sizeBytes": 19620752,
+            "contentHash": "sha256:abbd857af3a97b2e61e98c5f22bdf81262c3ddb7fc2494f94d092c736681b9af",
+            "originalSizeBytes": 93065456
+          },
+          "note": "",
+          "createdAt": "2026-10-15T00:10:04.705Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 895151,
+            "vertices": 1978307,
+            "meshes": 1194,
+            "materials": 25,
+            "textures": 26,
+            "drawCalls": 1194,
+            "nodes": 1514,
+            "textureMemoryBytes": 23283615,
+            "size": [
+              3145.382806081129,
+              93.00956122576235,
+              2415.8115171499494
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/okpo-building.png"
+        },
+        "updatedAt": "2026-10-15T00:10:10.297Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018987,
+            0.001499998312354016
+          ],
+          "distance": 3.8243359519364963,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "createdAt": "2026-10-15T00:10:04.705Z",
+      "updatedAt": "2026-10-15T00:10:11.719Z",
+      "history": [
+        {
+          "id": "27f192b7-30c3-4a9d-bea1-8dabf69b2d66",
+          "at": "2026-10-15T00:10:04.705Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "9127f6d2-f0fd-44b5-a633-b4698f00fd0d",
+          "at": "2026-10-15T00:10:10.297Z",
+          "actor": "crane.ocean",
+          "action": "thumbnail"
+        },
+        {
+          "id": "341dcc63-3c2e-42e9-bedc-01cacfc4ee21",
+          "at": "2026-10-15T00:10:10.954Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "e27d019f-ed27-423a-8812-7e827baa9931",
+          "at": "2026-10-15T00:10:11.287Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "2297af54-173a-4219-aa80-32299f627531",
+          "at": "2026-10-15T00:10:11.719Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        }
+      ]
+    },
+    {
+      "id": "philly-building",
+      "kind": "map",
+      "name": "Philly Building",
+      "description": "",
+      "categories": [
+        "philly",
+        "building"
+      ],
+      "owner": "crane.ocean",
+      "relatedAssetIds": [],
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/philly-building/v1/Philly_Building.glb"
+            },
+            "fileName": "Philly_Building.glb",
+            "format": "glb",
+            "sizeBytes": 979656,
+            "contentHash": "sha256:47b02fbf8839c2a7cd2543d71614d1c876287b6984cb5103d9c6f8ca19cb2d6a",
+            "originalSizeBytes": 5827668
+          },
+          "note": "",
+          "createdAt": "2026-10-15T00:10:33.963Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 68364,
+            "vertices": 85804,
+            "meshes": 408,
+            "materials": 27,
+            "textures": 9,
+            "drawCalls": 408,
+            "nodes": 565,
+            "textureMemoryBytes": 5828330,
+            "size": [
+              2321.57568359375,
+              68.1556956896897,
+              1265.0463329108775
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
+        }
+      ],
+      "currentVersion": 1,
+      "thumbnail": {
+        "ref": {
+          "storage": "public",
+          "path": "/asset-library/thumbnails/philly-building.png"
+        },
+        "updatedAt": "2026-10-15T00:10:43.819Z",
+        "view": {
+          "direction": [
+            0,
+            0.9999988750018984,
+            0.0014999983125020472
+          ],
+          "distance": 3.8243359519364972,
+          "targetOffset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "createdAt": "2026-10-15T00:10:33.963Z",
+      "updatedAt": "2026-10-15T00:10:37.803Z",
+      "history": [
+        {
+          "id": "50850a03-e421-4d85-a947-51ab7e96ce5c",
+          "at": "2026-10-15T00:10:33.963Z",
+          "actor": "crane.ocean",
+          "action": "created",
+          "version": 1
+        },
+        {
+          "id": "24db1882-9c45-4e3e-b23c-269309302647",
+          "at": "2026-10-15T00:10:37.336Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "20ba06aa-eda3-49e3-ac36-b1b55d3c9233",
+          "at": "2026-10-15T00:10:37.586Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "752cc1d0-d604-4bcb-b119-015c8adba976",
+          "at": "2026-10-15T00:10:37.803Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 1,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "fd0c1e29-a39e-4d43-8f92-0f1235fed7cc",
+          "at": "2026-10-15T00:10:43.819Z",
           "actor": "crane.ocean",
           "action": "thumbnail"
         }

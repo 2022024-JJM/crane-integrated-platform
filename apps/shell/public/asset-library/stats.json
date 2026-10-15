@@ -62,6 +62,90 @@
       "animations": 0
     }
   },
+  "/asset-library/files/llc-002/v2/LLC_Rigged_20260822.glb": {
+    "hash": "8c09e973",
+    "bytes": 984184,
+    "stats": {
+      "triangles": 54008,
+      "vertices": 97812,
+      "meshes": 9,
+      "materials": 4,
+      "textures": 4,
+      "drawCalls": 9,
+      "nodes": 15,
+      "textureMemoryBytes": 39048970,
+      "size": [
+        11.565,
+        53.224,
+        60.693
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/map-okpo/v2/Okpo_Yard.glb": {
+    "hash": "83d30c6a",
+    "bytes": 12698572,
+    "stats": {
+      "triangles": 43239,
+      "vertices": 56461,
+      "meshes": 17,
+      "materials": 17,
+      "textures": 19,
+      "drawCalls": 17,
+      "nodes": 1,
+      "textureMemoryBytes": 351440817,
+      "size": [
+        3344.19,
+        17.881,
+        3804.564
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/map-philly-area-1/v2/Philly_Area-1.glb": {
+    "hash": "a932351e",
+    "bytes": 1665876,
+    "stats": {
+      "triangles": 94866,
+      "vertices": 212713,
+      "meshes": 22,
+      "materials": 22,
+      "textures": 12,
+      "drawCalls": 22,
+      "nodes": 1,
+      "textureMemoryBytes": 100412148,
+      "size": [
+        823.468,
+        55.372,
+        1083.855
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/map-philly-area-2/v2/Philly_Area-2.glb": {
+    "hash": "0d773ff6",
+    "bytes": 4187220,
+    "stats": {
+      "triangles": 291189,
+      "vertices": 691099,
+      "meshes": 17,
+      "materials": 17,
+      "textures": 9,
+      "drawCalls": 17,
+      "nodes": 1,
+      "textureMemoryBytes": 122725505,
+      "size": [
+        1625.017,
+        42.848,
+        1483.23
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/oil-tanker/v1/Oil-Tanker.glb": {
     "hash": "5ef6c882",
     "bytes": 1570124,
@@ -78,6 +162,132 @@
         330.598,
         71.904,
         570.203
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/oil-tanker/v2/Asset_Oil-Tanker.glb": {
+    "hash": "f9e35352",
+    "bytes": 1646636,
+    "stats": {
+      "triangles": 80058,
+      "vertices": 158171,
+      "meshes": 8,
+      "materials": 8,
+      "textures": 2,
+      "drawCalls": 8,
+      "nodes": 1,
+      "textureMemoryBytes": 2959963,
+      "size": [
+        68.144,
+        71.873,
+        377.174
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-building/v1/Okpo_Building.glb": {
+    "hash": "d05510cc",
+    "bytes": 19620752,
+    "stats": {
+      "triangles": 895151,
+      "vertices": 1978307,
+      "meshes": 1194,
+      "materials": 25,
+      "textures": 27,
+      "drawCalls": 1194,
+      "nodes": 319,
+      "textureMemoryBytes": 23283704,
+      "size": [
+        3145.383,
+        93.01,
+        2415.812
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-goliath/v2/Goliath-Crane_Okpo.glb": {
+    "hash": "e0b67e5a",
+    "bytes": 718472,
+    "stats": {
+      "triangles": 95258,
+      "vertices": 112107,
+      "meshes": 5,
+      "materials": 4,
+      "textures": 1,
+      "drawCalls": 5,
+      "nodes": 4,
+      "textureMemoryBytes": 5578424,
+      "size": [
+        49.83,
+        111.368,
+        155.193
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb": {
+    "hash": "68aba85c",
+    "bytes": 1168704,
+    "stats": {
+      "triangles": 88076,
+      "vertices": 151904,
+      "meshes": 13,
+      "materials": 5,
+      "textures": 3,
+      "drawCalls": 13,
+      "nodes": 17,
+      "textureMemoryBytes": 16735273,
+      "size": [
+        84.945,
+        78.313,
+        29.878
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb": {
+    "hash": "15f9d6e6",
+    "bytes": 2408124,
+    "stats": {
+      "triangles": 68926,
+      "vertices": 117153,
+      "meshes": 6,
+      "materials": 5,
+      "textures": 8,
+      "drawCalls": 6,
+      "nodes": 3,
+      "textureMemoryBytes": 44627395,
+      "size": [
+        72.607,
+        52.994,
+        9.91
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb": {
+    "hash": "dae8b61a",
+    "bytes": 1996656,
+    "stats": {
+      "triangles": 72716,
+      "vertices": 93019,
+      "meshes": 5,
+      "materials": 4,
+      "textures": 7,
+      "drawCalls": 5,
+      "nodes": 3,
+      "textureMemoryBytes": 39048970,
+      "size": [
+        137.596,
+        99.744,
+        16.635
       ],
       "lodLevels": 1,
       "animations": 0
@@ -125,6 +335,27 @@
       "animations": 1
     }
   },
+  "/asset-library/files/philly-building/v1/Philly_Building.glb": {
+    "hash": "a2e8def4",
+    "bytes": 979656,
+    "stats": {
+      "triangles": 68364,
+      "vertices": 85804,
+      "meshes": 408,
+      "materials": 27,
+      "textures": 9,
+      "drawCalls": 408,
+      "nodes": 171,
+      "textureMemoryBytes": 5828331,
+      "size": [
+        2321.576,
+        68.156,
+        1265.046
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/truck/v1/Truck.glb": {
     "hash": "b6f75917",
     "bytes": 5589660,
@@ -133,6 +364,27 @@
       "vertices": 206064,
       "meshes": 53,
       "materials": 27,
+      "textures": 36,
+      "drawCalls": 53,
+      "nodes": 18,
+      "textureMemoryBytes": 191920468,
+      "size": [
+        2.91,
+        3.689,
+        10.683
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/truck/v2/Truck.glb": {
+    "hash": "371a12d8",
+    "bytes": 5778824,
+    "stats": {
+      "triangles": 175202,
+      "vertices": 227261,
+      "meshes": 53,
+      "materials": 32,
       "textures": 36,
       "drawCalls": 53,
       "nodes": 18,
