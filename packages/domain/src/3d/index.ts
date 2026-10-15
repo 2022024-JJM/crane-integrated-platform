@@ -263,6 +263,7 @@ export {
   sampleMapsSurfaceY,
 } from './lib/map-surface-raycast';
 export { toLambertMaterial, toLambertMaterials } from './lib/lambert-material';
+export { getUnlitSkyScale, publishUnlitSkyScale } from './lib/unlit-sky-scale';
 export {
   MATTE_ROUGHNESS_MIN,
   isMatteMaterial,

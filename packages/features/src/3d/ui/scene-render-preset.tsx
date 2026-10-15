@@ -25,6 +25,7 @@ import {
   bearingToWorldAzimuth,
   invalidateShadows,
   modelObjectRegistry,
+  publishUnlitSkyScale,
   registerShadowRenderer,
   resolveCameraBoundsMaps,
   resolveSceneSiteGeo,
@@ -482,6 +483,8 @@ function resetToManualLook(
   if (scene.environment) {
     scene.environmentIntensity = SCENE_ENVIRONMENT_INTENSITY;
   }
+  // 언마운트 뒤에는 useFrame 이 돌지 않아 밤 배율이 남는다.
+  publishUnlitSkyScale(1);
 }
 
 /** 밤하늘 틴트 돔 — 안쪽이 보이는 구, 반투명 남색. useFrame 이 카메라에 붙인다. */
@@ -766,6 +769,8 @@ export function SceneLighting({
     let waterSunIntensity = SCENE_LIGHTING.directionalIntensity;
     // 씬에 놓인 투광등의 점등 비율 — manual 은 낮이라 0.
     let floodlightOn = 0;
+    // 조명을 받지 않는 지형 사진의 밝기 배율 — 배경 하늘과 같은 값, manual 은 1.
+    let unlitSkyScale = 1;
     if (solarGeo) {
       const solar = solarRef.current;
       const timeMs = readSceneTimeMs(
@@ -831,6 +836,7 @@ export function SceneLighting({
         waterSunColor = sky.sunColor;
         waterSunIntensity = sky.sunIntensity;
         floodlightOn = sky.floodlightOn;
+        unlitSkyScale = sky.skyIntensity;
         // 세기·색·하늘 밝기 — 값이 다를 때만 쓴다(R3F 리렌더의 prop 재적용도
         // 여기서 다시 잡힌다).
         if (light.intensity !== sky.keyIntensity) {
@@ -930,6 +936,9 @@ export function SceneLighting({
     // 씬에 놓인 투광등(SceneFloodlights·기구 글로우)이 읽는 점등 비율. 같은
     // 프레임의 뒤쪽 useFrame(마운트 순)이 읽는다.
     publishFloodlightOn(sceneLightingInfo, floodlightOn);
+    // 컨텍스트 지형의 unlit 항공사진이 같은 프레임 렌더에서 읽는다
+    // (@crane/domain/3d unlit-sky-scale — 값이 같으면 업로드 없음).
+    publishUnlitSkyScale(unlitSkyScale);
 
     // 1) 초점 = 시선과 지면(y=0)의 교점(lib/scene-shadow resolveShadowFocus).
     //    수평·상향 시선이면 카메라 바로 아래(폴백은 씬 앵커가 아니라 카메라 —

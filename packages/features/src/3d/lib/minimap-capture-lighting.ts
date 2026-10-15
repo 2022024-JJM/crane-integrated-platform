@@ -1,4 +1,5 @@
 import { Color, Vector3, type Object3D, type Scene } from 'three';
+import { getUnlitSkyScale, publishUnlitSkyScale } from '@crane/domain/3d';
 import { SCENE_KEY_LIGHT_NAME } from '../model/scene-lighting-info';
 import type { OceanWater } from './ocean-water';
 import {
@@ -10,7 +11,8 @@ import {
  * 미니맵 캡처용 기준 조명 — 캡처 순간만 씬 조명을 SceneLighting 의 **수동
  * 모드 값**(백색 태양 `SCENE_LIGHTING_BASE.sunIntensity`, 백색 환경광
  * `SCENE_LIGHTING_BASE.ambientIntensity`, 환경맵 `SCENE_ENVIRONMENT_INTENSITY`,
- * 밤 전용 조명 0)으로 바꿔 찍고 렌더 뒤 원복한다(적용은
+ * 밤 전용 조명 0, 지형 unlit 사진의 하늘 배율 1)으로 바꿔 찍고 렌더 뒤
+ * 원복한다(적용은
  * ui/scene-minimap-capture.tsx). 3D 화면의 기본(수동) 룩과 같은 색이 나오고,
  * solar 모드의 시각·작업등·그림자와 무관해 같은 씬은 언제 찍어도 같다.
  *
@@ -114,6 +116,8 @@ export function applyCanonicalCaptureLighting(
   scene.environmentIntensity = scene.environment
     ? SCENE_ENVIRONMENT_INTENSITY
     : 0;
+  const unlitSkyScale = getUnlitSkyScale();
+  publishUnlitSkyScale(1);
   const { shadowMap } = renderer;
   const shadowAutoUpdate = shadowMap.autoUpdate;
   const shadowNeedsUpdate = shadowMap.needsUpdate;
@@ -133,6 +137,7 @@ export function applyCanonicalCaptureLighting(
       }
     }
     scene.environmentIntensity = environmentIntensity;
+    publishUnlitSkyScale(unlitSkyScale);
     shadowMap.autoUpdate = shadowAutoUpdate;
     shadowMap.needsUpdate = shadowNeedsUpdate;
   };

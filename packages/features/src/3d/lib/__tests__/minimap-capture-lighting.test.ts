@@ -11,7 +11,8 @@ import {
   Texture,
   Vector3,
 } from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { getUnlitSkyScale, publishUnlitSkyScale } from '@crane/domain/3d';
 import { SCENE_KEY_LIGHT_NAME } from '../../model/scene-lighting-info';
 import {
   CANONICAL_KEY_LIGHT_DISTANCE,
@@ -23,6 +24,11 @@ import {
   SCENE_ENVIRONMENT_INTENSITY,
   SCENE_LIGHTING_BASE,
 } from '../sky-lighting';
+
+afterEach(() => {
+  // 모듈 전역 배율 — 테스트 사이에 새지 않게 낮 값으로 되돌린다.
+  publishUnlitSkyScale(1);
+});
 
 /** 씬 → 태양 단위 벡터(임의의 비축 방향). */
 function canonicalSun(): Vector3 {
@@ -252,6 +258,35 @@ describe('applyCanonicalCaptureLighting', () => {
     expect(() =>
       applyCanonicalCaptureLighting(empty, makeRenderer(), canonicalSun())(),
     ).not.toThrow();
+  });
+
+  it('지형 unlit 사진의 하늘 배율을 캡처 동안 1 로 두고 원래 값으로 되돌린다', () => {
+    publishUnlitSkyScale(0.12);
+    const night = getUnlitSkyScale();
+    const { scene } = buildScene();
+    const restore = applyCanonicalCaptureLighting(
+      scene,
+      makeRenderer(),
+      canonicalSun(),
+    );
+    expect(getUnlitSkyScale()).toBe(1);
+    restore();
+    expect(getUnlitSkyScale()).toBe(night);
+  });
+
+  it('배율 원복도 한 번만 — 사이에 SceneLighting 이 쓴 값을 덮지 않는다', () => {
+    publishUnlitSkyScale(0.12);
+    const { scene } = buildScene();
+    const restore = applyCanonicalCaptureLighting(
+      scene,
+      makeRenderer(),
+      canonicalSun(),
+    );
+    restore();
+    publishUnlitSkyScale(0.5);
+    const later = getUnlitSkyScale();
+    restore();
+    expect(getUnlitSkyScale()).toBe(later);
   });
 
   it('apply 뒤 추가된 조명은 원복 대상이 아니다(예외 없음)', () => {

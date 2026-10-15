@@ -3,6 +3,7 @@ import {
   MeshLambertMaterial,
   type MeshStandardMaterial,
 } from 'three';
+import { toSkyScaledUnlitMaterial } from './unlit-sky-scale';
 
 /**
  * PBR(MeshStandardMaterial) → 저비용 Lambert 변환 — 관제와 무관한 주변
@@ -19,6 +20,11 @@ import {
  * 원본 머티리얼 하나당 변환본 하나를 WeakMap 으로 캐시해 같은 GLB 의 clone
  * 들이 공유한다(GLTF 캐시가 원본을 놓으면 함께 수거된다). 원본은 손대지
  * 않는다 — 다른 캔버스가 PBR 로 쓸 수 있다.
+ *
+ * 조명을 받지 않는 항공사진(unlit → MeshBasicMaterial)은 Lambert 로 바꾸지
+ * 않고 하늘 밝기 배율만 받는다(unlit-sky-scale.ts) — 사진에 햇빛이 구워져
+ * 있어 음영을 다시 얹으면 낮 화면이 달라지고, 픽셀마다 조명(밤엔 투광등
+ * 슬롯까지)을 계산하는 비용이 수 km 면적에 붙는다.
  */
 const cache = new WeakMap<Material, MeshLambertMaterial>();
 
@@ -27,7 +33,7 @@ function isStandardLike(material: Material): material is MeshStandardMaterial {
 }
 
 export function toLambertMaterial(material: Material): Material {
-  if (!isStandardLike(material)) return material;
+  if (!isStandardLike(material)) return toSkyScaledUnlitMaterial(material);
   const cached = cache.get(material);
   if (cached) return cached;
 

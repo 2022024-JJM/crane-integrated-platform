@@ -8,6 +8,10 @@ import {
   Texture,
 } from 'three';
 import { toLambertMaterial, toLambertMaterials } from '../lambert-material';
+import {
+  toSkyScaledUnlitMaterial,
+  unlitSkyScaleTexture,
+} from '../unlit-sky-scale';
 
 describe('toLambertMaterial', () => {
   it('PBR 의 색·맵·정점색·면·투명도를 옮기고 반사는 끈다', () => {
@@ -50,9 +54,15 @@ describe('toLambertMaterial', () => {
     expect(source.color.getHex()).toBe(0xff0000);
   });
 
-  it('PBR 이 아닌 머티리얼은 그대로 돌려준다', () => {
+  it('unlit(MeshBasicMaterial)은 Lambert 가 아니라 하늘 배율 변환본으로 바꾼다', () => {
     const basic = new MeshBasicMaterial();
-    expect(toLambertMaterial(basic)).toBe(basic);
+    const out = toLambertMaterial(basic);
+    expect(out).toBe(toSkyScaledUnlitMaterial(basic));
+    expect(out).toBeInstanceOf(MeshBasicMaterial);
+    expect((out as MeshBasicMaterial).lightMap).toBe(unlitSkyScaleTexture);
+  });
+
+  it('PBR·unlit 이 아닌 머티리얼은 그대로 돌려준다', () => {
     const lambert = new MeshLambertMaterial();
     expect(toLambertMaterial(lambert)).toBe(lambert);
   });
@@ -60,10 +70,12 @@ describe('toLambertMaterial', () => {
   it('배열 머티리얼은 항목별로 변환한다', () => {
     const a = new MeshStandardMaterial();
     const b = new MeshBasicMaterial();
-    const out = toLambertMaterials([a, b]) as unknown[];
+    const c = new MeshLambertMaterial();
+    const out = toLambertMaterials([a, b, c]) as unknown[];
     expect(Array.isArray(out)).toBe(true);
     expect(out[0]).toBeInstanceOf(MeshLambertMaterial);
-    expect(out[1]).toBe(b);
+    expect(out[1]).toBe(toSkyScaledUnlitMaterial(b));
+    expect(out[2]).toBe(c);
     expect(toLambertMaterials(a)).toBe(toLambertMaterial(a));
   });
 });

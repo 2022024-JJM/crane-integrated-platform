@@ -22,7 +22,7 @@
 | 불투명 씬 스텐실 표식 | `packages/domain/src/3d/lib/scene-stencil.ts`(`markSceneOpaqueStencil`), 켜는 곳 `packages/domain/src/3d/ui/model-mesh.tsx`(`useClonedModel`) |
 | 수면 아래 잠김(깊이 안개) | 셰이더 패치 `packages/domain/src/3d/lib/sea-submersion.ts`, 머티리얼 전이·공유 `lib/mesh-material-binding.ts`·`lib/sea-material-cache.ts`, 켜는 곳 `GltfModel` 의 `seaSubmersion` |
 | 바다 도달 마스크(안개가 끼는 위치) | 격자·물 퍼뜨리기 `packages/domain/src/3d/lib/sea-reach-grid.ts`, 지도 메시 → 마스크 `lib/sea-reach-mask.ts`(`buildSeaReachMask`), 전역 유니폼 `lib/sea-reach-uniforms.ts`, 수명 `packages/features/src/3d/model/sea-reach-controller.ts`, 나눠 돌리기 `lib/sliced-task.ts`, 캔버스 `ui/scene-sea-reach.tsx`(`SceneSeaReach`) — 전부 테스트 대상 |
-| 컨텍스트 지형 Lambert 변환 | `packages/domain/src/3d/lib/lambert-material.ts`, `GltfModel shading='lambert'` |
+| 컨텍스트 지형 Lambert 변환 / unlit 항공사진의 하늘 배율 | `packages/domain/src/3d/lib/lambert-material.ts`, `lib/unlit-sky-scale.ts`(`publishUnlitSkyScale`, 테스트 대상), `GltfModel shading='lambert'` |
 | 환경 객체(지도) 무광 변환·셰이딩 등급 판정 | `packages/domain/src/3d/lib/matte-material.ts`(`MATTE_ROUGHNESS_MIN`, `toMatteMaterials`), `lib/model-shading.ts`(`ModelShading`, `resolveMapShading`) — 둘 다 테스트 대상, 바꿔 끼우는 곳 `ui/model-mesh.tsx`(`useClonedModel`) |
 | 지형·모델 LOD 런타임 전환 | 배선 `packages/features/src/3d/ui/scene-terrain-lod.tsx`(`SceneTerrainLod`), 상태·카메라별 적용 `model/terrain-lod-controller.ts`(`TerrainLodController`, 테스트 대상), 수식 `lib/terrain-lod.ts`(`TERRAIN_LOD_THRESHOLD_PX`) |
 | 분할 화면 렌더(타일마다 카메라) | `packages/features/src/3d/ui/scene-split-renderer.tsx`, 프레임 `lib/split-render.ts`, 뷰포트별 DOM 포털 `packages/domain/src/3d/ui/scene-viewports.tsx`(`PerViewport`, `ViewportAnchor`) + `model/scene-viewports-context.ts`, 그림자 초점 합집합 `lib/scene-shadow.ts`(`unionShadowFocus`) — 화면 쪽은 `docs/agents/monitoring-ui.md` |
@@ -52,6 +52,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 - DPR 상한은 `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값 두 곳이 같은 값(1.5)이어야 한다 — 함께 바꾼다.
 - 컨텍스트 지형(씬 지도의 `role: 'context'` — `isContextMap`)은 `GltfModel shading='lambert'` 로 PBR 대신 Lambert 다(`lambert-material.ts`, 원본 머티리얼당 변환본 캐시). 조명·낮/밤엔 똑같이 반응하고 스펙큘러·radiance 샘플링만 없다. 모니터링·에디터 같은 규칙.
+  - 지형의 항공사진은 GLB 에서 `KHR_materials_unlit`(three `MeshBasicMaterial`)이라 조명이 닿지 않는다. Lambert 로 바꾸지 않고 배경 하늘처럼 다룬다 — `SceneLighting` 이 `skyIntensity`(배경·환경맵과 같은 값, manual 은 1)를 `publishUnlitSkyScale` 로 발행하고, 변환본(`unlit-sky-scale.ts`)이 그 배율로 어두워진다. 낮은 원본과 같다.
+  - 배율은 공유 1×1 텍스처의 텍셀이고 변환본에 `lightMap`(세기 π)으로 붙는다. clone 이 텍스처를 참조로 복사해 바다 잠김 공유본·개별 클론이 같은 값을 보고, 값이 바뀌어도 재컴파일이 없다. 미니맵 캡처는 배율 1 로 찍고 되돌린다.
 - 그 외 지도(ground·역할 없음)는 `shading='matte'` — PBR 은 유지하되 roughness 가 `MATTE_ROUGHNESS_MIN` 아래로 내려가지 못하게 하고 metalness 를 0 으로, roughness·metalness 맵은 뗀다(`matte-material.ts`, 원본당 변환본 캐시 — Lambert 와 같은 구조). 디자이너 GLB 가 Blender 기본 roughness 와 일부 metalness 1 을 그대로 들고 와 안벽·도크·지붕이 태양과 하늘을 비추던 눈부심을 없애는 것이다. 맵을 떼는 이유는 three 가 factor × 텍셀로 계산해 맵이 남으면 하한을 보장할 수 없기 때문. 원본은 그대로라 자산 라이브러리 뷰어 등 다른 캔버스는 파일대로 본다. 모델(크레인·선박·블록)은 'standard' 그대로다.
 - 타일 LOD 임계는 `TERRAIN_LOD_THRESHOLD_PX`(device px). 컨텍스트 지형과 LOD 체인이 붙은 모델에만 LOD 가 있다(생성 절차는 `docs/agents/assets-glb.md`).
 - 씬의 미러 표시(`seaMirror`, `resolveSeaMirror`)를 끄면 미러 패스가 씬 최상위 객체를 전부 빼고 하늘만 그린다 — 씬을 한 번 더 그리는 정점·드로우콜이 빠지고 크레인·야드·지도가 물에 비치지 않는다. 씬별 저작값이며 스위치는 `docs/agents/3d-editor.md`.
@@ -139,7 +141,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **씬을 매 프레임 바꾸는 새 경로는 `SceneFrameGovernor` 의 소스 목록에 넣거나 스스로 `invalidate()`/`requestSceneFrame()` 한다.** 안 하면 화면이 다음 조작까지 낡은 프레임에 머문다(model-mesh 의 머티리얼 effect 가 선례).
 - **`SceneLighting` 은 `regionId` 필수.** 빼면 solar 씬이 수동 태양으로 조용히 떨어진다.
 - **지리 방위(천체·나침반)를 월드 방향으로 바꾸는 곳은 `bearingToWorldAzimuth`(씬 진북) 하나다.** 월드 −Z 를 북으로 가정하지 않는다 — 씬이 지도를 돌려 놓아 진북이 씬마다 다르다.
-- **조명·하늘 밝기를 다른 곳에서 세팅하지 않는다.** `SceneLighting` 이 solar 모드에서 방향광 세기·색, 환경광, `scene.backgroundIntensity`·`environmentIntensity` 를 매 프레임 덮어쓰므로 프레임마다 서로 되돌린다. 기준값은 `sky-lighting.ts` 상수를 고치고, 환경맵 세기는 `SCENE_ENVIRONMENT_INTENSITY` 하나를 쓴다.
+- **조명·하늘 밝기를 다른 곳에서 세팅하지 않는다.** `SceneLighting` 이 solar 모드에서 방향광 세기·색, 환경광, `scene.backgroundIntensity`·`environmentIntensity`, unlit 사진 배율(`publishUnlitSkyScale`)을 매 프레임 덮어쓰므로 프레임마다 서로 되돌린다. 기준값은 `sky-lighting.ts` 상수를 고치고, 환경맵 세기는 `SCENE_ENVIRONMENT_INTENSITY` 하나를 쓴다.
 - **새 불투명 GLTF 로드 경로(`useClonedModel` 을 거치지 않는 것)는 `markSceneOpaqueStencil` 을 켠다.** 아니면 물 위에서 바다에 덮여 사라진다.
 - **바다 위에 보여야 하는 불투명 오버레이(선택 박스·텍스트 테두리·격자·가드 링)는 `renderOrder ≥ 0.5`.** 0 이면 물 위에서 바다에 덮인다.
 - `ocean-water.ts` 에 `gl_FragDepth`(logdepthbuf 청크)를 다시 넣거나 depthTest 를 켜지 않는다 — early stencil test 가 꺼져 절감이 사라진다.
@@ -182,6 +184,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - 조명 유무로 밤 전역광을 나누기(투광등 있는 씬만 바닥값) — 첫 조명을 놓거나 마지막을 지울 때 밤 전체 밝기가 점프한다. 밤 전역광은 항상 바닥값이다.
 - 투광등 SpotLight 슬롯을 조명 수만큼 늘리기(에디터) — 조명을 놓을 때마다 보이는 조명 수가 바뀌어 전 머티리얼이 재컴파일되고 화면이 멈춘다. 에디터는 상한을 예약한다.
 - 환경 무광을 셰이더 주입(잠김 안개 패치에 roughness·metalness 치환을 얹기)으로 — 바다 없는 씬까지 패치 변형을 강제하고 공유 풀 키가 (안개 유무)×(그룹)으로 늘었다. 원본당 머티리얼 변환본(`matte-material.ts`)으로 한다.
+- unlit 항공사진 지형을 Lambert 로 — 사진에 구운 햇빛 위에 음영이 한 번 더 얹혀 낮 화면이 바뀌고, 수 km 면적에 픽셀당 조명(밤엔 투광등 슬롯까지)과 점등·소등 재컴파일이 붙는다. 하늘 배율(`unlit-sky-scale.ts`)로 어둡게 한다.
+- unlit 배율을 `onBeforeCompile` 유니폼이나 `color` 로 — clone 이 `onBeforeCompile` 을 옮기지 않고 잠김 패치가 그 자리를 덮어쓰며, `color` 는 값으로 복사돼 잠김 공유본·개별 클론에 닿지 않는다. 참조로 복사되는 `lightMap` 텍스처를 쓴다.
 
 ## 미룬 것
 
