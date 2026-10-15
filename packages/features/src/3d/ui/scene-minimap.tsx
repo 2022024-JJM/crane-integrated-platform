@@ -31,7 +31,6 @@ import {
   type MinimapFrame,
 } from '../lib/minimap';
 import { zoneColorWithAlpha } from '../lib/scene-zones';
-import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
 
 /**
@@ -51,15 +50,14 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 같은 규칙).
  *
  * 조작: 누르면 그 지점으로, 누른 채 끌면 끄는 대로 카메라 타깃이 옮겨진다.
- * 높이·시선 방향·거리는 그대로(팬과 같다 — lib/minimap panPoseToPoint).
- * 포인터 캡처로 미니맵 밖까지 끌어도 이어지고, 픽셀은 이미지 안으로 클램프
- * 되어 지도 밖으로 튀지 않는다. 이동 자체는 뷰어 컨트롤러 moveTo(북마크·
- * 포커스 복귀와 같은 경로)라 카메라 이동 제한(SceneCameraLimits)이 그대로
- * 걸린다.
+ * 마커 위를 눌러도 같다. 높이·시선 방향·거리는 그대로(팬과 같다 —
+ * lib/minimap panPoseToPoint). 포인터 캡처로 미니맵 밖까지 끌어도 이어지고,
+ * 픽셀은 이미지 안으로 클램프되어 지도 밖으로 튀지 않는다. 이동 자체는 뷰어
+ * 컨트롤러 경로라 카메라 이동 제한(SceneCameraLimits)이 그대로 걸린다.
  *
  * 마커 위에 포인터를 올리면 장비 이름을 그 옆에 그린다. 마커 색은 알람
  * severity(critical·high·medium·info) 를 따르고 없으면 노랑(MARKER_COLOR —
- * 운전 상태 색은 HUD·3D 라벨이 담당한다), 포커스 중인 모델은 흰 테두리다.
+ * 운전 상태 색은 HUD·3D 라벨이 담당한다).
  *
  * 패널 자체는 상단 헤더 바(그립)를 끌어 캔버스 영역 안 어디든 놓을 수 있다.
  * 끄는 동안은 스타일을 직접 써서 리렌더하지 않고, 놓을 때 컨테이너 여유
@@ -117,7 +115,7 @@ interface SceneMinimapProps {
   alarmsByCraneId: Record<string, AlarmSeverity>;
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
-  /** 카메라를 즉시 옮긴다 — 북마크·포커스 복귀와 같은 경로. */
+  /** 카메라를 즉시 옮긴다(팬). */
   onMoveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
   className?: string;
 }
@@ -134,7 +132,6 @@ interface DrawnMarker {
   px: number;
   py: number;
   name: string;
-  modelId: string;
 }
 
 export function SceneMinimap({
@@ -191,7 +188,6 @@ export function SceneMinimap({
         scale,
         sceneInfo,
         alarmsByCraneId,
-        useObjectFocusStore.getState().focusedModelId,
         cacheRef.current,
       );
       const camera = resolveCameraDraw(drawFrame, scale, getPose());
@@ -201,8 +197,6 @@ export function SceneMinimap({
       }
       const hit = resolveHover(markersRef.current, hoverRef.current, scale);
       drawHoverLabel(context, scale, hit);
-      // 마커 위에서는 클릭이 포커스라 커서로 알려 준다.
-      canvas.style.cursor = hit ? 'pointer' : 'crosshair';
     };
 
     // prop 이 바뀌면 인터벌을 다시 건다 — 씬·알람·getPose 는 드물게 바뀌어
@@ -244,22 +238,6 @@ export function SceneMinimap({
     const pixel = localPixel(event);
     if (!pixel || !frame) return;
     event.preventDefault();
-    // 마커를 누르면 카메라 팬이 아니라 그 모델 포커스(씬 안 클릭과 같은
-    // 경로 — 포커스 중인 모델을 다시 누르면 돌아가기). 드래그는 시작하지
-    // 않는다.
-    const hit = resolveHover(
-      markersRef.current,
-      pixel,
-      frame.pxWidth / MINIMAP_CSS_WIDTH,
-    );
-    if (hit) {
-      const focus = useObjectFocusStore.getState();
-      if (focus.focusedModelId === hit.modelId) focus.exitFocus();
-      else if (focus.focusedModelId === null) {
-        focus.enterFocus(hit.modelId, getPose());
-      }
-      return;
-    }
     event.currentTarget.setPointerCapture(event.pointerId);
     draggingRef.current = true;
     moveCameraTo(pixel.px, pixel.py);
@@ -481,7 +459,6 @@ function drawMarkers(
   scale: number,
   sceneInfo: SavedSceneInfo | null,
   alarms: Record<string, AlarmSeverity>,
-  focusedModelId: string | null,
   cache: MarkerCache,
 ): DrawnMarker[] {
   const drawn: DrawnMarker[] = [];
@@ -500,21 +477,15 @@ function drawMarkers(
       continue;
     }
     const severity = model.craneId ? alarms[model.craneId] : undefined;
-    const isFocused = focusedModelId === model.id;
     context.beginPath();
-    context.arc(px, py, isFocused ? radius * 1.4 : radius, 0, Math.PI * 2);
+    context.arc(px, py, radius, 0, Math.PI * 2);
     // 알람 > 기본.
     context.fillStyle = severity ? SEVERITY_COLORS[severity] : MARKER_COLOR;
     context.fill();
-    context.lineWidth = (isFocused ? 2 : 1) * scale;
-    context.strokeStyle = isFocused ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';
+    context.lineWidth = scale;
+    context.strokeStyle = 'rgba(0, 0, 0, 0.7)';
     context.stroke();
-    drawn.push({
-      px,
-      py,
-      name: model.equipName || model.id,
-      modelId: model.id,
-    });
+    drawn.push({ px, py, name: model.equipName || model.id });
   }
   return drawn;
 }

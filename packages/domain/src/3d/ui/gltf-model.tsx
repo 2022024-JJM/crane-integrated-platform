@@ -42,12 +42,6 @@ interface GltfModelProps {
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
   showLabel?: boolean;
-  /**
-   * 라벨 흐림 + 포인터 차단. 모니터링 포커스 중 포커스 밖 모델에 opacity 와
-   * 함께 준다 — opacity 만으로는 라벨(DOM)이 또렷하고 클릭도 되기 때문.
-   * 모델 자체의 반투명(opacity < 1)과는 무관하므로 별도 prop 이다.
-   */
-  labelDimmed?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
   alarmHighlightMesh?: boolean;
   /** 라벨의 표시 상태 — 색·아이콘(model-label.tsx). 모니터링 뷰가 판정해 넘긴다. */
@@ -145,7 +139,6 @@ export const GltfModel = memo(function GltfModel({
   receiveShadow = true,
   shading = 'standard',
   showLabel = true,
-  labelDimmed = false,
   alarmSeverity = null,
   alarmHighlightMesh = false,
   labelState,
@@ -263,7 +256,6 @@ export const GltfModel = memo(function GltfModel({
               titles={labelTitles}
               readings={labelReadings}
               readValue={readLabelValue}
-              dimmed={labelDimmed}
               interactive={viewport === null}
               portal={viewport?.portal}
               onSelect={onSelect}

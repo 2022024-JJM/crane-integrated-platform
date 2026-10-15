@@ -98,7 +98,7 @@
 - up=+Y 인 채 타깃 정확히 위에 서면 `lookAt` 이 퇴화해 roll 이 부동소수 노이즈로 정해지므로, 포즈를 적용하는 경로(`useOrthoTopView.applyPose`)는 들어오는 모든 포즈를 `ensureTopViewTilt` 로 정규화한다 — 옛 북마크 방어.
 - **탑뷰는 직교 카메라로 교체하는 토글**이다(`packages/ui/src/organisms/use-ortho-top-view.ts`, 뷰어 `SceneControlsBridge` 와 에디터 `EditorCameraBridge` 가 같은 훅). 지도 fit 이 아니라 **지금 보는 화면**(궤도 타깃 = 화면 중앙 표면점) 위에서 내려다보고, 보던 수평 방향이 화면 위가 된다(`computeTopViewEntryPose`). 거리는 그대로이고 직교 프러스텀 반높이 = 거리×tan(원근 fov/2) — 직교 카메라가 "같은 구도의 원근 카메라가 있을 높이"에 서므로 거리로 판단하는 코드(라벨 축소·지형 LOD·그림자 반경·미니맵)가 그대로 맞는다. fov 가 필요한 코드는 `resolveCameraFov`/`resolveCameraAspect` 로 읽는다(직교는 `userData` 의 원근 fov·프러스텀 비). near 는 음수(`TOP_VIEW_ORTHO_NEAR`)라 카메라보다 높은 구조물도 평면도에 그려진다.
 - 탑뷰 중 조작은 팬·휠 줌·방위 회전이다. 극각은 `TOP_VIEW_POLAR_ANGLE` 로 양쪽 잠근다(`SceneCameraLimits` 는 직교일 때 극각을 건드리지 않는다). 휠은 커서 아래 점 기준 배율(`SceneSurfaceCamera` 의 직교 분기, `orthoZoomAdvance`) — 포즈·프러스텀을 같은 배율로 키우고 상·하한은 원근 거리 규칙과 같다. 표면 피벗이 타깃 거리를 조금 바꿔도 프러스텀은 명시적 줌·`applyPose` 에서만 바뀐다.
-- **복귀는 "지금 보는 곳 기준"**이다(`computeTopViewExitPose`): 진입 때 저장한 원근 오프셋을 탑뷰에서 돌린 방위만큼 회전하고 현재 거리로 스케일해 현재 타깃에 붙인다. 탑뷰 버튼 재클릭은 이 포즈로, 메인 뷰·씬 뷰·포커스·영역 보기는 원근으로 복귀하면서 그 구도로 간다(`moveTo`). 미니맵 팬만 모드를 유지한다(`panTo`). 분할 화면 진입·충돌 감지 표시 ON 은 탑뷰를 먼저 해제한다.
+- **복귀는 "지금 보는 곳 기준"**이다(`computeTopViewExitPose`): 진입 때 저장한 원근 오프셋을 탑뷰에서 돌린 방위만큼 회전하고 현재 거리로 스케일해 현재 타깃에 붙인다. 탑뷰 버튼 재클릭은 이 포즈로, 메인 뷰·씬 뷰·영역 보기는 원근으로 복귀하면서 그 구도로 간다(`moveTo`). 미니맵 팬만 모드를 유지한다(`panTo`). 분할 화면 진입·충돌 감지 표시 ON 은 탑뷰를 먼저 해제한다.
 - 탑뷰 중 저장한 뷰·씬 `camera` 는 그 자세(정수직 원근 포즈)로 저장된다 — 스키마에 직교 플래그는 없다.
 - 직교에서는 EXR 배경이 그려지지 않아 지도 밖이 검정이고(바다 씬은 바다 원판이 덮는다), `SceneLighting` 은 태양·달 표식과 밤 틴트 돔을 숨기며 `OceanWater` 는 반사를 0 으로 둔다(낡은 반사 RT). 카메라보다 높은 앵커의 라벨은 drei `Html` 이 "카메라 뒤"로 보고 숨긴다.
 - 에디터 캔버스는 `frameloop='demand'` 이며 `SceneFrameGovernor` 를 마운트한다. 카메라 이동 범위 제한은 뷰어와 같은 합집합을 본다 — `docs/agents/rendering-perf.md`, `docs/agents/monitoring-ui.md`.
@@ -174,7 +174,7 @@
 
 - 카메라 `up` 은 항상 +Y. 탑뷰는 `ensureTopViewTilt`/`TOP_VIEW_TILT` 로 만들고, 포즈를 적용하는 새 경로는 `ensureTopViewTilt` 로 정규화한다.
 - 카메라를 옮기는 새 명령은 `useOrthoTopView` 의 `moveTo`(원근 복귀)·`applyPose`(모드 유지)를 거친다. 컨트롤에 직접 쓰면 직교 프러스텀·극각 잠금이 따라오지 않는다. fov·aspect 는 `camera.fov` 대신 `resolveCameraFov`/`resolveCameraAspect`.
-- 카메라를 옮기는 effect 는 기본 카메라를 구독(`useThree(s => s.camera)` 의존성)하지 않고 `get().camera` 로 읽는다. 탑뷰 진입·복귀가 기본 카메라를 교체하므로 구독한 effect 는 그때마다 다시 돌아 탑뷰를 끊는다(`OutdoorWorkModelSimulation` 의 포커스 프레이밍이 선례).
+- 카메라를 옮기는 effect 는 기본 카메라를 구독(`useThree(s => s.camera)` 의존성)하지 않고 `get().camera` 로 읽는다. 탑뷰 진입·복귀가 기본 카메라를 교체하므로 구독한 effect 는 그때마다 다시 돌아 탑뷰를 끊는다.
 - 기즈모·스테퍼 스냅은 `snap-transform.ts` 순수 함수 한 곳. three `TransformControls` 의 `translationSnap`/`rotationSnap`/`scaleSnap` 은 쓰지 않는다.
 - 씬 스키마에 필드를 추가하면 `sanitize-scene-info.ts`(또는 해당 `sanitize-*`)와 `scene-snapshot.ts` 의 동등 비교를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 dirty 가 서지 않고 저장되지 않는다(`isZoneListEqual` 이 선례 — `docs/agents/3d-zone.md`).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나. 미등록 region 은 `null`, 기본 파일 fallback 금지.
@@ -204,7 +204,7 @@
 ## 하지 않기로 한 것
 
 - three `TransformControls` 의 `*Snap` — local 공간에서는 격자가 객체의 회전 프레임에 놓여 yaw 로 돌아간 모델의 X·Z 저장값이 격자를 벗어나고, world 회전은 델타 기준이라 시작 소수점이 남는다.
-- 탑뷰용 `camera.up` 변경 — OrbitControls 극점이 틀어져 회전이 어색하고, `{position, target}` 만 저장하는 포즈(포커스 복귀·북마크·`SavedCameraInfo`)가 up 을 되살릴 수 없어 복원 시 화면이 돌아간다.
+- 탑뷰용 `camera.up` 변경 — OrbitControls 극점이 틀어져 회전이 어색하고, `{position, target}` 만 저장하는 포즈(저장한 뷰·북마크·`SavedCameraInfo`)가 up 을 되살릴 수 없어 복원 시 화면이 돌아간다.
 - 다중 선택용 임시 Group 재부모화·프록시 객체 — `ModelMesh` 가 래퍼 group 을 의도적으로 걷어낸 구조라(리그 rest·선택 박스 포털이 씬 그래프 상속에 기댐) 재부모화가 그것과 충돌한다.
 - 미등록 region 의 기본 씬 파일 fallback — 남의 씬을 덮어쓴 사고의 원인.
 - `server.watch.ignored` 로 dev 저장 디렉토리 무시 — 기동 후 생긴 파일이 404.

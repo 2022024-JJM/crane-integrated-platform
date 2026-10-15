@@ -354,13 +354,11 @@ export {
 } from './model/virtual-tag-runner';
 export { useTagCatalog, type TagCatalogEntry } from './model/use-tag-catalog';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
-export { useCraneIdFromFocusedModel } from './model/use-crane-id-from-focused-model';
 export {
   useSceneDock,
   type SceneDockController,
   type SceneDockHandlers,
 } from './model/use-scene-dock';
-export { useObjectFocusStore } from './model/use-object-focus-store';
 export type {
   AxisKey,
   SceneTransformField,

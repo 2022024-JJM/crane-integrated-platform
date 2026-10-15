@@ -39,7 +39,7 @@ export function SceneSimulationPanel({
   onStop,
 }: {
   className?: string;
-  /** 종료 뒤 화면 쪽 후처리(카메라 원래 위치·포커스 해제). 모니터링 독이 넘긴다. */
+  /** 종료 뒤 화면 쪽 후처리. */
   onStop?: () => void;
 }) {
   const { t } = useTranslation();

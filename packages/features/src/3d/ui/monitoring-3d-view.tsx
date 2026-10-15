@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react';
 import {
   Suspense,
   useCallback,
@@ -23,16 +22,12 @@ import {
   type SceneViewport,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
-import { cn } from '@crane/core/lib/utils';
-import { Button } from '@crane/ui/atoms/button';
-import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
 import {
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { SavedSceneInfo, SavedSceneView } from '@crane/domain/3d';
-import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { usePlay3dStore } from '../model/use-play3d-store';
 import { usePlay3dTransport } from '../model/play3d-transport';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
@@ -132,7 +127,6 @@ interface Monitoring3dViewProps {
    */
   autoStartSimulation?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
-  fullscreenOverlay?: ReactNode;
   fullscreenTopRightOverlay?: ReactNode;
   fullscreenTopCenterOverlay?: ReactNode;
   toolbarExtras?: ReactNode;
@@ -177,7 +171,6 @@ export function Monitoring3dView({
   mode = 'simulation',
   autoStartSimulation = true,
   onLoadingChange,
-  fullscreenOverlay,
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
   toolbarExtras,
@@ -254,8 +247,6 @@ export function Monitoring3dView({
   );
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
-  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
-  const exitFocus = useObjectFocusStore((s) => s.exitFocus);
   // 충돌 감지는 전 모드에서 켠다. 정지 방식은 러너가 정한다(scene-collision-
   // hold) — 시뮬레이션·3D 플레이는 러너 pause, 실시간은 화면 반영 보류.
   const collisionRunner = mode;
@@ -270,13 +261,6 @@ export function Monitoring3dView({
   const handleControllerReady = useCallback(
     (controller: SceneController | null) => {
       sceneControllerRef.current = controller;
-    },
-    [],
-  );
-
-  const handleMoveTo = useCallback(
-    (position: Vector3Tuple, target: Vector3Tuple) => {
-      sceneControllerRef.current?.moveTo(position, target);
     },
     [],
   );
@@ -369,10 +353,8 @@ export function Monitoring3dView({
       exitSplit();
       return;
     }
-    // 포커스 중이면 풀고 들어간다 — 포커스 패널·복귀 버튼은 단일 화면의 것.
-    exitFocus();
     enterSplit(regionId);
-  }, [enterSplit, exitFocus, exitSplit, regionId]);
+  }, [enterSplit, exitSplit, regionId]);
   // shadow frustum 초점 — 분할 중엔 타일 구도들의 합집합으로 고정한다.
   const splitShadowFocus = useMemo(
     () =>
@@ -421,7 +403,7 @@ export function Monitoring3dView({
   );
 
   // 좌측 상단 열 — 첫 줄은 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드
-  // 등), 그 아래 시뮬레이션 배지 → 포커스 복귀 버튼. 방위 표시는 자리가
+  // 등), 그 아래 시뮬레이션 배지. 방위 표시는 자리가
   // 고정이어야 해서 일시 표시들보다 먼저 둔다. 방위 표시가 없는 배치(독이
   // 아닌 작은 뷰)는 후처리 상태가 열 맨 아래다.
   const topLeftOverlay = (
@@ -437,20 +419,6 @@ export function Monitoring3dView({
           움직이는 배치에서만. */}
       {simulationUiVisible && toolbarLayout !== 'none' ? (
         <SceneSimulationBadge />
-      ) : null}
-      {focusedModelId !== null ? (
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            SCENE_TOOLBAR_BUTTON_CLASS,
-            'pointer-events-auto gap-1.5',
-          )}
-          onClick={exitFocus}
-        >
-          <ArrowLeft className="size-4" />
-          {t('monitoring:focus.back')}
-        </Button>
       ) : null}
       {isDock ? null : <SceneWarmupIndicator />}
     </div>
@@ -498,7 +466,6 @@ export function Monitoring3dView({
             // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
             raycaster: SCENE_RAYCASTER_OPTIONS,
             shadows: sceneCanvasShadows(sceneInfo?.lighting),
-            onPointerMissed: exitFocus,
           }}
           overlay={
             <>
@@ -556,7 +523,6 @@ export function Monitoring3dView({
               />
             </>
           }
-          fullscreenOverlay={fullscreenOverlay}
           fullscreenTopRightOverlay={
             isDock ? (
               // 우상단 슬롯 — 고정한 뷰 줄이 먼저, 페이지의 알람 패널이 그 아래.
@@ -671,9 +637,7 @@ export function Monitoring3dView({
               alarmsByCraneId={sceneAlarms}
               alarmHighlightMesh={alarmHighlightMesh}
               mode={mode}
-              onMoveTo={handleMoveTo}
               onResetCamera={handleResetCamera}
-              getPose={handleGetPose}
               prepareOutline
               labelStates={labelStates}
               outlineStates={outlineStates}

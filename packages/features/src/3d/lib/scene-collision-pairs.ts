@@ -90,7 +90,7 @@ export interface CollisionCameraPose {
   target: Vector3Tuple;
 }
 
-/** 현재 카메라가 없을 때 쓰는 방향 — 모니터링 포커스 프레이밍과 같은 각도. */
+/** 현재 카메라가 없을 때 쓰는 방향. */
 const DEFAULT_VIEW_DIRECTION = new Vector3(0, 0.75, 0.65).normalize();
 const MIN_VIEW_DISTANCE = 6;
 const VIEW_DISTANCE_RATIO = 2.5;

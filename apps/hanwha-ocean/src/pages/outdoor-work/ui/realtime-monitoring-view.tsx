@@ -13,13 +13,10 @@ import {
   CollisionGuardSceneLayer,
   CollisionGuardToggle,
   Monitoring3dView,
-  useCraneIdFromFocusedModel,
-  useObjectFocusStore,
   type Monitoring3dViewActions,
 } from '@crane/features/3d';
 import { getRegionById } from '@crane/domain/region';
 import { Spinner } from '@crane/ui/atoms/spinner';
-import { CraneCmmsDetailPanel } from '@crane/widgets/crane';
 
 /**
  * 충돌 감지 표시(LiDAR 근접 존)는 필리 조선소 화면에만 둔다. 존은 씬의
@@ -51,17 +48,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   }, []);
   const { alarm: criticalBannerAlarm, dismiss: dismissCriticalBanner } =
     useCriticalAlarmBanner(regionId);
-  const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
-  const exitFocus = useObjectFocusStore((state) => state.exitFocus);
-  const isCmmsOpen = craneId !== null;
-  const fullscreenCmmsOverlay = isCmmsOpen ? (
-    <CraneCmmsDetailPanel
-      key={craneId}
-      craneId={craneId}
-      craneName={craneName ?? craneId}
-      onClose={exitFocus}
-    />
-  ) : null;
 
   return (
     <div className="relative h-full min-h-0">
@@ -79,7 +65,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         regionId={regionId}
         mode="realtime"
         onLoadingChange={setIs3dViewLoading}
-        fullscreenOverlay={fullscreenCmmsOverlay}
         actionsRef={sceneActionsRef}
         fullscreenTopRightOverlay={
           <AlarmFullscreenOverlay

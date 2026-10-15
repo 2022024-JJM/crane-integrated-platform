@@ -1,11 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useThree } from '@react-three/fiber';
-import { Box3, MathUtils, Object3D, Vector3 } from 'three';
-import {
-  resolveCameraAspect,
-  resolveCameraFov,
-} from '@crane/core/lib/top-view-pose';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
@@ -23,11 +17,6 @@ import {
   type ModelLabelTitles,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
-import type { Vector3Tuple } from '@crane/core/types/math';
-import {
-  useObjectFocusStore,
-  type FocusCameraPose,
-} from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { stopSimulation } from '../model/stop-simulation';
 import { readTagLiveValue } from '../model/tag-value-bus';
@@ -38,7 +27,6 @@ import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
-import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
 import type { LabelStateRecord } from '../lib/model-label-state';
 import type { OutlineStateRecord } from '../lib/model-outline-state';
 import { SceneFloodlightFixture } from './scene-floodlight-fixture';
@@ -195,13 +183,7 @@ interface OutdoorWorkModelSimulationProps {
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
   mode?: MonitoringViewMode;
-  onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
-  /**
-   * 현재 카메라 포즈. 모델 포커스 진입 순간에 잡아 두었다가 돌아가기 때
-   * 그 시점으로 복귀한다. null 이면 해제 시 onResetCamera 로 폴백.
-   */
-  getPose?: () => FocusCameraPose | null;
   /**
    * 모델의 실루엣 테두리 사본을 워밍업 큐에서 미리 만들지(GltfModel 로
    * 전달). 충돌 하이라이트가 그려질 수 있는 모니터링만 켠다 — 리플레이는
@@ -229,16 +211,12 @@ export function OutdoorWorkModelSimulation({
   alarmsByCraneId,
   alarmHighlightMesh = false,
   mode = 'simulation',
-  onMoveTo,
   onResetCamera,
-  getPose,
   prepareOutline = false,
   labelStates = NO_LABEL_STATES,
   outlineStates = NO_OUTLINE_STATES,
 }: OutdoorWorkModelSimulationProps) {
   const { t } = useTranslation();
-  // 카메라는 구독하지 않고 필요할 때 읽는다(아래 프레이밍 effect 주석).
-  const getThree = useThree((s) => s.get);
   // 라벨(domain)은 i18n 을 모른다 — 번역한 문구를 한 묶음으로 넘긴다. 참조가
   // 유지돼야 memo 된 모델이 리렌더되지 않는다.
   const labelTitles = useMemo<ModelLabelTitles>(
@@ -265,26 +243,6 @@ export function OutdoorWorkModelSimulation({
   useRealtimeRunner();
   useRealtimeWebSocketBridge(mode === 'realtime');
 
-  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
-  const enterFocus = useObjectFocusStore((s) => s.enterFocus);
-  const exitFocus = useObjectFocusStore((s) => s.exitFocus);
-
-  // 프레이밍(카메라 fit) 대상 조회용. 포커스 밖 모델도 마운트를 유지하고
-  // 투명하게만 만들므로, 예전처럼 언마운트 대비 박스 캐시를 둘 필요가 없다.
-  const objectMapRef = useRef<Map<string, Object3D>>(new Map());
-
-  const handleObjectReady = useCallback(
-    (id: string, object: Object3D | null) => {
-      if (object) {
-        objectMapRef.current.set(id, object);
-        return;
-      }
-
-      objectMapRef.current.delete(id);
-    },
-    [],
-  );
-
   const maps = sceneInfo?.maps ?? [];
   const models = sceneInfo?.models ?? [];
   const texts = sceneInfo?.texts ?? [];
@@ -305,153 +263,14 @@ export function OutdoorWorkModelSimulation({
     [sceneModels],
   );
 
-  const handleModelClick = useCallback(
-    (id: string) => {
-      // 포커스는 1단계 — 포커스 중에는 본체·라벨 어느 경로의 클릭도 무시한다.
-      // 다른 모델을 보려면 먼저 돌아가기로 빠져나와야 한다. 스토어의
-      // enterFocus 도 no-op 이지만 여기서 먼저 끊어 getPose 호출을 아낀다.
-      if (useObjectFocusStore.getState().focusedModelId !== null) {
-        return;
-      }
-
-      // 돌아가기 복귀 지점 = 클릭 순간의 카메라. 아래 프레이밍 effect 가
-      // 카메라를 옮기기 전에 잡아야 하므로 렌더 전에 여기서 캡처한다.
-      enterFocus(id, getPose?.() ?? null);
-    },
-    [enterFocus, getPose],
-  );
-
-  const onMoveToRef = useRef(onMoveTo);
-  onMoveToRef.current = onMoveTo;
   const onResetCameraRef = useRef(onResetCamera);
   onResetCameraRef.current = onResetCamera;
 
-  // 돌아가기 카메라 복귀. exitFocus 가 포즈까지 비우므로 렌더 뒤 effect 로는
-  // 읽을 수 없고, 전이 순간의 prev 상태에서 읽는다. 포즈가 없으면(컨트롤러
-  // 미준비 상태에서 진입) 씬 기본 카메라로 리셋한다.
-  useEffect(
-    () =>
-      useObjectFocusStore.subscribe((state, prev) => {
-        if (prev.focusedModelId === null || state.focusedModelId !== null) {
-          return;
-        }
-
-        const pose = prev.returnPose;
-        if (pose) {
-          onMoveToRef.current?.(pose.position, pose.target);
-        } else {
-          onResetCameraRef.current?.();
-        }
-      }),
-    [],
-  );
-
-  // 마운트 때 포커스가 없으면 씬 기본 카메라로 한 번 리셋한다. 포커스 해제
-  // (있음 → 없음)는 여기 오지 않는다 — 해제 시 카메라는 위 subscribe 가
-  // 복귀시키므로 여기서 리셋하면 그 복귀를 덮어쓴다. 마운트에만 묶는 이유:
-  // 아래 프레이밍 effect 에 섞여 있던 시절 기본 카메라 교체(직교 탑뷰)마다
-  // 다시 돌아 탑뷰 직후 메인 뷰로 되돌아갔다.
+  // 마운트 때 씬 기본 카메라로 한 번 리셋한다. 마운트에만 묶는다 — 기본
+  // 카메라 교체(직교 탑뷰)마다 다시 돌면 탑뷰 직후 메인 뷰로 되돌아간다.
   useEffect(() => {
-    if (useObjectFocusStore.getState().focusedModelId === null) {
-      onResetCameraRef.current?.();
-    }
+    onResetCameraRef.current?.();
   }, []);
-
-  // 포커스 대상이 바뀔 때만 프레이밍한다. 카메라는 effect 안에서 읽는다 —
-  // 구독하면 기본 카메라 교체(직교 탑뷰 진입·복귀)마다 다시 맞춰 탑뷰를 끊는다.
-  // 직교 탑뷰 중에도 fit 은 원근 기준(userData 의 fov·프러스텀 비)이고, 이동
-  // 명령이 원근으로 복귀하면서 이 구도로 간다.
-  useEffect(() => {
-    if (!focusedModelId) {
-      return;
-    }
-
-    // 포커스된 모델의 박스에만 카메라를 맞춘다. 겹치는 이웃 모델까지 합치면
-    // (예: LLC 클릭 시 골리앗까지 포함) 클릭한 크레인이 화면에서 작아진다.
-    // 나머지 모델은 투명 처리로만 물러나고 fit 에는 들어가지 않는다.
-    const focusedObject = objectMapRef.current.get(focusedModelId);
-
-    if (!focusedObject) {
-      return;
-    }
-
-    const groupBox = new Box3().setFromObject(focusedObject);
-
-    if (groupBox.isEmpty()) {
-      return;
-    }
-
-    const center = groupBox.getCenter(new Vector3());
-
-    const camera = getThree().camera;
-    const fov = resolveCameraFov(camera) ?? 75;
-    const aspect = resolveCameraAspect(camera) ?? 16 / 9;
-    const vFov = MathUtils.degToRad(fov / 2);
-    const hFov = Math.atan(Math.tan(vFov) * aspect);
-
-    // Camera direction: use the initial scene camera direction (consistent angle)
-    // instead of current camera position (which shifts as user orbits)
-    const defaultDir = new Vector3(0, 0.75, 0.65).normalize();
-
-    // 바운딩 구(sphere) 대신 박스 8개 코너를 시야 축에 투영해 필요한 최소
-    // 거리를 구한다. 구 반지름(=박스 대각선 절반) 기준은 가로로 긴 크레인을
-    // 실제보다 훨씬 멀리서 잡아 "포커스했는데 작아 보이는" 문제가 있었다.
-    const right = new Vector3().crossVectors(defaultDir, Object3D.DEFAULT_UP);
-    if (right.lengthSq() < 1e-6) {
-      right.set(1, 0, 0);
-    }
-    right.normalize();
-    const up = new Vector3().crossVectors(right, defaultDir).normalize();
-
-    const tanH = Math.tan(hFov);
-    const tanV = Math.tan(vFov);
-    const corner = new Vector3();
-    const offset = new Vector3();
-    let fitDistance = 0;
-
-    for (let i = 0; i < 8; i += 1) {
-      corner.set(
-        i & 1 ? groupBox.max.x : groupBox.min.x,
-        i & 2 ? groupBox.max.y : groupBox.min.y,
-        i & 4 ? groupBox.max.z : groupBox.min.z,
-      );
-      offset.copy(corner).sub(center);
-
-      const along = offset.dot(defaultDir);
-      const lateralX = Math.abs(offset.dot(right));
-      const lateralY = Math.abs(offset.dot(up));
-
-      fitDistance = Math.max(
-        fitDistance,
-        along + lateralX / tanH,
-        along + lateralY / tanV,
-      );
-    }
-
-    // 여백. near plane 클리핑과 답답함을 피할 정도만 띄운다.
-    fitDistance = Math.max(fitDistance * 1.2, 1);
-
-    const newPosition = center
-      .clone()
-      .add(defaultDir.clone().multiplyScalar(fitDistance));
-
-    const position: Vector3Tuple = [
-      newPosition.x,
-      newPosition.y,
-      newPosition.z,
-    ];
-    const target: Vector3Tuple = [center.x, center.y, center.z];
-
-    onMoveToRef.current?.(position, target);
-  }, [focusedModelId, getThree]);
-
-  useEffect(() => {
-    objectMapRef.current.clear();
-
-    return () => {
-      exitFocus();
-    };
-  }, [regionId, exitFocus]);
 
   return (
     <>
@@ -495,9 +314,7 @@ export function OutdoorWorkModelSimulation({
           </SceneObjectBoundary>
         );
       })}
-      {/* 포커스 중 나머지 모델은 언마운트하지 않고 투명(0.1)·라벨 흐림으로
-          물러난다. 흐림은 저장하지 않고 씬 opacity 에서 파생하므로 포커스가
-          풀리면 prop 이 원래 값으로 돌아가는 것이 곧 복원이다(focus-ghost.ts). */}
+      {/* 관제 화면은 모델 클릭을 받지 않는다 — onSelect 를 넘기지 않는다. */}
       {models.map((model) => (
         <SceneObjectBoundary
           key={model.id}
@@ -508,12 +325,7 @@ export function OutdoorWorkModelSimulation({
             url={model.path}
             equipName={model.equipName}
             showLabel={!model.labelHidden}
-            opacity={resolveFocusOpacity(
-              model.id,
-              focusedModelId,
-              model.opacity,
-            )}
-            labelDimmed={isFocusGhosted(model.id, focusedModelId)}
+            opacity={model.opacity}
             alarmSeverity={
               model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
             }
@@ -528,8 +340,6 @@ export function OutdoorWorkModelSimulation({
             position={model.position}
             rotation={model.rotation}
             scale={model.scale}
-            onSelect={handleModelClick}
-            onObjectReady={handleObjectReady}
           />
         </SceneObjectBoundary>
       ))}

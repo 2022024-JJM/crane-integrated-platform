@@ -214,9 +214,6 @@
     "disabledInSplit": "분할 화면에서는 사용할 수 없습니다",
     "openTile": "{{name}} 뷰로 보기"
   },
-  "focus": {
-    "back": "돌아가기"
-  },
   "hover": {
     "model": "모델"
   },

@@ -55,7 +55,7 @@ export interface OrthoTopViewHandle {
   toggle: () => void;
   /**
    * 원근으로 복귀. `pose` 를 주면 계산한 복귀 포즈 대신 그 구도로 간다(메인
-   * 뷰·저장한 뷰·포커스). 탑뷰가 아니면 no-op.
+   * 뷰·저장한 뷰·영역 보기). 탑뷰가 아니면 no-op.
    */
   exit: (pose?: CameraPose) => void;
   /**

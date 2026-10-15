@@ -18,7 +18,7 @@ export const TOP_VIEW_MAX_DISTANCE = 30000;
  *
  * 카메라 up 은 항상 +Y 로 둔다. 탑뷰를 위해 up 을 (0,0,-1) 로 바꾸면
  * OrbitControls 의 극점이 ±Z 로 틀어져 회전이 어색하고, `{position, target}`
- * 만 저장하는 포즈(포커스 복귀·북마크)가 up 을 되살릴 수 없어 복원 시
+ * 만 저장하는 포즈(저장한 뷰·북마크)가 up 을 되살릴 수 없어 복원 시
  * 화면이 돌아간다. 그렇다고 up=+Y 인 채 타깃 정확히 위에 서면 시선과 up 이
  * 평행해 `lookAt` 이 퇴화하고(roll 이 부동소수 노이즈로 결정) spherical
  * theta 를 잃는다. 대신 카메라를 +Z 쪽으로 아주 조금 기울인다 — 화면 위는
@@ -110,7 +110,7 @@ export const TOP_VIEW_POLAR_ANGLE = Math.atan(TOP_VIEW_TILT);
  * 직교 탑뷰 카메라가 `userData` 에 남기는 원근 fov 의 키. 직교 카메라는
  * "같은 구도의 원근 카메라가 있을 높이" 에 서고 프러스텀 반높이를
  * 거리×tan(fov/2) 로 잡으므로, 거리·fov 로 판단하는 코드(카메라 제한·지형
- * LOD·실루엣 두께·포커스 fit)는 resolveCameraFov 로 이 값을 읽는다.
+ * LOD·실루엣 두께·에디터 F 포커스)는 resolveCameraFov 로 이 값을 읽는다.
  */
 export const PERSPECTIVE_FOV_USER_DATA_KEY = 'perspectiveFov';
 

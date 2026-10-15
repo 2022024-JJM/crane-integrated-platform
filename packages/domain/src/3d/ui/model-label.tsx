@@ -123,12 +123,6 @@ interface ModelLabelProps {
   readings?: readonly ModelLabelReading[];
   readValue?: ModelLabelValueReader;
   /**
-   * 흐림 표시. 모니터링 포커스 중 포커스 밖 모델의 라벨 — 모델 본체가
-   * 투명해지는 것과 맞춰 라벨도 흐리게 하고 포인터 이벤트를 끊는다(클릭·
-   * hover 콜백 미부착). 라벨은 DOM 이라 material 투명도의 영향을 받지 않는다.
-   */
-  dimmed?: boolean;
-  /**
    * 클릭·hover 를 받을지. 분할 화면의 타일 라벨은 false — 타일 전체가 클릭
    * 영역이라 라벨은 표시만 한다(포인터 이벤트도 끊어 타일 클릭이 통과한다).
    */
@@ -153,7 +147,6 @@ export function ModelLabel({
   titles,
   readings = NO_READINGS,
   readValue,
-  dimmed = false,
   interactive = true,
   portal,
   onSelect,
@@ -232,8 +225,9 @@ export function ModelLabel({
     return null;
   }
 
-  // 흐린 라벨(포커스 밖)과 비대화형 라벨(분할 타일)은 포인터를 받지 않는다.
-  const inert = dimmed || !interactive;
+  // 비대화형 라벨(분할 타일)은 포인터를 받지 않는다. 클릭을 받지 않는
+  // 라벨(관제 화면)은 툴팁·휠 전달 때문에 포인터는 받되 커서만 기본이다.
+  const inert = !interactive;
 
   return (
     <group ref={groupRef} position={localAnchor}>
@@ -252,7 +246,7 @@ export function ModelLabel({
           <div
             ref={wheelRef}
             title={titles?.tone[tone]}
-            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${dimmed ? 'opacity-30' : tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
+            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-auto'} ${tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
             onPointerDown={inert ? undefined : forwardPointerDown}
             onPointerEnter={
               inert
@@ -314,7 +308,7 @@ export function ModelLabel({
               {readings.map((reading, i) => (
                 <div
                   key={reading.id}
-                  className={`flex items-baseline gap-1 font-sans text-[12px] leading-none font-bold whitespace-nowrap select-none ${dimmed ? 'opacity-30' : ''}`}
+                  className="flex items-baseline gap-1 font-sans text-[12px] leading-none font-bold whitespace-nowrap select-none"
                   style={{
                     color: READING_TEXT_COLOR,
                     textShadow: READING_TEXT_SHADOW,

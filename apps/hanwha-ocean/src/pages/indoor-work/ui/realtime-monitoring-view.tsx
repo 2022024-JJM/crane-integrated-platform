@@ -10,12 +10,9 @@ import {
 } from '@crane/features/alarm';
 import {
   Monitoring3dView,
-  useCraneIdFromFocusedModel,
-  useObjectFocusStore,
   type Monitoring3dViewActions,
 } from '@crane/features/3d';
 import { Spinner } from '@crane/ui/atoms/spinner';
-import { CraneCmmsDetailPanel } from '@crane/widgets/crane';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
@@ -39,18 +36,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { alarm: criticalBannerAlarm, dismiss: dismissCriticalBanner } =
     useCriticalAlarmBanner(regionId);
 
-  const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
-  const exitFocus = useObjectFocusStore((state) => state.exitFocus);
-  const isCmmsOpen = craneId !== null;
-  const fullscreenCmmsOverlay = isCmmsOpen ? (
-    <CraneCmmsDetailPanel
-      key={craneId}
-      craneId={craneId}
-      craneName={craneName ?? craneId}
-      onClose={exitFocus}
-    />
-  ) : null;
-
   return (
     <div className="relative h-full min-h-0">
       {is3dViewLoading ? (
@@ -67,7 +52,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         alarmHighlightMesh
         mode="realtime"
         onLoadingChange={setIs3dViewLoading}
-        fullscreenOverlay={fullscreenCmmsOverlay}
         actionsRef={sceneActionsRef}
         fullscreenTopRightOverlay={
           <AlarmFullscreenOverlay

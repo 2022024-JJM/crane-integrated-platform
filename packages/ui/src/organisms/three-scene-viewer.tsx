@@ -61,7 +61,6 @@ interface ThreeSceneViewerProps {
   cameraClip?: { near: number; far: number };
   children: ReactNode;
   overlay?: ReactNode;
-  fullscreenOverlay?: ReactNode;
   // 전체화면일 때 우측 상단에 떠있는 플로팅 슬롯. 도메인 무관.
   fullscreenTopRightOverlay?: ReactNode;
   // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
@@ -298,7 +297,6 @@ export function ThreeSceneViewer({
   cameraClip,
   children,
   overlay,
-  fullscreenOverlay,
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
   toolbarExtras,
@@ -330,7 +328,6 @@ export function ThreeSceneViewer({
     [onControllerReady],
   );
 
-  const showSplitPanel = isFullscreen && fullscreenOverlay;
   const isTopRightToolbar = toolbarPlacement === 'top-right';
   const isDock = toolbarPlacement === 'dock';
   const webglSupported = isWebGLSupported();
@@ -478,17 +475,17 @@ export function ThreeSceneViewer({
           기다리다(useAnimationsFinished, abort를 완료로 안 침) unmount를 영영
           놓쳐 툴팁이 화면에 남는다. */}
       <PortalContainerProvider container={rootRef}>
-        {/* 도킹 프레임: [캔버스 행: [캔버스 영역][CMMS 분할][우측 독 placeholder]].
+        {/* 도킹 프레임: [캔버스 행: [캔버스 영역][우측 독 placeholder]].
             placeholder 는 고정된 독의 크기만 차지하는 빈 요소다 — 독 내용은
             루트의 absolute 자식으로 한 곳에만 있고 CSS 로 그 자리에 겹친다.
             Canvas 의 부모 체인은 고정 여부와 무관하게 같아야 한다(리마운트되면
             씬이 다시 로드된다). placeholder 는 항상 형제 뒤에만 붙인다. */}
         <div className="flex h-full w-full flex-col">
-          {/* 캔버스 행 — 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 */}
+          {/* 캔버스 행 */}
           <div className="flex min-h-0 flex-1">
             {/* 3D 캔버스 영역 */}
             <div
-              className={`relative h-full ${showSplitPanel ? 'w-1/2 shrink-0' : 'min-w-0 flex-1'}`}
+              className="relative h-full min-w-0 flex-1"
               style={
                 {
                   '--dock-right-inset': dockRightInset,
@@ -547,14 +544,6 @@ export function ThreeSceneViewer({
               ) : null}
             </div>
 
-            {/* CMMS 패널 (전체화면 시에만). 남는 폭을 쓴다 — 우측 독이
-                고정돼 있으면 그 폭만큼 줄어들어 행이 넘치지 않는다. */}
-            {showSplitPanel ? (
-              <div className="relative h-full min-w-0 flex-1 overflow-hidden">
-                {fullscreenOverlay}
-              </div>
-            ) : null}
-
             {rightDockPinned ? (
               <div
                 aria-hidden
@@ -605,13 +594,7 @@ export function ThreeSceneViewer({
               ) : null}
             </>
           ) : isTopRightToolbar ? (
-            <div
-              className={`pointer-events-none absolute top-1.5 left-1.5 z-1 flex flex-col items-end gap-2 ${
-                // 분할 전체화면(CMMS 패널)에서는 캔버스가 왼쪽 절반이라
-                // 우측 기준을 화면 절반으로 당겨야 툴바가 패널 위로 넘어가지 않는다.
-                showSplitPanel ? 'right-[calc(50%+0.375rem)]' : 'right-1.5'
-              }`}
-            >
+            <div className="pointer-events-none absolute top-1.5 right-1.5 left-1.5 z-1 flex flex-col items-end gap-2">
               <div className="pointer-events-auto flex max-w-full items-center gap-2">
                 {toolbarTrailing}
                 {cameraToolbarButtons}

@@ -214,9 +214,6 @@
     "disabledInSplit": "Not available in split screen",
     "openTile": "Open {{name}}"
   },
-  "focus": {
-    "back": "Back"
-  },
   "hover": {
     "model": "Model"
   },

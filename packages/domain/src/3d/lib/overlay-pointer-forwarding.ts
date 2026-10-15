@@ -2,7 +2,7 @@
  * 캔버스 위 DOM 오버레이(모델 라벨·눈금 점/숫자)의 휠·포인터를 캔버스로
  * 넘기는 순수 DOM 함수 — 적용은 model/use-overlay-pointer-forwarding.ts.
  *
- * 오버레이가 pointer-events 를 받으면(클릭으로 선택·포커스) 그 위에서 난
+ * 오버레이가 pointer-events 를 받으면(클릭 선택·툴팁) 그 위에서 난
  * 휠·드래그는 카메라 조작에 닿지 않는다. 휠 줌(features SceneSurfaceCamera)은
  * 캔버스 요소의 리스너이고, 회전(OrbitControls)·R3F 이벤트는 R3F 가 연결한
  * 요소(Canvas 의 래퍼 div, `events.connected`)의 리스너인데, 오버레이는
@@ -18,7 +18,7 @@
 
 /**
  * 눌린 자리에서 이보다(px) 넘게 움직인 뒤의 click 은 드래그의 끝으로 보고
- * 선택·포커스로 치지 않는다. 경계 정확값은 클릭이다.
+ * 선택으로 치지 않는다. 경계 정확값은 클릭이다.
  */
 export const OVERLAY_CLICK_SLOP_PX = 4;
 

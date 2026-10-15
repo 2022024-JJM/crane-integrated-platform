@@ -214,9 +214,6 @@
     "disabledInSplit": "In scrinio diviso non praesto",
     "openTile": "{{name}} aperi"
   },
-  "focus": {
-    "back": "Redi"
-  },
   "hover": {
     "model": "Exemplar"
   },

@@ -2,7 +2,7 @@
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
-조립은 `packages/features/src/3d/ui/monitoring-3d-view.tsx`(`Monitoring3dView`)다. `toolbarLayout='dock'` 이 실시간 관제 화면 배치이고, HUD·미니맵은 그 배치에서 `mode !== 'play3d'` 일 때만 마운트된다. 좌측 상단 열은 시뮬레이션 배지(`ui/scene-simulation-badge.tsx`) → 포커스 복귀 버튼 → 워밍업 표시 순의 세로 스택이다.
+조립은 `packages/features/src/3d/ui/monitoring-3d-view.tsx`(`Monitoring3dView`)다. `toolbarLayout='dock'` 이 실시간 관제 화면 배치이고, HUD·미니맵은 그 배치에서 `mode !== 'play3d'` 일 때만 마운트된다. 좌측 상단 열은 시뮬레이션 배지(`ui/scene-simulation-badge.tsx`) → 워밍업 표시 순의 세로 스택이다. 모니터링·3D 플레이·대시보드 미리보기는 모델·라벨 클릭을 받지 않는다 — `OutdoorWorkModelSimulation` 이 `onSelect` 를 넘기지 않는다.
 
 ## 진입점
 
@@ -51,7 +51,7 @@
 
 **최소 거리** — 휠 줌은 커서 아래 표면(모델 자체 포함), 독 확대 버튼은 화면 중앙 표면(타깃)에서 `CAMERA_MIN_SURFACE_DISTANCE`(`lib/camera-limits.ts`)까지만 다가간다. 휠 한 이벤트의 이동량은 `surfaceDollyAdvance` 가 정한다(미적용 pending 반영, 하한·`controls.maxDistance` 로 clamp). 에디터 F 포커스·탑뷰의 최소 거리가 같은 상수를 읽고, 뷰어 확대 버튼의 `MIN_CAMERA_DISTANCE`(`three-scene-viewer.tsx`)는 ui 가 features 를 import 하지 못해 같은 값의 리터럴이다. OrbitControls `minDistance` 는 회전·팬 반경 clamp 일 뿐이라 이보다 작게(표면 레이캐스트 near 와 같게) 둔다. 바닥·극각 제한은 그대로 걸리므로 지면 위 객체에는 비스듬히 볼수록 멀리서 멈춘다.
 
-**라벨 위 조작** — 모델 라벨·눈금 점/숫자는 클릭을 받는 DOM 오버레이(drei `Html`)라 그 위의 휠·드래그는 카메라 조작에 닿지 않는다(휠 줌은 캔버스 요소의 리스너, OrbitControls·R3F 이벤트는 R3F 가 연결한 Canvas 래퍼 div 의 리스너). 그래서 `useOverlayPointerForwarding` 이 휠과 pointerdown 을 같은 좌표·버튼으로 캔버스에서 난 것처럼 다시 발행(bubbles)하고 원본의 전파는 끊는다 — 라벨 위에서도 휠 줌·회전이 되고 어느 리스너도 두 번 받지 않는다. OrbitControls 는 pointermove·pointerup 을 document 에서 받으므로 pointerdown 만 넘기면 드래그가 이어진다. 눌린 자리에서 `OVERLAY_CLICK_SLOP_PX` 넘게 움직인 뒤의 click 은 선택·포커스로 치지 않는다.
+**라벨 위 조작** — 모델 라벨·눈금 점/숫자는 포인터를 받는 DOM 오버레이(drei `Html` — 에디터의 클릭 선택, 라벨의 상태 툴팁)라 그 위의 휠·드래그는 카메라 조작에 닿지 않는다(휠 줌은 캔버스 요소의 리스너, OrbitControls·R3F 이벤트는 R3F 가 연결한 Canvas 래퍼 div 의 리스너). 그래서 `useOverlayPointerForwarding` 이 휠과 pointerdown 을 같은 좌표·버튼으로 캔버스에서 난 것처럼 다시 발행(bubbles)하고 원본의 전파는 끊는다 — 라벨 위에서도 휠 줌·회전이 되고 어느 리스너도 두 번 받지 않는다. OrbitControls 는 pointermove·pointerup 을 document 에서 받으므로 pointerdown 만 넘기면 드래그가 이어진다. 눌린 자리에서 `OVERLAY_CLICK_SLOP_PX` 넘게 움직인 뒤의 click 은 선택으로 치지 않는다. 클릭을 받지 않는 라벨(`onSelect` 없음)은 커서가 기본이다.
 
 제한 뒤에는 `controls.update()` 를 부르지 않고 `change` 이벤트만 발행해 에디터 카메라 상태가 따라오게 한다.
 
@@ -103,8 +103,8 @@
 - 픽셀 후처리 `minimap-image.ts` — Float 렌더 타깃 readback(선형·비톤매핑, Float 확장이 없으면 8bit 폴백을 `toLinearFloatPixels` 가 0~1 로 편다)에 three 의 `ACESFilmicToneMapping` 을 그대로 옮긴 `acesFilmicToneMap`(행렬이 채널을 섞어 채널별 LUT 불가) + sRGB 를 픽셀마다 적용한다. 노출은 렌더러와 같은 1, 노출 보정은 없다(캡처 조명이 고정이라 입력 밝기가 일정). 캡처용 기준 조명은 `minimap-capture-lighting.ts`(`applyCanonicalCaptureLighting`, `applyCanonicalWaterUniforms`, `CANONICAL_KEY_LIGHT_DISTANCE`) — 둘 다 테스트 대상.
 - 스토어 `use-scene-minimap-store.ts` — 스냅샷, 표시 여부(영속 `crane:scene-minimap:visible`), 패널 위치(영속 `crane:scene-minimap:position`, 컨테이너 여유 공간 대비 **비율** `PanelRatio`, null = 기본 좌하단. px 로 저장하던 예전 모양은 null 로 읽는다).
 - 캡처 `scene-minimap-capture.tsx`(Canvas 안) — 씬 준비 + 로더 idle 뒤 useFrame 에서 기준 지도 합집합(`resolveCameraBoundsMaps`, 위 카메라 제한과 같은 기준) 위를 직교 카메라(up=(0,0,-1) → 이미지 위 = −Z)로 렌더 타깃에 한 번 그려 readback 한다. **렌더 타깃에 stencilBuffer 가 필수**다 — 실루엣 마스크·헐이 자기 스텐실 비트로 그려진다(충돌 하이라이트 중 캡처, `docs/agents/3d-collision.md`). 렌더 타깃은 **Float**(`FloatType`, WebGL2 `EXT_color_buffer_float` 필요 — 없으면 readback 이 검정으로 남거나 던져 try/catch 가 경고 뒤 null, 어느 쪽이든 미니맵 배경만 잃는다) — 8bit 선형 RT 는 어두운 값이 양자화돼 띠·색 편향이 생긴다. **조명은 캡처 순간만 SceneLighting 의 수동 모드 값(기준 조명)으로 바꾼다**(`applyCanonicalCaptureLighting` — `SCENE_KEY_LIGHT_NAME` 으로 찾은 키 방향광을 씬의 수동 태양 방향(`sunDirectionFromAngles(lighting.sunAzimuth/sunElevation)`, 없으면 기본값)·백색·`SCENE_LIGHTING_BASE.sunIntensity` 로 두고 target 월드 위치 기준으로 옮김, 환경광 백색·`SCENE_LIGHTING_BASE.ambientIntensity`, 나머지 조명 세기 0, 그림자 `shadow.intensity` 0, `scene.environmentIntensity` 는 환경맵이 있으면 `SCENE_ENVIRONMENT_INTENSITY` 아니면 0, renderer 의 `shadowMap.autoUpdate`·`needsUpdate` 를 캡처 동안 끔 — 같은 프레임의 보류된 `invalidateShadows()` 를 옮긴 조명으로 소비하지 않게, 렌더 뒤 전부 원복). 미니맵이 3D 화면의 기본 룩과 같은 색이고 solar 모드의 시각·날씨·그림자와 무관하다. 전부 유니폼 변경이라 재컴파일이 없다 — visible·castShadow·`shadowMap.enabled` 는 건드리지 않는다. `OceanWater` 는 **보이는 채로** 그린다(바다 색이 물 셰이더에서 나온다) — 직교 카메라엔 미러 패스가 없어 캡처 동안만 `applyCanonicalWaterUniforms` 로 `reflectionIntensity` 0(낡은 반사 RT 배제)·`sunDirection`/`sunColor` 를 기준 태양·백색으로 둔다. 바다 반사 제외 등록부의 객체(밤하늘 틴트 돔·태양/달 스프라이트 — 돔은 직교 카메라도 감싸 전체를 틴트)만 숨긴다. clear color 는 손대지 않는다 — 바다 영역은 물 원판이 덮고, 바다 없는 씬은 검정 배경이다(`docs/agents/rendering-perf.md`). 재캡처는 기준 지도 목록 또는 씬의 수동 태양 각도(`lighting.sunAzimuth`/`sunElevation`)가 바뀔 때뿐이고 수동 새로 고침은 없다.
-- 표시 `scene-minimap.tsx` — DOM 2D 캔버스에 짧은 인터벌로 직접 그린다, setState 없음. 그리는 순서는 스냅샷 → 장비 마커 → 카메라(부채꼴·픽토그램) → 호버 라벨이다 — 카메라가 마커에 가려지지 않고, 부채꼴은 반투명이라 안의 마커가 비친다. 레지스트리 월드 위치 마커(색은 알람 severity, 없으면 노랑 `MARKER_COLOR` — 운전 상태 색은 미니맵에 쓰지 않는다, 포커스 테두리, 루트→AABB 중심 오프셋은 첫 관측 때 캐시), 카메라(시선 방향으로 돌린 카메라 픽토그램 `cameraGlyphPolygon` + 같은 색 `CAMERA_COLOR` 흰색의 시야 부채꼴 — 픽토그램은 검은 외곽선 — 카메라에서 멀어질수록 투명해지는 그라데이션 채움, 테두리는 호 없이 양쪽 모서리 직선만. 부채꼴은 방향 표시일 뿐이라 각·길이가 `FOOTPRINT_ANGLE_DEG`·`FOOTPRINT_LENGTH_PX` 고정이고 카메라 fov·타깃 거리를 따라가지 않는다. 카메라→타깃 XZ 거리가 `HEADING_MIN_DISTANCE_PX` 미만이면 정수직 탑뷰로 보고 점만 찍는다). 영역 원·타깃 십자는 그리지 않는다.
-- 조작 — 누르기·끌기는 `panPoseToPoint` 로 타깃만 옮기는 팬을 컨트롤러 `moveTo` 로 보내 `SceneCameraLimits` 가 그대로 걸린다. 마커 클릭 = 그 모델 포커스(포커스 중 재클릭 = 돌아가기, 드래그 시작 안 함, 커서 pointer). 패널은 상단 그립 바를 끌어 캔버스 영역 안 어디든 놓을 수 있다. 끄는 동안은 px(`clampPanelPosition`)로 움직이고 놓을 때 컨테이너 크기로 비율을 만들어 저장하며, 마운트·컨테이너 리사이즈(전체화면 포함) 때는 레이아웃 effect 가 `panelRatioToPosition` 으로 px 를 다시 놓는다 — 우하단에 둔 패널이 전체화면에서도 우하단에 머문다.
+- 표시 `scene-minimap.tsx` — DOM 2D 캔버스에 짧은 인터벌로 직접 그린다, setState 없음. 그리는 순서는 스냅샷 → 장비 마커 → 카메라(부채꼴·픽토그램) → 호버 라벨이다 — 카메라가 마커에 가려지지 않고, 부채꼴은 반투명이라 안의 마커가 비친다. 레지스트리 월드 위치 마커(색은 알람 severity, 없으면 노랑 `MARKER_COLOR` — 운전 상태 색은 미니맵에 쓰지 않는다, 루트→AABB 중심 오프셋은 첫 관측 때 캐시), 카메라(시선 방향으로 돌린 카메라 픽토그램 `cameraGlyphPolygon` + 같은 색 `CAMERA_COLOR` 흰색의 시야 부채꼴 — 픽토그램은 검은 외곽선 — 카메라에서 멀어질수록 투명해지는 그라데이션 채움, 테두리는 호 없이 양쪽 모서리 직선만. 부채꼴은 방향 표시일 뿐이라 각·길이가 `FOOTPRINT_ANGLE_DEG`·`FOOTPRINT_LENGTH_PX` 고정이고 카메라 fov·타깃 거리를 따라가지 않는다. 카메라→타깃 XZ 거리가 `HEADING_MIN_DISTANCE_PX` 미만이면 정수직 탑뷰로 보고 점만 찍는다). 영역 원·타깃 십자는 그리지 않는다.
+- 조작 — 누르기·끌기는 `panPoseToPoint` 로 타깃만 옮기는 팬을 컨트롤러 `panTo` 로 보내 `SceneCameraLimits` 가 그대로 걸린다. 마커 위를 눌러도 같은 팬이다 — 마커는 호버 때 장비 이름만 보인다. 패널은 상단 그립 바를 끌어 캔버스 영역 안 어디든 놓을 수 있다. 끄는 동안은 px(`clampPanelPosition`)로 움직이고 놓을 때 컨테이너 크기로 비율을 만들어 저장하며, 마운트·컨테이너 리사이즈(전체화면 포함) 때는 레이아웃 effect 가 `panelRatioToPosition` 으로 px 를 다시 놓는다 — 우하단에 둔 패널이 전체화면에서도 우하단에 머문다.
 - 독 토글 `scene-minimap-toggle.tsx`.
 
 ### 씬 독 (우측 레일, hover 펼침·고정)
@@ -119,7 +119,7 @@
 초기 로딩 오버레이(`ui/scene-loading-overlay.tsx`)가 걷힌 뒤 이어지는 비차단 표시다(스피너 + 문구 한 줄, `common:viewer3d.warmup.*`).
 
 - 단계 선택 `selectSceneWarmupStep`(`scene-warmup-step.ts`): bvh 잔여 → outline 잔여 → 충돌 런타임 baseline(스토어 `baselinePending`) → drei `useProgress` 활성. 타이머 추측은 없다. 큐 자체·셰이더 프리워밍은 `docs/agents/rendering-perf.md`, baseline 은 `docs/agents/3d-collision.md`.
-- 배치: 모니터링·리플레이는 overlay 슬롯의 좌측 상단 열(포커스 복귀 버튼과 세로 스택), 편집은 캔버스 컨테이너 좌측 상단.
+- 배치: 모니터링·리플레이는 overlay 슬롯의 좌측 상단 열(시뮬레이션 배지와 세로 스택), 편집은 캔버스 컨테이너 좌측 상단.
 
 ## 불변식
 

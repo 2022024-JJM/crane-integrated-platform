@@ -6,10 +6,6 @@
     "plcCommStatus": "PLC Comm. Status",
     "hoistMode": "Hoist Mode",
     "trolleyMode": "Trolley Mode",
-    "inline": {
-      "wind": "Wind",
-      "load": "Load"
-    },
     "wind": {
       "title": "Wind",
       "speed": "Speed (m/s)",
@@ -145,7 +141,6 @@
     "faultConnection": "Fault Connection"
   },
   "trolley": {
-    "title": "Trolley",
     "upperTrolley": "Upper Trolley",
     "lowerTrolley": "Lower Trolley",
     "joystickStep": "Joystick Step",
