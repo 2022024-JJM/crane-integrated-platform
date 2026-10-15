@@ -67,9 +67,9 @@ interface PalettePlacedObjectsProps {
   onToggleLock?: (id: string, locked: boolean) => void;
   onRenameObject?: (id: string, name: string) => void;
   /**
-   * 모델 행을 펼치면 GLB 노드 트리(Group/Mesh)가 나오고, 노드 행을 클릭하면
-   * 캔버스 더블클릭 drill-in 과 같은 서브노드 선택이 된다. 없으면 펼침 토글
-   * 자체를 그리지 않는다.
+   * 모델·지도 행을 펼치면 GLB 노드 트리(Group/Mesh)가 나오고, 노드 행을
+   * 클릭하면 캔버스 더블클릭 drill-in 과 같은 서브노드 선택이 된다. 첫 인자는
+   * 부모 객체(모델 또는 지도) id 다. 없으면 펼침 토글 자체를 그리지 않는다.
    */
   onSelectNode?: (modelId: string, nodePath: string) => void;
   /** 모델별 관절·구속조건이 가리키는 노드 경로 — 행에 뼈 배지를 단다. */
@@ -159,7 +159,7 @@ export function PalettePlacedObjects({
     });
   };
 
-  // 캔버스 더블클릭 drill-in 으로 노드가 선택되면 모델 행과 조상 노드를 펼쳐
+  // 캔버스 더블클릭 drill-in 으로 노드가 선택되면 부모 행과 조상 노드를 펼쳐
   // 목록에서 보이게 한다. 선택이 바뀔 때 한 번만 적용하므로 이후 사용자가
   // 접는 건 그대로 둔다. effect 안 setState(react-hooks/set-state-in-effect)
   // 대신 렌더 중 이전 값과 비교해 조정하는 패턴을 쓴다.
@@ -349,7 +349,11 @@ export function PalettePlacedObjects({
                     : 'text-muted-foreground',
               );
 
-              const canExpand = item.type === 'model' && Boolean(onSelectNode);
+              // 모델·지도는 GLB 노드 트리를 펼친다. 잠금과 무관하다 — 노드
+              // 선택은 읽기 전용이라 잠금의 "편집 대상에서 제외"와 겹치지
+              // 않는다(캔버스 더블클릭만 잠금 해제된 객체로 한정).
+              const canExpand =
+                (item.type === 'model' || isMap) && Boolean(onSelectNode);
               const isExpanded = canExpand && expandedModels.has(item.id);
 
               const rowChildren = (
@@ -532,7 +536,7 @@ export function PalettePlacedObjects({
 }
 
 /**
- * 펼친 모델 아래의 GLB 노드 행들. 모델 행(깊이 0) 아래 깊이 1부터 들여쓴다.
+ * 펼친 모델·지도 아래의 GLB 노드 행들. 객체 행(깊이 0) 아래 깊이 1부터 들여쓴다.
  * 선택 id 는 캔버스 drill-in 과 같은 `${modelId}::${path}` 형식이라 두 경로의
  * 선택 하이라이트가 일치한다.
  */

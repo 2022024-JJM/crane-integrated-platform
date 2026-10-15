@@ -2,11 +2,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useState, type SetStateAction } from 'react';
-import type {
-  SavedModelInfo,
-  SavedRulerInfo,
-  SavedSceneInfo,
-  SavedTextInfo,
+import {
+  makeMeshId,
+  type SavedMapInfo,
+  type SavedModelInfo,
+  type SavedRulerInfo,
+  type SavedSceneInfo,
+  type SavedTextInfo,
 } from '@crane/domain/3d';
 import { useSceneObjectSelectionStore } from '../use-scene-object-selection-store';
 import { useSelectedSceneObjectEditor } from '../use-selected-scene-object-editor';
@@ -60,6 +62,10 @@ function text(overrides: Partial<SavedTextInfo> = {}): SavedTextInfo {
   };
 }
 
+function map(overrides: Partial<SavedMapInfo> = {}): SavedMapInfo {
+  return { id: 'map1', path: '/maps/okpo.glb', ...overrides };
+}
+
 function scene(overrides: Partial<SavedSceneInfo> = {}): SavedSceneInfo {
   return { maps: [], models: [], texts: [], camera: null, ...overrides };
 }
@@ -73,7 +79,7 @@ function renderEditor(initial: SavedSceneInfo | null) {
       updateSceneInfo: (updater: SetStateAction<SavedSceneInfo | null>) =>
         setSceneInfo(updater),
     });
-    return { sceneInfo, editor };
+    return { sceneInfo, setSceneInfo, editor };
   });
 }
 
@@ -344,5 +350,75 @@ describe('공통 경로 — 삭제', () => {
     const before = result.current.sceneInfo;
     act(() => result.current.editor.removeSelectedModel());
     expect(result.current.sceneInfo).toBe(before);
+  });
+});
+
+describe('안쪽 노드 선택 — 모델·지도', () => {
+  const modelNode = makeMeshId('m1', '[0]Boom/[0]Hook');
+  const mapNode = makeMeshId('map1', '[0]Okpo_Building/[3]Office');
+
+  it('모델 노드 선택은 유지되고 selectedMesh 가 부모 종류를 알린다', () => {
+    const { result } = renderEditor(scene({ models: [model()] }));
+    act(() => selection.getState().selectMesh(modelNode));
+    expect(selection.getState().selectedModelId).toBe(modelNode);
+    expect(result.current.editor.selectedMesh).toEqual({
+      parentKind: 'model',
+      parentId: 'm1',
+      meshPath: '[0]Boom/[0]Hook',
+    });
+    expect(result.current.editor.selectedModel).toBeNull();
+  });
+
+  it('잠금 해제된 지도의 노드 선택은 유지되고 지도·모델 편집 대상은 null', () => {
+    const { result } = renderEditor(scene({ maps: [map({ locked: false })] }));
+    act(() => selection.getState().selectMesh(mapNode));
+    expect(selection.getState().selectedModelId).toBe(mapNode);
+    expect(result.current.editor.selectedMesh).toEqual({
+      parentKind: 'map',
+      parentId: 'map1',
+      meshPath: '[0]Okpo_Building/[3]Office',
+    });
+    expect(result.current.editor.selectedMap).toBeNull();
+    expect(result.current.editor.selectedModel).toBeNull();
+  });
+
+  it('잠긴 지도(필드 없음)의 노드 선택도 유지된다 — 노드는 읽기 전용이라 잠금과 무관', () => {
+    const { result } = renderEditor(scene({ maps: [map()] }));
+    act(() => selection.getState().selectMesh(mapNode));
+    expect(selection.getState().selectedIds.has(mapNode)).toBe(true);
+    expect(result.current.editor.selectedMesh?.parentKind).toBe('map');
+  });
+
+  it('부모가 씬에 없는 노드를 선택하면 선택이 풀린다', () => {
+    const { result } = renderEditor(scene({ maps: [map()] }));
+    act(() => selection.getState().selectMesh(makeMeshId('gone', '[0]A')));
+    expect(selection.getState().selectedIds.size).toBe(0);
+    expect(result.current.editor.selectedMesh).toBeNull();
+  });
+
+  it('부모 지도가 씬에서 빠지면(undo 등) 노드 선택이 풀린다', () => {
+    const { result } = renderEditor(scene({ maps: [map()] }));
+    act(() => selection.getState().selectMesh(mapNode));
+    expect(selection.getState().selectedIds.size).toBe(1);
+    act(() => result.current.setSceneInfo(scene({ maps: [] })));
+    expect(selection.getState().selectedIds.size).toBe(0);
+    expect(result.current.editor.selectedMesh).toBeNull();
+  });
+
+  it('노드 id 를 mesh 가 아닌 종류로 들고 있으면 없는 객체로 보고 푼다', () => {
+    renderEditor(scene({ maps: [map({ locked: false })] }));
+    act(() => selection.getState().selectMap(mapNode));
+    expect(selection.getState().selectedIds.size).toBe(0);
+  });
+
+  it('노드 선택 중 삭제는 부모 지도·모델을 지우지 않는다', () => {
+    const { result } = renderEditor(
+      scene({ models: [model()], maps: [map({ locked: false })] }),
+    );
+    act(() => selection.getState().selectMesh(mapNode));
+    act(() => result.current.editor.removeSelectedModel());
+    expect(result.current.sceneInfo?.maps.map((m) => m.id)).toEqual(['map1']);
+    expect(result.current.sceneInfo?.models.map((m) => m.id)).toEqual(['m1']);
+    expect(selection.getState().selectedIds.size).toBe(0);
   });
 });

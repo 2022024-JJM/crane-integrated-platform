@@ -1,6 +1,6 @@
 import {
   numRound,
-  parseMeshId,
+  resolveSceneNodeParent,
   type ModelStatusTags,
   type RigDefinition,
   type SavedFloodlightInfo,
@@ -10,6 +10,7 @@ import {
   type SavedRulerInfo,
   type SavedSceneInfo,
   type SavedTextInfo,
+  type SceneNodeParentKind,
   type TagMapping,
 } from '@crane/domain/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
@@ -72,14 +73,14 @@ interface UseSelectedSceneObjectEditorParams {
 }
 
 /**
- * 모델 안쪽 노드가 선택된 경우의 도출 정보(parseMeshId 결과 + 부모 모델).
- * 노드 선택은 읽기 전용이다 — 바운딩 박스 표시용이며 편집 API 가 없다.
+ * 모델·지도 안쪽 노드가 선택된 경우의 도출 정보(resolveSceneNodeParent 결과).
+ * 노드 선택은 읽기 전용이다 — 선택 표시용이며 편집 API 가 없다.
  * 저장된 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 만들지 않는다.
  */
 export interface SelectedMeshInfo {
-  modelId: string;
+  parentKind: SceneNodeParentKind;
+  parentId: string;
   meshPath: string;
-  parentModel: SavedModelInfo;
 }
 
 interface UseSelectedSceneObjectEditorResult {
@@ -197,16 +198,9 @@ export function useSelectedSceneObjectEditor({
     }
 
     if (selectedObjectType === 'mesh') {
-      // mesh ID는 `${modelId}::${meshPath}` 형식. 부모 모델이 살아있으면 유지.
-      const parsed = parseMeshId(selectedModelId);
-      if (!parsed) {
-        clearSelectedModel();
-        return;
-      }
-      const parentExists = sceneInfo.models.some(
-        (m) => m.id === parsed.modelId,
-      );
-      if (!parentExists) {
+      // 노드 id 는 `${부모 id}::${meshPath}` 형식. 부모 모델·지도가 살아
+      // 있으면 유지한다 — 잠금과는 무관하다(노드는 읽기 전용).
+      if (!resolveSceneNodeParent(sceneInfo, selectedModelId)) {
         clearSelectedModel();
       }
       return;
@@ -304,11 +298,13 @@ export function useSelectedSceneObjectEditor({
     if (selectedObjectType !== 'mesh' || !selectedModelId || !sceneInfo) {
       return null;
     }
-    const parsed = parseMeshId(selectedModelId);
-    if (!parsed) return null;
-    const parentModel = sceneInfo.models.find((m) => m.id === parsed.modelId);
-    if (!parentModel) return null;
-    return { modelId: parsed.modelId, meshPath: parsed.meshPath, parentModel };
+    const parent = resolveSceneNodeParent(sceneInfo, selectedModelId);
+    if (!parent) return null;
+    return {
+      parentKind: parent.kind,
+      parentId: parent.id,
+      meshPath: parent.meshPath,
+    };
   }, [selectedObjectType, selectedModelId, sceneInfo]);
 
   /**

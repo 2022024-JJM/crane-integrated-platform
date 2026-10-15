@@ -22,6 +22,7 @@
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
 | 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts`, `packages/features/src/3d/model/use-rig-driver.ts` |
 | 선택 표시(박스·실루엣) | `packages/domain/src/3d/lib/selection-bounding-box.ts`, `packages/domain/src/3d/lib/silhouette-outline.ts`, `packages/domain/src/3d/ui/gltf-model.tsx`, `packages/domain/src/3d/ui/model-mesh.tsx` |
+| 안쪽 노드 선택(부모 판정·노드 트리·계층 목록) | `packages/domain/src/3d/lib/scene-node-parent.ts`(`resolveSceneNodeParent`), `packages/widgets/src/3d/lib/model-node-tree.ts`(전부 테스트 대상), `packages/widgets/src/3d/ui/palette-placed-objects.tsx` |
 | 거리 눈금 스키마 / 방어 / 기하 / 렌더 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/sanitize-rulers.ts`, `packages/domain/src/3d/lib/ruler.ts`(테스트 대상), `packages/domain/src/3d/ui/scene-ruler.tsx` |
 | 화면을 향한 표시(모델 라벨·눈금)의 거리 축소·숨김 | `packages/domain/src/3d/lib/label-scale.ts`(테스트 대상) |
 | 거리 눈금 그리기 / 인스펙터 탭 / 편집 로직 | `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx`, `packages/widgets/src/3d/lib/ruler-editor.ts`(테스트 대상) |
@@ -121,10 +122,14 @@
 - 드라이버가 마지막으로 적용한 자세 그대로인 루트(기즈모가 안 건드린 것)는 rest 를 유지한다.
 - 기즈모가 잡는 자세는 rest+Δ 이므로 handoff 와 커밋(`use-scene-transform.ts`)·스냅은 드라이버가 readout 에 남긴 `rootDeltas`(루트에 마지막으로 적용한 Δ, 드래그 중엔 드래그 직전 값)를 벗겨 배치값을 얻는다(`strip-channel-delta.ts`, `root-placement.ts`). 그대로 저장하면 Δ 가 한 번 더 더해져 모델이 Δ 만큼 더 가서 멈춘다.
 
-### 모델 안쪽 노드 선택
+### 모델·지도 안쪽 노드 선택
 
-- 계층 목록의 자식·뷰포트 더블클릭 drill-in 으로 선택한 안쪽 노드는 **읽기 전용**이다. 인스펙터는 안내 문구만 보이고 기즈모는 붙지 않으며, 노드 선택은 항상 단일 선택(Ctrl 토글 없음)이다.
-- 표시는 모델 선택과 같은 실루엣 테두리이며 대상만 그 노드 서브트리로 좁힌다 — `GltfModel` 의 `selectedMeshTarget` 이 `ObjectSilhouetteOutline` 대상이 된다(`selectionStyle='outline'` 인 에디터 한정). 실루엣 자체는 `docs/agents/3d-collision.md`.
+- 모델과 지도는 GLB 의 안쪽 노드를 고를 수 있다. 계층 목록에서 행을 펼친 자식, 또는 뷰포트 더블클릭 drill-in 으로 고른다. 노드 id 는 `${부모 id}::${meshPath}` 이고, 부모가 모델인지 지도인지와 씬에 아직 있는지는 `resolveSceneNodeParent` 하나로 판정한다(선택 유지·인스펙터·F 포커스).
+- 계층 목록의 펼침은 잠금과 무관하다. 캔버스 더블클릭은 잠금 해제된 객체만 받는다. 지도는 기본이 잠김이라 보통 계층 목록에서 고른다. 노드가 선택된 동안 부모를 잠가도 선택은 풀리지 않는다.
+- 노드 트리(`buildModelNodeTree`)는 LOD 사본(extras `lod > 0` 캐리어와 그 서브트리)을 뺀다. 사본은 숨김·raycast 제외라 골라도 표시가 없다. 빠진 사본이 있어도 남은 노드의 경로 index 는 GLB 자리 그대로다.
+- 트리는 GLB 구조 그대로다. 노드가 하나뿐인 야드 지도는 재질별 메시로만 나뉘고, 건물 지도는 건물 노드 단위로 나뉜다.
+- 선택한 안쪽 노드는 **읽기 전용**이다. 인스펙터는 안내 문구만 보이고 기즈모는 붙지 않으며, 노드 선택은 항상 단일 선택(Ctrl 토글 없음)이다.
+- 모델 노드의 표시는 모델 선택과 같은 실루엣 테두리이며 대상만 그 노드 서브트리로 좁힌다 — `GltfModel` 의 `selectedMeshTarget` 이 `ObjectSilhouetteOutline` 대상이 된다(`selectionStyle='outline'` 인 에디터 한정). 실루엣 자체는 `docs/agents/3d-collision.md`.
 - `selectionStyle='box'` 인 캔버스(에디터의 지도, 모니터링·리플레이·존 뷰어)는 노드 바운딩 박스다. 박스 점은 `selection-bounding-box.ts` 가 마운트 대상의 로컬 좌표로 계산하고, 노드 박스는 `createPortal` 로 노드 자식에 마운트해 리그·기즈모 움직임을 씬 그래프 상속으로 따라간다.
 - 포털은 `target.uuid` key 로 재마운트해야 한다 — R3F `Portal` 이 컨테이너 교체 시 이전 노드에 붙는 문제가 있다(파일 주석). 실루엣 쪽도 같은 이유로 `node.uuid`·`mesh.uuid` 를 key 로 쓴다.
 - 하위에 메시가 없는 리프 Empty 노드는 그릴 것이 없어 아무 표시도 나오지 않는다.
@@ -202,6 +207,7 @@
 - 미등록 region 의 기본 씬 파일 fallback — 남의 씬을 덮어쓴 사고의 원인.
 - `server.watch.ignored` 로 dev 저장 디렉토리 무시 — 기동 후 생긴 파일이 404.
 - 안쪽 노드에 기즈모·다중 선택·`meshOverrides` 생성 — 읽기 전용으로 유지.
+- 지도 노드의 실루엣 테두리 — 건물 지도 루트·지형 타일 같은 큰 노드는 클릭 순간 헐 생성(동기 `toCreasedNormals`)으로 화면이 멈칫한다. 지도 선택과 같은 박스로 둔다.
 - 에디터에서 `meshOverrides` 를 새로 만드는 것 — 렌더 전용 데이터.
 - 눈금을 누른 채 끌어서 그리기 — 왼쪽 드래그는 마퀴, 가운데·오른쪽 드래그는 카메라라 겹치고, 긴 레일은 시작점을 찍은 뒤 카메라를 옮겨야 끝점을 찍을 수 있다.
 - 뷰를 계층 목록의 씬 객체(카메라 기즈모)로 두기 — 선택·기즈모·id 발급까지 끌려 들어온다. 뷰 탭의 목록으로 충분하다.

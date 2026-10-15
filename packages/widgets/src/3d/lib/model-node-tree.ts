@@ -2,7 +2,7 @@ import { Mesh, type Object3D } from 'three';
 import { getMeshPath, isMeshId } from '@crane/domain/3d';
 
 /**
- * 모델 clone root 아래 GLB 노드 트리 — 계층 목록·리깅 노드 선택기가 쓴다.
+ * 모델·지도 clone root 아래 GLB 노드 트리 — 계층 목록·리깅 노드 선택기가 쓴다.
  * path 는 mesh-path.ts 형식(`[index]name/...`)이라 관절 정의에 그대로 들어간다.
  */
 export interface ModelNodeTreeItem {
@@ -13,8 +13,22 @@ export interface ModelNodeTreeItem {
   children: ModelNodeTreeItem[];
 }
 
+/**
+ * LOD 사본(지형 타일·모델 LOD 체인의 extras `lod > 0`, assets-glb 문서)인지.
+ * 사본은 clone 시점에 숨김·raycast 제외되고 선택 표시도 LOD0 만 그리므로
+ * 트리에 두면 골라도 아무것도 보이지 않는 행이 된다. 판정은 model-mesh.tsx
+ * 의 숨김 처리와 같은 조건이다.
+ */
+function isLodCopy(node: Object3D): boolean {
+  const lod = (node.userData as { lod?: unknown }).lod;
+  return typeof lod === 'number' && lod > 0;
+}
+
 export function buildModelNodeTree(root: Object3D): ModelNodeTreeItem[] {
   const build = (node: Object3D, depth: number): ModelNodeTreeItem | null => {
+    // 사본의 서브트리도 통째로 뺀다 — GLTFLoader 가 다중 프리미티브 노드의
+    // extras 를 자식 Mesh 에도 복제하지만 최상위 캐리어에서 이미 끊긴다.
+    if (isLodCopy(node)) return null;
     const path = getMeshPath(root, node);
     if (path === null || path === '') return null;
     const children: ModelNodeTreeItem[] = [];

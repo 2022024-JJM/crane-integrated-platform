@@ -56,6 +56,87 @@ describe('buildModelNodeTree', () => {
   });
 });
 
+/**
+ * 지형 타일 LOD 체인 — tile-terrain-glb.mjs 산출물처럼 타일마다 LOD0~2 형제가
+ * 있고, 다중 프리미티브 노드는 GLTFLoader 가 Group + 자식 Mesh 로 펼치며
+ * extras(lod)를 자식에도 복제한다.
+ */
+function lodFixture() {
+  const root = new Object3D();
+  const carrier = (name: string, lod: unknown) => {
+    const group = new Object3D();
+    group.name = name;
+    group.userData = { tile: [0, 0], lod, lodError: 0 };
+    const prim = new Mesh(new BoxGeometry());
+    prim.name = `${name}_1`;
+    prim.userData = { ...group.userData };
+    group.add(prim);
+    root.add(group);
+    return group;
+  };
+  carrier('terrain-tile-0-0', 0);
+  carrier('terrain-tile-0-0-lod1', 1);
+  carrier('terrain-tile-0-0-lod2', 2);
+  return root;
+}
+
+describe('buildModelNodeTree — LOD 사본 제외', () => {
+  it('lod > 0 캐리어와 그 자식은 빼고 LOD0 만 남긴다', () => {
+    const tree = buildModelNodeTree(lodFixture());
+    expect(tree.map((item) => item.name)).toEqual(['terrain-tile-0-0']);
+    expect(tree[0].children.map((c) => c.name)).toEqual(['terrain-tile-0-0_1']);
+  });
+
+  it('LOD0 의 자식 Mesh 가 extras lod 0 을 복제해 들고 있어도 남는다', () => {
+    const [tile] = buildModelNodeTree(lodFixture());
+    expect(tile.children[0]).toMatchObject({ kind: 'mesh', depth: 1 });
+  });
+
+  it('빠진 사본이 있어도 남은 노드의 경로 index 는 원래 자리 그대로다', () => {
+    const root = new Object3D();
+    const lod1 = new Object3D();
+    lod1.name = 'Crane-lod1';
+    lod1.userData = { lodGroup: 0, lod: 1 };
+    const after = new Object3D();
+    after.name = 'Hook';
+    root.add(lod1, after);
+    expect(buildModelNodeTree(root).map((item) => item.path)).toEqual([
+      '[1]Hook',
+    ]);
+  });
+
+  it('lod 가 숫자가 아니거나 0 이하면 사본으로 보지 않는다', () => {
+    const root = new Object3D();
+    for (const [name, lod] of [
+      ['string', '2'],
+      ['zero', 0],
+      ['negative', -1],
+      ['nan', Number.NaN],
+      ['null', null],
+    ] as const) {
+      const node = new Object3D();
+      node.name = name;
+      node.userData = { lod };
+      root.add(node);
+    }
+    expect(buildModelNodeTree(root).map((item) => item.name)).toEqual([
+      'string',
+      'zero',
+      'negative',
+      'nan',
+      'null',
+    ]);
+  });
+
+  it('Infinity 는 숫자이고 0 보다 크므로 사본으로 뺀다', () => {
+    const root = new Object3D();
+    const node = new Object3D();
+    node.userData = { lod: Number.POSITIVE_INFINITY };
+    root.add(node);
+    expect(buildModelNodeTree(root)).toEqual([]);
+  });
+});
+
 describe('flattenModelNodeTree', () => {
   it('펼치지 않으면 최상위만, 펼친 노드의 자식만 DFS 로 편다', () => {
     const tree = buildModelNodeTree(fixture().root);

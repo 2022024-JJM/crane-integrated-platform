@@ -283,6 +283,11 @@ export {
   getMeshPath,
   findMeshByPath,
 } from './lib/mesh-path';
+export {
+  resolveSceneNodeParent,
+  type SceneNodeParent,
+  type SceneNodeParentKind,
+} from './lib/scene-node-parent';
 export type {
   SavedCameraInfo,
   SavedLightingInfo,

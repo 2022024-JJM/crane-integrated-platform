@@ -648,22 +648,28 @@ export function SceneObjectsEditCanvas({
     [primarySelectedId, setIsTransformDragging, setSelectedObject],
   );
 
-  // 마지막 단일 클릭 시각. dblclick 윈도우 안의 두 번째 click이면 selectModel을
-  // skip하여 직후 발화할 onDoubleClick의 selectMesh가 덮어쓰이지 않게 한다.
+  // 마지막 단일 클릭 시각. dblclick 윈도우 안의 두 번째 click이면 모델·지도
+  // 선택을 skip하여 직후 발화할 onDoubleClick의 selectMesh가 덮어쓰이지 않게
+  // 한다(Ctrl 두 번 토글·기즈모 재부착도 함께 막는다). 객체 id 는 종류를
+  // 가리지 않고 전역 고유라 기록 하나를 같이 쓴다.
   const lastClickTimeRef = useRef(0);
   const lastClickIdRef = useRef<string | null>(null);
   const DOUBLE_CLICK_WINDOW_MS = 300;
 
+  const consumeLikelySecondClick = useCallback((id: string) => {
+    const now = performance.now();
+    const isLikelySecondClick =
+      lastClickIdRef.current === id &&
+      now - lastClickTimeRef.current < DOUBLE_CLICK_WINDOW_MS;
+    lastClickTimeRef.current = now;
+    lastClickIdRef.current = id;
+    return isLikelySecondClick;
+  }, []);
+
   const handleSelectModel = useCallback(
     (id: string) => {
       if (dragJustEndedRef.current) return;
-      const now = performance.now();
-      const isLikelySecondClick =
-        lastClickIdRef.current === id &&
-        now - lastClickTimeRef.current < DOUBLE_CLICK_WINDOW_MS;
-      lastClickTimeRef.current = now;
-      lastClickIdRef.current = id;
-      if (isLikelySecondClick) {
+      if (consumeLikelySecondClick(id)) {
         // 곧 onDoubleClick이 따라온다. selection을 건드리지 않는다.
         return;
       }
@@ -678,16 +684,23 @@ export function SceneObjectsEditCanvas({
         selectModel(id);
       }
     },
-    [dragJustEndedRef, selectModel, toggleModel, setSelectedObject],
+    [
+      consumeLikelySecondClick,
+      dragJustEndedRef,
+      selectModel,
+      toggleModel,
+      setSelectedObject,
+    ],
   );
 
-  const handleDoubleSelectModel = useCallback(
+  // 모델·잠금 해제된 지도 공용. 잠긴 객체는 onDoubleSelect 를 받지 않는다.
+  const handleDoubleSelectNode = useCallback(
     (id: string, event: ThreeEvent<MouseEvent>) => {
       // R3F의 onDoubleClick은 DOM dblclick과 매핑되어 onClick의 detail 카운트
       // 보다 안정적이다. 더블클릭 시 클릭된 자식 mesh path를 계산해 drill-in.
       //
-      // 노드 선택은 읽기 전용(바운딩 박스만)이라 기즈모 대상을 세우지 않고,
-      // Ctrl 토글로 모델 멀티 선택에 섞이지도 않는다 — 항상 단일 선택.
+      // 노드 선택은 읽기 전용(선택 표시만)이라 기즈모 대상을 세우지 않고,
+      // Ctrl 토글로 멀티 선택에 섞이지도 않는다 — 항상 단일 선택.
       // event.eventObject: 핸들러가 붙은 primitive(=clone root)
       // event.object: 클릭된 가장 깊은 Mesh
       const cloneRoot = event.eventObject;
@@ -750,11 +763,12 @@ export function SceneObjectsEditCanvas({
   );
 
   // 지도 선택 — 잠금 해제된 지도는 Ctrl 토글로 다중 선택에 참여한다
-  // (마퀴만 제외, selectMap 주석 참고). 더블클릭 drill-in은 두지 않는다 —
-  // 지형 메시는 수만 개라 자식 단위 편집이 의미가 없다.
+  // (마퀴만 제외, selectMap 주석 참고). 더블클릭 drill-in 은 모델과 같다 —
+  // 건물 지도처럼 노드가 나뉜 GLB 를 안쪽 노드 단위로 확인한다.
   const handleSelectMap = useCallback(
     (id: string) => {
       if (dragJustEndedRef.current) return;
+      if (consumeLikelySecondClick(id)) return;
       const isCtrl =
         lastPointerEventRef.current?.ctrlKey ||
         lastPointerEventRef.current?.metaKey;
@@ -765,7 +779,13 @@ export function SceneObjectsEditCanvas({
         selectMap(id);
       }
     },
-    [dragJustEndedRef, selectMap, toggleMap, setSelectedObject],
+    [
+      consumeLikelySecondClick,
+      dragJustEndedRef,
+      selectMap,
+      toggleMap,
+      setSelectedObject,
+    ],
   );
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
@@ -1026,7 +1046,7 @@ export function SceneObjectsEditCanvas({
       (transformMode !== 'translate' &&
         sceneObjectIds.floodlights.has(primarySelectedId)));
 
-  // F 포커스 — 모델·텍스트·지도·드릴인 메시 모두 대상. 조회 순서는
+  // F 포커스 — 모델·텍스트·지도·안쪽 노드 모두 대상. 조회 순서는
   // use-scene-transform과 같다(캔버스 로컬 registry → 도메인 전역 registry;
   // 메시는 전역에만 등록된다).
   const focusSelected = useCallback(() => {
@@ -1038,8 +1058,13 @@ export function SceneObjectsEditCanvas({
       let obj: Object3D | undefined;
 
       if (meshIdInfo) {
-        if (!sceneObjectIds.models.has(meshIdInfo.modelId)) continue;
-        // 메시가 아직 등록 전이면 부모 모델로 폴백한다.
+        if (
+          !sceneObjectIds.models.has(meshIdInfo.modelId) &&
+          !sceneObjectIds.maps.has(meshIdInfo.modelId)
+        ) {
+          continue;
+        }
+        // 노드가 아직 등록 전이면 부모 모델·지도로 폴백한다.
         obj =
           sharedModelObjectRegistry.get(id) ??
           modelObjectRegistryRef.current.get(meshIdInfo.modelId);
@@ -1353,6 +1378,11 @@ export function SceneObjectsEditCanvas({
                 onSelect={
                   m.locked === false ? handleSelectMap : handleClearSelection
                 }
+                // 안쪽 노드 drill-in — 모델과 같이 잠금 해제된 것만. 잠긴
+                // 지도의 노드는 계층 목록에서 고른다.
+                onDoubleSelect={
+                  m.locked === false ? handleDoubleSelectNode : undefined
+                }
                 onObjectReady={handleModelObjectReady}
               />
             </SceneObjectBoundary>
@@ -1382,9 +1412,7 @@ export function SceneObjectsEditCanvas({
               // 규칙. 핸들러만 갈아끼우고 컴포넌트는 유지해 GLB 리마운트를
               // 피한다(위 지도 주석 참고).
               onSelect={model.locked ? handleClearSelection : handleSelectModel}
-              onDoubleSelect={
-                model.locked ? undefined : handleDoubleSelectModel
-              }
+              onDoubleSelect={model.locked ? undefined : handleDoubleSelectNode}
               onObjectReady={handleModelObjectReady}
               labelReadings={labelReadingsById.get(model.id)}
               readLabelValue={readTagLiveValue}
