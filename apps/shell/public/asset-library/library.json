@@ -170,12 +170,12 @@
           "storage": "public",
           "path": "/asset-library/thumbnails/okpo-goliath.png"
         },
-        "updatedAt": "2026-10-14T23:36:28.939Z",
+        "updatedAt": "2026-10-15T02:36:05.807Z",
         "view": {
           "direction": [
-            0.6726029224488891,
-            0.4323875930028569,
-            -0.6005383236150791
+            0.672602922448889,
+            0.43238759300285684,
+            -0.600538323615079
           ],
           "distance": 3.824335951936498,
           "targetOffset": [
@@ -285,6 +285,12 @@
           "version": 3,
           "from": "2",
           "to": "3"
+        },
+        {
+          "id": "472d5319-06cf-48e6-886e-cd3c5224d307",
+          "at": "2026-10-15T02:36:05.807Z",
+          "actor": "crane.philly",
+          "action": "thumbnail"
         }
       ]
     },
