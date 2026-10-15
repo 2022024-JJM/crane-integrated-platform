@@ -3,6 +3,7 @@
 // 사용법:
 //   pnpm assets:stats            # 전체 다시 측정
 //   pnpm assets:stats --check    # 표가 현재 파일과 맞는지만 확인(쓰지 않음)
+//   pnpm assets:stats --changed  # 해시가 바뀌었거나 없는 파일만 다시 측정
 //
 // 무엇을 하나:
 //   apps/shell/public 의 models·maps·asset-library/files 아래 GLB, scenes 아래
@@ -14,6 +15,10 @@
 //   hash 는 자산 해시 매니페스트(vite-plugin-asset-hash.ts)와 같은 값
 //   (sha256 앞 8자)이다. GLB 를 교체하고 이 스크립트를 다시 돌리지 않으면
 //   --check 가 그 파일을 "오래됨" 으로 보고한다.
+//
+//   자산 등록 화면의 dev 저장 미들웨어(vite.config.ts devAssetLibraryPlugin)가
+//   버전 파일을 쓰거나 지운 뒤 --changed 로 이 스크립트를 돌린다. --changed 는
+//   해시가 같은 항목을 그대로 두므로 측정 기준을 고쳤을 때는 옵션 없이 돌린다.
 //
 // 측정 기준은 scripts/scene-perf-report.mjs 의 measureGlb 와 같다 — 드로우콜·
 // 삼각형은 노드 사용 기준이고 LOD 사본(extras lod>0)은 뺀다. 브라우저 쪽
@@ -54,6 +59,7 @@ const HASH_LENGTH = 8;
 const MIPMAP_OVERHEAD = 1.33;
 
 const checkOnly = process.argv.includes('--check');
+const changedOnly = process.argv.includes('--changed');
 
 function collectFiles(dir) {
   if (!existsSync(dir)) return [];
@@ -68,6 +74,15 @@ function collectFiles(dir) {
 
 function toPublicPath(absolute) {
   return `/${relative(PUBLIC_DIR, absolute).split(sep).join('/')}`;
+}
+
+/** 지금 표. 없거나 깨졌으면 빈 표다 — --changed 는 그때 전부 다시 잰다. */
+function readTable() {
+  try {
+    return JSON.parse(readFileSync(OUTPUT_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
 }
 
 function hashFile(absolute) {
@@ -297,9 +312,7 @@ for (const source of SOURCES) {
 targets.sort((a, b) => a.absolute.localeCompare(b.absolute));
 
 if (checkOnly) {
-  const existing = existsSync(OUTPUT_PATH)
-    ? JSON.parse(readFileSync(OUTPUT_PATH, 'utf8'))
-    : {};
+  const existing = readTable();
   const stale = [];
   for (const { absolute } of targets) {
     const key = toPublicPath(absolute);
@@ -317,11 +330,20 @@ if (checkOnly) {
   process.exit(1);
 }
 
+const previous = changedOnly ? readTable() : {};
 const table = {};
 let failed = 0;
+let reused = 0;
 for (const { absolute, extension } of targets) {
   const key = toPublicPath(absolute);
   const entry = { hash: hashFile(absolute), bytes: statSync(absolute).size };
+  // 해시가 같으면 지난 측정을 그대로 쓴다. 측정에 실패했던 GLB 는 다시 잰다.
+  const kept = previous[key];
+  if (kept?.hash === entry.hash && (extension !== 'glb' || kept.stats)) {
+    table[key] = kept;
+    reused += 1;
+    continue;
+  }
   if (extension === 'glb') {
     try {
       entry.stats = await measureGlb(absolute);
@@ -336,7 +358,9 @@ for (const { absolute, extension } of targets) {
 
 mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
 writeFileSync(OUTPUT_PATH, `${JSON.stringify(table, null, 2)}\n`, 'utf8');
+const measured = Object.keys(table).length - reused;
 console.log(
-  `${Object.keys(table).length}개 파일을 측정해 ${relative(repoRoot, OUTPUT_PATH)} 에 썼습니다` +
+  `${measured}개 파일을 측정해 ${relative(repoRoot, OUTPUT_PATH)} 에 썼습니다` +
+    (reused > 0 ? ` (그대로 둔 항목 ${reused}개)` : '') +
     (failed > 0 ? ` (측정 실패 ${failed}개).` : '.'),
 );

@@ -35,7 +35,7 @@
 | 페이지 슬라이스·라우트·메뉴 | `apps/hanwha-ocean/src/pages/asset-library/`, `apps/shell/src/app.tsx`, `packages/widgets/src/layout/config/navigation.ts`(`getAssetsGroup`) |
 | dev 저장 미들웨어 | `apps/shell/vite.config.ts`(`devAssetLibraryPlugin`) |
 | 배포 데이터 | `apps/shell/public/asset-library/{library.json,stats.json,thumbnails/,files/}` |
-| 통계 표 생성 `pnpm assets:stats [--check]` | `scripts/asset-library-stats.mjs` |
+| 통계 표 생성 `pnpm assets:stats [--check\|--changed]` | `scripts/asset-library-stats.mjs`, 등록 뒤 자동 갱신 `apps/shell/vite.config.ts`(`createAssetStatsRefresher`) |
 | 번역 | `apps/shell/src/locales/{ko,en,la}/asset-library.json` |
 
 ## 동작
@@ -132,7 +132,7 @@
 
 ### 통계
 
-- 배포 파일의 크기·삼각형 수 등은 `pnpm assets:stats` 가 `stats.json` 에 미리 뽑아 둔다. 목록은 이 표로 표시·정렬하므로 GLB 를 열지 않는다. GLB 가 아닌 파일(배경 EXR·도면)은 크기와 해시만 적는다.
+- 배포 파일의 크기·삼각형 수 등은 `stats.json` 에 미리 뽑아 둔다. 표를 쓰는 곳은 `scripts/asset-library-stats.mjs` 하나다 — dev 저장 미들웨어가 버전 파일을 쓰거나 지운 뒤 `--changed`(해시가 바뀌었거나 없는 파일만 측정)로 뒤에서 돌리고, 사람은 `pnpm assets:stats` 로 돌린다. 목록은 이 표로 표시·정렬하므로 GLB 를 열지 않는다. GLB 가 아닌 파일(배경 EXR·도면)은 크기와 해시만 적는다.
 - 표의 항목은 **지금 배포된 파일과 해시가 같을 때만** 쓴다(자산 해시 매니페스트와 비교) — 낡은 항목은 비운다. `pnpm assets:stats --check` 가 낡은 항목을 보고한다.
 - 이 화면에서 올린 파일은 뷰어가 처음 열 때 재서 버전 레코드에 채운다.
 - 스크립트와 브라우저 측정은 같은 기준이다: LOD 사본(`lod > 0`)은 렌더 기준에서 빼고, 메쉬는 프리미티브 단위로 센다. 노드 수만 기준이 다르다(glTF 노드 vs three 객체) — 그래서 상세 화면은 저장된 값이 있으면 그것을 쓴다.
@@ -262,7 +262,7 @@
 - 배치 속성 항목을 추가하면 `AssetPlacement`·`sanitizeAssetPlacement`·`isSamePlacement`(`asset-versions.ts`)·팔레트 생성(`scene-palette.ts`)·배치 속성 탭·번역을 함께 고친다. 기본 동작인 값은 저장하지 않는다.
 - 경로·파일명 규칙은 `asset-library-paths.ts` 한 곳이다. vite 미들웨어가 이 파일을 직접 import 하므로 의존성 0 을 유지한다.
 - `public/asset-library` 는 `vite-plugin-asset-hash.ts` 의 `HASHED_DIRS`·`DEV_WRITTEN_DIRS` 에 들어 있다.
-- 배포 경로에 GLB·배경 EXR 이 늘거나 바뀌면 `pnpm assets:stats` 를 다시 돌려 `stats.json` 을 함께 커밋한다.
+- 등록 화면에서 올리거나 지운 파일은 미들웨어가 `stats.json` 을 맞춰 둔다 — 함께 커밋한다. 화면을 거치지 않고 배포 경로에 GLB·배경 EXR 을 넣거나 바꾸면 `pnpm assets:stats` 를 돌린다. 측정 기준을 고쳤으면 `--changed` 없이 전부 다시 잰다(해시가 같은 항목을 그대로 두기 때문).
 - 상태 색은 수명주기의 위치만 나타낸다(`ASSET_STATUS_TONE`). 상태는 점과 글자를 함께 쓴다.
 - 손이 가야 하는 이유를 추가하면 `ASSET_ATTENTION_KINDS`(급한 순)·`getAssetAttention`·`resolveAttentionTarget`·아이콘 표(`asset-attention.tsx`)·번역을 함께 고친다.
 - 목록의 이동(미리보기 이전/다음·범위 선택·상세 이전/다음)은 전부 화면에 놓인 순서 하나를 따른다. 카드 보기의 순서는 종류별 묶음을 이어 붙인 것이다.

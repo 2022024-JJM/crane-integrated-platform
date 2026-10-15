@@ -248,6 +248,45 @@ function isOptimizeKind(value: string | null): value is OptimizeKind {
   return value === 'model' || value === 'map';
 }
 
+/**
+ * 배포 파일 통계 표(stats.json)를 지금 파일에 맞춘다. 표를 쓰는 곳은
+ * `scripts/asset-library-stats.mjs` 하나로 두고 그 스크립트를 `--changed`(해시가
+ * 바뀐 파일만 측정)로 돌린다. 응답을 늦추지 않게 뒤에서 돌리고, 도는 중에 다시
+ * 불리면 끝난 뒤 한 번 더 돈다 — 두 실행이 표를 겹쳐 쓰지 않게.
+ */
+function createAssetStatsRefresher(repoRoot: string): () => void {
+  let running = false;
+  let pending = false;
+  const run = async () => {
+    running = true;
+    try {
+      await execFileAsync(
+        process.execPath,
+        [path.join(repoRoot, 'scripts', 'asset-library-stats.mjs'), '--changed'],
+        { maxBuffer: 16 * 1024 * 1024 },
+      );
+    } catch (error) {
+      console.warn(
+        'Failed to refresh asset stats table. Run `pnpm assets:stats`.',
+        error,
+      );
+    } finally {
+      running = false;
+      if (pending) {
+        pending = false;
+        void run();
+      }
+    }
+  };
+  return () => {
+    if (running) {
+      pending = true;
+      return;
+    }
+    void run();
+  };
+}
+
 /** GitHub 이 받지 않는 크기 — 이보다 큰 원본은 커밋하지 않는다(.gitignore). */
 const GIT_FILE_LIMIT_BYTES = 100 * 1024 * 1024;
 
@@ -415,7 +454,8 @@ function isAssetLibraryShaped(value: unknown): boolean {
  *   (`/models/x.glb`)에 있는 그 자산의 버전 파일이다 — 정해진 디렉터리·
  *   확장자만 받는다(isRemovableLegacyAssetPath).
  *
- * 생성물은 커밋해서 배포한다. 운영에는 이 미들웨어가 없어 브라우저 저장소로
+ * 버전 파일을 쓰거나 지우면 통계 표(stats.json)도 뒤에서 맞춘다
+ * (createAssetStatsRefresher). 생성물은 커밋해서 배포한다. 운영에는 이 미들웨어가 없어 브라우저 저장소로
  * 떨어진다(asset-library-storage.ts).
  */
 function devAssetLibraryPlugin(): Plugin {
@@ -429,6 +469,7 @@ function devAssetLibraryPlugin(): Plugin {
       );
       // 저장소 루트 — 최적화 스크립트와 원본 보관 위치의 기준.
       const repoRoot = path.resolve(server.config.root, '..', '..');
+      const refreshAssetStats = createAssetStatsRefresher(repoRoot);
 
       server.middlewares.use(
         DEV_ASSET_LIBRARY_API_PATH,
@@ -570,6 +611,7 @@ function devAssetLibraryPlugin(): Plugin {
                 }
                 throw error;
               }
+              if (parsed.kind === 'version') refreshAssetStats();
               jsonResponse(res, 200, {
                 key,
                 bytes: payload.length,
@@ -611,6 +653,7 @@ function devAssetLibraryPlugin(): Plugin {
                   ),
                   { recursive: true, force: true },
                 );
+                refreshAssetStats();
                 jsonResponse(res, 200, { ok: true });
                 return;
               }
@@ -637,6 +680,7 @@ function devAssetLibraryPlugin(): Plugin {
                   { force: true },
                 );
               }
+              refreshAssetStats();
               jsonResponse(res, 200, { ok: true });
               return;
             }

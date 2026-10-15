@@ -124,7 +124,7 @@ GLB 는 압축본만 배포되고, 압축 전 원본은 `assets-src/` 에 보관
 - 자산을 새 버전으로 교체할 때 `assets-src/models/<파일>.nolod`·`.orig` 도 함께 갱신·삭제한다.
 - LOD 노드 숨김은 최상위 캐리어만 — 자식 Mesh 의 복제된 extras 로 끄지 않는다.
 - three 를 업그레이드하면 `apps/shell/public/basis/r<REVISION>/` 을 새 REVISION 으로 재복사한다.
-- 배포 경로에 GLB 가 늘거나 바뀌면 `pnpm assets:stats` 로 자산 라이브러리의 통계 표를 다시 뽑아 함께 커밋한다(`docs/agents/asset-library.md`).
+- 등록 화면을 거치지 않고 배포 경로에 GLB 를 넣거나 바꾸면 `pnpm assets:stats` 로 자산 라이브러리의 통계 표를 다시 뽑아 함께 커밋한다. 화면에서 올린 것은 dev 미들웨어가 표를 맞춘다(`docs/agents/asset-library.md`).
 - GLB 는 자산 라이브러리에서 지운다. 씬이나 화면 코드가 쓰는 자산은 지워지지 않는다 — 파일을 손으로 지우지 않는다.
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 출력에 "← 얹힌 표시" 가 없어야 한다.
 - 새 지도는 자산의 배치 속성에서 역할을 정한다 — 바닥은 드롭 바닥·(체크 시) 카메라 기준, 주변 지형은 Lambert·그림자 제외·바다 반사 제외 규칙을 받는다. 놓은 뒤에는 씬의 `role` 이 그 값이다.

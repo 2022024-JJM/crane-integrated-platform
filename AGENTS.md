@@ -25,7 +25,7 @@ pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` �
 - `pnpm new-site <slug>` — 새 사이트 plugin scaffold
 - `node scripts/optimize-{glb,map}.mjs --single <입력> <출력>`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 최적화는 자산 등록 화면이 돌린다. 절차는 `docs/agents/assets-glb.md`
 - `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채운다. `docs/agents/asset-library.md`
-- `pnpm assets:stats [--check]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. `docs/agents/asset-library.md`
+- `pnpm assets:stats [--check|--changed]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. 등록 화면은 저장 뒤 `--changed` 로 자동 갱신한다. `docs/agents/asset-library.md`
 
 ### 검증 커맨드의 실제 커버리지 (주의)
 
@@ -299,7 +299,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 배포 파일을 같은 경로에 덮어쓰지 않는다. 파일이 바뀌면 자산 라이브러리의 새 버전이고, 씬은 에디터에서 갱신해야 그 버전을 쓴다 (asset-library, assets-glb).
 - GLB 경로를 코드에 문자열로 적지 않는다. 코드가 직접 로드하는 모델은 `CODE_ASSETS` 표에 자산 id·버전·경로로 올리고 거기서 꺼내 쓴다 (asset-library).
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 에 "얹힌 표시" 가 없는지 본다. 바닥과 같은 높이로 겹친 표시는 로그 깊이로도 갈리지 않아 깜빡인다 (assets-glb).
-- 배포 경로에 GLB·배경 EXR 이 늘거나 바뀌면 `pnpm assets:stats` 를 돌린다. 자산 id 는 바꾸지 않는다 — 씬과 코드가 그 id 를 가리킨다 (asset-library).
+- 등록 화면을 거치지 않고 배포 경로에 GLB·배경 EXR 을 넣거나 바꾸면 `pnpm assets:stats` 를 돌린다(화면에서 올린 것은 dev 미들웨어가 맞춘다). 자산 id 는 바꾸지 않는다 — 씬과 코드가 그 id 를 가리킨다 (asset-library).
 - GLB·씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 `pnpm perf:scene` 등으로 직접 확인한다. 자동 성능 게이트는 없다 (assets-glb).
 
 ### 다시 시도하지 않는 것

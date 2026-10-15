@@ -35,8 +35,8 @@ node scripts/optimize-map.mjs --single <입력.glb> <출력.glb>   # 지도
   고친다.
 - 옛 파일로 돌아가려면 라이브러리에서 그 버전을 현재로 지정하고 씬을 다시
   갱신한다. 옛 버전의 파일은 지우지 않는다.
-- 배포 경로에 GLB 가 늘거나 바뀌었으면 `pnpm assets:stats` 로 통계 표를 다시 뽑아
-  함께 커밋한다.
+- 등록 화면을 거치지 않고 배포 경로에 GLB 를 넣거나 바꿨으면 `pnpm assets:stats` 로
+  통계 표를 다시 뽑아 함께 커밋한다(화면에서 올린 것은 dev 미들웨어가 맞춘다).
 
 절차와 규칙의 현재 상태는 `docs/agents/asset-library.md`·`docs/agents/assets-glb.md` 다.
 
