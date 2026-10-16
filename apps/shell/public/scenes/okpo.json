@@ -161,10 +161,10 @@
     {
       "id": "54aba53a-2c2b-47fd-905b-75a5bdca01ee",
       "equipName": "TC",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -186,10 +186,10 @@
     {
       "id": "181492b6-122e-4afe-a680-809928707c06",
       "equipName": "TTC",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -262,10 +262,10 @@
     {
       "id": "0f7d5737-9896-41f6-9fc9-89212e132630",
       "equipName": "TTC-7",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -287,10 +287,10 @@
     {
       "id": "5e97b639-9840-48da-b1a6-90920cad44e5",
       "equipName": "TTC-06",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -312,10 +312,10 @@
     {
       "id": "75041f21-af60-461d-828a-2dcefd671874",
       "equipName": "TTC-16",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -337,10 +337,10 @@
     {
       "id": "d53386df-ff1c-4550-8736-c3c20d42d9d9",
       "equipName": "TTC-17",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -387,10 +387,10 @@
     {
       "id": "50f57d5c-c177-47f2-a1d4-649e0b3ca397",
       "equipName": "TTC-13",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -437,10 +437,10 @@
     {
       "id": "6f2a2b72-e5ba-4383-9dd1-3283895ace35",
       "equipName": "TTC-09",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -462,10 +462,10 @@
     {
       "id": "2f7cd750-c352-419c-934e-183b5224cd97",
       "equipName": "TTC-14",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -487,10 +487,10 @@
     {
       "id": "536b842e-7905-4704-a983-c55fc649b77f",
       "equipName": "TTC-10",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -512,10 +512,10 @@
     {
       "id": "cc6d4cfe-c29b-4cd9-8c99-ecaee3309fa6",
       "equipName": "TTC-15",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -562,10 +562,10 @@
     {
       "id": "d2e92e27-e5f7-4b5d-a1d5-06ceac82774c",
       "equipName": "TC-54",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -587,10 +587,10 @@
     {
       "id": "3fc01bfc-7b61-4a45-9a49-c6039bb30882",
       "equipName": "TC-35",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -612,10 +612,10 @@
     {
       "id": "84998952-60c5-43c3-980b-a64a1e39a512",
       "equipName": "TC-77",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -637,10 +637,10 @@
     {
       "id": "67cd54a4-0879-4f9a-95eb-1106c3fd2add",
       "equipName": "TC-48",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -740,10 +740,10 @@
     {
       "id": "c58d8d19-ecd4-44b6-afc3-66f342f756b9",
       "equipName": "TC-39",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -765,10 +765,10 @@
     {
       "id": "4158fb43-24ff-42c3-a6ec-8cea66907c23",
       "equipName": "TC-64",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -790,10 +790,10 @@
     {
       "id": "8f15a6ad-4b33-48c1-a9c0-b1554484fa9f",
       "equipName": "TC-96",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -815,10 +815,10 @@
     {
       "id": "d96086c3-4f7b-4678-88de-0411b37bdee8",
       "equipName": "TC-94",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -840,10 +840,10 @@
     {
       "id": "36d94b6e-1137-458c-8a97-81a8a6e6c7c0",
       "equipName": "TC-93",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -941,10 +941,10 @@
     {
       "id": "cc8b7687-3c60-445a-9360-8f190473b4b1",
       "equipName": "TTC-24",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -966,10 +966,10 @@
     {
       "id": "ac814c7f-bf77-4c5c-a550-1587809a86b5",
       "equipName": "TTC-23",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -991,10 +991,10 @@
     {
       "id": "a38bc42f-f3ef-4222-922a-5b1cf37ef2c5",
       "equipName": "TC-70",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1016,10 +1016,10 @@
     {
       "id": "34db2131-205b-40df-88a4-47ca8514719b",
       "equipName": "TC-75",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1041,10 +1041,10 @@
     {
       "id": "8b98e9e5-10ce-4765-8fec-c7f3e069179a",
       "equipName": "TC-74",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1066,10 +1066,10 @@
     {
       "id": "64a7aa63-f1dc-496c-b71e-dfc9620bf763",
       "equipName": "TC-80",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1091,10 +1091,10 @@
     {
       "id": "b7b150e9-8c17-4fdc-acc6-67dbc1d92a4e",
       "equipName": "TC-83",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1116,10 +1116,10 @@
     {
       "id": "5a90fb3b-c638-4434-b1a4-c7de003aae59",
       "equipName": "TC-73",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1141,10 +1141,10 @@
     {
       "id": "5945ec78-aeda-4c67-94f5-3f6d0aedd324",
       "equipName": "TC-72",
-      "path": "/asset-library/files/okpo-tc/v2/TC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1166,10 +1166,10 @@
     {
       "id": "4f872382-fbda-4ae3-81d5-7aa0c5d66e23",
       "equipName": "TTC-22",
-      "path": "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
-        "version": 2
+        "version": 3
       },
       "opacity": 1,
       "position": [
@@ -1217,14 +1217,14 @@
   "texts": [],
   "camera": {
     "position": [
-      375.7008896365628,
-      294.7365253194258,
-      204.9530826113506
+      340.55678482423167,
+      241.43448817138403,
+      176.7059936204084
     ],
     "target": [
-      136.50299451279264,
-      111.19460080620055,
-      -2.508578852513182
+      203.08471320261026,
+      53.0871133400997,
+      -15.050049250199274
     ]
   },
   "rigs": [
@@ -1664,14 +1664,14 @@
   "cameraByRegion": {
     "dock-1": {
       "position": [
-        375.7008896365628,
-        294.7365253194258,
-        204.9530826113506
+        340.55678482423167,
+        241.43448817138403,
+        176.7059936204084
       ],
       "target": [
-        136.50299451279264,
-        111.19460080620055,
-        -2.508578852513182
+        203.08471320261026,
+        53.0871133400997,
+        -15.050049250199274
       ]
     },
     "dock-2": {

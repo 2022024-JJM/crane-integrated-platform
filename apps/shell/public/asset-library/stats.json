@@ -293,6 +293,27 @@
       "animations": 0
     }
   },
+  "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb": {
+    "hash": "0ad2d3ca",
+    "bytes": 2432112,
+    "stats": {
+      "triangles": 68926,
+      "vertices": 119564,
+      "meshes": 6,
+      "materials": 5,
+      "textures": 8,
+      "drawCalls": 6,
+      "nodes": 4,
+      "textureMemoryBytes": 44627395,
+      "size": [
+        72.607,
+        52.994,
+        9.91
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/okpo-ttc/v2/TTC-Crane_Okpo.glb": {
     "hash": "dae8b61a",
     "bytes": 1996656,
@@ -304,6 +325,27 @@
       "textures": 7,
       "drawCalls": 5,
       "nodes": 3,
+      "textureMemoryBytes": 39048970,
+      "size": [
+        137.596,
+        99.744,
+        16.635
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb": {
+    "hash": "bb9ab18c",
+    "bytes": 2037016,
+    "stats": {
+      "triangles": 72716,
+      "vertices": 98063,
+      "meshes": 5,
+      "materials": 4,
+      "textures": 7,
+      "drawCalls": 5,
+      "nodes": 4,
       "textureMemoryBytes": 39048970,
       "size": [
         137.596,
