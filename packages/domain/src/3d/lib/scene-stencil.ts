@@ -17,15 +17,19 @@ import type { Material } from 'three';
  *   스텐실 테스트는 프래그먼트 셰이더 앞(early test)에서 끝나므로 가려진
  *   픽셀은 바다 셰이더(노멀맵 4회 + 미러 샘플) 비용이 0 이다.
  *
- * - PLAN_HIDDEN_STENCIL_BIT: 평면도 숨은선(plan-hidden-line.ts)의 "이 모델이
- *   보이는 픽셀" 임시 표식. 모델마다 찍고 빗금 패스가 읽은 뒤 바로 지운다.
+ * - PLAN_HIDDEN_STENCIL_BIT·PLAN_HIDDEN_REGION_STENCIL_BIT: 평면도 숨은선
+ *   (plan-hidden-line.ts)의 임시 표식 — "이 모델이 보이는 픽셀" 과 "이 모델이
+ *   가려진 픽셀". 모델마다 찍고 채움·윤곽 패스가 읽은 뒤 바로 지운다.
  *
  * 스텐실 버퍼가 없는 캔버스(mro2·philly 존 뷰어)에서는 GL 규격상 테스트가
- * 항상 통과하고 쓰기는 무시되므로 같은 머티리얼을 그대로 써도 무해하다.
+ * 항상 통과하고 쓰기는 무시되므로 같은 머티리얼을 그대로 써도 무해하다 —
+ * 숨은선 채움 쿼드만 예외다(테스트가 통과하면 화면 전체를 칠한다. 숨은선은
+ * 스텐실 캔버스에서만 마운트한다).
  */
 export const SILHOUETTE_STENCIL_BIT = 0x01;
 export const SCENE_OPAQUE_STENCIL_BIT = 0x02;
 export const PLAN_HIDDEN_STENCIL_BIT = 0x04;
+export const PLAN_HIDDEN_REGION_STENCIL_BIT = 0x08;
 
 /**
  * 불투명 씬 메시 머티리얼에 "그려졌다" 비트 쓰기를 켠다. 테스트는 Always 라

@@ -415,6 +415,7 @@ export {
   type StatusOutlineKind,
 } from './lib/status-outline-style';
 export {
+  PLAN_HIDDEN_REGION_STENCIL_BIT,
   PLAN_HIDDEN_STENCIL_BIT,
   SCENE_OPAQUE_STENCIL_BIT,
   SILHOUETTE_STENCIL_BIT,

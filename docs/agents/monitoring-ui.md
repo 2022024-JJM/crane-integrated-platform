@@ -125,7 +125,7 @@
 위에서 겹쳐 보이는 장비 쌍에서 가려지는 쪽을 읽게 하는 표시. 실제 충돌(`docs/agents/3d-collision.md`)과 별개의 표시용 계산이고 경고색을 쓰지 않는다 — "겹쳐 보이는데 빨갛지 않다" 가 안전이어야 한다.
 
 - 판정 `lib/plan-overlap.ts`(domain, `resolvePlanOverlaps`): 모델별 메쉬 월드 AABB 의 평면 겹침 → 위/아래(수직 여유가 가장 작은 메쉬 쌍 기준, 여유 값은 화면에 쓰지 않는다). 스캔은 `lib/plan-overlap-scan.ts` 의 `PlanOverlapScanner` 가 `modelObjectRegistry` 루트에서 `collectCollidableMeshes` 로 모아 `PLAN_OVERLAP_SCAN_INTERVAL_MS` 마다 돌고(`ScenePlanOverlapDetector`, Canvas 안·RigDriver 뒤·평면도 룩일 때만), 숨은선 대상(쌍·위아래)이 바뀐 결과만 `use-plan-overlap-store.ts` 에 쓴다(`hasPlanOverlapChanged`) — 장비가 겹친 채 움직여도 스토어를 다시 쓰지 않는다. 원근으로 돌아오면 비운다.
-- **숨은선**: 가려지는 쪽 모델에 어두운 점무늬(`docs/agents/rendering-perf.md` "평면도 룩" 의 숨은선). 픽셀 단위 깊이라 AABB 가 겹침을 과하게 잡아도 정확하다.
+- **숨은선**: 가려지는 쪽 모델에 옅은 회청 채움과 가는 윤곽(`docs/agents/rendering-perf.md` "평면도 룩" 의 숨은선). 픽셀 단위 깊이라 AABB 가 겹침을 과하게 잡아도 정확하다.
 
 ### 워밍업 표시
 

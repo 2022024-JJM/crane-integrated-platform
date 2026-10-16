@@ -95,7 +95,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **윤곽선** — 모든 장비를 아주 가는 반투명 실루엣(`lib/status-outline-style.ts` 의 `PLAN_VIEW_OUTLINE_PX`·`PLAN_VIEW_OUTLINE_OPACITY`)으로 두른다(`GltfModel.planOutline`, `docs/agents/3d-collision.md` "평면도 윤곽선"). 지도에 묻히는 가는 부재를 살짝 세우는 용도라 두껍게 하지 않는다. 부풀림 채움(`lib/plan-fill.ts`·`ObjectPlanFill`)은 구현만 남아 있고 쓰지 않는다 — 아래 "하지 않기로 한 것".
 - **라벨 앵커** — 평면도에서 라벨은 바닥 메쉬 발자국 중심(선회 축)에 서고 짧은 지시선을 내린다(`lib/model-label-anchor.ts`, `GltfModel.planLabel`, `ModelLabel.leader`). 평면도 라벨은 거리 축소(`label-scale.ts`)를 타지 않고 글자도 한 단계 크다 — 직교에선 카메라 높이가 곧 거리라 줄이면 읽히지 않는다. 지브 bbox 중심에 두면 선회해도 허공에 남아 어느 장비 것인지 흐려진다.
 - **축척 바·북쪽 위로** — 관제 화면의 평면도 보조 표시. `docs/agents/monitoring-ui.md` "방위 표시·축척·북쪽 위로".
-- **숨은선** — 다른 장비 아래 가려진 장비를 제도 관례대로 어두운 점무늬로 위 장비를 뚫고 보인다(`lib/plan-hidden-line.ts`, `ObjectHiddenLine`, `GltfModel.planHiddenIndex`). 메쉬마다 같은 geometry 의 오버레이 세 패스(가시 표식 → GreaterDepth 빗금 → 표식 지우기)를 자식으로 붙이고 스텐실 `PLAN_HIDDEN_STENCIL_BIT` 로 자기 가림을 뺀다. 세 패스는 모델마다 연속이어야 해서 `planHiddenLineRenderOrder(index, pass)` 로 모델 인덱스마다 떨어뜨린다 — 인덱스는 겹침 스토어(`use-plan-overlap-store.ts`)의 가려지는 모델 순서다. 대상은 탑뷰에서 다른 장비와 평면 겹침이 있는 아래쪽 모델뿐이라 비용은 그 모델의 삼각형 ×3 이다. 세 패스는 깊이를 three 메쉬 셰이더와 같은 `logdepthbuf` 청크로 쓴다 — 캔버스가 로그 깊이 버퍼라 다른 경로로 쓰면 같은 면 비교가 어긋난다. 채움·숨은선 모두 `PLAN_OVERLAY_MAX_TRIANGLES`(`lib/plan-overlay-budget.ts`)를 넘는 큰 몸체 메쉬는 뺀다. 스텐실 캔버스 전용.
+- **숨은선** — 다른 장비 아래 가려진 장비를 위 장비를 뚫고 옅은 회청 단색으로 깔고 가려진 실루엣에 가는 윤곽을 두른다(Revit 언더레이식 반톤, `lib/plan-hidden-line.ts` 의 `PLAN_HIDDEN_LINE_*`·`PLAN_HIDDEN_OUTLINE_*`, `ObjectHiddenLine`, `GltfModel.planHiddenIndex`). 모델마다 다섯 패스를 연속으로 그린다 — 보임 표식(`PLAN_HIDDEN_STENCIL_BIT`) → GreaterDepth 가려짐 표식(`PLAN_HIDDEN_REGION_STENCIL_BIT`) → 가려짐 픽셀만 칠하는 화면 쿼드 하나(부재가 몇 겹이든 한 층) → 두 비트가 모두 없는 픽셀에 GreaterDepth 헐 윤곽(실루엣 윤곽과 같은 스무딩 헐 캐시, 두께 유니폼은 `model/use-outline-offset.ts`) → 비트 지우기. 순서는 `planHiddenLineRenderOrder(index, pass)` 로 모델 인덱스마다 떨어뜨린다 — 인덱스는 겹침 스토어(`use-plan-overlap-store.ts`)의 가려지는 모델 순서다. 메쉬 패스는 모델의 **모든** 메쉬(LOD 사본·큰 몸체 포함)에 붙이고 표식·지우기는 양면이다 — 표식이 없는 메쉬는 그 아래 자기 부재를 고스트로 만든다. 깊이 비교는 본체와 같은 값이어야 하므로 정점은 three 의 `project_vertex` 청크 그대로 투영하고 로그 깊이도 같은 청크로 쓰며, `PLAN_HIDDEN_DEPTH_BIAS` 만큼 카메라 쪽으로 당겨 같은 면은 항상 보임으로 판정한다. 가려짐은 깊이 버퍼 기준이라 땅 속으로 꺼진 부재는 땅에 가려진 것으로 칠해진다. 스텐실 캔버스 전용 — 스텐실이 없으면 쿼드가 화면 전체를 칠한다.
 
 ### 낮/밤·태양 위치(solar 모드)
 
@@ -185,6 +185,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 - 평면도(탑뷰)에서 장비를 평면 색으로 고정하거나 두꺼운 윤곽·부풀림 채움을 두르기 — 종이를 오려 붙인 것처럼 평평해지고 3D 모델과 따로 노는 덧그림으로 읽혔다(관제 화면 리뷰). 탑뷰 장비는 원근과 같은 음영에 아주 가는 반투명 윤곽 하나만 더한다.
 - **평면도 룩만 시각 무관 낮 조명으로 그리기** — 밤인데 한 화면만 밝으면 어색하다. 반대로 **평면도에서만 바닥을 한 단계 더 어둡게 하고 투광등 웅덩이를 거의 끄기** — 밤 바닥을 밝히는 것은 투광등뿐이라 평면도만 검게 남았다. 밤 밝기는 `sky-lighting.ts` 의 밤 바닥값과 `floodlight-spot.ts` 의 투광등 기준 조도를 모든 화면에 같이 올려 맞춘다.
+- **숨은선을 빗금·점무늬로** — 빗금은 확대·축소에 모아레가 생기고 지도 균열선·차선과 섞였고, 점무늬는 형체가 흩어지고 가까이서 노이즈로 읽혔다. 무늬 없는 옅은 단색으로 깐다(`lib/plan-hidden-line.ts`). **가리는 쪽을 반투명하게** 하는 것도 상시 표시로는 쓰지 않는다 — 크레인은 메쉬가 많아 반투명 정렬이 깨지고, 비치는 쪽이 아래로 보여 위아래가 거꾸로 읽힌다.
+- **숨은선 패스를 `projectionMatrix * modelViewMatrix * position` 한 줄로 투영하기** — 본체 셰이더(`project_vertex`)와 행렬 곱 순서가 달라 반올림이 어긋나고, 수평 평면은 면 전체가 한쪽으로 기울어 보이는 면에 고스트가 통째로 찍혔다(OC 기계실 데크·아웃리거 패드). 같은 청크로 투영하고 깊이 바이어스를 둔다. 큰 메쉬를 삼각형 예산(`lib/plan-overlay-budget.ts`)으로 숨은선 패스에서 빼는 것도 하지 않는다 — 표식이 없는 메쉬 아래의 자기 부재가 고스트가 된다.
 
 - **reverse-Z 깊이** — three r183 의 `reverseDepthBuffer` 는 WebGPURenderer 전용이고, 기본 프레임버퍼(24bit unorm)에선 부호 반전만으로 정밀도가 늘지 않아(float 깊이 RT 여야 이득) 로그 깊이의 z-fighting 해결을 대체할 수 없다.
 - **DPR 상한 1.25** — 내렸다 되돌렸다. 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 뷰어 기본값 함께).
