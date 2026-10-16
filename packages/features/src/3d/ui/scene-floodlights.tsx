@@ -190,7 +190,7 @@ export function SceneFloodlights({
     // 배정·편집에 따라 흔들리면 그 프레임마다 전 머티리얼이 재컴파일된다.
     const on = sceneLightingInfo.floodlightOn;
     const visible = on > 0;
-    // 평면도에서는 바닥 빛 웅덩이를 거의 끈다(세기만, visible 은 그대로).
+    // 평면도에서는 바닥 빛 웅덩이를 줄인다(세기만, visible 은 그대로).
     const planScale = isPlanLookCamera(
       camera,
       usePlanLookStore.getState().enabled,

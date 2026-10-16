@@ -956,7 +956,7 @@ export function SceneLighting({
     // 프레임의 뒤쪽 useFrame(마운트 순)이 읽는다.
     publishFloodlightOn(sceneLightingInfo, floodlightOn);
     // 평면도 톤 유니폼 — 이 캔버스의 렌더 직전에 자기 카메라 기준으로 쓴다.
-    publishPlanView(planView ? 1 : 0, floodlightOn);
+    publishPlanView(planView ? 1 : 0);
     // 컨텍스트 지형의 unlit 항공사진이 같은 프레임 렌더에서 읽는다
     // (@crane/domain/3d unlit-sky-scale — 값이 같으면 업로드 없음).
     publishUnlitSkyScale(unlitSkyScale);

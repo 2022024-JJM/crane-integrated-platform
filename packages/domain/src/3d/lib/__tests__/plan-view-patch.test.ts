@@ -30,7 +30,7 @@ function run(
 
 describe('plan-view-patch', () => {
   beforeEach(() => {
-    publishPlanView(0, 0);
+    publishPlanView(0);
   });
 
   it("'ground' 는 color_fragment 뒤에 톤 식을 넣고 전역 유니폼 객체를 물린다", () => {
@@ -42,7 +42,7 @@ describe('plan-view-patch', () => {
     expect(shader.fragmentShader).toContain('planTone');
     expect(shader.fragmentShader).not.toContain('planFlat');
     expect(shader.uniforms.uPlanView).toBe(planViewUniforms.uPlanView);
-    expect(shader.uniforms.uPlanNight).toBe(planViewUniforms.uPlanNight);
+    expect(shader.fragmentShader).not.toContain('uPlanNight');
     expect(m.customProgramCacheKey()).toBe(planViewPatchKey('ground'));
   });
 
@@ -109,22 +109,24 @@ describe('plan-view-patch', () => {
 
 describe('plan-view-uniforms', () => {
   beforeEach(() => {
-    publishPlanView(0, 0);
+    publishPlanView(0);
   });
 
   it('값이 바뀔 때만 true 를 돌려주고, 같은 값은 쓰지 않는다', () => {
-    expect(publishPlanView(1, 0.5)).toBe(true);
+    expect(publishPlanView(1)).toBe(true);
     expect(planViewUniforms.uPlanView.value).toBe(1);
-    expect(planViewUniforms.uPlanNight.value).toBe(0.5);
-    expect(publishPlanView(1, 0.5)).toBe(false);
+    expect(publishPlanView(1)).toBe(false);
   });
 
   it('범위를 [0,1] 로 자르고 비유한 값은 0 이다', () => {
-    publishPlanView(3, -1);
+    publishPlanView(3);
     expect(planViewUniforms.uPlanView.value).toBe(1);
-    expect(planViewUniforms.uPlanNight.value).toBe(0);
-    publishPlanView(Number.NaN, Number.POSITIVE_INFINITY);
+    publishPlanView(-1);
     expect(planViewUniforms.uPlanView.value).toBe(0);
-    expect(planViewUniforms.uPlanNight.value).toBe(0);
+    publishPlanView(1);
+    publishPlanView(Number.NaN);
+    expect(planViewUniforms.uPlanView.value).toBe(0);
+    publishPlanView(Number.POSITIVE_INFINITY);
+    expect(planViewUniforms.uPlanView.value).toBe(0);
   });
 });

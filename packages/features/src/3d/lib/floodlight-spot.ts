@@ -15,12 +15,12 @@ import { YARD_LIGHT_COLOR, type RgbTuple } from './sky-lighting';
  * 바꾼다 — 30 m 마스트와 50 m 마스트가 같은 배율이면 바닥 밝기가 같다.
  *
  * 기준 조도 FLOODLIGHT_AIM_IRRADIANCE 는 낮 방향광 세기(SCENE_LIGHTING_BASE
- * .sunIntensity 3.6)에 가까운 값이다 — 밤의 전역광은 바닥값(sky-lighting 의
+ * .sunIntensity)보다 조금 높은 값이다 — 밤의 전역광은 바닥값(sky-lighting 의
  * YARD_LIGHT_INTENSITY_RATIO·NIGHT_*_LIT)이라 웅덩이가 낮 수준으로 환해야
- * 대비가 산다.
+ * 대비가 산다. 전역 바닥값을 올리면 이 값도 같이 올려 비율을 지킨다.
  * 값은 화면을 보고 맞춘다(ACES 톤매핑은 선형 합산으로 예측되지 않는다).
  */
-export const FLOODLIGHT_AIM_IRRADIANCE = 3.2;
+export const FLOODLIGHT_AIM_IRRADIANCE = 4.8;
 /**
  * 컷오프 거리 = 조준 거리 × 이 배. three 는 컷오프 근처에서 (1 − (d/cut)⁴)²
  * 로 부드럽게 0 이 되므로 조준점(1/2 지점)은 거의 깎이지 않고, 조준점 너머

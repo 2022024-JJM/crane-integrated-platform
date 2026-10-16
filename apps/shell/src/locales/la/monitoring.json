@@ -532,9 +532,6 @@
     "label": "Pyxis",
     "northUp": "Septentrio sursum"
   },
-  "planOverlap": {
-    "label": "Spatium superpositionis"
-  },
   "planScale": {
     "label": "Scala"
   },

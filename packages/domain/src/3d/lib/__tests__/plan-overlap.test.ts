@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { Box3, Vector3 } from 'three';
 import {
   collectPlanHiddenIds,
-  formatPlanClearance,
   isPlanOverlapListEqual,
   planOverlapKey,
   resolvePlanOverlaps,
@@ -23,7 +22,7 @@ function member(id: string, boxes: Box3[]): PlanOverlapMember {
 }
 
 describe('resolvePlanOverlaps', () => {
-  it('평면에서 겹치고 높이가 다른 쌍 — 위·아래와 수직 여유, 겹침 중심', () => {
+  it('평면에서 겹치고 높이가 다른 쌍 — 위·아래와 수직 여유', () => {
     // 타워(0~30m 높이, 발자국 4×4) 위를 지브(높이 40~42, 길이 60)가 지난다.
     const tower = member('tower', [box([-2, 0, -2], [2, 30, 2])]);
     const jib = member('jib', [box([-30, 40, -1], [30, 42, 1])]);
@@ -35,7 +34,6 @@ describe('resolvePlanOverlaps', () => {
       lowerId: 'tower',
       gap: 10,
     });
-    expect(out[0].center).toEqual([0, 42, 0]);
   });
 
   it('평면에서 안 겹치면 없다 — 높이가 같아도', () => {
@@ -95,49 +93,27 @@ describe('planOverlapKey', () => {
 });
 
 describe('isPlanOverlapListEqual', () => {
-  const base = {
-    key: 'a|b',
-    upperId: 'a',
-    lowerId: 'b',
-    gap: 10,
-    center: [0, 40, 0] as [number, number, number],
-  };
+  const base = { key: 'a|b', upperId: 'a', lowerId: 'b', gap: 10 };
 
-  it('양자화 폭 안의 떨림은 같다, 넘으면 다르다', () => {
-    expect(
-      isPlanOverlapListEqual(
-        [base],
-        [{ ...base, gap: 10.04, center: [0.2, 40, 0] }],
-        0.1,
-        0.5,
-      ),
-    ).toBe(true);
-    expect(
-      isPlanOverlapListEqual([base], [{ ...base, gap: 10.3 }], 0.1, 0.5),
-    ).toBe(false);
-    expect(
-      isPlanOverlapListEqual(
-        [base],
-        [{ ...base, center: [1, 40, 0] }],
-        0.1,
-        0.5,
-      ),
-    ).toBe(false);
+  it('여유 값이 달라도 같은 쌍·위아래면 같다(숨은선 대상이 같다)', () => {
+    expect(isPlanOverlapListEqual([base], [{ ...base, gap: 0.5 }])).toBe(true);
+    expect(isPlanOverlapListEqual([base], [{ ...base, gap: -3 }])).toBe(true);
+    expect(isPlanOverlapListEqual([], [])).toBe(true);
   });
 
-  it('길이·키·위아래가 다르면 다르다', () => {
-    expect(isPlanOverlapListEqual([base], [], 0.1, 0.5)).toBe(false);
-    expect(
-      isPlanOverlapListEqual([base], [{ ...base, key: 'a|c' }], 0.1, 0.5),
-    ).toBe(false);
+  it('길이·키·위아래·순서가 다르면 다르다', () => {
+    const other = { key: 'c|d', upperId: 'c', lowerId: 'd', gap: 1 };
+    expect(isPlanOverlapListEqual([base], [])).toBe(false);
+    expect(isPlanOverlapListEqual([base], [{ ...base, key: 'a|c' }])).toBe(
+      false,
+    );
     expect(
       isPlanOverlapListEqual(
         [base],
         [{ ...base, upperId: 'b', lowerId: 'a' }],
-        0.1,
-        0.5,
       ),
     ).toBe(false);
+    expect(isPlanOverlapListEqual([base, other], [other, base])).toBe(false);
   });
 });
 
@@ -148,7 +124,6 @@ describe('collectPlanHiddenIds', () => {
       upperId,
       lowerId,
       gap: 1,
-      center: [0, 0, 0] as [number, number, number],
     });
     expect(
       collectPlanHiddenIds([o('a', 'b'), o('c', 'b'), o('b', 'd')]),
@@ -156,10 +131,3 @@ describe('collectPlanHiddenIds', () => {
   });
 });
 
-describe('formatPlanClearance', () => {
-  it('소수 한 자리 m, 음수는 0', () => {
-    expect(formatPlanClearance(18.26)).toBe('Δh 18.3 m');
-    expect(formatPlanClearance(-2)).toBe('Δh 0.0 m');
-    expect(formatPlanClearance(Number.NaN)).toBe('');
-  });
-});

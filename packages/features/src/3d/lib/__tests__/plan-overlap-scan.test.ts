@@ -9,9 +9,7 @@ import {
 import {
   PlanOverlapScanner,
   buildPlanHiddenIndex,
-  clonePlanOverlaps,
   hasPlanOverlapChanged,
-  isPlanClearanceKnown,
 } from '../plan-overlap-scan';
 
 function model(
@@ -65,32 +63,40 @@ describe('PlanOverlapScanner', () => {
     roots.set('b', model([2, 2, 2], [50, 11, 0]));
     expect(scanner.scan(['a', 'b'], (id) => roots.get(id))).toHaveLength(0);
   });
+
+  it('결과 배열은 재사용하고 항목은 스캔마다 새 객체다', () => {
+    const roots = new Map<string, Object3D>([
+      ['a', model([2, 2, 2], [0, 1, 0])],
+      ['b', model([2, 2, 2], [0, 11, 0])],
+    ]);
+    const scanner = new PlanOverlapScanner();
+    const first = scanner.scan(['a', 'b'], (id) => roots.get(id));
+    const firstItem = first[0];
+    const second = scanner.scan(['a', 'b'], (id) => roots.get(id));
+    expect(second).toBe(first);
+    expect(second[0]).not.toBe(firstItem);
+    expect(second[0]).toEqual(firstItem);
+  });
 });
 
-describe('hasPlanOverlapChanged / clonePlanOverlaps / buildPlanHiddenIndex', () => {
-  const overlap = {
-    key: 'a|b',
-    upperId: 'a',
-    lowerId: 'b',
-    gap: 3,
-    center: [1, 2, 3] as [number, number, number],
-  };
+describe('hasPlanOverlapChanged / buildPlanHiddenIndex', () => {
+  const overlap = { key: 'a|b', upperId: 'a', lowerId: 'b', gap: 3 };
 
-  it('미세 떨림은 변화가 아니다', () => {
+  it('여유 값만 달라진 것은 변화가 아니다 — 쌍·위아래가 바뀌어야 변화다', () => {
     expect(hasPlanOverlapChanged([overlap], [{ ...overlap, gap: 3.02 }])).toBe(
       false,
     );
-    expect(hasPlanOverlapChanged([overlap], [{ ...overlap, gap: 4 }])).toBe(
-      true,
+    expect(hasPlanOverlapChanged([overlap], [{ ...overlap, gap: -1 }])).toBe(
+      false,
     );
+    expect(
+      hasPlanOverlapChanged(
+        [overlap],
+        [{ ...overlap, upperId: 'b', lowerId: 'a' }],
+      ),
+    ).toBe(true);
+    expect(hasPlanOverlapChanged([overlap], [])).toBe(true);
     expect(hasPlanOverlapChanged([], [])).toBe(false);
-  });
-
-  it('복사본은 center 배열까지 분리된다', () => {
-    const copy = clonePlanOverlaps([overlap]);
-    expect(copy[0]).toEqual(overlap);
-    expect(copy[0]).not.toBe(overlap);
-    expect(copy[0].center).not.toBe(overlap.center);
   });
 
   it('숨은선 인덱스는 가려지는 쪽에 0부터', () => {
@@ -102,19 +108,8 @@ describe('hasPlanOverlapChanged / clonePlanOverlaps / buildPlanHiddenIndex', () 
     expect(map.get('d')).toBe(1);
     expect(map.has('a')).toBe(false);
   });
-});
 
-describe('isPlanClearanceKnown', () => {
-  const base = {
-    key: 'a|b',
-    upperId: 'a',
-    lowerId: 'b',
-    gap: 1,
-    center: [0, 0, 0] as [number, number, number],
-  };
-  it('양수 여유만 — 0·음수(높이 겹침)는 모른다', () => {
-    expect(isPlanClearanceKnown(base)).toBe(true);
-    expect(isPlanClearanceKnown({ ...base, gap: 0 })).toBe(false);
-    expect(isPlanClearanceKnown({ ...base, gap: -3 })).toBe(false);
+  it('빈 목록의 인덱스는 비어 있다', () => {
+    expect(buildPlanHiddenIndex([]).size).toBe(0);
   });
 });

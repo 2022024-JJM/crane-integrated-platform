@@ -152,7 +152,7 @@ export const YARD_LIGHT_FADE: readonly [number, number] = [-5, 2];
  * "하지 않기로 한 것")다 — 투광등이 닿지 않는 장비도 윤곽은 보여야 한다.
  * 조명 유무로 값을 나누지 않는다(첫 조명·마지막 조명에서 밤 밝기가 점프한다).
  */
-export const YARD_LIGHT_INTENSITY_RATIO = 0.2;
+export const YARD_LIGHT_INTENSITY_RATIO = 0.3;
 /** 작업등 색 — 따뜻한 백색 LED/메탈할라이드. */
 export const YARD_LIGHT_COLOR: RgbTuple = [1, 0.93, 0.8];
 /**
@@ -179,7 +179,7 @@ export const FILL_LIGHT_INTENSITY_RATIO = 0.5;
  */
 export const NIGHT_LIGHT_VISIBLE_EPSILON = 0.001;
 /** 밤 반구광 세기 — 작업등 점등 후(바닥값)/점등 전. */
-export const NIGHT_HEMISPHERE_INTENSITY_LIT = 0.25;
+export const NIGHT_HEMISPHERE_INTENSITY_LIT = 0.35;
 export const NIGHT_HEMISPHERE_INTENSITY_DARK = 0.12;
 /** 밤 반구광 색 — 위는 하늘 남색, 아래는 조명 받은 바닥의 난색 반사. */
 export const NIGHT_HEMISPHERE_SKY_COLOR: RgbTuple = [0.4, 0.5, 0.8];
@@ -202,7 +202,7 @@ export const BODY_VISIBILITY_FADE: readonly [number, number] = [-1, 2];
  */
 export const NIGHT_SKY_INTENSITY = 0.12;
 /** 작업등 켜진 밤의 환경광 — 난색 바닥값(투광등 밖 장비의 윤곽만 보일 만큼). */
-export const NIGHT_AMBIENT_INTENSITY_LIT = 0.3;
+export const NIGHT_AMBIENT_INTENSITY_LIT = 0.45;
 export const NIGHT_AMBIENT_COLOR_LIT: RgbTuple = [0.96, 0.92, 0.85];
 /** 작업등 점등 전 박명의 환경광 — 달·별빛 수준의 푸른 바닥값. */
 export const NIGHT_AMBIENT_INTENSITY_DARK = 0.28;

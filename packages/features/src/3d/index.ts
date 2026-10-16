@@ -280,10 +280,7 @@ export { SceneNorthUpButton } from './ui/scene-north-up-button';
 export { SceneTopViewButtons } from './ui/scene-top-view-buttons';
 export { usePlanLookStore } from './model/use-plan-look-store';
 export { isPlanLookCamera } from './lib/plan-look';
-export {
-  ScenePlanOverlapChips,
-  ScenePlanOverlapDetector,
-} from './ui/scene-plan-overlaps';
+export { ScenePlanOverlapDetector } from './ui/scene-plan-overlaps';
 export { usePlanOverlapStore } from './model/use-plan-overlap-store';
 export { northUpPose } from './lib/north-up';
 export {

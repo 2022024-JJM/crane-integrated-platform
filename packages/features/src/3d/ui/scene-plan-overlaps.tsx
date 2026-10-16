@@ -1,31 +1,22 @@
-import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  formatPlanClearance,
-  modelObjectRegistry,
-  type SavedSceneInfo,
-} from '@crane/domain/3d';
-import { cn } from '@crane/core/lib/utils';
+import { modelObjectRegistry, type SavedSceneInfo } from '@crane/domain/3d';
 import {
   PLAN_OVERLAP_SCAN_INTERVAL_MS,
-  PLAN_OVERLAP_WARN_METERS,
   PlanOverlapScanner,
   buildPlanHiddenIndex,
-  clonePlanOverlaps,
   hasPlanOverlapChanged,
-  isPlanClearanceKnown,
 } from '../lib/plan-overlap-scan';
 import { usePlanOverlapStore } from '../model/use-plan-overlap-store';
 import { isPlanLookCamera } from '../lib/plan-look';
 import { usePlanLookStore } from '../model/use-plan-look-store';
 
 /**
- * 평면도 겹침 검출(Canvas 안, 무렌더) — 활성 카메라가 직교일 때만
+ * 평면도 겹침 검출(Canvas 안, 무렌더) — 평면도 룩일 때만
  * PLAN_OVERLAP_SCAN_INTERVAL_MS 마다 씬 모델의 메쉬 월드 박스로 겹침을 찾아
- * 스토어에 쓴다. 원근이면 스토어를 비운다. **RigDriver 뒤에 마운트**한다
- * (같은 priority 의 useFrame 은 마운트 순 — 움직인 뒤 잰다).
+ * 스토어에 쓴다. 숨은선 대상(쌍·위아래)이 바뀐 결과만 쓴다. 원근이면
+ * 스토어를 비운다. **RigDriver 뒤에 마운트**한다(같은 priority 의 useFrame 은
+ * 마운트 순 — 움직인 뒤 잰다).
  */
 export function ScenePlanOverlapDetector({
   sceneInfo,
@@ -65,68 +56,10 @@ export function ScenePlanOverlapDetector({
     );
     const store = usePlanOverlapStore.getState();
     if (!hasPlanOverlapChanged(store.overlaps, next)) return;
-    const copy = clonePlanOverlaps(next);
+    // 스캐너는 배열을 재사용한다 — 보관본은 복사한다(항목은 스캔마다 새 객체).
+    const copy = next.slice();
     store.set(copy, buildPlanHiddenIndex(copy));
   });
 
   return null;
-}
-
-/**
- * 겹침 칩 — 겹침 사각형 중심(위 메쉬 윗면)에 두 장비 이름과 Δh. 여유가
- * PLAN_OVERLAP_WARN_METERS 아래면 주의색. 여유를 알 수 없는 쌍
- * (isPlanClearanceKnown false)은 칩 없이 숨은선만. 클릭할 것이 없어 포인터를 끊는다.
- * 장비 이름은 씬의 equipName(없으면 id).
- */
-export function ScenePlanOverlapChips({
-  sceneInfo,
-  metersPerUnit,
-}: {
-  sceneInfo: SavedSceneInfo | null;
-  metersPerUnit: number;
-}) {
-  const { t } = useTranslation();
-  const overlaps = usePlanOverlapStore((s) => s.overlaps);
-  const nameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const model of sceneInfo?.models ?? []) {
-      map.set(model.id, model.equipName || model.id);
-    }
-    return map;
-  }, [sceneInfo]);
-
-  if (overlaps.length === 0) return null;
-  return (
-    <>
-      {overlaps.filter(isPlanClearanceKnown).map((overlap) => {
-        const gapMeters = overlap.gap * metersPerUnit;
-        const warn = gapMeters < PLAN_OVERLAP_WARN_METERS;
-        return (
-          <group key={overlap.key} position={overlap.center}>
-            <Html center zIndexRange={[6, 0]}>
-              <div
-                role="note"
-                aria-label={t('monitoring:planOverlap.label')}
-                className={cn(
-                  'pointer-events-none flex flex-col items-center rounded-sm border px-1.5 py-0.5 font-mono leading-tight whitespace-nowrap select-none',
-                  warn
-                    ? 'border-amber-400 bg-amber-400 text-black'
-                    : 'border-white/40 bg-black/70 text-white',
-                )}
-              >
-                <span className="text-[9px] opacity-80">
-                  {nameById.get(overlap.upperId) ?? overlap.upperId}
-                  {' / '}
-                  {nameById.get(overlap.lowerId) ?? overlap.lowerId}
-                </span>
-                <span className="text-[11px] font-bold tabular-nums">
-                  {formatPlanClearance(gapMeters)}
-                </span>
-              </div>
-            </Html>
-          </group>
-        );
-      })}
-    </>
-  );
 }

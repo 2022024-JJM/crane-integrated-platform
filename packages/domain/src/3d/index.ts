@@ -432,7 +432,6 @@ export {
   resolvePlanOverlaps,
   isPlanOverlapListEqual,
   collectPlanHiddenIds,
-  formatPlanClearance,
   planOverlapKey,
   type PlanOverlap,
   type PlanOverlapMember,

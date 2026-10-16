@@ -11,17 +11,16 @@ import type { IUniform } from 'three';
  * 프레임 루프가 따로라 각자의 렌더는 각자가 쓴 값을 본다.
  *
  *  - `uPlanView` 0(원근)‥1(직교 탑뷰). 바닥 톤·장비 평면 색의 세기.
- *  - `uPlanNight` 0(낮)‥1(밤). 평면도일 때 바닥을 한 단계 더 어둡게 — 투광등
- *    점등 비율(sceneLightingInfo.floodlightOn)을 그대로 쓴다.
+ *
+ * 시각(낮·밤)에 따른 값은 없다 — 평면도의 밤 밝기는 다른 화면과 같은 밤
+ * 조명이 정하고, 평면도만 더 어둡게 하는 단계를 두지 않는다.
  */
 export interface PlanViewUniforms {
   uPlanView: IUniform<number>;
-  uPlanNight: IUniform<number>;
 }
 
 export const planViewUniforms: PlanViewUniforms = {
   uPlanView: { value: 0 },
-  uPlanNight: { value: 0 },
 };
 
 function clamp01(value: number): number {
@@ -33,17 +32,9 @@ function clamp01(value: number): number {
  *
  * @returns 바뀌었는지.
  */
-export function publishPlanView(planView: number, night: number): boolean {
-  const nextPlan = clamp01(planView);
-  const nextNight = clamp01(night);
-  let changed = false;
-  if (planViewUniforms.uPlanView.value !== nextPlan) {
-    planViewUniforms.uPlanView.value = nextPlan;
-    changed = true;
-  }
-  if (planViewUniforms.uPlanNight.value !== nextNight) {
-    planViewUniforms.uPlanNight.value = nextNight;
-    changed = true;
-  }
-  return changed;
+export function publishPlanView(planView: number): boolean {
+  const next = clamp01(planView);
+  if (planViewUniforms.uPlanView.value === next) return false;
+  planViewUniforms.uPlanView.value = next;
+  return true;
 }

@@ -116,17 +116,16 @@
 
 ### 방위 표시·축척·북쪽 위로 (독 배치, 분할 아님)
 
-- **방위 표시** `ui/scene-compass.tsx` — 좌상단 열 첫 줄. 지면에 놓인 원(N·E·S·W + 북 적색 바늘)을 카메라가 보는 모습이라 탑뷰에선 원, 비스듬하면 납작한 타원이다. 기하는 `lib/compass.ts`(`resolveCompassView`, 진북 = `resolveTrueNorth`). 자세는 React 상태가 아니라 Canvas 안 `SceneCompassDriver` 가 `useFrame` 에서 바뀐 프레임에만 DOM 에 쓴다. 조작은 없다.
+- **방위 표시** `ui/scene-compass.tsx` — 좌상단 열 첫 줄. 지면에 놓인 원(N·E·S·W + 북 적색 바늘)을 카메라가 보는 모습이라 탑뷰에선 원, 비스듬하면 납작한 타원이다. 기하는 `lib/compass.ts`(`resolveCompassView`, 진북 = `resolveTrueNorth`). 자세는 React 상태가 아니라 Canvas 안 `SceneCompassDriver` 가 `useFrame` 에서 바뀐 프레임에만 DOM 에 쓴다. 모니터링에서는 누르면 북쪽 위로(`onNorthUp`), 에디터·분할 타일의 방위 표시는 조작이 없다.
 - **축척 바** `ui/scene-plan-scale-bar.tsx` — 캔버스 우하단(독 레일 안쪽). 직교 탑뷰에서만 보이고 원근에서는 숨는다(원근은 화면 위치마다 축척이 달라 바 하나가 거짓). 길이는 `lib/plan-scale-bar.ts` 의 `resolvePlanScaleBar`(상한 `PLAN_SCALE_BAR_MAX_PX` 안에서 가장 긴 1·2·5×10ⁿ m, 씬 단위는 `getSceneMetersPerUnit`). 갱신은 `ScenePlanScaleBarDriver` 가 방위 표시와 같은 규칙으로 쓴다.
-- **북쪽 위로** `ui/scene-north-up-button.tsx` — 독 레일 버튼. 타깃을 축으로 카메라를 돌려 화면 위가 진북이 되게 한다(`lib/north-up.ts` → core `rotatePoseToHeading`·`headingForAzimuth`). 모드를 유지하는 `panTo` 로 적용하므로 탑뷰면 평면도가 north-up, 원근이면 시선이 북을 향한다. 탑뷰 진입 기본은 여전히 "보던 방향이 화면 위" 다 — 북쪽 고정을 기본으로 바꾸지 않는다(보던 곳을 잃는다).
+- **북쪽 위로** — 방위 표시를 누른다(독 레일 버튼은 없다). 타깃을 축으로 카메라를 돌려 화면 위가 진북이 되게 한다(`lib/north-up.ts` → core `rotatePoseToHeading`·`headingForAzimuth`). 모드를 유지하는 `panTo` 로 적용하므로 탑뷰면 평면도가 north-up, 원근이면 시선이 북을 향한다. 탑뷰 진입 기본은 여전히 "보던 방향이 화면 위" 다 — 북쪽 고정을 기본으로 바꾸지 않는다(보던 곳을 잃는다).
 
 ### 평면도 겹침 (탑뷰, 독 배치)
 
-위에서 겹쳐 보이지만 높이가 달라 닿지 않는 장비 쌍을 읽게 하는 표시. 실제 충돌(`docs/agents/3d-collision.md`)과 별개의 표시용 계산이고 경고색을 쓰지 않는다 — "겹쳐 보이는데 빨갛지 않다" 가 안전이어야 한다.
+위에서 겹쳐 보이는 장비 쌍에서 가려지는 쪽을 읽게 하는 표시. 실제 충돌(`docs/agents/3d-collision.md`)과 별개의 표시용 계산이고 경고색을 쓰지 않는다 — "겹쳐 보이는데 빨갛지 않다" 가 안전이어야 한다.
 
-- 판정 `lib/plan-overlap.ts`(domain, `resolvePlanOverlaps`): 모델별 메쉬 월드 AABB 의 평면 겹침 → 가장 작은 수직 여유(`gap`)·위/아래·겹침 중심. 스캔은 `lib/plan-overlap-scan.ts` 의 `PlanOverlapScanner` 가 `modelObjectRegistry` 루트에서 `collectCollidableMeshes` 로 모아 `PLAN_OVERLAP_SCAN_INTERVAL_MS` 마다 돌고(`ScenePlanOverlapDetector`, Canvas 안·RigDriver 뒤·직교 카메라일 때만), 표시상 바뀐 결과만 `use-plan-overlap-store.ts` 에 쓴다(`hasPlanOverlapChanged` 양자화). 원근으로 돌아오면 비운다.
-- **Δh 칩** `ui/scene-plan-overlaps.tsx`(`ScenePlanOverlapChips`): 겹침 중심에 두 장비 이름과 `Δh n.n m`(`formatPlanClearance`, m 환산은 `getSceneMetersPerUnit`). `PLAN_OVERLAP_WARN_METERS` 아래면 주의색. 여유를 알 수 없는 쌍(`isPlanClearanceKnown` false — AABB 로 높이까지 겹침, 골리앗처럼 박스가 바닥까지 닿는 장비)은 칩을 띄우지 않는다.
-- **숨은선**: 가려지는 쪽 모델에 어두운 점무늬(`docs/agents/rendering-perf.md` "평면도 룩" 의 숨은선). 여유를 몰라도 그린다 — 픽셀 단위 깊이라 정확하다.
+- 판정 `lib/plan-overlap.ts`(domain, `resolvePlanOverlaps`): 모델별 메쉬 월드 AABB 의 평면 겹침 → 위/아래(수직 여유가 가장 작은 메쉬 쌍 기준, 여유 값은 화면에 쓰지 않는다). 스캔은 `lib/plan-overlap-scan.ts` 의 `PlanOverlapScanner` 가 `modelObjectRegistry` 루트에서 `collectCollidableMeshes` 로 모아 `PLAN_OVERLAP_SCAN_INTERVAL_MS` 마다 돌고(`ScenePlanOverlapDetector`, Canvas 안·RigDriver 뒤·평면도 룩일 때만), 숨은선 대상(쌍·위아래)이 바뀐 결과만 `use-plan-overlap-store.ts` 에 쓴다(`hasPlanOverlapChanged`) — 장비가 겹친 채 움직여도 스토어를 다시 쓰지 않는다. 원근으로 돌아오면 비운다.
+- **숨은선**: 가려지는 쪽 모델에 어두운 점무늬(`docs/agents/rendering-perf.md` "평면도 룩" 의 숨은선). 픽셀 단위 깊이라 AABB 가 겹침을 과하게 잡아도 정확하다.
 
 ### 워밍업 표시
 
@@ -162,3 +161,4 @@
 - 독의 하단 패널(크레인 실시간 상태 테이블)·감지 묶음.
 - 미니맵 마커·카메라 그리기를 React state 로 — 매 틱 리렌더.
 - 미니맵 시야 부채꼴을 카메라 fov·타깃 거리에 맞추기 — 탑뷰 근처에선 사라지고 멀리서 낮게 보면 지도를 덮어 방향을 읽기 어렵다. 리사이즈로 종횡비가 바뀔 때마다 각도 흔들린다.
+- 평면도 겹침 쌍의 수직 여유(Δh) 칩 — 겹침 중심에 띄운 숫자가 화면을 어지럽히고, AABB 여유는 골리앗처럼 박스가 바닥까지 닿는 장비에서 뜻이 없다. 가려짐은 숨은선 하나로 보인다.

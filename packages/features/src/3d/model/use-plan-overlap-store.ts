@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import type { PlanOverlap } from '@crane/domain/3d';
 
 /**
- * 평면도 겹침 상태 — Canvas 안 ScenePlanOverlapDetector 가 직교 탑뷰에서
- * 주기적으로 채우고, 칩(ScenePlanOverlapChips)과 모델 숨은선
- * (outdoor-work-model-simulation → GltfModel.planHiddenIndex)이 읽는다.
- * 원근으로 돌아오면 비운다. 리렌더를 아끼려 표시상 같은 결과는 쓰지 않는다
- * (lib/plan-overlap.ts isPlanOverlapListEqual — 검출기가 비교한다).
+ * 평면도 겹침 상태 — Canvas 안 ScenePlanOverlapDetector 가 평면도 룩에서
+ * 주기적으로 채우고, 모델 숨은선(outdoor-work-model-simulation →
+ * GltfModel.planHiddenIndex)이 `hiddenIndexById` 를 읽는다. `overlaps` 는
+ * 검출기의 변화 비교용이다. 원근으로 돌아오면 비운다. 리렌더를 아끼려
+ * 숨은선 대상이 같은 결과는 쓰지 않는다(lib/plan-overlap.ts
+ * isPlanOverlapListEqual — 검출기가 비교한다).
  */
 interface PlanOverlapState {
   overlaps: readonly PlanOverlap[];

@@ -532,9 +532,6 @@
     "label": "방위 표시",
     "northUp": "북쪽 위로"
   },
-  "planOverlap": {
-    "label": "평면도 겹침 여유"
-  },
   "planScale": {
     "label": "축척"
   },

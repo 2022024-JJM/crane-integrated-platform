@@ -69,10 +69,7 @@ import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
 import { SceneNorthUpButton } from './scene-north-up-button';
 import { SceneTopViewButtons } from './scene-top-view-buttons';
-import {
-  ScenePlanOverlapChips,
-  ScenePlanOverlapDetector,
-} from './scene-plan-overlaps';
+import { ScenePlanOverlapDetector } from './scene-plan-overlaps';
 import {
   ScenePlanScaleBar,
   ScenePlanScaleBarDriver,
@@ -668,13 +665,9 @@ export function Monitoring3dView({
               runner={collisionRunner}
             />
             <SceneCollisionHighlight />
-            {/* 평면도 겹침(위에서 겹쳐 보이는 장비의 Δh 칩·숨은선) — 탑뷰에서만
-              스캔한다. 리그 드라이버 뒤라 움직인 뒤 잰다. */}
+            {/* 평면도 겹침(가려지는 장비의 숨은선) — 평면도 룩에서만 스캔한다.
+              리그 드라이버 뒤라 움직인 뒤 잰다. */}
             <ScenePlanOverlapDetector sceneInfo={sceneInfo} />
-            <ScenePlanOverlapChips
-              sceneInfo={sceneInfo}
-              metersPerUnit={metersPerUnit}
-            />
             {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
             <SceneZoneDetector
               sceneInfo={sceneInfo}

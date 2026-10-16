@@ -532,9 +532,6 @@
     "label": "Compass",
     "northUp": "North up"
   },
-  "planOverlap": {
-    "label": "Plan overlap clearance"
-  },
   "planScale": {
     "label": "Scale"
   },

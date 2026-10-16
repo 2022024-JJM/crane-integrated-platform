@@ -85,13 +85,13 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 ### 평면도(직교 탑뷰) 룩
 
-탑뷰는 둘이다 — **2D 탑뷰**(직교 + 평면도 룩)와 **3D 탑뷰**(직교 카메라만, 모델·조명은 원근 그대로). 평면도 룩은 정보가 아닌 것(그림자·빛 웅덩이·바닥 텍스처 대비)을 빼는 처리이고, 판정은 전부 `isPlanLookCamera(camera, enabled)`(`lib/plan-look.ts` — 직교 + 스위치 `model/use-plan-look-store.ts`, localStorage 영속) 하나다. 탑뷰 자체는 직교 카메라 교체 토글(`docs/agents/3d-editor.md`)이고 어느 것도 셰이더를 재컴파일하지 않는다. 버튼은 `ui/scene-top-view-buttons.tsx` 가 뷰어의 `TopViewButtons` 슬롯에 둘을 놓는다 — 이미 탑뷰 중에 다른 쪽을 누르면 카메라는 그대로 두고 룩만 바뀐다.
+탑뷰는 둘이다 — **2D 탑뷰**(직교 + 평면도 룩)와 **3D 탑뷰**(직교 카메라만, 모델·조명은 원근 그대로). 평면도 룩은 정보가 아닌 것(그림자·바닥 텍스처 대비)을 빼고 빛 웅덩이를 줄이는 처리이고, 판정은 전부 `isPlanLookCamera(camera, enabled)`(`lib/plan-look.ts` — 직교 + 스위치 `model/use-plan-look-store.ts`, localStorage 영속) 하나다. 탑뷰 자체는 직교 카메라 교체 토글(`docs/agents/3d-editor.md`)이고 어느 것도 셰이더를 재컴파일하지 않는다. 버튼은 `ui/scene-top-view-buttons.tsx` 가 뷰어의 `TopViewButtons` 슬롯에 둘을 놓는다 — 이미 탑뷰 중에 다른 쪽을 누르면 카메라는 그대로 두고 룩만 바뀐다.
 
 - **그림자 끄기** — 위 단락.
-- **바닥 톤** — 셰이더 패치 `lib/plan-view-patch.ts`(`PlanViewKind` 'ground' | 'equipment'). 지도는 `<color_fragment>` 뒤에서 저채도·어둡게(밤엔 `uPlanNight` 로 한 단계 더). 'equipment'(조명 결과를 알베도 평면 색으로 대체)는 모니터링이 쓰지 않는다 — 아래 "하지 않기로 한 것". 장비는 원근과 같은 음영이다. 유니폼은 전역 `planViewUniforms`(`lib/plan-view-uniforms.ts`) 하나이고 `SceneLighting` 이 매 프레임 자기 카메라 기준으로 `publishPlanView(planView, floodlightOn)` 을 쓴다 — 캔버스별 프레임 루프라 각자의 렌더는 각자가 쓴 값을 본다. 원근에서는 유니폼 0 이라 식이 원래 값으로 떨어진다. `ModelMesh`/`GltfModel` 의 `planView` prop 으로 켜며 모니터링·3D 플레이(`outdoor-work-model-simulation.tsx`)가 지도에 'ground' 를 넘긴다. 에디터·자산 뷰어는 넘기지 않는다.
+- **바닥 톤** — 셰이더 패치 `lib/plan-view-patch.ts`(`PlanViewKind` 'ground' | 'equipment'). 지도는 `<color_fragment>` 뒤에서 저채도·어둡게. 배율은 낮·밤 공통 하나다 — 밤의 평면도 밝기는 다른 화면과 같은 밤 조명이 정하고, 평면도만 더 어둡게 하는 단계는 없다(아래 "하지 않기로 한 것"). 'equipment'(조명 결과를 알베도 평면 색으로 대체)는 모니터링이 쓰지 않는다 — 아래 "하지 않기로 한 것". 장비는 원근과 같은 음영이다. 유니폼은 전역 `planViewUniforms`(`lib/plan-view-uniforms.ts`) 하나이고 `SceneLighting` 이 매 프레임 자기 카메라 기준으로 `publishPlanView(planView)` 를 쓴다 — 캔버스별 프레임 루프라 각자의 렌더는 각자가 쓴 값을 본다. 원근에서는 유니폼 0 이라 식이 원래 값으로 떨어진다. `ModelMesh`/`GltfModel` 의 `planView` prop 으로 켜며 모니터링·3D 플레이(`outdoor-work-model-simulation.tsx`)가 지도에 'ground' 를 넘긴다. 에디터·자산 뷰어는 넘기지 않는다.
 - **패치 합성** — 잠김 안개(`sea-submersion.ts`)와 평면도 톤이 같은 머티리얼에 걸리므로 `lib/shader-patch.ts` 가 `onBeforeCompile` 슬롯 하나에 키별 패치를 등록 순서로 돌리고 `customProgramCacheKey` 를 키를 이은 값으로 둔다. 새 머티리얼 패치는 이 경로로만 건다 — `onBeforeCompile` 을 직접 대입하면 앞 패치를 덮는다.
 - **공유 머티리얼** — `lib/sea-material-cache.ts` 는 원본당 **패치 조합별**(`SharedVariantOptions { sea, plan }`) variant 를 refcount 공유한다. 패치가 하나도 필요 없는 인스턴스만 원본을 그대로 쓴다(`isSharedVariantNeeded`). 바인딩 전이는 `mesh-material-binding.ts`(`assignSharedMaterials`, `ensureClonedMaterials(binding, sea, plan)`).
-- **투광등** — `SceneFloodlights` 가 직교 카메라면 슬롯 세기에 `PLAN_VIEW_FLOODLIGHT_SCALE`(`lib/floodlight-slots.ts`)을 곱해 바닥 빛 웅덩이를 거의 끈다. `visible` 은 건드리지 않는다(조명 수 변화 = 재컴파일). 기구 글로우(`SceneFloodlightFixture`)는 그대로라 점으로 남는다.
+- **투광등** — `SceneFloodlights` 가 평면도 룩이면 슬롯 세기에 `PLAN_VIEW_FLOODLIGHT_SCALE`(`lib/floodlight-slots.ts`)을 곱해 바닥 빛 웅덩이를 줄인다. 끄지 않는다 — 밤 바닥을 밝히는 것은 투광등뿐이라 끄면 평면도만 검게 남는다. `visible` 은 건드리지 않는다(조명 수 변화 = 재컴파일). 기구 글로우(`SceneFloodlightFixture`)는 그대로라 점으로 남는다.
 - **윤곽선** — 모든 장비를 아주 가는 반투명 실루엣(`lib/status-outline-style.ts` 의 `PLAN_VIEW_OUTLINE_PX`·`PLAN_VIEW_OUTLINE_OPACITY`)으로 두른다(`GltfModel.planOutline`, `docs/agents/3d-collision.md` "평면도 윤곽선"). 지도에 묻히는 가는 부재를 살짝 세우는 용도라 두껍게 하지 않는다. 부풀림 채움(`lib/plan-fill.ts`·`ObjectPlanFill`)은 구현만 남아 있고 쓰지 않는다 — 아래 "하지 않기로 한 것".
 - **라벨 앵커** — 평면도에서 라벨은 바닥 메쉬 발자국 중심(선회 축)에 서고 짧은 지시선을 내린다(`lib/model-label-anchor.ts`, `GltfModel.planLabel`, `ModelLabel.leader`). 평면도 라벨은 거리 축소(`label-scale.ts`)를 타지 않고 글자도 한 단계 크다 — 직교에선 카메라 높이가 곧 거리라 줄이면 읽히지 않는다. 지브 bbox 중심에 두면 선회해도 허공에 남아 어느 장비 것인지 흐려진다.
 - **축척 바·북쪽 위로** — 관제 화면의 평면도 보조 표시. `docs/agents/monitoring-ui.md` "방위 표시·축척·북쪽 위로".
@@ -184,6 +184,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 ## 하지 않기로 한 것
 
 - 평면도(탑뷰)에서 장비를 평면 색으로 고정하거나 두꺼운 윤곽·부풀림 채움을 두르기 — 종이를 오려 붙인 것처럼 평평해지고 3D 모델과 따로 노는 덧그림으로 읽혔다(관제 화면 리뷰). 탑뷰 장비는 원근과 같은 음영에 아주 가는 반투명 윤곽 하나만 더한다.
+- **평면도 룩만 시각 무관 낮 조명으로 그리기** — 밤인데 한 화면만 밝으면 어색하다. 반대로 **평면도에서만 바닥을 한 단계 더 어둡게 하고 투광등 웅덩이를 거의 끄기** — 밤 바닥을 밝히는 것은 투광등뿐이라 평면도만 검게 남았다. 밤 밝기는 `sky-lighting.ts` 의 밤 바닥값과 `floodlight-spot.ts` 의 투광등 기준 조도를 모든 화면에 같이 올려 맞춘다.
 
 - **reverse-Z 깊이** — three r183 의 `reverseDepthBuffer` 는 WebGPURenderer 전용이고, 기본 프레임버퍼(24bit unorm)에선 부호 반전만으로 정밀도가 늘지 않아(float 깊이 RT 여야 이득) 로그 깊이의 z-fighting 해결을 대체할 수 없다.
 - **DPR 상한 1.25** — 내렸다 되돌렸다. 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 뷰어 기본값 함께).

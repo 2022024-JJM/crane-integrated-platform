@@ -56,11 +56,11 @@ export function assignFloodlightSlots(
  */
 /**
  * 평면도(직교 탑뷰)에서의 투광등 세기 배율. 위에서 본 빛 웅덩이는 큰 흰
- * 타원으로 도크를 덮어 정보를 가린다 — 기구 글로우(점)만 남기고 바닥 조명은
- * 거의 끈다. 0 이 아닌 이유: visible 토글(조명 수 변화 = 재컴파일)을 피하고
- * 바닥에 "켜져 있다" 는 흔적만 남긴다.
+ * 타원으로 도크를 덮어 정보를 가리므로 절반으로 줄인다 — 더 줄이면 밤의
+ * 평면도 바닥이 다른 화면보다 검게 남는다(밤 바닥을 밝히는 것은 투광등뿐).
+ * 세기만 곱하고 visible 은 건드리지 않는다(조명 수 변화 = 재컴파일).
  */
-export const PLAN_VIEW_FLOODLIGHT_SCALE = 0.12;
+export const PLAN_VIEW_FLOODLIGHT_SCALE = 0.5;
 
 export const FLOODLIGHT_FOCUS_STEP = 25;
 

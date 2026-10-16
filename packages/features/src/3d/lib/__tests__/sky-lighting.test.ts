@@ -249,13 +249,15 @@ describe('resolveSkyLighting — 태양→작업등 인계 연속성', () => {
     }
   });
 
-  it('밤의 전역광은 바닥값 — 0 은 아니되 낮의 1/3 아래(바닥은 투광등이 밝힌다)', () => {
+  it('밤의 전역광은 바닥값 — 0 은 아니되 낮의 절반 아래(바닥은 투광등이 밝힌다)', () => {
     const night = at(-40);
+    const day = at(90);
     expect(night.keyIntensity).toBeGreaterThan(0);
-    expect(night.keyIntensity).toBeLessThan(BASE.sunIntensity / 3);
+    expect(night.keyIntensity).toBeLessThan(day.keyIntensity / 2);
     expect(night.ambientIntensity).toBeGreaterThan(0);
-    expect(night.ambientIntensity).toBeLessThan(BASE.ambientIntensity / 2);
+    expect(night.ambientIntensity).toBeLessThan(day.ambientIntensity / 2);
     expect(night.hemisphereIntensity).toBeGreaterThan(0);
+    expect(night.hemisphereIntensity).toBeLessThan(day.hemisphereIntensity);
   });
 });
 
