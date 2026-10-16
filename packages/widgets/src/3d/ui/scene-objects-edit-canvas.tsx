@@ -80,6 +80,7 @@ import {
   ScenePerfProbe,
   SceneTerrainLod,
   manualJointSource,
+  northUpPose,
   readTagLiveValue,
   rigValueStore,
   snapStepFor,
@@ -294,6 +295,8 @@ export interface SceneEditorCameraActions {
   topView: () => void;
   /** 저장된 구도(씬 뷰)로 즉시 이동 — 뷰 탭의 행 클릭·우상단 고정 뷰 버튼. 탑뷰 중이면 원근으로 복귀하면서. */
   moveTo: (pose: SavedCameraInfo) => void;
+  /** 북쪽 위로 — 방위 표시 클릭. 모드를 유지한 채 타깃 축으로 돌린다. */
+  northUp: () => void;
 }
 
 interface SceneObjectsEditCanvasProps {
@@ -1132,11 +1135,28 @@ export function SceneObjectsEditCanvas({
     topViewHandleRef.current?.toggle();
   }, []);
 
+  // 북쪽 위로 — 모니터링과 같은 lib/north-up. 모드를 유지하므로(applyCameraPose)
+  // 탑뷰면 평면도가 north-up, 원근이면 시선이 북을 향한다.
+  const trueNorth = resolveTrueNorth(sceneInfo);
+  const northUp = useCallback(() => {
+    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+    if (!controls) return;
+    applyCameraPose(
+      northUpPose(
+        {
+          position: controls.object.position.toArray(),
+          target: controls.target.toArray(),
+        },
+        trueNorth,
+      ),
+    );
+  }, [applyCameraPose, orbitControlsRef, trueNorth]);
+
   useEffect(() => {
     if (cameraActionsRef) {
-      cameraActionsRef.current = { resetView, topView, moveTo };
+      cameraActionsRef.current = { resetView, topView, moveTo, northUp };
     }
-  }, [cameraActionsRef, resetView, topView, moveTo]);
+  }, [cameraActionsRef, resetView, topView, moveTo, northUp]);
 
   // 로드·저장 시점 카메라 — 모드는 유지한다(저장 뒤 같은 포즈가 다시 들어와도
   // 탑뷰가 풀리지 않게).
@@ -1246,10 +1266,7 @@ export function SceneObjectsEditCanvas({
         <SceneTerrainLod />
         {/* 방위 표시 자세 — 카메라 확정 뒤. 진북 입력을 바꾸면 바로 돈다. */}
         {compassRef ? (
-          <SceneCompassDriver
-            compassRef={compassRef}
-            trueNorth={resolveTrueNorth(sceneInfo)}
-          />
+          <SceneCompassDriver compassRef={compassRef} trueNorth={trueNorth} />
         ) : null}
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}

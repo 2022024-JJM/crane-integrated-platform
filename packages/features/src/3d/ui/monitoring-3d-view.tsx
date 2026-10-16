@@ -67,7 +67,6 @@ import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
-import { SceneNorthUpButton } from './scene-north-up-button';
 import { SceneTopViewButtons } from './scene-top-view-buttons';
 import { ScenePlanOverlapDetector } from './scene-plan-overlaps';
 import {
@@ -431,8 +430,11 @@ export function Monitoring3dView({
     <div className="pointer-events-none absolute top-1.5 left-1.5 flex flex-col items-start gap-2">
       {isDock ? (
         <div className="flex items-start gap-2">
-          {/* 분할 중엔 타일마다 방위 표시가 있어 전역 것은 숨긴다. */}
-          {splitActive ? null : <SceneCompass ref={compassRef} />}
+          {/* 분할 중엔 타일마다 방위 표시가 있어 전역 것은 숨긴다. 누르면
+              북쪽 위로(탑뷰·원근 모두 타깃 축으로 돌린다). */}
+          {splitActive ? null : (
+            <SceneCompass ref={compassRef} onNorthUp={handleNorthUp} />
+          )}
           <SceneWarmupIndicator />
         </div>
       ) : null}
@@ -582,8 +584,6 @@ export function Monitoring3dView({
                 {showControlRoomWidgets ? (
                   <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
                 ) : null}
-                {/* 북쪽 위로 — 탑뷰·원근 모두 타깃 축으로 돌린다. */}
-                <SceneNorthUpButton onNorthUp={handleNorthUp} />
                 {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
                   의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
                   소스는 프레임 시각을 따르므로 숨긴다. */}

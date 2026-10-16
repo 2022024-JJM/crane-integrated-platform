@@ -856,9 +856,13 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               <SceneShortcutsHelp />
               {/* 좌측 상단 — 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드·
                   충돌 기준선·팔레트 모델 로드). 우상단 축 기즈모·하단 바와
-                  겹치지 않는다. 비차단이다. */}
+                  겹치지 않는다. 방위 표시를 누르면 북쪽 위로(모니터링과
+                  같다), 나머지는 비차단이다. */}
               <div className="pointer-events-none absolute top-1.5 left-1.5 z-10 flex items-start gap-2">
-                <SceneCompass ref={compassRef} />
+                <SceneCompass
+                  ref={compassRef}
+                  onNorthUp={() => cameraActionsRef.current?.northUp()}
+                />
                 <SceneWarmupIndicator />
               </div>
               {/* 우상단 — 고정한 뷰·분할 버튼 줄. 있으면 축 기즈모가 이 아래로

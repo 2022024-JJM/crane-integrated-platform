@@ -76,7 +76,7 @@
 - 미러 필드 `seaMirror` 는 바다에 씬(크레인·야드·지도)을 비출지다. 필드 없음이 비춘다이고 `false` 만 저장한다. 유효값은 `resolveSeaMirror(sceneInfo)` 하나가 정하고, `setSeaMirror` 가 끌 때 `false` 를 쓰고 켤 때 필드를 지운다. 스위치는 바다 스위치 아래 한 단 들여 있고 바다가 꺼진 씬에서는 잠기되 값은 남는다. 끈 씬이 무엇을 그리는지는 `docs/agents/rendering-perf.md`.
 - 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environment`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.
 - 지역 `siteLocation` 은 현장 시각의 시간 기준(시간대 + 대표 좌표)이다. `undefined` 는 region 기본 지역, 값은 명시이고 유효값은 `resolveSceneSiteLocation(regionId, sceneInfo)` 하나가 정한다. 드롭다운은 현장 시각 연동일 때 배경 탭 시각 패널의 날짜 위에 있고(수동 태양 씬은 region 기본 지역 그대로), 유효값을 보여 주다가 고르면 `setSiteLocation` 이 명시값으로 쓴다(바다와 같은 규칙 — 같은 값은 참조 유지). 모니터링 시계 팝업은 지역 이름만 보이고 바꾸지 않는다(`docs/agents/rendering-perf.md`).
-- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돈다. 수동 태양 패드의 방위도 지리 방위(패드 위 = 진북)라 진북을 바꾸면 수동 태양이 같이 돈다.
+- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돌고, 누르면 모니터링과 같이 북쪽 위로 돈다. 수동 태양 패드의 방위도 지리 방위(패드 위 = 진북)라 진북을 바꾸면 수동 태양이 같이 돈다.
 
 ### 씬 뷰와 분할 지정 (뷰 탭)
 

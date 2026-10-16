@@ -10,6 +10,11 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Quaternion, Vector3 } from 'three';
 import { cn } from '@crane/core/lib/utils';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
+import {
   COMPASS_NEEDLE_NORTH_POINTS,
   COMPASS_NEEDLE_SOUTH_POINTS,
   COMPASS_POINTS,
@@ -36,17 +41,24 @@ export interface SceneCompassHandle {
  * `update` 로 SVG 속성을 직접 쓴다(미니맵과 같은 매-프레임 갱신 규칙).
  * 여기 JSX 는 자세와 무관한 속성만 두어 리렌더가 직접 쓴 값을 덮지 않는다.
  * 첫 `update` 전에는 visibility hidden — 카메라와 어긋난 방위를 보이지 않는다.
- * 위치(absolute)는 부모가 정한다. 조작은 없다(pointer-events-none).
+ * 위치(absolute)는 부모가 정한다.
+ *
+ * `onNorthUp` 을 주면 누를 수 있는 버튼이 된다(모니터링·에디터 — "북쪽 위로",
+ * lib/north-up.ts). 없으면 조작이 없다(pointer-events-none — 분할 타일).
+ * 숨김은 맨 바깥 요소에 둔다 — 첫 `update` 전 보이지 않는 버튼이 눌리지 않게.
  */
 export function SceneCompass({
   ref,
   className,
+  onNorthUp,
 }: {
   ref: Ref<SceneCompassHandle>;
   className?: string;
+  onNorthUp?: () => void;
 }) {
   const { t } = useTranslation();
-  const rootRef = useRef<SVGSVGElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const planeRef = useRef<SVGGElement | null>(null);
   const labelsRef = useRef<SVGGElement | null>(null);
 
@@ -54,7 +66,7 @@ export function SceneCompass({
     ref,
     () => ({
       update(view) {
-        const root = rootRef.current;
+        const root = buttonRef.current ?? svgRef.current;
         const plane = planeRef.current;
         const labels = labelsRef.current;
         if (!root || !plane || !labels) return;
@@ -73,16 +85,19 @@ export function SceneCompass({
     [],
   );
 
-  return (
+  const svg = (
     <svg
-      ref={rootRef}
+      ref={svgRef}
       role="img"
       aria-label={t('monitoring:compass.label')}
       width={COMPASS_SIZE_PX}
       height={COMPASS_SIZE_PX}
       viewBox={COMPASS_VIEW_BOX}
-      style={{ visibility: 'hidden' }}
-      className={cn('pointer-events-none shrink-0 drop-shadow', className)}
+      style={onNorthUp ? undefined : { visibility: 'hidden' }}
+      className={cn(
+        'pointer-events-none shrink-0 drop-shadow',
+        onNorthUp ? null : className,
+      )}
     >
       <g ref={planeRef}>
         <circle
@@ -110,6 +125,28 @@ export function SceneCompass({
         ))}
       </g>
     </svg>
+  );
+
+  if (!onNorthUp) return svg;
+
+  const northUpLabel = t('monitoring:compass.northUp');
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        ref={buttonRef}
+        delay={150}
+        aria-label={northUpLabel}
+        onClick={onNorthUp}
+        style={{ visibility: 'hidden' }}
+        className={cn(
+          'pointer-events-auto shrink-0 cursor-pointer rounded-full outline-none hover:bg-black/25 focus-visible:ring-2 focus-visible:ring-white/70',
+          className,
+        )}
+      >
+        {svg}
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{northUpLabel}</TooltipContent>
+    </Tooltip>
   );
 }
 
