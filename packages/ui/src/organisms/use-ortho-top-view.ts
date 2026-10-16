@@ -53,6 +53,8 @@ export interface OrthoTopViewHandle {
   isActive: () => boolean;
   /** 탑뷰 진입 / "지금 보는 곳 기준" 복귀. */
   toggle: () => void;
+  /** 탑뷰 진입만 — 이미 탑뷰면 no-op. */
+  enter: () => void;
   /**
    * 원근으로 복귀. `pose` 를 주면 계산한 복귀 포즈 대신 그 구도로 간다(메인
    * 뷰·저장한 뷰·영역 보기). 탑뷰가 아니면 no-op.
@@ -330,5 +332,5 @@ export function useOrthoTopView({
     [set],
   );
 
-  return { active, isActive, toggle, exit, applyPose, moveTo };
+  return { active, isActive, toggle, enter, exit, applyPose, moveTo };
 }

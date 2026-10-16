@@ -18,6 +18,8 @@ import {
   isPlanClearanceKnown,
 } from '../lib/plan-overlap-scan';
 import { usePlanOverlapStore } from '../model/use-plan-overlap-store';
+import { isPlanLookCamera } from '../lib/plan-look';
+import { usePlanLookStore } from '../model/use-plan-look-store';
 
 /**
  * 평면도 겹침 검출(Canvas 안, 무렌더) — 활성 카메라가 직교일 때만
@@ -46,9 +48,10 @@ export function ScenePlanOverlapDetector({
   );
 
   useFrame(({ camera, clock }) => {
-    const planView =
-      (camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
-      true;
+    const planView = isPlanLookCamera(
+      camera,
+      usePlanLookStore.getState().enabled,
+    );
     if (!planView) {
       usePlanOverlapStore.getState().clear();
       return;

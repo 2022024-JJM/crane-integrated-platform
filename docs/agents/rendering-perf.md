@@ -85,7 +85,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 ### 평면도(직교 탑뷰) 룩
 
-탑뷰는 관제 평면도다 — 정보가 아닌 것(그림자·빛 웅덩이·바닥 텍스처 대비)을 빼고 장비 색을 시각과 무관하게 고정한다. 판정은 전부 "활성 카메라가 직교인가" 하나이고(탑뷰 = 직교 카메라 교체 토글, `docs/agents/3d-editor.md`), 어느 것도 셰이더를 재컴파일하지 않는다.
+탑뷰는 둘이다 — **2D 탑뷰**(직교 + 평면도 룩)와 **3D 탑뷰**(직교 카메라만, 모델·조명은 원근 그대로). 평면도 룩은 정보가 아닌 것(그림자·빛 웅덩이·바닥 텍스처 대비)을 빼는 처리이고, 판정은 전부 `isPlanLookCamera(camera, enabled)`(`lib/plan-look.ts` — 직교 + 스위치 `model/use-plan-look-store.ts`, localStorage 영속) 하나다. 탑뷰 자체는 직교 카메라 교체 토글(`docs/agents/3d-editor.md`)이고 어느 것도 셰이더를 재컴파일하지 않는다. 버튼은 `ui/scene-top-view-buttons.tsx` 가 뷰어의 `TopViewButtons` 슬롯에 둘을 놓는다 — 이미 탑뷰 중에 다른 쪽을 누르면 카메라는 그대로 두고 룩만 바뀐다.
 
 - **그림자 끄기** — 위 단락.
 - **바닥 톤** — 셰이더 패치 `lib/plan-view-patch.ts`(`PlanViewKind` 'ground' | 'equipment'). 지도는 `<color_fragment>` 뒤에서 저채도·어둡게(밤엔 `uPlanNight` 로 한 단계 더). 'equipment'(조명 결과를 알베도 평면 색으로 대체)는 모니터링이 쓰지 않는다 — 아래 "하지 않기로 한 것". 장비는 원근과 같은 음영이다. 유니폼은 전역 `planViewUniforms`(`lib/plan-view-uniforms.ts`) 하나이고 `SceneLighting` 이 매 프레임 자기 카메라 기준으로 `publishPlanView(planView, floodlightOn)` 을 쓴다 — 캔버스별 프레임 루프라 각자의 렌더는 각자가 쓴 값을 본다. 원근에서는 유니폼 0 이라 식이 원래 값으로 떨어진다. `ModelMesh`/`GltfModel` 의 `planView` prop 으로 켜며 모니터링·3D 플레이(`outdoor-work-model-simulation.tsx`)가 지도에 'ground' 를 넘긴다. 에디터·자산 뷰어는 넘기지 않는다.

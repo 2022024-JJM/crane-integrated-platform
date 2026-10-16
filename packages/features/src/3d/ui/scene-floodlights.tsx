@@ -13,6 +13,8 @@ import {
   resolveFloodlightSlotCount,
   PLAN_VIEW_FLOODLIGHT_SCALE,
 } from '../lib/floodlight-slots';
+import { isPlanLookCamera } from '../lib/plan-look';
+import { usePlanLookStore } from '../model/use-plan-look-store';
 import { resolveShadowFocus } from '../lib/scene-shadow';
 import { sceneLightingInfo } from '../model/scene-lighting-info';
 
@@ -189,11 +191,12 @@ export function SceneFloodlights({
     const on = sceneLightingInfo.floodlightOn;
     const visible = on > 0;
     // 평면도에서는 바닥 빛 웅덩이를 거의 끈다(세기만, visible 은 그대로).
-    const planScale =
-      (camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
-      true
-        ? PLAN_VIEW_FLOODLIGHT_SCALE
-        : 1;
+    const planScale = isPlanLookCamera(
+      camera,
+      usePlanLookStore.getState().enabled,
+    )
+      ? PLAN_VIEW_FLOODLIGHT_SCALE
+      : 1;
     for (let i = 0; i < slots.length; i += 1) {
       const { light } = slots[i];
       const intensity = (state.candela[i] ?? 0) * on * planScale;

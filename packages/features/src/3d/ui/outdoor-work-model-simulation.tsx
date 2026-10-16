@@ -20,6 +20,8 @@ import {
 } from '@crane/domain/3d';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { usePlanOverlapStore } from '../model/use-plan-overlap-store';
+import { usePlanLookStore } from '../model/use-plan-look-store';
+import { isPlanLookCamera } from '../lib/plan-look';
 import { stopSimulation } from '../model/stop-simulation';
 import { readTagLiveValue } from '../model/tag-value-bus';
 import type { MonitoringViewMode } from '../model/types';
@@ -241,11 +243,8 @@ export function OutdoorWorkModelSimulation({
   const seaVisible = resolveSeaVisible(sceneInfo);
   // 평면도(직교 탑뷰) 여부 — 탑뷰는 기본 카메라를 직교로 교체하는 토글이라
   // 카메라 종류가 곧 모드다. 구독은 교체 순간에만 리렌더를 일으킨다.
-  const planView = useThree(
-    (s) =>
-      (s.camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
-      true,
-  );
+  const planLook = usePlanLookStore((s) => s.enabled);
+  const planView = useThree((s) => isPlanLookCamera(s.camera, planLook));
   // 평면도 숨은선 대상 — 검출기(ScenePlanOverlapDetector)가 탑뷰에서 채운다.
   const planHiddenIndexById = usePlanOverlapStore((s) => s.hiddenIndexById);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.

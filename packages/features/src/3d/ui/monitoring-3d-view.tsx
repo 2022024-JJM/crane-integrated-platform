@@ -68,6 +68,7 @@ import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
 import { SceneNorthUpButton } from './scene-north-up-button';
+import { SceneTopViewButtons } from './scene-top-view-buttons';
 import {
   ScenePlanOverlapChips,
   ScenePlanOverlapDetector,
@@ -482,6 +483,7 @@ export function Monitoring3dView({
         <ThreeSceneViewer
           cameraPreset={cameraPreset}
           cameraClip={SCENE_CAMERA_CLIP}
+          TopViewButtons={SceneTopViewButtons}
           canvasProps={{
             dpr: canvasDpr,
             frameloop: 'demand',

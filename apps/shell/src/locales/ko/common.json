@@ -292,6 +292,8 @@
     "resetView": "메인 뷰",
     "topView": "탑뷰",
     "topViewExit": "탑뷰 해제",
+    "topView2d": "2D 탑뷰(평면도)",
+    "topView3d": "3D 탑뷰",
     "fullscreen": "전체화면",
     "exitFullscreen": "전체화면 복원",
     "badge": "3D Viewer",

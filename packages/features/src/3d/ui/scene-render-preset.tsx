@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { isPlanLookCamera } from '../lib/plan-look';
+import { usePlanLookStore } from '../model/use-plan-look-store';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   ACESFilmicToneMapping,
@@ -765,9 +767,10 @@ export function SceneLighting({
     const light = lightRef.current;
     if (!light) return;
 
-    const planView =
-      (camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
-      true;
+    const planView = isPlanLookCamera(
+      camera,
+      usePlanLookStore.getState().enabled,
+    );
     if (planView !== planViewRef.current) {
       planViewRef.current = planView;
       light.shadow.intensity = planView ? 0 : 1;
