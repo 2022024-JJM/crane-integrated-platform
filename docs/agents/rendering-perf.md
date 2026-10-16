@@ -81,6 +81,22 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 `SceneLighting` 이 `gl.shadowMap.autoUpdate=false` 로 끄고, 캐스터를 움직이는 코드가 `invalidateShadows()` 를 불러야 그 프레임의 shadow pass 가 돈다. 배선된 경로: `rigValueStore`(set/reset/step 누적 드리프트 판정 — 임계 `SHADOW_STEP_EPS` 를 넘긴 프레임마다), `useActiveTransformStore`(기즈모), `ModelMesh`(배치 props·meshOverrides·마운트), 리그 드라이버 인스턴스 해체/재생성(관절·맵핑 정의 편집 시 rest 점프), `SceneLighting` 자신(frustum·태양각) + 4초 주기 안전망. shadow pass 상한은 거버너 fps 가 정한다. 컨텍스트 지형은 cast/receiveShadow 모두 꺼져 있다(모니터링·에디터 동일).
 
+**직교 탑뷰(평면도)에서는 그림자를 끈다.** 위에서 본 그림자는 크레인보다 크고 지브처럼 읽혀 노이즈다. `SceneLighting` 의 useFrame 이 활성 카메라가 직교인 프레임에 키 라이트 `shadow.intensity` 를 0 으로 두고 `setShadowsSuppressed(gl, true)` 로 무효화 신호를 삼킨다(shadow pass 0회). 셰이더 재컴파일을 일으키는 `castShadow`·`shadowMap.enabled` 는 건드리지 않는다. 원근으로 돌아오면 세기를 되돌리고 보류 해제가 한 번 갱신한다. 뷰어·에디터 모두 같은 훅(`useOrthoTopView`)이라 둘 다 적용된다.
+
+### 평면도(직교 탑뷰) 룩
+
+탑뷰는 관제 평면도다 — 정보가 아닌 것(그림자·빛 웅덩이·바닥 텍스처 대비)을 빼고 장비 색을 시각과 무관하게 고정한다. 판정은 전부 "활성 카메라가 직교인가" 하나이고(탑뷰 = 직교 카메라 교체 토글, `docs/agents/3d-editor.md`), 어느 것도 셰이더를 재컴파일하지 않는다.
+
+- **그림자 끄기** — 위 단락.
+- **바닥 톤** — 셰이더 패치 `lib/plan-view-patch.ts`(`PlanViewKind` 'ground' | 'equipment'). 지도는 `<color_fragment>` 뒤에서 저채도·어둡게(밤엔 `uPlanNight` 로 한 단계 더). 'equipment'(조명 결과를 알베도 평면 색으로 대체)는 모니터링이 쓰지 않는다 — 아래 "하지 않기로 한 것". 장비는 원근과 같은 음영이다. 유니폼은 전역 `planViewUniforms`(`lib/plan-view-uniforms.ts`) 하나이고 `SceneLighting` 이 매 프레임 자기 카메라 기준으로 `publishPlanView(planView, floodlightOn)` 을 쓴다 — 캔버스별 프레임 루프라 각자의 렌더는 각자가 쓴 값을 본다. 원근에서는 유니폼 0 이라 식이 원래 값으로 떨어진다. `ModelMesh`/`GltfModel` 의 `planView` prop 으로 켜며 모니터링·3D 플레이(`outdoor-work-model-simulation.tsx`)가 지도에 'ground' 를 넘긴다. 에디터·자산 뷰어는 넘기지 않는다.
+- **패치 합성** — 잠김 안개(`sea-submersion.ts`)와 평면도 톤이 같은 머티리얼에 걸리므로 `lib/shader-patch.ts` 가 `onBeforeCompile` 슬롯 하나에 키별 패치를 등록 순서로 돌리고 `customProgramCacheKey` 를 키를 이은 값으로 둔다. 새 머티리얼 패치는 이 경로로만 건다 — `onBeforeCompile` 을 직접 대입하면 앞 패치를 덮는다.
+- **공유 머티리얼** — `lib/sea-material-cache.ts` 는 원본당 **패치 조합별**(`SharedVariantOptions { sea, plan }`) variant 를 refcount 공유한다. 패치가 하나도 필요 없는 인스턴스만 원본을 그대로 쓴다(`isSharedVariantNeeded`). 바인딩 전이는 `mesh-material-binding.ts`(`assignSharedMaterials`, `ensureClonedMaterials(binding, sea, plan)`).
+- **투광등** — `SceneFloodlights` 가 직교 카메라면 슬롯 세기에 `PLAN_VIEW_FLOODLIGHT_SCALE`(`lib/floodlight-slots.ts`)을 곱해 바닥 빛 웅덩이를 거의 끈다. `visible` 은 건드리지 않는다(조명 수 변화 = 재컴파일). 기구 글로우(`SceneFloodlightFixture`)는 그대로라 점으로 남는다.
+- **윤곽선** — 모든 장비를 아주 가는 반투명 실루엣(`lib/status-outline-style.ts` 의 `PLAN_VIEW_OUTLINE_PX`·`PLAN_VIEW_OUTLINE_OPACITY`)으로 두른다(`GltfModel.planOutline`, `docs/agents/3d-collision.md` "평면도 윤곽선"). 지도에 묻히는 가는 부재를 살짝 세우는 용도라 두껍게 하지 않는다. 부풀림 채움(`lib/plan-fill.ts`·`ObjectPlanFill`)은 구현만 남아 있고 쓰지 않는다 — 아래 "하지 않기로 한 것".
+- **라벨 앵커** — 평면도에서 라벨은 바닥 메쉬 발자국 중심(선회 축)에 서고 짧은 지시선을 내린다(`lib/model-label-anchor.ts`, `GltfModel.planLabel`, `ModelLabel.leader`). 평면도 라벨은 거리 축소(`label-scale.ts`)를 타지 않고 글자도 한 단계 크다 — 직교에선 카메라 높이가 곧 거리라 줄이면 읽히지 않는다. 지브 bbox 중심에 두면 선회해도 허공에 남아 어느 장비 것인지 흐려진다.
+- **축척 바·북쪽 위로** — 관제 화면의 평면도 보조 표시. `docs/agents/monitoring-ui.md` "방위 표시·축척·북쪽 위로".
+- **숨은선** — 다른 장비 아래 가려진 장비를 제도 관례대로 어두운 점무늬로 위 장비를 뚫고 보인다(`lib/plan-hidden-line.ts`, `ObjectHiddenLine`, `GltfModel.planHiddenIndex`). 메쉬마다 같은 geometry 의 오버레이 세 패스(가시 표식 → GreaterDepth 빗금 → 표식 지우기)를 자식으로 붙이고 스텐실 `PLAN_HIDDEN_STENCIL_BIT` 로 자기 가림을 뺀다. 세 패스는 모델마다 연속이어야 해서 `planHiddenLineRenderOrder(index, pass)` 로 모델 인덱스마다 떨어뜨린다 — 인덱스는 겹침 스토어(`use-plan-overlap-store.ts`)의 가려지는 모델 순서다. 대상은 탑뷰에서 다른 장비와 평면 겹침이 있는 아래쪽 모델뿐이라 비용은 그 모델의 삼각형 ×3 이다. 세 패스는 깊이를 three 메쉬 셰이더와 같은 `logdepthbuf` 청크로 쓴다 — 캔버스가 로그 깊이 버퍼라 다른 경로로 쓰면 같은 면 비교가 어긋난다. 채움·숨은선 모두 `PLAN_OVERLAY_MAX_TRIANGLES`(`lib/plan-overlay-budget.ts`)를 넘는 큰 몸체 메쉬는 뺀다. 스텐실 캔버스 전용.
+
 ### 낮/밤·태양 위치(solar 모드)
 
 씬 설정 `lighting.sunMode: 'solar'`(`SceneSunMode`, 기본 `manual` = 수동 방위·고도 패드, 필드 생략). `'solar'` 만 저장하고 수동 각도는 보존돼 되돌리면 복원된다 — sanitize·에디터 dirty·`setLighting` 모두 같은 규칙.
@@ -166,6 +182,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **지도의 셰이딩 등급은 `resolveMapShading`(`lib/model-shading.ts`) 하나가 정한다.** 호출부가 role 을 직접 보고 등급을 고르면 모니터링과 에디터가 갈라진다. 새 등급을 더하면 `useClonedModel` 의 바꿔 끼우기 분기와 함께 둔다 — 바인딩·잠김 패치·스텐실 표식이 그 뒤에 만들어져야 한다.
 
 ## 하지 않기로 한 것
+
+- 평면도(탑뷰)에서 장비를 평면 색으로 고정하거나 두꺼운 윤곽·부풀림 채움을 두르기 — 종이를 오려 붙인 것처럼 평평해지고 3D 모델과 따로 노는 덧그림으로 읽혔다(관제 화면 리뷰). 탑뷰 장비는 원근과 같은 음영에 아주 가는 반투명 윤곽 하나만 더한다.
 
 - **reverse-Z 깊이** — three r183 의 `reverseDepthBuffer` 는 WebGPURenderer 전용이고, 기본 프레임버퍼(24bit unorm)에선 부호 반전만으로 정밀도가 늘지 않아(float 깊이 RT 여야 이득) 로그 깊이의 z-fighting 해결을 대체할 수 없다.
 - **DPR 상한 1.25** — 내렸다 되돌렸다. 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 뷰어 기본값 함께).

@@ -4,7 +4,9 @@ import {
   computeTopViewExitPose,
   computeTopViewPose,
   ensureTopViewTilt,
+  headingForAzimuth,
   headingOfPose,
+  rotatePoseToHeading,
   orthoHalfHeightForDistance,
   PERSPECTIVE_FOV_USER_DATA_KEY,
   resolveCameraAspect,
@@ -508,5 +510,73 @@ describe('ensureTopViewTilt', () => {
   it('computeTopViewPose 결과는 이미 정규 포즈라 통과해도 변하지 않는다', () => {
     const pose = computeTopViewPose(box(100, 10, 100), 1, FOV)!;
     expect(ensureTopViewTilt(pose.position, pose.target)).toBe(pose.position);
+  });
+});
+
+describe('headingForAzimuth', () => {
+  it('0 은 −Z, 90 은 +X, 180 은 +Z, 270 은 −X', () => {
+    const near = (h: [number, number], x: number, z: number) => {
+      expect(h[0]).toBeCloseTo(x, 12);
+      expect(h[1]).toBeCloseTo(z, 12);
+    };
+    near(headingForAzimuth(0), 0, -1);
+    near(headingForAzimuth(90), 1, 0);
+    near(headingForAzimuth(180), 0, 1);
+    near(headingForAzimuth(270), -1, 0);
+  });
+
+  it('비유한수는 −Z', () => {
+    expect(headingForAzimuth(Number.NaN)).toEqual([0, -1]);
+  });
+});
+
+describe('rotatePoseToHeading', () => {
+  const target: Vector3Tuple = [10, 0, 20];
+
+  it('타깃 축으로 돌려 시선 XZ 가 heading 을 향하고 수평 거리·높이는 그대로', () => {
+    const out = rotatePoseToHeading([10 + 30, 40, 20 + 40], target, [1, 0]);
+    // heading +X → 카메라는 타깃의 −X 쪽, 수평 거리 50.
+    expect(out.position[0]).toBeCloseTo(10 - 50, 12);
+    expect(out.position[1]).toBe(40);
+    expect(out.position[2]).toBeCloseTo(20, 12);
+    expect(out.target).toEqual(target);
+    expect(headingOfPose(out.position, out.target)![0]).toBeCloseTo(1, 12);
+  });
+
+  it('heading 은 정규화한다', () => {
+    const a = rotatePoseToHeading([0, 5, 10], [0, 0, 0], [0, 1]);
+    const b = rotatePoseToHeading([0, 5, 10], [0, 0, 0], [0, 7]);
+    expect(a).toEqual(b);
+  });
+
+  it('탑뷰 진입 포즈(미세 tilt)도 tilt 방향만 돌고 높이는 그대로', () => {
+    const entry = computeTopViewEntryPose([100, 80, 100], [0, 0, 0]);
+    const out = rotatePoseToHeading(entry.position, entry.target, [0, -1]);
+    expect(out.position[1]).toBe(entry.position[1]);
+    const lateralBefore = Math.hypot(entry.position[0], entry.position[2]);
+    const lateralAfter = Math.hypot(out.position[0], out.position[2]);
+    expect(lateralAfter).toBeCloseTo(lateralBefore, 12);
+    expect(out.position[2]).toBeGreaterThan(0);
+    expect(Math.abs(out.position[0])).toBeLessThan(1e-12);
+  });
+
+  it('정수직(수평 거리 0)·퇴화 heading·비유한수는 복사본 그대로', () => {
+    const vertical: Vector3Tuple = [10, 50, 20];
+    expect(rotatePoseToHeading(vertical, target, [1, 0]).position).toEqual(
+      vertical,
+    );
+    const p: Vector3Tuple = [40, 10, 60];
+    expect(rotatePoseToHeading(p, target, [0, 0]).position).toEqual(p);
+    expect(rotatePoseToHeading(p, target, [NaN, 1]).position).toEqual(p);
+    expect(
+      rotatePoseToHeading([NaN, 10, 60], target, [1, 0]).position[0],
+    ).toBeNaN();
+  });
+
+  it('입력 배열 참조를 공유하지 않는다', () => {
+    const p: Vector3Tuple = [40, 10, 60];
+    const out = rotatePoseToHeading(p, target, [1, 0]);
+    expect(out.position).not.toBe(p);
+    expect(out.target).not.toBe(target);
   });
 });

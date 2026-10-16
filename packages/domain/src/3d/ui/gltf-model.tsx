@@ -12,6 +12,7 @@ import {
   useModelLabelLocalAnchor,
 } from './model-mesh';
 import type { ModelShading } from '../lib/model-shading';
+import type { PlanViewKind } from '../lib/plan-view-patch';
 import {
   ModelLabel,
   type AlarmHighlightSeverity,
@@ -20,12 +21,17 @@ import {
 import { PerViewport } from './scene-viewports';
 import { ModelSelectionBox } from './model-selection-box';
 import { ObjectSilhouetteOutline } from './object-silhouette-outline';
+import { ObjectHiddenLine } from './object-hidden-line';
 import type {
   ModelLabelReading,
   ModelLabelValueReader,
 } from '../lib/label-reading';
 import { SELECTION_LINE_COLOR } from '../lib/selection-style';
 import {
+  PLAN_VIEW_OUTLINE_COLOR,
+  PLAN_VIEW_OUTLINE_OPACITY,
+  PLAN_VIEW_OUTLINE_PX,
+  PLAN_VIEW_OUTLINE_RENDER_ORDER,
   STATUS_OUTLINE_COLORS,
   STATUS_OUTLINE_PX,
   isStatusOutlineVisible,
@@ -57,6 +63,23 @@ interface GltfModelProps {
    */
   outlineState?: EquipmentOutlineState;
   /**
+   * 평면도(직교 탑뷰) 윤곽선 — 모델 전체를 어두운 가는 선으로 두른다
+   * (lib/status-outline-style.ts 의 PLAN_VIEW_*). 상태 외곽선이 있으면 그것이
+   * 대신한다. 스텐실 전제는 outlineState 와 같다. 기본 false.
+   */
+  planOutline?: boolean;
+  /**
+   * 평면도 라벨 — 앵커를 바닥 발자국 중심(선회 축)에 두고 지시선을 내린다
+   * (lib/model-label-anchor.ts, model-label.tsx 의 leader). 기본 false.
+   */
+  planLabel?: boolean;
+  /**
+   * 평면도 숨은선 — 다른 장비 아래 가려진 부분을 빗금으로 위 장비를 뚫고
+   * 보인다(lib/plan-hidden-line.ts). 값은 같은 캔버스의 숨은선 대상 중 이
+   * 모델의 자리(0부터)이고 null 이면 그리지 않는다. 스텐실 캔버스 전용.
+   */
+  planHiddenIndex?: number | null;
+  /**
    * 라벨 위에 쌓일 태그 값 목록과 값 읽기 함수(model-label.tsx). 목록은
    * 참조가 안정적이어야 한다 — buildLabelReadings 결과를 memo 해서 넘긴다.
    */
@@ -64,6 +87,8 @@ interface GltfModelProps {
   readLabelValue?: ModelLabelValueReader;
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델·지도(model-mesh.tsx). */
   seaSubmersion?: boolean;
+  /** 평면도 톤 패치 종류(model-mesh.tsx 의 같은 prop). 기본 null. */
+  planView?: PlanViewKind | null;
   /**
    * 그림자를 드리울지. 기본 true. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
    */
@@ -135,6 +160,7 @@ export const GltfModel = memo(function GltfModel({
   equipName,
   opacity = 1,
   seaSubmersion = false,
+  planView = null,
   castShadow = true,
   receiveShadow = true,
   shading = 'standard',
@@ -144,6 +170,9 @@ export const GltfModel = memo(function GltfModel({
   labelState,
   labelTitles,
   outlineState,
+  planOutline = false,
+  planLabel = false,
+  planHiddenIndex = null,
   labelReadings,
   readLabelValue,
   position = [0, 0, 0],
@@ -167,7 +196,11 @@ export const GltfModel = memo(function GltfModel({
   // SelectionBox·라벨 앵커가 실제 렌더되는 트리와 다른 clone을 측정했다.
   const clonedModel = useClonedModel(url, undefined, { shading });
   const { clone } = clonedModel;
-  const labelLocalAnchor = useModelLabelLocalAnchor(clone, showLabel);
+  const labelLocalAnchor = useModelLabelLocalAnchor(
+    clone,
+    showLabel,
+    planLabel,
+  );
   // 선택 표시 대상 — 자식 노드가 선택됐으면 그 노드, 아니면 모델 루트.
   // ObjectSilhouetteOutline 은 내부에서 node.uuid 를 key 로 인스턴스를 새로
   // 만들므로 대상이 바뀌어도 포털 컨테이너가 교체되지 않는다. 여기서 다시
@@ -203,6 +236,7 @@ export const GltfModel = memo(function GltfModel({
       opacity={opacity}
       alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
       seaSubmersion={seaSubmersion}
+      planView={planView}
       castShadow={castShadow}
       receiveShadow={receiveShadow}
       shading={shading}
@@ -226,6 +260,21 @@ export const GltfModel = memo(function GltfModel({
           color={STATUS_OUTLINE_COLORS[statusOutline]}
           thicknessPx={STATUS_OUTLINE_PX}
           renderOrder={statusOutlineRenderOrder(statusOutline)}
+        />
+      ) : planOutline ? (
+        // 아주 가는 반투명 선 하나 — 채움(ObjectPlanFill)은 두지 않는다.
+        <ObjectSilhouetteOutline
+          objects={statusOutlineObjects}
+          color={PLAN_VIEW_OUTLINE_COLOR}
+          thicknessPx={PLAN_VIEW_OUTLINE_PX}
+          renderOrder={PLAN_VIEW_OUTLINE_RENDER_ORDER}
+          opacity={PLAN_VIEW_OUTLINE_OPACITY}
+        />
+      ) : null}
+      {planHiddenIndex !== null ? (
+        <ObjectHiddenLine
+          objects={statusOutlineObjects}
+          index={planHiddenIndex}
         />
       ) : null}
       {useOutline ? (
@@ -257,6 +306,7 @@ export const GltfModel = memo(function GltfModel({
               readings={labelReadings}
               readValue={readLabelValue}
               interactive={viewport === null}
+              leader={planLabel}
               portal={viewport?.portal}
               onSelect={onSelect}
               onHoverStart={onHoverStart}

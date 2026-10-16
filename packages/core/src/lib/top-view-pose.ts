@@ -374,3 +374,45 @@ export function ensureTopViewTilt(
 
   return [target[0], position[1], target[2] + tilt];
 }
+
+/**
+ * 방위각(도, −Z 기준 시계 방향 — 나침반·태양 방향과 같은 규약)의 XZ 단위
+ * 방향. 비유한수는 −Z(북).
+ */
+export function headingForAzimuth(azimuthDeg: number): [number, number] {
+  if (!Number.isFinite(azimuthDeg)) return [0, -1];
+  const a = (azimuthDeg * Math.PI) / 180;
+  return [Math.sin(a), -Math.cos(a)];
+}
+
+/**
+ * 타깃을 축으로 카메라를 돌려 시선의 XZ 방향을 `heading` 에 맞춘 포즈 —
+ * 거리·높이·타깃은 그대로다. 탑뷰 포즈는 미세 tilt 의 방향이 곧 화면 위
+ * 방향이라 같은 식으로 평면도의 "북쪽 위" 가 된다. 수평 거리가 0(정수직)
+ * 이거나 heading 이 퇴화하거나 입력이 비유한수면 원본을 그대로 돌려준다.
+ */
+export function rotatePoseToHeading(
+  position: Vector3Tuple,
+  target: Vector3Tuple,
+  heading: readonly [number, number],
+): CameraPose {
+  const same: CameraPose = {
+    position: [position[0], position[1], position[2]],
+    target: [target[0], target[1], target[2]],
+  };
+  const values = [...position, ...target, ...heading];
+  if (values.some((v) => !Number.isFinite(v))) return same;
+  const dx = position[0] - target[0];
+  const dz = position[2] - target[2];
+  const lateral = Math.sqrt(dx * dx + dz * dz);
+  const length = Math.hypot(heading[0], heading[1]);
+  if (lateral === 0 || length === 0) return same;
+  // 시선 XZ = target − position 이 heading 을 향하려면 position 은 heading 의
+  // 반대쪽에 선다.
+  const hx = heading[0] / length;
+  const hz = heading[1] / length;
+  return {
+    position: [target[0] - hx * lateral, position[1], target[2] - hz * lateral],
+    target: same.target,
+  };
+}

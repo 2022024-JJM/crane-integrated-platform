@@ -59,6 +59,8 @@
       "min": "Min",
       "max": "Max",
       "invert": "Invert",
+      "pivot": "Pivot",
+      "pivotHint": "Rotation center as an offset from the node origin (m). Empty = origin",
       "hinge": "Rotate",
       "slide": "Translate",
       "unresolvedNode": "Node not found",
@@ -527,7 +529,14 @@
     }
   },
   "compass": {
-    "label": "Compass"
+    "label": "Compass",
+    "northUp": "North up"
+  },
+  "planOverlap": {
+    "label": "Plan overlap clearance"
+  },
+  "planScale": {
+    "label": "Scale"
   },
   "sceneClock": {
     "live": "Current time",

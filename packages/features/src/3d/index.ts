@@ -271,6 +271,23 @@ export {
   SceneCompassDriver,
   type SceneCompassHandle,
 } from './ui/scene-compass';
+export {
+  ScenePlanScaleBar,
+  ScenePlanScaleBarDriver,
+  type ScenePlanScaleBarHandle,
+} from './ui/scene-plan-scale-bar';
+export { SceneNorthUpButton } from './ui/scene-north-up-button';
+export {
+  ScenePlanOverlapChips,
+  ScenePlanOverlapDetector,
+} from './ui/scene-plan-overlaps';
+export { usePlanOverlapStore } from './model/use-plan-overlap-store';
+export { northUpPose } from './lib/north-up';
+export {
+  resolvePlanScaleBar,
+  formatPlanScale,
+  type PlanScaleBar,
+} from './lib/plan-scale-bar';
 export { ScenePerfHud } from './ui/scene-perf-hud';
 export { ScenePerfProbe } from './ui/scene-perf-probe';
 export { useSceneWarmupStep } from './model/use-scene-warmup-step';

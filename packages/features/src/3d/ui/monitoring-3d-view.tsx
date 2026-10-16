@@ -19,6 +19,7 @@ import {
   resolveSeaVisible,
   resolveSplitLayout,
   resolveTrueNorth,
+  getSceneMetersPerUnit,
   type SceneViewport,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -66,6 +67,17 @@ import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
+import { SceneNorthUpButton } from './scene-north-up-button';
+import {
+  ScenePlanOverlapChips,
+  ScenePlanOverlapDetector,
+} from './scene-plan-overlaps';
+import {
+  ScenePlanScaleBar,
+  ScenePlanScaleBarDriver,
+  type ScenePlanScaleBarHandle,
+} from './scene-plan-scale-bar';
+import { northUpPose } from '../lib/north-up';
 import { useModelStatusRecords } from '../model/use-model-runtime-statuses';
 import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
@@ -199,6 +211,7 @@ export function Monitoring3dView({
   // 방위 표시는 독 배치 전부(실시간·3D 플레이) — ACMS 는 실시간과 Play Back
   // 화면 모두 좌상단에 방위를 둔다. 자세는 Canvas 안 드라이버가 직접 쓴다.
   const compassRef = useRef<SceneCompassHandle | null>(null);
+  const scaleBarRef = useRef<ScenePlanScaleBarHandle | null>(null);
   // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
   // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
   const toolsDock = useSceneDock('tools');
@@ -220,6 +233,7 @@ export function Monitoring3dView({
   // 파도가 얼어붙던 문제의 해법이다.
   const seaVisible = resolveSeaVisible(sceneInfo);
   const trueNorth = resolveTrueNorth(sceneInfo);
+  const metersPerUnit = getSceneMetersPerUnit(regionId);
   const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
@@ -277,6 +291,15 @@ export function Monitoring3dView({
   const handleResetCamera = useCallback(() => {
     sceneControllerRef.current?.reset();
   }, []);
+
+  // 북쪽 위로 — 모드를 유지한 채(panTo) 타깃 축으로 돌린다.
+  const handleNorthUp = useCallback(() => {
+    const controller = sceneControllerRef.current;
+    const pose = controller?.getPose();
+    if (!controller || !pose) return;
+    const next = northUpPose(pose, trueNorth);
+    controller.panTo(next.position, next.target);
+  }, [trueNorth]);
 
   const handleGetPose = useCallback(
     () => sceneControllerRef.current?.getPose() ?? null,
@@ -493,6 +516,16 @@ export function Monitoring3dView({
                 />
               ) : null}
               {overlayExtras}
+              {/* 평면도 축척(우하단) — 직교 탑뷰에서만 드라이버가 보이게 한다.
+                우측 독 레일 안쪽으로 들어오게 레일 여백 변수를 더한다. */}
+              {isDock && !splitActive ? (
+                <div
+                  className="pointer-events-none absolute bottom-2 z-10"
+                  style={{ right: 'calc(0.5rem + var(--dock-right-inset))' }}
+                >
+                  <ScenePlanScaleBar ref={scaleBarRef} className="items-end" />
+                </div>
+              ) : null}
               {/* 2D 미니맵(좌하단) — 실시간 관제 화면에서만. 배경은
                 Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링.
                 분할 중엔 숨긴다(카메라 표시가 기본 카메라 것이라 의미가 없다). */}
@@ -550,6 +583,8 @@ export function Monitoring3dView({
                 {showControlRoomWidgets ? (
                   <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
                 ) : null}
+                {/* 북쪽 위로 — 탑뷰·원근 모두 타깃 축으로 돌린다. */}
+                <SceneNorthUpButton onNorthUp={handleNorthUp} />
                 {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
                   의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
                   소스는 프레임 시각을 따르므로 숨긴다. */}
@@ -595,7 +630,16 @@ export function Monitoring3dView({
           {/* 방위 표시 자세 — 카메라 확정 뒤 이 프레임의 최종 시점을 읽는다.
             분할 중엔 전역 방위 표시가 없다. */}
           {isDock && !splitActive ? (
-            <SceneCompassDriver compassRef={compassRef} trueNorth={trueNorth} />
+            <>
+              <SceneCompassDriver
+                compassRef={compassRef}
+                trueNorth={trueNorth}
+              />
+              <ScenePlanScaleBarDriver
+                barRef={scaleBarRef}
+                metersPerUnit={metersPerUnit}
+              />
+            </>
           ) : null}
           {/* 분할 렌더러 — 뷰포트(타일)가 잡힌 뒤 R3F 렌더를 넘겨받는다. 맨
             마지막이 아니어도 된다(priority 1 은 0 들 뒤에 돈다). */}
@@ -622,6 +666,13 @@ export function Monitoring3dView({
               runner={collisionRunner}
             />
             <SceneCollisionHighlight />
+            {/* 평면도 겹침(위에서 겹쳐 보이는 장비의 Δh 칩·숨은선) — 탑뷰에서만
+              스캔한다. 리그 드라이버 뒤라 움직인 뒤 잰다. */}
+            <ScenePlanOverlapDetector sceneInfo={sceneInfo} />
+            <ScenePlanOverlapChips
+              sceneInfo={sceneInfo}
+              metersPerUnit={metersPerUnit}
+            />
             {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
             <SceneZoneDetector
               sceneInfo={sceneInfo}

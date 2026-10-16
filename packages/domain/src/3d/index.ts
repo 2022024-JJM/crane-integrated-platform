@@ -202,6 +202,7 @@ export { modelObjectRegistry } from './lib/model-object-registry';
 export { extendGltfLoaderWithKtx2 } from './lib/ktx2-loader';
 export {
   invalidateShadows,
+  setShadowsSuppressed,
   registerShadowRenderer,
   unregisterShadowRenderer,
 } from './lib/shadow-invalidation';
@@ -367,6 +368,16 @@ export {
   resetSeaReachMask,
 } from './lib/sea-reach-uniforms';
 export {
+  planViewUniforms,
+  publishPlanView,
+  type PlanViewUniforms,
+} from './lib/plan-view-uniforms';
+export {
+  applyPlanViewPatch,
+  clearPlanViewPatch,
+  type PlanViewKind,
+} from './lib/plan-view-patch';
+export {
   withBaseUrl,
   registerAssetHashManifest,
 } from '@crane/core/lib/asset-url';
@@ -404,6 +415,7 @@ export {
   type StatusOutlineKind,
 } from './lib/status-outline-style';
 export {
+  PLAN_HIDDEN_STENCIL_BIT,
   SCENE_OPAQUE_STENCIL_BIT,
   SILHOUETTE_STENCIL_BIT,
   hasSceneOpaqueStencil,
@@ -416,3 +428,36 @@ export {
   SCENE_METERS_PER_UNIT_BY_REGION_ID,
   getSceneMetersPerUnit,
 } from './model/scene-unit-scale';
+export {
+  resolvePlanOverlaps,
+  isPlanOverlapListEqual,
+  collectPlanHiddenIds,
+  formatPlanClearance,
+  planOverlapKey,
+  type PlanOverlap,
+  type PlanOverlapMember,
+} from './lib/plan-overlap';
+export {
+  PLAN_HIDDEN_LINE_COLOR,
+  PLAN_HIDDEN_RENDER_ORDER,
+  createPlanHiddenLineMeshes,
+  planHiddenLineRenderOrder,
+} from './lib/plan-hidden-line';
+export { ObjectHiddenLine } from './ui/object-hidden-line';
+export {
+  defaultLabelAnchorFromBox,
+  planLabelAnchorFromBoxes,
+  LABEL_ANCHOR_FALLBACK,
+} from './lib/model-label-anchor';
+export {
+  PLAN_FILL_PX,
+  createPlanFillMaterial,
+  createPlanFillMesh,
+  planFillUniforms,
+  publishPlanFillOffset,
+} from './lib/plan-fill';
+export { ObjectPlanFill } from './ui/object-plan-fill';
+export {
+  PLAN_OVERLAY_MAX_TRIANGLES,
+  isPlanOverlayEligible,
+} from './lib/plan-overlay-budget';

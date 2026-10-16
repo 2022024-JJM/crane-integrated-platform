@@ -24,6 +24,8 @@ import {
   SCENE_SUN_ELEVATION_DEFAULT,
   bearingToWorldAzimuth,
   invalidateShadows,
+  publishPlanView,
+  setShadowsSuppressed,
   modelObjectRegistry,
   publishUnlitSkyScale,
   registerShadowRenderer,
@@ -741,6 +743,11 @@ export function SceneLighting({
     sunDir: Vector3;
   }>({ cx: Number.NaN, cz: Number.NaN, radius: 0, sunDir: new Vector3() });
   const lastShadowRenderAtRef = useRef(0);
+  // 직교 탑뷰(평면도)에서 그림자를 끈다 — 위에서 본 그림자는 크레인보다 크고
+  // 지브처럼 읽혀 정보가 아니라 노이즈다. 셰이더를 다시 컴파일하는 플래그
+  // (castShadow·shadowMap.enabled)는 건드리지 않고, 그림자 세기 0 + shadow
+  // pass 보류로 끈다. 복귀 때 한 번 갱신된다(setShadowsSuppressed).
+  const planViewRef = useRef(false);
 
   // 시점 추종 shadow frustum — 고정 frustum으로 씬 전체를 덮으면 텍셀이
   // m급이라 계단이 보인다(SUN_SHADOW_MAP_SIZE 주석). 대신 카메라 시선이
@@ -757,6 +764,15 @@ export function SceneLighting({
   useFrame(({ camera, clock, scene: frameScene }) => {
     const light = lightRef.current;
     if (!light) return;
+
+    const planView =
+      (camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
+      true;
+    if (planView !== planViewRef.current) {
+      planViewRef.current = planView;
+      light.shadow.intensity = planView ? 0 : 1;
+      if (shadowsEnabled) setShadowsSuppressed(gl, planView);
+    }
 
     // 0) 이 프레임의 태양 방향 — manual 은 메모 값, solar 는 시각으로 계산.
     let sunDir = manualSunDir;
@@ -936,6 +952,8 @@ export function SceneLighting({
     // 씬에 놓인 투광등(SceneFloodlights·기구 글로우)이 읽는 점등 비율. 같은
     // 프레임의 뒤쪽 useFrame(마운트 순)이 읽는다.
     publishFloodlightOn(sceneLightingInfo, floodlightOn);
+    // 평면도 톤 유니폼 — 이 캔버스의 렌더 직전에 자기 카메라 기준으로 쓴다.
+    publishPlanView(planView ? 1 : 0, floodlightOn);
     // 컨텍스트 지형의 unlit 항공사진이 같은 프레임 렌더에서 읽는다
     // (@crane/domain/3d unlit-sky-scale — 값이 같으면 업로드 없음).
     publishUnlitSkyScale(unlitSkyScale);

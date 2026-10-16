@@ -54,6 +54,14 @@ export function assignFloodlightSlots(
  * 그때마다 재배정하면 경계의 두 조명이 번갈아 켜진다. 격자에 맞추면 격자
  * 칸을 넘을 때만 바뀐다.
  */
+/**
+ * 평면도(직교 탑뷰)에서의 투광등 세기 배율. 위에서 본 빛 웅덩이는 큰 흰
+ * 타원으로 도크를 덮어 정보를 가린다 — 기구 글로우(점)만 남기고 바닥 조명은
+ * 거의 끈다. 0 이 아닌 이유: visible 토글(조명 수 변화 = 재컴파일)을 피하고
+ * 바닥에 "켜져 있다" 는 흔적만 남긴다.
+ */
+export const PLAN_VIEW_FLOODLIGHT_SCALE = 0.12;
+
 export const FLOODLIGHT_FOCUS_STEP = 25;
 
 export function quantizeFloodlightFocus(

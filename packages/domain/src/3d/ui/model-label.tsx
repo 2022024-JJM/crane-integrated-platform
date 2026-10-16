@@ -128,6 +128,12 @@ interface ModelLabelProps {
    */
   interactive?: boolean;
   /**
+   * 평면도 — 상자를 앵커 **위**에 세우고 앵커까지 짧은 지시선을 내린다.
+   * 앵커가 장비의 축(바닥 발자국 중심)이라 지시선 발이 곧 "이 장비" 다.
+   * 기본(false)은 앵커 중심에 상자를 둔다(원근, 모델 머리 위).
+   */
+  leader?: boolean;
+  /**
    * DOM 을 붙일 컨테이너(drei Html 의 portal). 분할 화면은 타일 컨테이너를
    * 넘긴다 — Html 이 이 요소 기준으로 위치를 쓴다. 없으면 캔버스 옆.
    */
@@ -148,6 +154,7 @@ export function ModelLabel({
   readings = NO_READINGS,
   readValue,
   interactive = true,
+  leader = false,
   portal,
   onSelect,
   onHoverStart,
@@ -212,8 +219,9 @@ export function ModelLabel({
 
     // drei <Html>은 wrapper에 자체 transform을 걸므로, 스케일은 우리가 소유한
     // 안쪽 div에 적용해 충돌을 피한다. 배율은 단계로 끊겨 나와 매 프레임
-    // style 재작성이 없다.
-    const scale = labelScaleAtDistance(dist);
+    // style 재작성이 없다. 평면도(leader)는 줄이지 않는다 — 직교 탑뷰는
+    // 카메라 높이가 곧 "거리" 라 100m 만 올라가도 글자가 읽히지 않게 줄었다.
+    const scale = leader ? 1 : labelScaleAtDistance(dist);
     if (scale !== lastScaleRef.current) {
       div.style.transform = scale === 1 ? '' : `scale(${scale})`;
       lastScaleRef.current = scale;
@@ -234,19 +242,28 @@ export function ModelLabel({
       {/* drei 의 portal 타입은 non-null RefObject 라 캐스팅한다 — 분할
           타일 컨테이너는 마운트 뒤에 채워진다. */}
       <Html
-        center
+        center={!leader}
         zIndexRange={[5, 0]}
         portal={portal as RefObject<HTMLElement> | undefined}
       >
         {/* 숨김·축소는 상자와 값 줄을 함께 감싼 이 요소에 건다. 감싼 요소의
             크기는 상자 하나다 — 값 줄은 흐름 밖(absolute)에서 상자 위로 쌓여,
             값 줄이 몇 개든 상자는 제자리에 있다. 포인터는 상자만 받고, 상자
-            위의 휠·pointerdown 은 캔버스로 넘긴다. */}
-        <div ref={divRef} className="pointer-events-none relative">
+            위의 휠·pointerdown 은 캔버스로 넘긴다. 지시선 모드는 Html 의
+            center 대신 translate 로 "아래 가운데" 를 앵커에 맞춘다(Tailwind
+            v4 의 translate 는 별도 속성이라 축소 transform 과 충돌하지 않는다). */}
+        <div
+          ref={divRef}
+          className={
+            leader
+              ? 'pointer-events-none relative flex -translate-x-1/2 -translate-y-full flex-col items-center'
+              : 'pointer-events-none relative'
+          }
+        >
           <div
             ref={wheelRef}
             title={titles?.tone[tone]}
-            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-auto'} ${tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
+            className={`inline-flex items-center gap-1 rounded font-mono leading-tight font-semibold whitespace-nowrap drop-shadow ${leader ? 'px-1.5 py-0.5 text-[12px]' : 'px-1.5 py-0.5 text-[11px]'} ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-auto'} ${tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
             onPointerDown={inert ? undefined : forwardPointerDown}
             onPointerEnter={
               inert
@@ -302,13 +319,19 @@ export function ModelLabel({
               </span>
             ) : null}
           </div>
+          {leader ? (
+            <span
+              aria-hidden
+              className="block h-3 w-px bg-white/70 shadow-[0_0_1px_rgba(0,0,0,0.8)]"
+            />
+          ) : null}
           {readings.length > 0 ? (
             // 상자 바로 위에서 위쪽으로 쌓는다 — 첫 값이 상자에 가장 가깝다.
             <div className="absolute bottom-full left-1/2 mb-0.5 flex -translate-x-1/2 flex-col-reverse items-center gap-0.5">
               {readings.map((reading, i) => (
                 <div
                   key={reading.id}
-                  className="flex items-baseline gap-1 font-sans text-[12px] leading-none font-bold whitespace-nowrap select-none"
+                  className={`flex items-baseline gap-1 font-sans text-[12px] leading-none font-bold whitespace-nowrap select-none`}
                   style={{
                     color: READING_TEXT_COLOR,
                     textShadow: READING_TEXT_SHADOW,

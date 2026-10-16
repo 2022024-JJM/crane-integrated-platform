@@ -15,7 +15,18 @@ import { seedRestPose } from '../lib/rest-pose-cache';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
 import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
 import {
-  assignSharedSeaMaterials,
+  applyPlanViewPatch,
+  clearPlanViewPatch,
+  type PlanViewKind,
+} from '../lib/plan-view-patch';
+import { isSharedVariantNeeded } from '../lib/sea-material-cache';
+import {
+  LABEL_ANCHOR_FALLBACK,
+  defaultLabelAnchorFromBox,
+  planLabelAnchorFromBoxes,
+} from '../lib/model-label-anchor';
+import {
+  assignSharedMaterials,
   createMeshMaterialBinding,
   ensureClonedMaterials,
   restoreOriginalMaterials,
@@ -52,6 +63,12 @@ interface ModelMeshProps {
    * 바다가 닿지 않는 위치(드라이독 등)는 셰이더가 마스크로 거른다.
    */
   seaSubmersion?: boolean;
+  /**
+   * 평면도(직교 탑뷰) 톤 패치 종류 — 'ground'(지도: 저채도·어둡게) 또는
+   * 'equipment'(장비: 조명 무관 평면 색). 원근에서는 유니폼이 0 이라 변화가
+   * 없고 탑뷰 전환에 재컴파일이 없다(lib/plan-view-patch.ts). 기본 null.
+   */
+  planView?: PlanViewKind | null;
   /**
    * 그림자를 드리울지. 기본 true. ground 지도도 드리운다 — GLB에 건물이 함께
    * 구워져 있어 끄면 건물 그림자가 통째로 사라진다. 예외는 컨텍스트 지형
@@ -281,28 +298,20 @@ export function useModelLabelOffsetY(clone: Object3D, scale: Vector3Tuple) {
 }
 
 /**
- * 라벨을 모델의 정중앙 위에 띄우기 위한 unscaled local anchor.
- *
- * (x, z) = clone bbox의 중심 — 모델의 origin이 한쪽으로 치우쳐 있어도
- *           시각적 정중앙에 라벨이 온다.
- * y      = clone bbox의 최상단 + 약간의 padding — 모델 위에 살짝 떠 있게.
- *
- * 이 hook이 반환하는 값은 unscaled local 좌표다. ModelMesh의 primitive 자식
- * 으로 라벨을 마운트하면 부모 scale/rotation/position이 자동 적용되어 라벨이
- * 모델과 함께 움직이고 회전한다. 드래그 중에도 sceneInfo state와 무관하게
- * 정확히 따라간다.
- *
- * `enabled=false`(라벨 없는 인스턴스 — 지도 등)면 bbox 순회를 통째로 건너뛴다.
- * 지도급 트리(수십만 정점)에서 setFromObject + updateMatrixWorld 2회는
- * 마운트 시 수백 ms짜리 낭비다.
+ * 라벨 앵커(clone 로컬, unscaled). 배치 transform 을 잠시 항등으로 두고 bbox 를
+ * 재므로 결과는 GLB 좌표계다 — 부모 scale 이 곱해져 화면 거리가 맞는다.
+ * `planView` 면 바닥 메쉬 발자국 중심(lib/model-label-anchor.ts). 리그가 노드를
+ * 움직여도 다시 재지 않는다(rest 기준 — 라벨은 축에 붙어야지 지브를 따라
+ * 가면 안 된다).
  */
 export function useModelLabelLocalAnchor(
   clone: Object3D,
   enabled = true,
+  planView = false,
 ): Vector3Tuple {
   return useMemo(() => {
     if (!enabled) {
-      return [0, 2, 0];
+      return LABEL_ANCHOR_FALLBACK;
     }
     const prevPos = clone.position.clone();
     const prevRot = clone.rotation.clone();
@@ -312,23 +321,27 @@ export function useModelLabelLocalAnchor(
     clone.scale.set(1, 1, 1);
     clone.updateMatrixWorld(true);
 
-    const box = new Box3().setFromObject(clone);
+    let anchor: Vector3Tuple;
+    if (planView) {
+      const boxes: Box3[] = [];
+      clone.traverse((child) => {
+        if (!(child instanceof Mesh)) return;
+        if ((child.userData as { terrainLodProxy?: boolean }).terrainLodProxy) {
+          return;
+        }
+        boxes.push(new Box3().setFromObject(child));
+      });
+      anchor = planLabelAnchorFromBoxes(boxes);
+    } else {
+      anchor = defaultLabelAnchorFromBox(new Box3().setFromObject(clone));
+    }
 
     clone.position.copy(prevPos);
     clone.rotation.copy(prevRot);
     clone.scale.copy(prevScale);
     clone.updateMatrixWorld(true);
-
-    if (box.isEmpty()) {
-      return [0, 2, 0];
-    }
-    const cx = (box.min.x + box.max.x) / 2;
-    const cz = (box.min.z + box.max.z) / 2;
-    // unscaled bbox top + 약간의 padding (unscaled 단위). 부모 scale이 곱해져
-    // 화면에서 적절한 거리가 된다.
-    const topY = box.max.y + 0.2;
-    return [cx, topY, cz];
-  }, [clone, enabled]);
+    return anchor;
+  }, [clone, enabled, planView]);
 }
 
 export function ModelMesh({
@@ -337,6 +350,7 @@ export function ModelMesh({
   opacity = 1,
   alarmSeverity = null,
   seaSubmersion = false,
+  planView = null,
   castShadow = true,
   receiveShadow = true,
   position = [0, 0, 0],
@@ -434,10 +448,11 @@ export function ModelMesh({
     //   원본 공유 — 둘 다 아님. GLTF 원본 reference 그대로.
     const needsIndividual = opacity < 1 || alarmSeverity !== null;
 
+    const sharedOptions = { sea: seaSubmersion, plan: planView };
     if (!needsIndividual) {
       for (const binding of meshBindings) {
-        if (seaSubmersion) {
-          assignSharedSeaMaterials(binding);
+        if (isSharedVariantNeeded(sharedOptions)) {
+          assignSharedMaterials(binding, sharedOptions);
         } else {
           restoreOriginalMaterials(binding);
         }
@@ -448,7 +463,7 @@ export function ModelMesh({
 
     // 개별 클론 경로: 이 instance만 lazy clone하여 mutate.
     for (const binding of meshBindings) {
-      const materials = ensureClonedMaterials(binding, seaSubmersion);
+      const materials = ensureClonedMaterials(binding, seaSubmersion, planView);
       for (const material of materials) {
         const mat = material as Material & {
           opacity: number;
@@ -478,12 +493,24 @@ export function ModelMesh({
         } else {
           clearSeaSubmersion(mat);
         }
+        if (planView) {
+          applyPlanViewPatch(mat, planView);
+        } else {
+          clearPlanViewPatch(mat);
+        }
 
         mat.needsUpdate = true;
       }
     }
     invalidate();
-  }, [meshBindings, opacity, alarmSeverity, seaSubmersion, invalidate]);
+  }, [
+    meshBindings,
+    opacity,
+    alarmSeverity,
+    seaSubmersion,
+    planView,
+    invalidate,
+  ]);
 
   // 그림자 플래그 — clone은 인스턴스 전용 트리이므로 여기서 걸어도 다른
   // 인스턴스에 새지 않는다. useClonedModel의 useMemo에 넣지 않는 이유:
@@ -601,7 +628,11 @@ export function ModelMesh({
           // 잠김 공유 중이던 바인딩도 여기서 개별로 승격된다 — 승격은
           // 원본에서 clone 하므로 seaSubmersion 을 넘겨 잠김 패치를 다시
           // 건다(안 넘기면 이 메시만 안개가 빠지는 회귀).
-          const materials = ensureClonedMaterials(binding, seaSubmersion);
+          const materials = ensureClonedMaterials(
+            binding,
+            seaSubmersion,
+            planView,
+          );
           for (const material of materials) {
             const mat = material as Material & {
               opacity: number;
@@ -624,6 +655,7 @@ export function ModelMesh({
     clone,
     originalTransforms,
     seaSubmersion,
+    planView,
     invalidate,
   ]);
 

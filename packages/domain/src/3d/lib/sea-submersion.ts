@@ -1,6 +1,7 @@
-import type { IUniform, Material } from 'three';
+import type { Material } from 'three';
 import { SEA_LEVEL_Y } from '../model/sea-level';
 import { seaReachUniforms } from './sea-reach-uniforms';
+import { clearShaderPatch, setShaderPatch } from './shader-patch';
 
 /**
  * 수면 아래 잠김 패치 — 바다가 있는 씬의 모델·지도 머티리얼에 **깊이 안개**를
@@ -101,18 +102,10 @@ const FRAGMENT_INJECT = /* glsl */ `
 #include <tonemapping_fragment>
 `;
 
-type PatchableMaterial = Material & {
-  onBeforeCompile: (shader: {
-    uniforms: Record<string, IUniform>;
-    vertexShader: string;
-    fragmentShader: string;
-  }) => void;
-  customProgramCacheKey: () => string;
-};
-
 export function applySeaSubmersion(material: Material): void {
-  const target = material as PatchableMaterial;
-  target.onBeforeCompile = (shader) => {
+  // shader-patch 로 합성 — 평면도 톤 패치와 같은 머티리얼에 함께 걸린다.
+  // 키(customProgramCacheKey)는 등록된 패치 키를 이은 값이다.
+  setShaderPatch(material, CACHE_KEY, (shader) => {
     // 값이 아니라 유니폼 객체를 물려 준다 — 마스크가 바뀌면 전 머티리얼이
     // 다음 프레임에 새 값을 본다.
     shader.uniforms.seaReachMask = seaReachUniforms.seaReachMask;
@@ -123,20 +116,14 @@ export function applySeaSubmersion(material: Material): void {
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', FRAGMENT_DECLARE)
       .replace('#include <tonemapping_fragment>', FRAGMENT_INJECT);
-  };
-  target.customProgramCacheKey = () => CACHE_KEY;
-  target.needsUpdate = true;
+  });
 }
 
 /**
  * 패치 해제 — opacity<1 등으로 clone이 유지된 채 seaSubmersion만 꺼질 때 쓴다.
  * clone 자체가 버려지는 경로(restoreOriginalMaterials)에서는 원본이 패치가
- * 없으므로 호출할 필요가 없다.
+ * 없으므로 호출할 필요가 없다. 다른 패치(평면도 톤)는 남는다.
  */
 export function clearSeaSubmersion(material: Material): void {
-  const target = material as PatchableMaterial;
-  if (target.customProgramCacheKey() !== CACHE_KEY) return;
-  target.onBeforeCompile = () => {};
-  target.customProgramCacheKey = () => '';
-  target.needsUpdate = true;
+  clearShaderPatch(material, CACHE_KEY);
 }

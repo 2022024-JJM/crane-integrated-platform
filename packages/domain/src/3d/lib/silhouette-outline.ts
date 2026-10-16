@@ -89,8 +89,9 @@ const VERTEX_SHADER = /* glsl */ `
 
 const FRAGMENT_SHADER = /* glsl */ `
   uniform vec3 uColor;
+  uniform float uOpacity;
   void main() {
-    gl_FragColor = vec4(uColor, 1.0);
+    gl_FragColor = vec4(uColor, uOpacity);
   }
 `;
 
@@ -185,17 +186,21 @@ function detachOverlayMesh(mesh: Mesh): void {
  * 단위의 모든 헐 메시가 하나를 공유한다(uOffsetFactor 가 캔버스 단위 값
  * 이라 개별로 둘 이유가 없다). 호출자가 dispose 한다.
  */
-export function createSilhouetteOutlineMaterial(color: string): ShaderMaterial {
+export function createSilhouetteOutlineMaterial(
+  color: string,
+  opacity = 1,
+): ShaderMaterial {
   return new ShaderMaterial({
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     uniforms: {
       uColor: { value: new Color(color) },
+      uOpacity: { value: Math.min(1, Math.max(0, opacity)) },
       uOffsetFactor: { value: 0 },
     },
     side: DoubleSide,
-    // transparent — 블렌딩용이 아니라(알파 1) transparent 렌더 리스트로
-    // 보내 renderOrder 가 바다 등 다른 transparent 뒤에 오게 하기 위함.
+    // transparent — renderOrder 가 바다 등 다른 transparent 뒤에 오게 하기
+    // 위함. 선택·충돌·상태 테두리는 알파 1 이고 평면도 윤곽만 연하게 섞는다.
     transparent: true,
     depthTest: false,
     depthWrite: false,

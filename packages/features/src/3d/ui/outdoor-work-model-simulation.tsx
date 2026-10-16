@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useThree } from '@react-three/fiber';
 import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
@@ -18,6 +19,7 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
+import { usePlanOverlapStore } from '../model/use-plan-overlap-store';
 import { stopSimulation } from '../model/stop-simulation';
 import { readTagLiveValue } from '../model/tag-value-bus';
 import type { MonitoringViewMode } from '../model/types';
@@ -237,6 +239,15 @@ export function OutdoorWorkModelSimulation({
   // 바다가 켜진 씬(resolveSeaVisible)에서만 모델·지도의 수면 아래를 잠김
   // 처리한다 — 바다가 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다.
   const seaVisible = resolveSeaVisible(sceneInfo);
+  // 평면도(직교 탑뷰) 여부 — 탑뷰는 기본 카메라를 직교로 교체하는 토글이라
+  // 카메라 종류가 곧 모드다. 구독은 교체 순간에만 리렌더를 일으킨다.
+  const planView = useThree(
+    (s) =>
+      (s.camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
+      true,
+  );
+  // 평면도 숨은선 대상 — 검출기(ScenePlanOverlapDetector)가 탑뷰에서 채운다.
+  const planHiddenIndexById = usePlanOverlapStore((s) => s.hiddenIndexById);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
   // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
@@ -310,6 +321,7 @@ export function OutdoorWorkModelSimulation({
               // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 바다가 닿지
               // 않는 곳(드라이독)은 셰이더가 마스크로 거른다.
               seaSubmersion={seaVisible}
+              planView="ground"
             />
           </SceneObjectBoundary>
         );
@@ -332,6 +344,9 @@ export function OutdoorWorkModelSimulation({
             alarmHighlightMesh={alarmHighlightMesh}
             labelState={labelStates[model.id]}
             outlineState={outlineStates[model.id]}
+            planOutline={planView}
+            planLabel={planView}
+            planHiddenIndex={planHiddenIndexById.get(model.id) ?? null}
             labelTitles={labelTitles}
             labelReadings={labelReadingsById.get(model.id)}
             readLabelValue={readTagLiveValue}

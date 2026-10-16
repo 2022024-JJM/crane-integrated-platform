@@ -59,6 +59,8 @@
       "min": "Min",
       "max": "Max",
       "invert": "Invertere",
+      "pivot": "Cardo",
+      "pivotHint": "Centrum rotationis ab origine nodi (m). Vacuum = origo",
       "hinge": "Rotatio",
       "slide": "Translatio",
       "unresolvedNode": "Nodus non inventus",
@@ -527,7 +529,14 @@
     }
   },
   "compass": {
-    "label": "Pyxis"
+    "label": "Pyxis",
+    "northUp": "Septentrio sursum"
+  },
+  "planOverlap": {
+    "label": "Spatium superpositionis"
+  },
+  "planScale": {
+    "label": "Scala"
   },
   "sceneClock": {
     "live": "Hora praesens",

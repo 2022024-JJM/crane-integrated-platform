@@ -114,6 +114,20 @@
 - `toolbarTrailing` 을 카메라 묶음 안에 끼우는 것은 dock 배치뿐이다. 가로 툴바는 앞에 붙는다.
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
 
+### 방위 표시·축척·북쪽 위로 (독 배치, 분할 아님)
+
+- **방위 표시** `ui/scene-compass.tsx` — 좌상단 열 첫 줄. 지면에 놓인 원(N·E·S·W + 북 적색 바늘)을 카메라가 보는 모습이라 탑뷰에선 원, 비스듬하면 납작한 타원이다. 기하는 `lib/compass.ts`(`resolveCompassView`, 진북 = `resolveTrueNorth`). 자세는 React 상태가 아니라 Canvas 안 `SceneCompassDriver` 가 `useFrame` 에서 바뀐 프레임에만 DOM 에 쓴다. 조작은 없다.
+- **축척 바** `ui/scene-plan-scale-bar.tsx` — 캔버스 우하단(독 레일 안쪽). 직교 탑뷰에서만 보이고 원근에서는 숨는다(원근은 화면 위치마다 축척이 달라 바 하나가 거짓). 길이는 `lib/plan-scale-bar.ts` 의 `resolvePlanScaleBar`(상한 `PLAN_SCALE_BAR_MAX_PX` 안에서 가장 긴 1·2·5×10ⁿ m, 씬 단위는 `getSceneMetersPerUnit`). 갱신은 `ScenePlanScaleBarDriver` 가 방위 표시와 같은 규칙으로 쓴다.
+- **북쪽 위로** `ui/scene-north-up-button.tsx` — 독 레일 버튼. 타깃을 축으로 카메라를 돌려 화면 위가 진북이 되게 한다(`lib/north-up.ts` → core `rotatePoseToHeading`·`headingForAzimuth`). 모드를 유지하는 `panTo` 로 적용하므로 탑뷰면 평면도가 north-up, 원근이면 시선이 북을 향한다. 탑뷰 진입 기본은 여전히 "보던 방향이 화면 위" 다 — 북쪽 고정을 기본으로 바꾸지 않는다(보던 곳을 잃는다).
+
+### 평면도 겹침 (탑뷰, 독 배치)
+
+위에서 겹쳐 보이지만 높이가 달라 닿지 않는 장비 쌍을 읽게 하는 표시. 실제 충돌(`docs/agents/3d-collision.md`)과 별개의 표시용 계산이고 경고색을 쓰지 않는다 — "겹쳐 보이는데 빨갛지 않다" 가 안전이어야 한다.
+
+- 판정 `lib/plan-overlap.ts`(domain, `resolvePlanOverlaps`): 모델별 메쉬 월드 AABB 의 평면 겹침 → 가장 작은 수직 여유(`gap`)·위/아래·겹침 중심. 스캔은 `lib/plan-overlap-scan.ts` 의 `PlanOverlapScanner` 가 `modelObjectRegistry` 루트에서 `collectCollidableMeshes` 로 모아 `PLAN_OVERLAP_SCAN_INTERVAL_MS` 마다 돌고(`ScenePlanOverlapDetector`, Canvas 안·RigDriver 뒤·직교 카메라일 때만), 표시상 바뀐 결과만 `use-plan-overlap-store.ts` 에 쓴다(`hasPlanOverlapChanged` 양자화). 원근으로 돌아오면 비운다.
+- **Δh 칩** `ui/scene-plan-overlaps.tsx`(`ScenePlanOverlapChips`): 겹침 중심에 두 장비 이름과 `Δh n.n m`(`formatPlanClearance`, m 환산은 `getSceneMetersPerUnit`). `PLAN_OVERLAP_WARN_METERS` 아래면 주의색. 여유를 알 수 없는 쌍(`isPlanClearanceKnown` false — AABB 로 높이까지 겹침, 골리앗처럼 박스가 바닥까지 닿는 장비)은 칩을 띄우지 않는다.
+- **숨은선**: 가려지는 쪽 모델에 어두운 점무늬(`docs/agents/rendering-perf.md` "평면도 룩" 의 숨은선). 여유를 몰라도 그린다 — 픽셀 단위 깊이라 정확하다.
+
 ### 워밍업 표시
 
 초기 로딩 오버레이(`ui/scene-loading-overlay.tsx`)가 걷힌 뒤 이어지는 비차단 표시다(스피너 + 문구 한 줄, `common:viewer3d.warmup.*`).

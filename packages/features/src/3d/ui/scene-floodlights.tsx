@@ -11,6 +11,7 @@ import {
   isSlotAssignmentEqual,
   quantizeFloodlightFocus,
   resolveFloodlightSlotCount,
+  PLAN_VIEW_FLOODLIGHT_SCALE,
 } from '../lib/floodlight-slots';
 import { resolveShadowFocus } from '../lib/scene-shadow';
 import { sceneLightingInfo } from '../model/scene-lighting-info';
@@ -187,9 +188,15 @@ export function SceneFloodlights({
     // 배정·편집에 따라 흔들리면 그 프레임마다 전 머티리얼이 재컴파일된다.
     const on = sceneLightingInfo.floodlightOn;
     const visible = on > 0;
+    // 평면도에서는 바닥 빛 웅덩이를 거의 끈다(세기만, visible 은 그대로).
+    const planScale =
+      (camera as { isOrthographicCamera?: boolean }).isOrthographicCamera ===
+      true
+        ? PLAN_VIEW_FLOODLIGHT_SCALE
+        : 1;
     for (let i = 0; i < slots.length; i += 1) {
       const { light } = slots[i];
-      const intensity = (state.candela[i] ?? 0) * on;
+      const intensity = (state.candela[i] ?? 0) * on * planScale;
       if (light.intensity !== intensity) light.intensity = intensity;
       if (light.visible !== visible) light.visible = visible;
     }

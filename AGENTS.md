@@ -279,6 +279,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 투광등 빛은 `SceneFloodlights` 의 SpotLight 슬롯만 쓰고 점등 중에 슬롯 수를 바꾸지 않는다 — 조명을 놓고 지우는 캔버스는 `reserveSlots` 를 켠다. 보이는 조명 수가 셰이더 프로그램 키라 바뀌는 프레임마다 전 머티리얼이 재컴파일된다 (rendering-perf).
 - 새 GLTF 로드 경로는 `extendGltfLoaderWithKtx2` 를 걸고, 불투명 머티리얼이면 `markSceneOpaqueStencil` 을 켠다. 바다 위에 보여야 하는 불투명 오버레이는 `renderOrder ≥ 0.5` (assets-glb, rendering-perf).
 - 바다 표시 판정은 `resolveSeaVisible(sceneInfo)` 한 곳이다. 배경 유무로 바다를 유추하는 코드를 다른 곳에 두지 않는다 (rendering-perf).
+- 머티리얼에 `onBeforeCompile` 을 직접 대입하지 않는다. 셰이더 주입은 `lib/shader-patch.ts` 의 `setShaderPatch` 로 키를 붙여 건다 — 잠김 안개와 평면도 톤이 같은 머티리얼에 합성된다 (rendering-perf).
 - 수면 아래 잠김 안개는 바다가 닿는 위치(바다 도달 마스크)에만 낀다. 안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않고, 마스크 유니폼은 `publishSeaReachMask` 로 값만 바꾼다 (rendering-perf).
 - 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
 - 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).

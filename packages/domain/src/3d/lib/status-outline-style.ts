@@ -31,6 +31,24 @@ const STATUS_OUTLINE_RENDER_ORDER: Record<StatusOutlineKind, number> = {
   endstop: 10.7,
 };
 
+/**
+ * 평면도(직교 탑뷰) 윤곽선 — 위에서 본 크레인은 지브·타워가 1~2px 선이라
+ * 지도 텍스처에 묻힌다. 모든 장비를 어두운 가는 선으로 둘러 형체를 세운다.
+ * **운전 상태는 라벨 색 하나로만 말한다** — 윤곽은 상태와 무관하게 같은 선이다.
+ * 상태 외곽선(commError 등)이 있는 장비는 그 색이 대신한다(같은 자리). 색은 주황이 번지지
+ * 않는 어두운 난색 — 순검정은 지도 그림자선과 구분되지 않는다.
+ */
+export const PLAN_VIEW_OUTLINE_COLOR = '#2a1d10';
+/** 평면도 윤곽선 두께(px) — 상태 외곽선보다 얇아 상태가 켜지면 차이가 보인다. */
+export const PLAN_VIEW_OUTLINE_PX = 1;
+/**
+ * 평면도 윤곽 불투명도 — 진한 검정 선은 3D 모델과 따로 노는 "도면 위에 덧그린
+ * 선" 으로 읽힌다. 바탕이 비치게 섞어 모델의 그림자선처럼 보이게 한다.
+ */
+export const PLAN_VIEW_OUTLINE_OPACITY = 0.4;
+/** 상태 외곽선(10.5~)보다 먼저 그려 겹치면 상태 색이 위에 온다. */
+export const PLAN_VIEW_OUTLINE_RENDER_ORDER = 10.4;
+
 export function isStatusOutlineVisible(
   state: EquipmentOutlineState | undefined,
 ): state is StatusOutlineKind {

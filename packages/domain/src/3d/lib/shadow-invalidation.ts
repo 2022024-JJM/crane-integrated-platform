@@ -34,6 +34,13 @@ interface ShadowRendererLike {
 }
 
 const renderers = new Set<ShadowRendererLike>();
+/**
+ * shadow pass 를 보류 중인 렌더러 — 직교 탑뷰(평면도) 동안 SceneLighting 이
+ * 건다. 보류 중엔 무효화 신호를 삼켜 shadow pass 가 돌지 않고(그림자 세기는
+ * SceneLighting 이 0 으로 둬 낡은 map 이 보이지 않는다), 풀리면 한 번 갱신해
+ * 그동안 움직인 캐스터의 그림자를 따라잡는다.
+ */
+const suppressed = new Set<ShadowRendererLike>();
 
 /**
  * dev 진단 카운터 — 콘솔에서 `__shadowDebug` 로 등록 수·무효화 횟수를 본다.
@@ -54,13 +61,33 @@ export function registerShadowRenderer(gl: ShadowRendererLike): void {
 
 export function unregisterShadowRenderer(gl: ShadowRendererLike): void {
   renderers.delete(gl);
+  suppressed.delete(gl);
   debugCounters.registered = renderers.size;
+}
+
+/**
+ * shadow pass 보류 on/off. 멱등 — 같은 값 재설정은 no-op 이고, 해제 때만
+ * needsUpdate 를 세워 보류 동안의 변화를 한 번에 반영한다. 미등록 렌더러는
+ * 무시한다(그림자 꺼진 씬).
+ */
+export function setShadowsSuppressed(
+  gl: ShadowRendererLike,
+  value: boolean,
+): void {
+  if (!renderers.has(gl)) return;
+  if (value) {
+    suppressed.add(gl);
+    return;
+  }
+  if (!suppressed.delete(gl)) return;
+  gl.shadowMap.needsUpdate = true;
 }
 
 /** 등록된 모든 렌더러의 다음 프레임 shadow pass 를 1회 갱신시킨다. 멱등. */
 export function invalidateShadows(): void {
   debugCounters.invalidations += 1;
   for (const gl of renderers) {
+    if (suppressed.has(gl)) continue;
     gl.shadowMap.needsUpdate = true;
   }
 }

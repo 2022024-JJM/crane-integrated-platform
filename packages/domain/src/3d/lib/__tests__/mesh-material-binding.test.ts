@@ -2,15 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { Mesh, MeshStandardMaterial, BoxGeometry } from 'three';
 import {
   acquireSeaVariant,
+  acquireSharedVariant,
   releaseSeaVariant,
+  releaseSharedVariant,
   seaVariantCacheSize,
 } from '../sea-material-cache';
 import {
+  assignSharedMaterials,
   assignSharedSeaMaterials,
   createMeshMaterialBinding,
   ensureClonedMaterials,
   restoreOriginalMaterials,
 } from '../mesh-material-binding';
+import { planViewPatchKey } from '../plan-view-patch';
 
 const SEA_CACHE_KEY = 'sea-submersion';
 
@@ -134,5 +138,75 @@ describe('mesh-material-binding 상태 전이', () => {
     restoreOriginalMaterials(binding);
     expect(mesh.material).toEqual([m1, m2]);
     expect(seaVariantCacheSize()).toBe(0);
+  });
+
+  describe('패치 조합(잠김 + 평면도)', () => {
+    it('옵션이 다르면 같은 원본이라도 variant 가 따로 잡히고 키가 다르다', () => {
+      const original = new MeshStandardMaterial();
+      const sea = acquireSharedVariant(original, { sea: true, plan: null });
+      const both = acquireSharedVariant(original, {
+        sea: true,
+        plan: 'equipment',
+      });
+      const planOnly = acquireSharedVariant(original, {
+        sea: false,
+        plan: 'ground',
+      });
+      expect(sea).not.toBe(both);
+      expect(both).not.toBe(planOnly);
+      expect(cacheKeyOf(sea)).toBe(SEA_CACHE_KEY);
+      expect(cacheKeyOf(both)).toBe(
+        `${SEA_CACHE_KEY}|${planViewPatchKey('equipment')}`,
+      );
+      expect(cacheKeyOf(planOnly)).toBe(planViewPatchKey('ground'));
+      expect(seaVariantCacheSize()).toBe(3);
+      releaseSharedVariant(original, { sea: true, plan: null });
+      releaseSharedVariant(original, { sea: true, plan: 'equipment' });
+      releaseSharedVariant(original, { sea: false, plan: 'ground' });
+      expect(seaVariantCacheSize()).toBe(0);
+    });
+
+    it('공유 옵션이 바뀌면 이전 variant 를 반납하고 새 것으로 바꾼다', () => {
+      const { binding, mesh } = makeBinding();
+      assignSharedMaterials(binding, { sea: false, plan: 'equipment' });
+      const first = mesh.material;
+      assignSharedMaterials(binding, { sea: true, plan: 'equipment' });
+      expect(mesh.material).not.toBe(first);
+      expect(cacheKeyOf(mesh.material)).toBe(
+        `${SEA_CACHE_KEY}|${planViewPatchKey('equipment')}`,
+      );
+      // 이전 variant 는 refs 0 으로 캐시에서 빠졌다.
+      expect(seaVariantCacheSize()).toBe(1);
+      restoreOriginalMaterials(binding);
+      expect(seaVariantCacheSize()).toBe(0);
+    });
+
+    it('같은 옵션 재할당은 멱등이다(참조 유지·refcount 이중 증가 없음)', () => {
+      const { binding, mesh } = makeBinding();
+      assignSharedMaterials(binding, { sea: true, plan: 'ground' });
+      const first = mesh.material;
+      assignSharedMaterials(binding, { sea: true, plan: 'ground' });
+      expect(mesh.material).toBe(first);
+      restoreOriginalMaterials(binding);
+      expect(seaVariantCacheSize()).toBe(0);
+    });
+
+    it('개별 승격은 평면도 패치도 다시 건다', () => {
+      const { binding } = makeBinding();
+      assignSharedMaterials(binding, { sea: true, plan: 'equipment' });
+      const [promoted] = ensureClonedMaterials(binding, true, 'equipment');
+      expect(cacheKeyOf(promoted)).toBe(
+        `${SEA_CACHE_KEY}|${planViewPatchKey('equipment')}`,
+      );
+      expect(seaVariantCacheSize()).toBe(0);
+      restoreOriginalMaterials(binding);
+    });
+
+    it('평면도만 필요한 승격(바다 없음)은 평면도 패치만 건다', () => {
+      const { binding } = makeBinding();
+      const [promoted] = ensureClonedMaterials(binding, false, 'ground');
+      expect(cacheKeyOf(promoted)).toBe(planViewPatchKey('ground'));
+      restoreOriginalMaterials(binding);
+    });
   });
 });

@@ -103,6 +103,8 @@ interface ObjectSilhouetteOutlineProps {
    * 넘긴다(lib/status-outline-style.ts).
    */
   renderOrder?: number;
+  /** 테두리 불투명도 [0,1]. 기본 1 — 평면도 윤곽만 연하게 둔다. */
+  opacity?: number;
 }
 
 /**
@@ -121,12 +123,13 @@ export function ObjectSilhouetteOutline({
   color,
   thicknessPx = SILHOUETTE_OUTLINE_PX,
   renderOrder = SILHOUETTE_OUTLINE_RENDER_ORDER,
+  opacity = 1,
 }: ObjectSilhouetteOutlineProps) {
   // 헐 공유 머티리얼 — 이 표시 단위의 모든 헐 메시가 하나를 쓴다. 색이
   // 바뀌면 새로 만든다(실제로는 용도별 상수라 수명 내 불변).
   const material = useMemo(
-    () => createSilhouetteOutlineMaterial(color),
-    [color],
+    () => createSilhouetteOutlineMaterial(color, opacity),
+    [color, opacity],
   );
   useEffect(() => () => material.dispose(), [material]);
 

@@ -59,6 +59,8 @@
       "min": "최소",
       "max": "최대",
       "invert": "반전",
+      "pivot": "피벗",
+      "pivotHint": "회전 중심 — 노드 원점에서의 오프셋(m). 비우면 노드 원점",
       "hinge": "회전",
       "slide": "이동",
       "unresolvedNode": "노드를 찾을 수 없음",
@@ -527,7 +529,14 @@
     }
   },
   "compass": {
-    "label": "방위 표시"
+    "label": "방위 표시",
+    "northUp": "북쪽 위로"
+  },
+  "planOverlap": {
+    "label": "평면도 겹침 여유"
+  },
+  "planScale": {
+    "label": "축척"
   },
   "sceneClock": {
     "live": "현재 시각",
