@@ -12,6 +12,8 @@
  * 노드를 특정할 수 없다.
  */
 
+import type { Vector3Tuple } from '@crane/core/types/math';
+
 /** 모델 clone root 기준 노드 경로(mesh-path.ts 형식). '' 는 root 자신. */
 export type RigNodePath = string;
 
@@ -43,6 +45,15 @@ export interface RigJoint {
   max?: number;
   /** 축 방향 뒤집기. 생략 시 1. */
   sign?: 1 | -1;
+  /**
+   * hinge 의 회전 중심 — 노드 rest 원점에서 회전 중심까지의 오프셋,
+   * **부모 프레임 m** (노드 scale 과 무관). 생략 시 노드 원점. Blender 원점이
+   * 지브 중앙에 찍힌 타워크레인 상부처럼 원점이 회전축 위에 없는 노드를
+   * 축(마스트) 둘레로 돌리는 데 쓴다. 값은 "축의 부모 좌표 − 노드 rest
+   * translation". slide 에는 의미가 없어 sanitize 가 버린다. 적용식은 features
+   * lib/apply-channel.ts.
+   */
+  pivot?: Vector3Tuple;
 }
 
 /**

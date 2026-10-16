@@ -159,3 +159,97 @@ describe('resetJointNode', () => {
     expect(node.quaternion.w).toBe(1);
   });
 });
+
+describe('applyJoint — hinge pivot', () => {
+  /** 피벗 점의 부모 좌표 — rest 원점 + 오프셋. */
+  const pivotPoint = (rest: Vector3, p: [number, number, number]) =>
+    rest.clone().add(new Vector3(...p));
+  /** 노드 로컬 점을 부모 좌표로(scale 포함). */
+  const toParent = (node: Object3D, local: Vector3) =>
+    local
+      .clone()
+      .multiply(node.scale)
+      .applyQuaternion(node.quaternion)
+      .add(node.position);
+
+  it('피벗 점은 제자리, 원점은 피벗 둘레로 돈다', () => {
+    const node = new Object3D();
+    node.position.set(15.81, 34.52, 0.73);
+    seedRestPose(node);
+    const pivot: [number, number, number] = [-15.51, 0, -0.73];
+    const fixed = pivotPoint(node.position, pivot);
+    applyJoint(node, hinge({ axis: 'y', pivot }), 90);
+    // 원점은 마스트 축에서 같은 거리를 유지한 채 90° 돈다.
+    const r = Math.hypot(pivot[0], pivot[2]);
+    expect(node.position.distanceTo(fixed)).toBeCloseTo(r, 9);
+    expect(node.position.y).toBeCloseTo(34.52, 9);
+    expect(
+      node.position.distanceTo(new Vector3(15.81, 34.52, 0.73)),
+    ).toBeGreaterThan(1);
+    // 피벗 점을 로컬로 되돌려 다시 부모로 보내면 제자리다.
+    const local = fixed
+      .clone()
+      .sub(node.position)
+      .applyQuaternion(node.quaternion.clone().invert())
+      .divide(node.scale);
+    expect(toParent(node, local).distanceTo(fixed)).toBeLessThan(1e-9);
+  });
+
+  it('노드 scale 이 커도(meshopt 양자화 36×) 피벗은 m 그대로다', () => {
+    const node = new Object3D();
+    node.position.set(15.81, 34.52, 0.73);
+    node.scale.setScalar(36.3);
+    seedRestPose(node);
+    const pivot: [number, number, number] = [-15.51, 0, -0.73];
+    const fixed = pivotPoint(node.position, pivot);
+    applyJoint(node, hinge({ axis: 'y', pivot }), 180);
+    // 180° 면 원점은 피벗 반대편(2r 이동)이고 축 거리 r 는 그대로.
+    const r = Math.hypot(pivot[0], pivot[2]);
+    expect(node.position.distanceTo(fixed)).toBeCloseTo(r, 9);
+    expect(
+      node.position.distanceTo(new Vector3(15.81, 34.52, 0.73)),
+    ).toBeCloseTo(2 * r, 9);
+  });
+
+  it('rest 회전이 있어도 피벗 점(부모 프레임)은 제자리다', () => {
+    const node = new Object3D();
+    node.position.set(1, 2, 3);
+    node.quaternion.setFromAxisAngle(new Vector3(0, 1, 0), 0.7);
+    node.scale.setScalar(2);
+    seedRestPose(node);
+    const pivot: [number, number, number] = [4, 0, -2];
+    const fixed = pivotPoint(node.position, pivot);
+    // 피벗 점의 로컬 좌표(rest 기준)를 잡아 두고, 회전 뒤 같은 로컬 점이
+    // 같은 부모 좌표에 있는지 본다.
+    const local = fixed
+      .clone()
+      .sub(node.position)
+      .applyQuaternion(node.quaternion.clone().invert())
+      .divide(node.scale);
+    applyJoint(node, hinge({ axis: 'y', pivot }), 123);
+    expect(toParent(node, local).distanceTo(fixed)).toBeLessThan(1e-9);
+  });
+
+  it('피벗이 없으면 원점 회전 — 위치가 그대로다', () => {
+    const node = new Object3D();
+    node.position.set(3, 4, 5);
+    seedRestPose(node);
+    applyJoint(node, hinge({ axis: 'y' }), 90);
+    expect(node.position.toArray()).toEqual([3, 4, 5]);
+  });
+
+  it('slide 는 피벗을 무시한다', () => {
+    const node = new Object3D();
+    seedRestPose(node);
+    applyJoint(node, slide({ axis: 'x', pivot: [9, 9, 9] }), 2);
+    expect(node.position.toArray()).toEqual([2, 0, 0]);
+  });
+
+  it('값 0 은 피벗이 있어도 rest 그대로(no-op)', () => {
+    const node = new Object3D();
+    node.position.set(1, 1, 1);
+    seedRestPose(node);
+    applyJoint(node, hinge({ axis: 'y', pivot: [5, 0, 5] }), 0);
+    expect(node.position.toArray()).toEqual([1, 1, 1]);
+  });
+});

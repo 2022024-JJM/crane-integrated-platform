@@ -12,6 +12,7 @@ import {
   getRigJointUnit,
   modelObjectRegistry,
   RIG_HINGE_DEFAULT_RANGE,
+  RIG_AXES,
   RIG_JOINT_TYPES,
   RIG_SLIDE_DEFAULT_RANGE,
   type RigDefinition,
@@ -29,6 +30,7 @@ import {
   type RigModelReadout,
 } from '@crane/features/3d';
 import { createId } from '@crane/core/lib/create-id';
+import { withPivotAxis } from '../lib/rig-pivot';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
@@ -253,6 +255,28 @@ function JointCard({
           {t('monitoring:inspector.rigging.invert')}
         </label>
       </div>
+      {joint.type === 'hinge' ? (
+        // 회전 중심 — 노드 원점에서의 오프셋(부모 프레임 m). 비워 두면 원점.
+        <div className="flex items-center gap-2">
+          <span
+            className={FIELD_LABEL}
+            title={t('monitoring:inspector.rigging.pivotHint')}
+          >
+            {t('monitoring:inspector.rigging.pivot')}
+          </span>
+          {RIG_AXES.map((axis) => (
+            <NumberField
+              key={axis}
+              value={joint.pivot?.[axis === 'x' ? 0 : axis === 'y' ? 1 : 2]}
+              placeholder={axis.toUpperCase()}
+              unit="m"
+              onChange={(v) =>
+                onChange({ pivot: withPivotAxis(joint.pivot, axis, v) })
+              }
+            />
+          ))}
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-2 pt-0.5">
         <input
