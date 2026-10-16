@@ -37,7 +37,7 @@ GLB 는 압축본만 배포되고, 압축 전 원본은 `assets-src/` 에 보관
 - **파일은 자산 라이브러리로만 들어간다.** 등록하거나 새 버전을 올릴 때 "최적화" 를 켜면 dev 미들웨어가 그 종류의 스크립트를 돌려 압축본을 `files/<id>/v<N>/` 에, 올린 원본을 `assets-src/asset-library/<id>/v<N>/` 에 둔다. 배포 파일을 같은 경로에 덮어쓰는 길은 없다 — 스크립트에 그런 모드가 없다.
 - 100MB 를 넘는 원본은 미들웨어가 `.gitignore` 에 올린다(GitHub 한도). 그런 원본은 컨플루언스에 따로 보관한다. `assets-src/maps/` 의 `philly-terrain.glb`·`okpo.glb`·`okpo-terrain.glb`·`okpo-tree.glb` 가 같은 이유로 커밋돼 있지 않다.
 - 모델 파이프라인(`optimize-glb.mjs`)은 텍스처 상한·WebP·transmission 제거·meshopt 다. join/prune 을 쓰지 않아 Empty 계층·노드 이름이 보존된다(리깅 자산의 전제 — `docs/agents/tag-mapping-rig.md`). `KHR_materials_transmission` 은 알파 블렌딩 반투명으로 치환한다(`stripTransmission`) — 그 머티리얼 하나가 씬 전체를 한 번 더 그리게 만든다.
-- **모델은 올리기 전에 손이 가야 하는 경우가 있다.** Blender export 에 월드 좌표가 베이크돼 오면 `unbake-goliath-crane.mjs` 또는 `unbake-root-transform.mjs` 로 원점을 복원한다(그냥 올리면 존·기즈모가 수 km 어긋난다). 루트 Empty 에 uniform scale 이 실린 리깅본(`LLC_002.glb`)은 `--fold-scale` 로 scale 을 직계 자식에 접어 넣는다. 거리별 LOD·정적 병합도 아래 절의 스크립트로 먼저 가공한다. 가공한 파일을 올린다.
+- **모델은 올리기 전에 손이 가야 하는 경우가 있다.** Blender export 에 월드 좌표가 베이크돼 오면 `unbake-goliath-crane.mjs` 또는 `unbake-root-transform.mjs` 로 원점을 복원한다(그냥 올리면 존·기즈모가 수 km 어긋난다). 루트 Empty 에 uniform scale 이 실린 리깅본(`LLC_002.glb`)은 `--fold-scale` 로 scale 을 직계 자식에 접어 넣는다. 돌아야 하는 부품(타워크레인 상부 등)이 잎 메쉬 노드 하나면 Blender 에서 같은 이름의 Empty 아래에 `*_Mesh` 로 내린다 — meshopt 양자화가 잎 메쉬 노드의 원점을 바운즈 중심으로 옮긴다(`docs/agents/tag-mapping-rig.md`). 거리별 LOD·정적 병합도 아래 절의 스크립트로 먼저 가공한다. 가공한 파일을 올린다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다**. `pnpm perf:scene` 은 진단 리포트일 뿐(경고와 join 후보 표기, LOD>0 노드는 렌더 집계에서 제외)이며 모델 추가·교체 후 한 번 돌려 본다.
 - 씬에 놓이지 않고 화면 코드가 직접 로드하는 GLB 가 있다(자산 크레인 타입 표, 골리앗 부품, 충돌 가드 객체). 목록은 `CODE_ASSETS`(`packages/domain/src/3d/model/code-asset-refs.ts`)이고 자산 라이브러리가 그것을 사용처로 읽어 지우지 못하게 막는다.
 
@@ -121,6 +121,7 @@ GLB 는 압축본만 배포되고, 압축 전 원본은 `assets-src/` 에 보관
 - 최적화 스크립트의 보고(`--report`)는 `{ lines, rootOffset? }` 다. 미들웨어와 화면이 이 모양을 읽는다 — 줄은 등록 알림에 그대로 나오므로 짧은 한국어 문장으로 적는다.
 - `add-model-lod`·`join-static-glb`·unbake 는 `assets-src/models/` 의 파일을 고친다. 고친 파일을 자산 라이브러리에서 새 버전으로 올린다.
 - `meshOverrides`·내부 노드 `tagMappings`·`rigId`·skin 이 있는 모델에 LOD·join 을 걸지 않는다(스크립트가 거부하지만 손으로도 지킨다).
+- 회전 리그의 대상은 Empty 노드다. 메쉬를 든 잎 노드는 양자화가 원점을 옮기므로 그대로 돌리지 않는다.
 - 자산을 새 버전으로 교체할 때 `assets-src/models/<파일>.nolod`·`.orig` 도 함께 갱신·삭제한다.
 - LOD 노드 숨김은 최상위 캐리어만 — 자식 Mesh 의 복제된 extras 로 끄지 않는다.
 - three 를 업그레이드하면 `apps/shell/public/basis/r<REVISION>/` 을 새 REVISION 으로 재복사한다.

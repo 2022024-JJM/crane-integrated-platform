@@ -1,7 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { Euler, Quaternion, Vector3, type Object3D } from 'three';
-import type { Vector3Tuple } from '@crane/core/types/math';
 import {
   capturePose,
   degToRad,
@@ -16,12 +15,7 @@ import {
   type SavedModelInfo,
   type TagMappingNodeTarget,
 } from '@crane/domain/3d';
-import {
-  clampJointValue,
-  jointChannel,
-  jointDelta,
-  jointPivot,
-} from '../lib/apply-joint';
+import { clampJointValue, jointChannel, jointDelta } from '../lib/apply-joint';
 import {
   accumulatedParentScale,
   addChannelDelta,
@@ -235,8 +229,7 @@ function disposeInstance(instance: DriverInstance): void {
   invalidateShadows();
 }
 
-/** 누적 항목 — 관절이 걸린 채널은 피벗(노드 로컬 회전 중심)을 함께 든다. */
-type ChannelEntry = ChannelDelta & { pivot?: Vector3Tuple };
+type ChannelEntry = ChannelDelta;
 
 const EMPTY_DELTAS: ReadonlyArray<ChannelDelta> = [];
 
@@ -401,7 +394,6 @@ export function useRigDriver({
           channel,
           axis: joint.axis,
           delta: jointDelta(joint, values.get(joint.id) ?? 0),
-          pivot: jointPivot(joint),
         });
       }
 
@@ -411,8 +403,8 @@ export function useRigDriver({
         const driven = instance.drivenNodes.get(node);
         if (!driven || (driven.isRoot && dragging)) continue;
         beginNodePose(node, driven.rest);
-        for (const { channel, axis, delta: d, pivot } of entries.values()) {
-          addChannelDelta(node, channel, axis, d, pivot);
+        for (const { channel, axis, delta: d } of entries.values()) {
+          addChannelDelta(node, channel, axis, d);
         }
         if (driven.isRoot) {
           if (driven.lastApplied) {

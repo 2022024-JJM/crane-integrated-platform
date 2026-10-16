@@ -382,39 +382,3 @@ describe('sanitizeSceneInfo — 리그 통합', () => {
     ]);
   });
 });
-
-describe('sanitizeRigJoint — pivot', () => {
-  const base = { id: 'slew', node: '[0]Top', type: 'hinge', axis: 'y' };
-  const rigWith = (joint: Record<string, unknown>) =>
-    sanitizeRigDefinition({
-      id: 'r',
-      name: 'r',
-      modelPath: '/m.glb',
-      joints: [joint],
-    });
-
-  it('hinge 의 유한수 셋은 복사해 남긴다', () => {
-    const out = rigWith({ ...base, pivot: [-15.5, 0, -0.7] })!;
-    expect(out.joints[0].pivot).toEqual([-15.5, 0, -0.7]);
-  });
-
-  it('slide 는 버린다', () => {
-    const out = rigWith({ ...base, type: 'slide', pivot: [1, 2, 3] })!;
-    expect(out.joints[0].pivot).toBeUndefined();
-  });
-
-  it('길이·타입이 깨지면 통째로 버리고 관절은 살린다', () => {
-    for (const broken of [
-      [1, 2],
-      [1, 2, 'x'],
-      [1, NaN, 3],
-      'abc',
-      null,
-      [1, 2, 3, 4],
-    ]) {
-      const out = rigWith({ ...base, pivot: broken })!;
-      expect(out.joints).toHaveLength(1);
-      expect(out.joints[0].pivot).toBeUndefined();
-    }
-  });
-});

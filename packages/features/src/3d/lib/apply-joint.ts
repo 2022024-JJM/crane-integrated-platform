@@ -1,5 +1,4 @@
 import type { Object3D } from 'three';
-import type { Vector3Tuple } from '@crane/core/types/math';
 import { getRestPose, type RigJoint } from '@crane/domain/3d';
 import { addChannelDelta, beginNodePose } from './apply-channel';
 
@@ -22,11 +21,6 @@ export function jointChannel(joint: RigJoint): 'rotation' | 'position' {
   return joint.type === 'hinge' ? 'rotation' : 'position';
 }
 
-/** hinge 의 회전 중심(rest 원점 기준 부모 프레임 오프셋). slide·미지정은 undefined(원점). */
-export function jointPivot(joint: RigJoint): Vector3Tuple | undefined {
-  return joint.type === 'hinge' ? joint.pivot : undefined;
-}
-
 /**
  * 관절 하나를 단독 적용한다 — rest 로 되돌린 뒤 Δ 를 더한다. 같은 노드에
  * 여러 관절·맵핑이 걸리는 경우는 드라이버가 beginNodePose/addChannelDelta 로
@@ -38,13 +32,7 @@ export function applyJoint(
   value: number,
 ): void {
   beginNodePose(node, getRestPose(node));
-  addChannelDelta(
-    node,
-    jointChannel(joint),
-    joint.axis,
-    jointDelta(joint, value),
-    jointPivot(joint),
-  );
+  addChannelDelta(node, jointChannel(joint), joint.axis, jointDelta(joint, value));
 }
 
 /** 관절이 비활성일 때 원본 자세로 되돌린다. */

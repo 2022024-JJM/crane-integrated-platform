@@ -107,16 +107,16 @@
 
 - 정의 `RigDefinition` = 관절 `hinge|slide` + 구속조건 `linear`("출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로). 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다.
 - 정의는 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 만 가진다. 관절 ← 태그는 `tagMappings` 의 joint 대상.
-- hinge 는 노드 원점을 지나는 로컬 축으로 돈다. 원점이 축 위에 없는 노드(옥포 TC·TTC 상부 — Blender 원점이 지브 중앙)는 관절에 `pivot`(노드 rest 원점에서 회전 중심까지의 오프셋, 부모 프레임 m — 노드 scale 무관)을 주면 그 점을 지나는 축으로 돈다 — 적용식은 `features lib/apply-channel.ts`(`addChannelDelta` 의 pivot 인자), 인스펙터 리깅 섹션의 피벗 X·Y·Z. 피벗 값은 "축의 부모 좌표 − 노드 rest translation" 으로 구한다. slide 에는 없다(sanitize 가 버린다).
 - 관절 값은 **항상 rest pose 기준 Δ** 다. `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로.
 - 값 소스는 `JointValueSource` 하나로 통한다. 에디터 슬라이더는 `manualJointSource`(씬 데이터·히스토리에 남지 않음), 태그는 `createTagBindingSource`. 시뮬레이션 재생 중 태그가 꽂힌 관절의 슬라이더는 잠긴다.
-- 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본(루트 scale 을 `scripts/unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1)이다. 옥포 OC(`okpo_oc.glb`)는 `okpo.json` 의 `rigs[]` 에 리그가 있다 — 입력 관절 `Link_Upper.001` 하나에 나머지 5개(`Link_Upper.002/003`·`Connector`·`Link_Lower.001`·`Link_End`)가 디자이너 비율의 선형 구속으로 매달리며, 모든 Empty 의 로컬 X 가 러핑 평면 법선이라 관절 축은 전부 `x` 다. 옥포 Goliath·TC·TTC 는 `Trolly_*`·`*_Top` 노드를 노드 맵핑 대상으로 쓸 수 있다. 그 외 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. 모델 최적화 파이프라인(`scripts/optimize-glb.mjs`)은 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
+- 리깅 가능한 자산은 돌아야 하는 부품마다 Empty 노드가 있어야 하고 메쉬는 그 Empty 의 자식이어야 한다. 메쉬를 든 잎 노드는 최적화(`optimize-glb.mjs` 의 meshopt 양자화)가 translation·scale 보정을 노드 자체에 실어 원점이 메쉬 바운즈 중심으로 옮겨진다 — 메쉬가 없는 Empty 는 건드리지 않는다. `LLC_002.glb` 는 참고 프로젝트의 리깅본(루트 scale 을 `scripts/unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1)이다. 옥포 OC(`okpo_oc.glb`)는 `okpo.json` 의 `rigs[]` 에 리그가 있다 — 입력 관절 `Link_Upper.001` 하나에 나머지 5개(`Link_Upper.002/003`·`Connector`·`Link_Lower.001`·`Link_End`)가 디자이너 비율의 선형 구속으로 매달리며, 모든 Empty 의 로컬 X 가 러핑 평면 법선이라 관절 축은 전부 `x` 다. 옥포 TC·TTC 는 `*_Top` Empty 를 hinge(축 `y`)로 돌리는 선회 리그다 — 디자이너 파일의 잎 메쉬를 Blender 에서 `*_Top(Empty) › *_Top_Mesh` 로 내린 버전이고, Empty 는 마스트 단면 중심에 둔다. 옥포 Goliath 는 `Trolly_*` 노드를 slide(position) 맵핑 대상으로 쓴다(부모 프레임 평행이동이라 자기 원점과 무관). 그 외 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. 모델 최적화 파이프라인(`scripts/optimize-glb.mjs`)은 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
 - 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
 - 관절·맵핑 정의 편집으로 드라이버 인스턴스가 해체·재생성되면 rest 점프가 생기므로 그림자 무효화가 배선돼 있다 — `docs/agents/rendering-perf.md`.
 
 ## 불변식
 
 - 관절·태그 값은 항상 rest 기준 Δ 로 적용한다. `rotation.x = θ` 같은 절대 대입은 Blender Empty 의 비항등 rest 를 파괴하므로 금지.
+- 메쉬를 든 노드를 hinge 로 직접 돌리지 않는다. 돌릴 부품은 Empty 아래에 메쉬를 두고 Empty 를 돌린다 — 잎 메쉬 노드는 최적화가 원점을 바운즈 중심으로 옮긴다. slide 는 자기 원점과 무관하다.
 - 태그 값 생산자를 새로 만들면 `publishTagValue` 로만 내보낸다 — 버스가 단일 진입점이고, 표시 캐시·바인딩·운전 상태 판정·3D 플레이 통계가 전부 여기서 갈라진다.
 - 시뮬레이션을 끝내는 코드는 `stopSimulation()` 을 부른다. 스토어 `stop()` 만 부르면 값 저장소·충돌 기록·실시간 보류가 남는다.
 - 같은 대상(노드·채널·축 / 관절)에 맵핑을 두 개 만들지 않는다 — sanitize 가 뒤 항목을 조용히 버린다.
@@ -138,6 +138,7 @@
 - 에디터에 시뮬레이션·시나리오 UI 를 두지 않는다 — 진입·이탈의 `stopSimulation()` 은 관리 페이지에서 켜진 러너가 넘어오지 않게 하는 방어다. 재생 UI 는 관리 페이지와 3D 플레이 트랜스포트 바에만 있다.
 - 시뮬레이션 알림 toast — 배너·HUD·헤더 배지와 겹쳐 보여 소리·브라우저 알림만 쓴다(`docs/agents/monitoring-ui.md`).
 - 레거시 `valueMapList`·`rigBindings` 를 저장본에 다시 쓰는 것 — 입력 전용, 로드 시 변환 후 소멸.
+- 리그 관절의 회전 중심(pivot) 오프셋 필드 — 최적화가 옮긴 원점을 리그에서 되감는 우회였다. 값을 GLB 를 열어 손으로 재야 하고 재최적화·새 버전에서 틀어지며 회전 중심의 원천이 자산과 리그 둘이 된다. 모델에 Empty 를 둔다.
 
 ## 미룬 것
 

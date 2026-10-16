@@ -60,16 +60,6 @@ function sanitizeRigJoint(raw: unknown, seenIds: Set<string>): RigJoint | null {
     if (max !== undefined) joint.max = max;
   }
   if (j.sign === -1) joint.sign = -1;
-  // 피벗: hinge 에만, 유한수 셋이어야 한다. 하나라도 깨지면 통째로 버린다 —
-  // 축이 어긋난 회전보다 원점 회전이 낫다.
-  if (
-    joint.type === 'hinge' &&
-    Array.isArray(j.pivot) &&
-    j.pivot.length === 3 &&
-    j.pivot.every(isFiniteNumber)
-  ) {
-    joint.pivot = [j.pivot[0], j.pivot[1], j.pivot[2]];
-  }
   seenIds.add(joint.id);
   return joint;
 }

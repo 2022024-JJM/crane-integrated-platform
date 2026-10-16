@@ -59,8 +59,6 @@
       "min": "Min",
       "max": "Max",
       "invert": "Invert",
-      "pivot": "Pivot",
-      "pivotHint": "Rotation center as an offset from the node origin (m). Empty = origin",
       "hinge": "Rotate",
       "slide": "Translate",
       "unresolvedNode": "Node not found",
