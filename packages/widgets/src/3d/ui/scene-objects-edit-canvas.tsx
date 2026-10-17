@@ -13,6 +13,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,6 +75,9 @@ import {
   SceneCameraLimits,
   SceneCompassDriver,
   type SceneCompassHandle,
+  ScenePlanOverlapDetector,
+  ScenePlanScaleBarDriver,
+  type ScenePlanScaleBarHandle,
   SceneZoneDetector,
   SceneZoneRings,
   ScenePerfHud,
@@ -87,6 +91,8 @@ import {
   useIsObjectSelected,
   useLabelPreviewState,
   useOutlinePreviewState,
+  usePlanLookStore,
+  usePlanOverlapStore,
   useSceneObjectSelectionStore,
   useSceneZoneStore,
 } from '@crane/features/3d';
@@ -315,7 +321,7 @@ interface SceneObjectsEditCanvasProps {
    * 없으면 저장 시점 카메라). 없으면 initialCamera.
    */
   homeCamera?: SavedCameraInfo | null;
-  /** 직교 탑뷰 상태 — 헤더 탑뷰 버튼의 눌림 표시. */
+  /** 직교 탑뷰 상태 — 헤더 탑뷰 버튼의 눌림 표시·우상단 2D/3D 전환 토글. */
   onTopViewActiveChange?: (active: boolean) => void;
   onTransformVectorChange: (
     field: SceneTransformField,
@@ -378,8 +384,14 @@ interface SceneObjectsEditCanvasProps {
    */
   compassRef?: RefObject<SceneCompassHandle | null>;
   /**
+   * 평면도 축척 바(캔버스 밖 DOM, 페이지가 우하단에 둔다) 핸들 — 방위 표시와
+   * 같은 짝. 직교 탑뷰에서만 Canvas 안 드라이버가 보이게 한다.
+   */
+  scaleBarRef?: RefObject<ScenePlanScaleBarHandle | null>;
+  /**
    * 우상단 축 기즈모를 아래로 내릴 여백(px). 페이지가 캔버스 우상단에 고정 뷰
-   * 줄을 띄우면 그 높이만큼 넘겨 기즈모가 줄 아래로 밀린다. 0 이면 기본 자리.
+   * 줄·2D/3D 전환을 띄우면 그 높이만큼 넘겨 기즈모가 그 아래로 밀린다. 0 이면
+   * 기본 자리.
    */
   axisGizmoTopOffset?: number;
 }
@@ -415,6 +427,7 @@ export function SceneObjectsEditCanvas({
   floodlightAimingId = null,
   onFloodlightAim,
   compassRef,
+  scaleBarRef,
   axisGizmoTopOffset = 0,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
@@ -529,6 +542,23 @@ export function SceneObjectsEditCanvas({
   );
   // 영역 침범 감지 — 꺼져 있어도 선택 모델의 영역은 그린다(반경 편집 피드백).
   const zonesEnabled = useSceneZoneStore((state) => state.enabled);
+  // 평면도 룩(2D 탑뷰) — 직교 탑뷰 + 전역 스위치. 모니터링의 isPlanLookCamera
+  // 와 같은 판정이다(탑뷰 = 직교 카메라 교체). 모델·지도는 Canvas 밖 JSX 라
+  // 카메라 대신 브리지가 알려 주는 탑뷰 상태로 정한다.
+  const [topViewActive, setTopViewActive] = useState(false);
+  const planLook = usePlanLookStore((state) => state.enabled);
+  const planView = topViewActive && planLook;
+  // 평면도 숨은선 대상 — 검출기(ScenePlanOverlapDetector)가 평면도에서 채운다.
+  const planHiddenIndexById = usePlanOverlapStore(
+    (state) => state.hiddenIndexById,
+  );
+  const handleTopViewActiveChange = useCallback(
+    (active: boolean) => {
+      setTopViewActive(active);
+      onTopViewActiveChange?.(active);
+    },
+    [onTopViewActiveChange],
+  );
   const selectModel = useSceneObjectSelectionStore(
     (state) => state.selectModel,
   );
@@ -1246,6 +1276,9 @@ export function SceneObjectsEditCanvas({
             바뀌면 전 머티리얼이 재컴파일되어 화면이 멈춘다. */}
         <SceneFloodlights floodlights={sceneInfo?.floodlights} reserveSlots />
         <RigDriver sceneInfo={sceneInfo} />
+        {/* 평면도 겹침(가려지는 장비의 숨은선) — 평면도 룩에서만 스캔한다.
+            리그 드라이버 뒤라 움직인 뒤 잰다(모니터링과 같은 자리). */}
+        <ScenePlanOverlapDetector sceneInfo={sceneInfo} />
         {/* 영역 침범 검출·링 — 드라이버 바로 다음(useFrame 실행 순서 = 마운트
             순), 검출기 뒤에 링(같은 틱 상태). 충돌 검출기는 두지 않는다 —
             러너 재생 중에만 스캔하는데 에디터엔 러너를 켤 UI 가 없다
@@ -1267,6 +1300,12 @@ export function SceneObjectsEditCanvas({
         {/* 방위 표시 자세 — 카메라 확정 뒤. 진북 입력을 바꾸면 바로 돈다. */}
         {compassRef ? (
           <SceneCompassDriver compassRef={compassRef} trueNorth={trueNorth} />
+        ) : null}
+        {scaleBarRef ? (
+          <ScenePlanScaleBarDriver
+            barRef={scaleBarRef}
+            metersPerUnit={metersPerUnit}
+          />
         ) : null}
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
@@ -1309,7 +1348,7 @@ export function SceneObjectsEditCanvas({
           handleRef={topViewHandleRef}
           cameraRef={cameraRef}
           cameraStateRef={cameraStateRef}
-          onActiveChange={onTopViewActiveChange}
+          onActiveChange={handleTopViewActiveChange}
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
             27px) + 6px(오버레이들의 top-1.5/right-1.5 와 같은 여백) + 여유로
@@ -1392,6 +1431,9 @@ export function SceneObjectsEditCanvas({
                 shading={resolveMapShading(m)}
                 // 수면 아래 지형 잠김 — 모니터링과 같은 규칙.
                 seaSubmersion={seaVisible}
+                // 평면도 바닥 톤 — 셰이더 패치는 늘 걸고 2D 탑뷰에서만
+                // 유니폼이 켜진다(모니터링과 같다).
+                planView="ground"
                 onSelect={
                   m.locked === false ? handleSelectMap : handleClearSelection
                 }
@@ -1422,6 +1464,12 @@ export function SceneObjectsEditCanvas({
               rotation={model.rotation}
               scale={model.scale}
               meshOverrides={model.meshOverrides}
+              // 평면도(2D 탑뷰) 윤곽선·라벨 앵커·숨은선 — 모니터링과 같다.
+              // 상태 외곽선 미리보기가 있으면 그쪽이 윤곽선 자리를 쓰고,
+              // 선택 테두리는 그 위에 따로 그려진다.
+              planOutline={planView}
+              planLabel={planView}
+              planHiddenIndex={planHiddenIndexById.get(model.id) ?? null}
               // 선택 실루엣 테두리 사본을 로딩 뒤 미리 만든다 — 지도는 제외
               // (지형은 135만 삼각형, bvh-build-queue 주석).
               prepareOutline

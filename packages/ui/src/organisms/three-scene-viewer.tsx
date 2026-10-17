@@ -16,7 +16,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ComponentType,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -95,27 +94,11 @@ interface ThreeSceneViewerProps {
    */
   cameraControlsDisabledLabel?: string;
   /**
-   * 탑뷰 버튼 자리를 바꿔 그릴 컴포넌트 — 기본 버튼 하나 대신 호출자가 여러
-   * 개(2D·3D 탑뷰 등)를 놓는다. 탑뷰 상태와 진입·해제, 툴팁 방향·비활성 사유를
-   * props 로 받는다(렌더 함수가 아니라 컴포넌트인 이유: 진입·해제 콜백이 ref
-   * 를 읽으므로 렌더 중 호출로 보이면 안 된다). 생략하면 기본 탑뷰 토글 하나.
+   * 탑뷰 진입·해제 알림 — 탑뷰일 때만 보이는 오버레이(2D/3D 전환 토글)를
+   * 호출자가 그린다. 상태는 Canvas 안 브리지(useOrthoTopView)가 소유한다.
    */
-  TopViewButtons?: ComponentType<TopViewButtonsContext>;
+  onTopViewActiveChange?: (active: boolean) => void;
   onControllerReady?: (controller: SceneController | null) => void;
-}
-
-export interface TopViewButtonsContext {
-  /** 탑뷰 중인지. */
-  active: boolean;
-  /** 탑뷰 진입(이미 탑뷰면 no-op). */
-  enter: () => void;
-  /** 원근 복귀(탑뷰가 아니면 no-op). */
-  exit: () => void;
-  /** 툴팁 방향 — 툴바 배치가 정한다. */
-  side: 'left' | 'bottom' | 'top';
-  /** 카메라 버튼 비활성 여부·사유(분할 화면). */
-  disabled: boolean;
-  disabledLabel?: string;
 }
 
 export interface SceneController {
@@ -125,8 +108,6 @@ export interface SceneController {
   zoomOut: () => void;
   /** 직교 탑뷰 진입 / "지금 보는 곳 기준" 원근 복귀. */
   toggleTopView: () => void;
-  /** 직교 탑뷰 진입만 — 이미 탑뷰면 no-op. */
-  enterTopView: () => void;
   /** 탑뷰면 원근으로 복귀(지금 보는 곳 기준), 아니면 no-op. */
   exitTopView: () => void;
   /** 구도로 이동 — 탑뷰 중이면 원근으로 복귀하면서 그 구도로 간다. */
@@ -192,14 +173,7 @@ function SceneControlsBridge({
   // 콜백은 전부 controlsRef 를 읽고 state.camera 에 의존하지 않는다 — 카메라
   // 교체(탑뷰)로 컨트롤러가 다시 등록되거나 reset 이 다시 돌면 안 된다.
   const topView = useOrthoTopView({ controlsRef, far: cameraFar });
-  const {
-    active: topViewActive,
-    applyPose,
-    moveTo,
-    exit,
-    toggle,
-    enter,
-  } = topView;
+  const { active: topViewActive, applyPose, moveTo, exit, toggle } = topView;
 
   useEffect(() => {
     onTopViewActiveChange(topViewActive);
@@ -265,7 +239,6 @@ function SceneControlsBridge({
       zoomIn,
       zoomOut,
       toggleTopView: toggle,
-      enterTopView: enter,
       exitTopView,
       moveTo,
       panTo: applyPose,
@@ -280,7 +253,6 @@ function SceneControlsBridge({
     zoomIn,
     zoomOut,
     toggle,
-    enter,
     exitTopView,
     moveTo,
     applyPose,
@@ -337,7 +309,7 @@ export function ThreeSceneViewer({
   toolbarPlacement = 'bottom-left',
   dockRight,
   cameraControlsDisabledLabel,
-  TopViewButtons,
+  onTopViewActiveChange,
   onControllerReady,
 }: ThreeSceneViewerProps) {
   const { t } = useTranslation();
@@ -354,13 +326,13 @@ export function ThreeSceneViewer({
   const [topViewActive, setTopViewActive] = useState(false);
   const clip = cameraClip ?? DEFAULT_CAMERA_CLIP;
 
-  // 탑뷰 버튼 슬롯에 넘기는 안정 콜백 — 렌더 중 ref 를 읽지 않는다.
-  const enterTopViewFromToolbar = useCallback(() => {
-    controllerRef.current?.enterTopView();
-  }, []);
-  const exitTopViewFromToolbar = useCallback(() => {
-    controllerRef.current?.exitTopView();
-  }, []);
+  const handleTopViewActiveChange = useCallback(
+    (active: boolean) => {
+      setTopViewActive(active);
+      onTopViewActiveChange?.(active);
+    },
+    [onTopViewActiveChange],
+  );
 
   const setController = useCallback(
     (controller: SceneController | null) => {
@@ -422,33 +394,26 @@ export function ThreeSceneViewer({
       >
         <House />
       </SceneToolbarButton>
-      {TopViewButtons ? (
-        <TopViewButtons
-          active={topViewActive}
-          enter={enterTopViewFromToolbar}
-          exit={exitTopViewFromToolbar}
-          side={tooltipSide}
-          disabled={cameraDisabled}
-          disabledLabel={cameraControlsDisabledLabel}
-        />
-      ) : (
-        <SceneToolbarButton
-          label={
-            topViewActive
-              ? t('common:viewer3d.topViewExit')
-              : t('common:viewer3d.topView')
-          }
-          side={tooltipSide}
-          pressed={topViewActive}
-          disabled={cameraDisabled}
-          disabledLabel={cameraControlsDisabledLabel}
-          onClick={() => {
-            controllerRef.current?.toggleTopView();
-          }}
-        >
-          <Binoculars />
-        </SceneToolbarButton>
-      )}
+      {/* 탑뷰 하나 — 2D(평면도)·3D 전환은 탑뷰 중 우상단 토글이 맡는다
+          (호출자가 onTopViewActiveChange 로 그린다). 독 레일에서는 켜짐을
+          에디터 도구 모음처럼 아이콘 아래 점으로 표시한다. */}
+      <SceneToolbarButton
+        label={
+          topViewActive
+            ? t('common:viewer3d.topViewExit')
+            : t('common:viewer3d.topView')
+        }
+        side={tooltipSide}
+        pressed={topViewActive}
+        pressedDot={isDock}
+        disabled={cameraDisabled}
+        disabledLabel={cameraControlsDisabledLabel}
+        onClick={() => {
+          controllerRef.current?.toggleTopView();
+        }}
+      >
+        <Binoculars />
+      </SceneToolbarButton>
     </>
   );
   const cameraToolbarButtonsTail = (
@@ -569,7 +534,7 @@ export function ThreeSceneViewer({
                   cameraPreset={cameraPreset}
                   cameraFar={clip.far}
                   onControllerChange={setController}
-                  onTopViewActiveChange={setTopViewActive}
+                  onTopViewActiveChange={handleTopViewActiveChange}
                 />
                 {children}
               </Canvas>

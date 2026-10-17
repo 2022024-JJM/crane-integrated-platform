@@ -67,7 +67,7 @@ import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
-import { SceneTopViewButtons } from './scene-top-view-buttons';
+import { ScenePlanLookToggle } from './scene-plan-look-toggle';
 import { ScenePlanOverlapDetector } from './scene-plan-overlaps';
 import {
   ScenePlanScaleBar,
@@ -209,6 +209,8 @@ export function Monitoring3dView({
   // 화면 모두 좌상단에 방위를 둔다. 자세는 Canvas 안 드라이버가 직접 쓴다.
   const compassRef = useRef<SceneCompassHandle | null>(null);
   const scaleBarRef = useRef<ScenePlanScaleBarHandle | null>(null);
+  // 탑뷰 중에만 우상단에 2D/3D 전환 토글을 띄운다 — 상태는 뷰어가 알린다.
+  const [topViewActive, setTopViewActive] = useState(false);
   // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
   // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
   const toolsDock = useSceneDock('tools');
@@ -482,7 +484,7 @@ export function Monitoring3dView({
         <ThreeSceneViewer
           cameraPreset={cameraPreset}
           cameraClip={SCENE_CAMERA_CLIP}
-          TopViewButtons={SceneTopViewButtons}
+          onTopViewActiveChange={setTopViewActive}
           canvasProps={{
             dpr: canvasDpr,
             frameloop: 'demand',
@@ -559,13 +561,15 @@ export function Monitoring3dView({
           }
           fullscreenTopRightOverlay={
             isDock ? (
-              // 우상단 슬롯 — 고정한 뷰 줄이 먼저, 페이지의 알람 패널이 그 아래.
+              // 우상단 슬롯 — 고정한 뷰 줄, 탑뷰 중이면 2D/3D 전환, 페이지의
+              // 알람 패널 순. 고정 뷰 줄이 비면(null) 간격 없이 토글이 맨 위다.
               <div className="flex flex-col items-end gap-2">
                 <SceneViewBar
                   views={pinnedViews}
                   onSelectView={handleSelectView}
                   split={splitBarProps}
                 />
+                {topViewActive ? <ScenePlanLookToggle /> : null}
                 {fullscreenTopRightOverlay}
               </div>
             ) : (

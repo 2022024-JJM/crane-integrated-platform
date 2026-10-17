@@ -292,7 +292,7 @@
     "resetView": "Main view",
     "topView": "Top view",
     "topViewExit": "Exit top view",
-    "topView2d": "2D top view (plan)",
+    "topView2d": "2D top view",
     "topView3d": "3D top view",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",

@@ -110,14 +110,16 @@
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
-- 레일 순서(위에서부터): 카메라 묶음(원래위치·2D 탑뷰·3D 탑뷰(`docs/agents/rendering-perf.md` "평면도 룩")·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
+- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
+- 레일 토글의 켜짐은 배경 채움이고, 탑뷰만 에디터 도구 모음처럼 아이콘 아래 점이다(`SceneToolbarButton` 의 `pressedDot`, 점 클래스 `TOOLBAR_PRESSED_DOT_CLASS` 를 에디터와 공유). 2D/3D 는 레일이 아니라 우상단 토글이다(`docs/agents/rendering-perf.md` "평면도 룩").
+- 우상단 슬롯(`fullscreenTopRightOverlay`)은 위에서부터 고정 뷰 줄(`SceneViewBar`) → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`) → 페이지의 알람 패널이다. 고정 뷰 줄이 비면 `null` 이라 간격 없이 토글이 맨 위다. 탑뷰 상태는 뷰어의 `onTopViewActiveChange` 로 받는다.
 - `toolbarTrailing` 을 카메라 묶음 안에 끼우는 것은 dock 배치뿐이다. 가로 툴바는 앞에 붙는다.
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
 
 ### 방위 표시·축척·북쪽 위로 (독 배치, 분할 아님)
 
 - **방위 표시** `ui/scene-compass.tsx` — 좌상단 열 첫 줄. 지면에 놓인 원(N·E·S·W + 북 적색 바늘)을 카메라가 보는 모습이라 탑뷰에선 원, 비스듬하면 납작한 타원이다. 기하는 `lib/compass.ts`(`resolveCompassView`, 진북 = `resolveTrueNorth`). 자세는 React 상태가 아니라 Canvas 안 `SceneCompassDriver` 가 `useFrame` 에서 바뀐 프레임에만 DOM 에 쓴다. 모니터링·에디터에서는 누르면 북쪽 위로(`onNorthUp`), 분할 타일의 방위 표시는 조작이 없다(타일 클릭이 그 뷰를 연다).
-- **축척 바** `ui/scene-plan-scale-bar.tsx` — 캔버스 우하단(독 레일 안쪽). 직교 탑뷰에서만 보이고 원근에서는 숨는다(원근은 화면 위치마다 축척이 달라 바 하나가 거짓). 길이는 `lib/plan-scale-bar.ts` 의 `resolvePlanScaleBar`(상한 `PLAN_SCALE_BAR_MAX_PX` 안에서 가장 긴 1·2·5×10ⁿ m, 씬 단위는 `getSceneMetersPerUnit`). 갱신은 `ScenePlanScaleBarDriver` 가 방위 표시와 같은 규칙으로 쓴다.
+- **축척 바** `ui/scene-plan-scale-bar.tsx` — 캔버스 우하단(독 레일 안쪽, 에디터는 단축키 버튼 왼쪽). 직교 탑뷰에서만 보이고 원근에서는 숨는다(원근은 화면 위치마다 축척이 달라 바 하나가 거짓). 길이는 `lib/plan-scale-bar.ts` 의 `resolvePlanScaleBar`(상한 `PLAN_SCALE_BAR_MAX_PX` 안에서 가장 긴 1·2·5×10ⁿ m, 씬 단위는 `getSceneMetersPerUnit`). 갱신은 `ScenePlanScaleBarDriver` 가 방위 표시와 같은 규칙으로 쓴다.
 - **북쪽 위로** — 방위 표시를 누른다(독 레일 버튼은 없다). 타깃을 축으로 카메라를 돌려 화면 위가 진북이 되게 한다(`lib/north-up.ts` → core `rotatePoseToHeading`·`headingForAzimuth`). 모드를 유지하는 경로(모니터링 `panTo`, 에디터 `SceneEditorCameraActions.northUp`)로 적용하므로 탑뷰면 평면도가 north-up, 원근이면 시선이 북을 향한다. 탑뷰 진입 기본은 여전히 "보던 방향이 화면 위" 다 — 북쪽 고정을 기본으로 바꾸지 않는다(보던 곳을 잃는다).
 
 ### 평면도 겹침 (탑뷰, 독 배치)

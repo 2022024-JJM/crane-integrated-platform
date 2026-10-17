@@ -22,9 +22,12 @@ import {
   FLOODLIGHT_SLOT_COUNT,
   SceneCompass,
   SceneLoadingOverlay,
+  ScenePlanLookToggle,
+  ScenePlanScaleBar,
   SceneViewBar,
   SceneWarmupIndicator,
   type SceneCompassHandle,
+  type ScenePlanScaleBarHandle,
   useSceneEditorViewStore,
   useTagBindingSource,
   stopSimulation,
@@ -90,10 +93,10 @@ interface SceneObjectsEditPageProps {
 const EMPTY_MAPS: SavedMapInfo[] = [];
 const EMPTY_VIEWS: SavedSceneView[] = [];
 /**
- * 우상단 고정 뷰 줄이 있을 때 축 기즈모를 내리는 양(px) — 줄 높이(버튼 h-8)
- * 에 오버레이 간격(gap-2)을 더한 값.
+ * 우상단 줄(고정 뷰 줄·2D/3D 전환) 하나당 축 기즈모를 내리는 양(px) — 줄
+ * 높이에 오버레이 간격(gap-2)과 여유를 더한 값.
  */
-const VIEW_BAR_GIZMO_OFFSET_PX = 40;
+const TOP_RIGHT_ROW_GIZMO_OFFSET_PX = 40;
 
 /** 뷰 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 객체로 묶어 넘긴다. */
 interface SceneViewHandlers {
@@ -165,6 +168,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   // 방위 표시 핸들 — DOM 은 좌상단 슬롯, 자세는 캔버스 안 드라이버가 쓴다.
   const compassRef = useRef<SceneCompassHandle | null>(null);
+  // 평면도 축척 핸들 — DOM 은 우하단, 값은 캔버스 안 드라이버가 쓴다.
+  const scaleBarRef = useRef<ScenePlanScaleBarHandle | null>(null);
   // 전체화면은 문서 전체를 올린다 — AppLayout 이 헤더·사이드바를
   // 숨기면 이 페이지가 화면을 채운다. 포털·토스트는 손댈 것 없다
   // (useFullscreen 주석).
@@ -175,7 +180,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   } = useFullscreen();
   const focusSelectedRef = useRef<(() => void) | null>(null);
   const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
-  // 직교 탑뷰 상태 — 캔버스가 알려 주고 헤더 버튼의 눌림 표시에 쓴다.
+  // 직교 탑뷰 상태 — 캔버스가 알려 주고 헤더 버튼의 눌림 표시와 우상단
+  // 2D/3D 전환 토글에 쓴다.
   const [topViewActive, setTopViewActive] = useState(false);
   const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
   const snapStep = useSceneEditorViewStore((state) => state.snapStep);
@@ -840,8 +846,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 floodlightAimingId={floodlightAimingId}
                 onFloodlightAim={handleFloodlightAim}
                 compassRef={compassRef}
+                scaleBarRef={scaleBarRef}
                 axisGizmoTopOffset={
-                  viewBarVisible ? VIEW_BAR_GIZMO_OFFSET_PX : 0
+                  ((viewBarVisible ? 1 : 0) + (topViewActive ? 1 : 0)) *
+                  TOP_RIGHT_ROW_GIZMO_OFFSET_PX
                 }
               />
 
@@ -854,6 +862,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
                   겹치지 않는다. */}
               <SceneShortcutsHelp />
+              {/* 평면도 축척(우하단, 단축키 버튼 왼쪽) — 직교 탑뷰에서만
+                  드라이버가 보이게 한다(모니터링과 같은 짝). */}
+              <div className="pointer-events-none absolute right-12 bottom-2 z-10">
+                <ScenePlanScaleBar ref={scaleBarRef} className="items-end" />
+              </div>
               {/* 좌측 상단 — 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드·
                   충돌 기준선·팔레트 모델 로드). 우상단 축 기즈모·하단 바와
                   겹치지 않는다. 방위 표시를 누르면 북쪽 위로(모니터링과
@@ -865,10 +878,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 />
                 <SceneWarmupIndicator />
               </div>
-              {/* 우상단 — 고정한 뷰·분할 버튼 줄. 있으면 축 기즈모가 이 아래로
-                  내려간다(axisGizmoTopOffset). 모니터링의 같은 줄과 같은 모양. */}
-              {viewBarVisible ? (
-                <div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex justify-end">
+              {/* 우상단 — 고정한 뷰·분할 버튼 줄, 탑뷰 중이면 그 아래 2D/3D
+                  전환(줄이 없으면 맨 위). 축 기즈모가 보이는 줄 수만큼 내려간다
+                  (axisGizmoTopOffset). 모니터링의 같은 자리와 같은 모양. */}
+              {viewBarVisible || topViewActive ? (
+                <div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex flex-col items-end gap-2">
                   <SceneViewBar
                     views={pinnedViews}
                     onSelectView={viewHandlers.onFlyTo}
@@ -885,6 +899,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         : null
                     }
                   />
+                  {topViewActive ? <ScenePlanLookToggle /> : null}
                 </div>
               ) : null}
 

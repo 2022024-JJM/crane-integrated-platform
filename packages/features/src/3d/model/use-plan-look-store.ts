@@ -6,7 +6,10 @@ import { getStorageItem, setStorageItem } from '@crane/core/lib/safe-storage';
  * 톤·투광등 웅덩이 줄이기·가는 윤곽·축 고정 라벨·숨은선)를 얹을지.
  *
  * - 2D 탑뷰: 켬 — 직교 + 평면도 룩.
- * - 3D 탑뷰: 끔 — 직교 카메라만 바뀌고 모델·조명은 원근과 같다(예전 탑뷰).
+ * - 3D 탑뷰: 끔 — 직교 카메라만 바뀌고 모델·조명은 원근과 같다.
+ *
+ * 탑뷰 중 우상단 2D/3D 전환(ui/scene-plan-look-toggle.tsx)이 바꾼다.
+ * 모니터링·3D 플레이·에디터가 같은 스위치를 본다.
  *
  * 판정은 모두 `isPlanLookCamera(camera, enabled)`(lib/plan-look.ts) 하나다.
  * 리전 무관 전역이고 localStorage 에 영속한다(미니맵 표시와 같은 계열).

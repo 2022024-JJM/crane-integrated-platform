@@ -87,7 +87,7 @@
 - **분할 칸은 목록의 행을 끌어다 놓는다**(HTML5 DnD, `SCENE_VIEW_DRAG_TYPE` — `text/plain` 을 싣지 않아 캔버스 드롭이 모델 배치로 오해하지 않는다). 찬 칸에 놓으면 교체, 다른 칸에 있던 뷰면 이동이라 한 뷰는 한 칸에만 있다. 뷰를 지우면 그 칸도 빈다. 칸 순서는 좌상·우상·좌하·우하이고, 화면 배치(빈 행·열 접기)는 `resolveSplitLayout` 이 정한다.
 - **메인 뷰**는 탭 맨 위 슬롯이다 — 목록의 행을 끌어다 놓고 ✕ 로 비운다. region 별 슬롯(`SavedSceneInfo.mainViewByRegion[regionId]`, `cameraByRegion` 과 같은 이유 — 파일을 공유하는 region 의 초기 시점이 다르다)이고 에디터는 자기 region 슬롯만 쓴다. 뷰를 지우면 슬롯도 빈다. 놓아도 에디터 카메라는 움직이지 않는다.
 - **홈 카메라**(`resolveSceneHomeCamera(scene, regionId)`) = 메인 뷰의 구도, 없으면 `camera`(저장 시점 카메라). 세 캔버스의 초기 시점과 "메인 뷰" 버튼(구 원래 위치, `common:viewer3d.resetView`)이 이 값 하나를 본다. 에디터는 로드 때 홈 카메라에서 시작하고 저장 뒤에는 현재 카메라를 그대로 둔다. `camera`·`cameraByRegion` 은 여전히 저장 시점마다 기록되는 폴백이다.
-- **고정**은 뷰마다 하나, 분할에 하나다(`pinned`, true 만 저장). 고정한 것만 에디터·모니터링 캔버스 우상단 고정 줄(`SceneViewBar`)에 상시 버튼으로 온다. 에디터는 고정 줄이 있으면 축 기즈모를 그 아래로 내린다(`SceneObjectsEditCanvas` 의 `axisGizmoTopOffset`).
+- **고정**은 뷰마다 하나, 분할에 하나다(`pinned`, true 만 저장). 고정한 것만 에디터·모니터링 캔버스 우상단 고정 줄(`SceneViewBar`)에 상시 버튼으로 온다. 에디터 우상단은 고정 줄 → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`) 순이고, 보이는 줄 수만큼 축 기즈모를 내린다(`SceneObjectsEditCanvas` 의 `axisGizmoTopOffset`, 줄당 `TOP_RIGHT_ROW_GIZMO_OFFSET_PX`).
 - **에디터의 분할 버튼은 비활성**이다(`aria-disabled` + 툴팁 "모니터링 화면에서만") — 분할 화면은 모니터링에서 확인한다. 에디터 캔버스와 모니터링 타일은 가로세로 비율이 달라 세로 범위는 같고 가로 범위만 달라진다.
 - 편집 의미는 `view-editor.ts` 의 순수 함수(`withSceneView*`, `withSplit*`)가 정하고 결과가 같으면 같은 참조를 돌려준다. 세터(`scene-manipulation-actions.ts`)는 그 함수를 `updateScene` 에 넘길 뿐이다. undo·dirty 는 다른 씬 설정과 같다.
 - 뷰 id 는 씬 객체(모델·텍스트·눈금) id 집합과 별개다 — 뷰는 선택·기즈모·레지스트리 대상이 아니다.
@@ -97,6 +97,7 @@
 - 카메라 `up` 은 항상 +Y 다. 탑뷰는 `top-view-pose.ts` 의 미세 tilt(`TOP_VIEW_TILT`)로 만든다.
 - up=+Y 인 채 타깃 정확히 위에 서면 `lookAt` 이 퇴화해 roll 이 부동소수 노이즈로 정해지므로, 포즈를 적용하는 경로(`useOrthoTopView.applyPose`)는 들어오는 모든 포즈를 `ensureTopViewTilt` 로 정규화한다 — 옛 북마크 방어.
 - **탑뷰는 직교 카메라로 교체하는 토글**이다(`packages/ui/src/organisms/use-ortho-top-view.ts`, 뷰어 `SceneControlsBridge` 와 에디터 `EditorCameraBridge` 가 같은 훅). 지도 fit 이 아니라 **지금 보는 화면**(궤도 타깃 = 화면 중앙 표면점) 위에서 내려다보고, 보던 수평 방향이 화면 위가 된다(`computeTopViewEntryPose`). 거리는 그대로이고 직교 프러스텀 반높이 = 거리×tan(원근 fov/2) — 직교 카메라가 "같은 구도의 원근 카메라가 있을 높이"에 서므로 거리로 판단하는 코드(라벨 축소·지형 LOD·그림자 반경·미니맵)가 그대로 맞는다. fov 가 필요한 코드는 `resolveCameraFov`/`resolveCameraAspect` 로 읽는다(직교는 `userData` 의 원근 fov·프러스텀 비). near 는 음수(`TOP_VIEW_ORTHO_NEAR`)라 카메라보다 높은 구조물도 평면도에 그려진다.
+- 탑뷰 버튼은 하나다(뷰어 기본 버튼·에디터 헤더, 켜짐은 아이콘 아래 점). 2D(평면도 룩)/3D 는 탑뷰 중 우상단 전환 토글이 전역 스위치만 바꾸고 카메라는 그대로다(`docs/agents/rendering-perf.md` "평면도 룩").
 - 탑뷰 중 조작은 팬·휠 줌·방위 회전이다. 극각은 `TOP_VIEW_POLAR_ANGLE` 로 양쪽 잠근다(`SceneCameraLimits` 는 직교일 때 극각을 건드리지 않는다). 휠은 커서 아래 점 기준 배율(`SceneSurfaceCamera` 의 직교 분기, `orthoZoomAdvance`) — 포즈·프러스텀을 같은 배율로 키우고 상·하한은 원근 거리 규칙과 같다. 표면 피벗이 타깃 거리를 조금 바꿔도 프러스텀은 명시적 줌·`applyPose` 에서만 바뀐다.
 - **복귀는 "지금 보는 곳 기준"**이다(`computeTopViewExitPose`): 진입 때 저장한 원근 오프셋을 탑뷰에서 돌린 방위만큼 회전하고 현재 거리로 스케일해 현재 타깃에 붙인다. 탑뷰 버튼 재클릭은 이 포즈로, 메인 뷰·씬 뷰·영역 보기는 원근으로 복귀하면서 그 구도로 간다(`moveTo`). 미니맵 팬만 모드를 유지한다(`panTo`). 분할 화면 진입·충돌 감지 표시 ON 은 탑뷰를 먼저 해제한다.
 - 탑뷰 중 저장한 뷰·씬 `camera` 는 그 자세(정수직 원근 포즈)로 저장된다 — 스키마에 직교 플래그는 없다.

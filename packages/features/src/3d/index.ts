@@ -276,7 +276,7 @@ export {
   ScenePlanScaleBarDriver,
   type ScenePlanScaleBarHandle,
 } from './ui/scene-plan-scale-bar';
-export { SceneTopViewButtons } from './ui/scene-top-view-buttons';
+export { ScenePlanLookToggle } from './ui/scene-plan-look-toggle';
 export { usePlanLookStore } from './model/use-plan-look-store';
 export { isPlanLookCamera } from './lib/plan-look';
 export { ScenePlanOverlapDetector } from './ui/scene-plan-overlaps';

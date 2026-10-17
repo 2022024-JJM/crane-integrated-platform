@@ -35,6 +35,21 @@ export const SCENE_TOOLBAR_BUTTON_CLASS =
 export const SCENE_TOOLBAR_DISABLED_CLASS =
   'cursor-not-allowed opacity-50 hover:bg-white/40 hover:text-black dark:hover:bg-black/40 dark:hover:text-white in-data-[scene-dock]:hover:bg-transparent in-data-[scene-dock]:hover:text-foreground';
 
+/**
+ * 켜짐 표시 점 — 아이콘 아래 작은 점(aria-pressed). 독립 on/off 토글을 배경
+ * 채움보다 약하게 표시한다. 에디터 도구 모음의 토글(widgets
+ * EditorToolbarButton)과 씬 독의 탑뷰 버튼이 같은 점을 쓴다.
+ */
+export const TOOLBAR_PRESSED_DOT_CLASS =
+  'relative after:absolute after:bottom-0.5 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-transparent aria-pressed:after:bg-primary';
+
+/**
+ * 독 안의 점 표시 버튼 — 눌림 채움(accent)을 걷고 점만 남긴다. hover 중에는
+ * 채움이 그대로라 누를 수 있는 버튼으로 읽힌다. `:not(:hover)` 가 붙어 기본
+ * 클래스의 눌림 채움보다 선택자가 강하다.
+ */
+const SCENE_TOOLBAR_PRESSED_DOT_CLASS = `${TOOLBAR_PRESSED_DOT_CLASS} in-data-[scene-dock]:aria-pressed:not-hover:bg-transparent`;
+
 export type SceneToolbarTooltipSide = 'top' | 'bottom' | 'left' | 'right';
 
 interface SceneToolbarButtonProps {
@@ -45,6 +60,8 @@ interface SceneToolbarButtonProps {
   size?: 'icon-sm' | 'icon-xs';
   /** 토글 버튼일 때 눌림 상태 (aria-pressed). */
   pressed?: boolean;
+  /** 눌림을 배경 채움 대신 아이콘 아래 점으로 표시한다. */
+  pressedDot?: boolean;
   /**
    * 비활성 — 회색으로 남고 클릭을 무시하며, 툴팁은 `disabledLabel`(없으면
    * label)을 보인다. 분할 화면에서 쓸 수 없는 카메라 버튼이 이렇게 남는다.
@@ -61,6 +78,7 @@ export function SceneToolbarButton({
   side = 'top',
   size = 'icon-sm',
   pressed,
+  pressedDot = false,
   disabled = false,
   disabledLabel,
   className,
@@ -76,6 +94,7 @@ export function SceneToolbarButton({
             size={size}
             className={cn(
               SCENE_TOOLBAR_BUTTON_CLASS,
+              pressedDot && SCENE_TOOLBAR_PRESSED_DOT_CLASS,
               disabled && SCENE_TOOLBAR_DISABLED_CLASS,
               className,
             )}

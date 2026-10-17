@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Kbd } from '@crane/ui/atoms/kbd';
+import { TOOLBAR_PRESSED_DOT_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
 import {
   Tooltip,
   TooltipContent,
@@ -35,8 +36,7 @@ interface EditorToolbarButtonProps {
 const BASE_CLASS =
   'text-muted-foreground hover:text-foreground relative rounded-md';
 
-const TOGGLE_CLASS =
-  'aria-pressed:text-foreground after:absolute after:bottom-0.5 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-transparent aria-pressed:after:bg-primary';
+const TOGGLE_CLASS = `aria-pressed:text-foreground ${TOOLBAR_PRESSED_DOT_CLASS}`;
 
 /** 편집기 도구 모음 공용 아이콘 버튼 — 툴팁·단축키 병기·성격별 활성 표현. */
 export function EditorToolbarButton({
