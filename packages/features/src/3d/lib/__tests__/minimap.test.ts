@@ -10,7 +10,7 @@ import {
   panelPositionToRatio,
   panelRatioToPosition,
   computeMinimapFrame,
-  isSamePose,
+  isSameViewPose,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
@@ -155,43 +155,111 @@ describe('cameraFootprint', () => {
   });
 });
 
-describe('isSamePose', () => {
-  const pose: MinimapPose = { position: [10, 20, 30], target: [0, 1, 0] };
+describe('isSameViewPose', () => {
+  // +X 를 내려다보는 시선 — 방향 (10, -10, 0).
+  const pose: MinimapPose = { position: [0, 10, 0], target: [10, 0, 0] };
+  const ANGLE = 1e-3;
 
-  it('같은 값이면 true, 각 축 차이가 epsilon 정확값이면 true·넘으면 false', () => {
+  it('같은 값이면 true', () => {
     expect(
-      isSamePose(pose, { position: [10, 20, 30], target: [0, 1, 0] }, 0),
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0], target: [10, 0, 0] },
+        0,
+        ANGLE,
+      ),
     ).toBe(true);
+  });
+
+  it('타깃이 같은 시선 위에서 앞뒤로 옮겨져도(표면 피벗 재배치) true', () => {
+    // 저장 때 중앙의 구조물(가까움) → 지금은 그 뒤의 땅(멀리)
+    expect(
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0], target: [25, -15, 0] },
+        1e-3,
+        ANGLE,
+      ),
+    ).toBe(true);
+    expect(
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0], target: [2, 8, 0] },
+        1e-3,
+        ANGLE,
+      ),
+    ).toBe(true);
+  });
+
+  it('카메라 위치는 각 축 차이가 epsilon 정확값이면 true·넘으면 false', () => {
     // 2진수로 정확한 값만 써서 경계가 부동소수 오차에 흔들리지 않게 한다.
     const eps = 0.25;
     expect(
-      isSamePose(pose, { position: [10.25, 20, 30], target: [0, 1, 0] }, eps),
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0.25], target: [10, 0, 0.25] },
+        eps,
+        ANGLE,
+      ),
     ).toBe(true);
     expect(
-      isSamePose(pose, { position: [10.5, 20, 30], target: [0, 1, 0] }, eps),
-    ).toBe(false);
-    expect(
-      isSamePose(pose, { position: [10, 20, 30], target: [0, 1, -0.25] }, eps),
-    ).toBe(true);
-    expect(
-      isSamePose(pose, { position: [10, 20, 30], target: [0, 1, -0.5] }, eps),
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0.5], target: [10, 0, 0.5] },
+        eps,
+        ANGLE,
+      ),
     ).toBe(false);
   });
 
-  it('위치가 같아도 타깃이 다르면(같은 자리에서 다른 곳을 봄) false', () => {
+  it('같은 자리에서 시선이 각 허용치보다 돌면 false, 안이면 true', () => {
+    const turned = (rad: number): MinimapPose => ({
+      position: [0, 10, 0],
+      target: [10 * Math.cos(rad), 0, 10 * Math.sin(rad)],
+    });
+    // 수평으로 rad 만큼 돌린 시선과의 실제 각은 rad 보다 작다(내려다보는
+    // 성분은 그대로) — 허용치의 절반·네 배로 안쪽·바깥쪽을 확실히 가른다.
+    expect(isSameViewPose(pose, turned(ANGLE / 2), 1e-3, ANGLE)).toBe(true);
+    expect(isSameViewPose(pose, turned(ANGLE * 4), 1e-3, ANGLE)).toBe(false);
+    // 반대 방향
     expect(
-      isSamePose(pose, { position: [10, 20, 30], target: [5, 1, 0] }, 1e-3),
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0], target: [-10, 0, 0] },
+        1e-3,
+        ANGLE,
+      ),
     ).toBe(false);
   });
 
-  it('NaN·Infinity 가 섞이면 false (epsilon 이 NaN 이어도)', () => {
+  it('시선 길이 0(타깃 = 위치)은 false', () => {
+    const degenerate: MinimapPose = {
+      position: [0, 10, 0],
+      target: [0, 10, 0],
+    };
+    expect(isSameViewPose(degenerate, degenerate, 1, ANGLE)).toBe(false);
+    expect(isSameViewPose(pose, degenerate, 1, ANGLE)).toBe(false);
+  });
+
+  it('NaN·Infinity 가 섞이면 false (허용치가 NaN 이어도)', () => {
     expect(
-      isSamePose(pose, { position: [NaN, 20, 30], target: [0, 1, 0] }, 1),
+      isSameViewPose(
+        pose,
+        { position: [NaN, 10, 0], target: [10, 0, 0] },
+        1,
+        ANGLE,
+      ),
     ).toBe(false);
     expect(
-      isSamePose(pose, { position: [10, 20, 30], target: [0, Infinity, 0] }, 1),
+      isSameViewPose(
+        pose,
+        { position: [0, 10, 0], target: [10, Infinity, 0] },
+        1,
+        ANGLE,
+      ),
     ).toBe(false);
-    expect(isSamePose(pose, pose, NaN)).toBe(false);
+    expect(isSameViewPose(pose, pose, NaN, ANGLE)).toBe(false);
+    expect(isSameViewPose(pose, pose, 1, NaN)).toBe(false);
   });
 });
 

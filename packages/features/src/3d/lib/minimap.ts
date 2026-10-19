@@ -191,20 +191,36 @@ export function cameraFootprint(
 }
 
 /**
- * 두 포즈가 같은 구도인가 — 위치·타깃의 각 축 차이가 모두 epsilon 이하.
- * 미니맵이 지금 카메라가 그 고정 뷰에 있는지(핀 강조)를 판정한다. NaN 이
- * 섞이면 다르다.
+ * 두 포즈가 같은 화면인가 — 카메라 위치의 각 축 차이가 `positionEpsilon`
+ * 이하이고 시선 방향(위치→타깃) 사이 각이 `angleEpsilonRad` 이하. 미니맵이
+ * 지금 카메라가 그 고정 뷰에 있는지(핀 강조)를 판정한다.
+ *
+ * 타깃까지의 거리는 보지 않는다 — 모니터링 카메라는 이동 뒤 타깃을 화면 중앙
+ * 표면으로 다시 잡아(SceneSurfaceCamera) 같은 화면이어도 타깃이 시선 위에서
+ * 앞뒤로 움직인다(저장 때 중앙에 있던 크레인이 비켜나면 뒤의 땅). 시선
+ * 길이가 0 이거나 NaN 이 섞이면 다르다.
  */
-export function isSamePose(
+export function isSameViewPose(
   a: MinimapPose,
   b: MinimapPose,
-  epsilon: number,
+  positionEpsilon: number,
+  angleEpsilonRad: number,
 ): boolean {
   for (let i = 0; i < 3; i += 1) {
-    if (!(Math.abs(a.position[i] - b.position[i]) <= epsilon)) return false;
-    if (!(Math.abs(a.target[i] - b.target[i]) <= epsilon)) return false;
+    if (!(Math.abs(a.position[i] - b.position[i]) <= positionEpsilon)) {
+      return false;
+    }
   }
-  return true;
+  const ax = a.target[0] - a.position[0];
+  const ay = a.target[1] - a.position[1];
+  const az = a.target[2] - a.position[2];
+  const bx = b.target[0] - b.position[0];
+  const by = b.target[1] - b.position[1];
+  const bz = b.target[2] - b.position[2];
+  const lengths = Math.hypot(ax, ay, az) * Math.hypot(bx, by, bz);
+  if (!(lengths > 0) || !Number.isFinite(lengths)) return false;
+  const cos = (ax * bx + ay * by + az * bz) / lengths;
+  return cos >= Math.cos(angleEpsilonRad);
 }
 
 /**

@@ -27,7 +27,7 @@ import {
   cameraFootprint,
   cameraGlyphPolygon,
   clampPanelPosition,
-  isSamePose,
+  isSameViewPose,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
@@ -67,8 +67,9 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 머리에 고정 줄 순서의 번호를 쓴다. 핀 머리를 눌렀다 놓으면 `onSelectView` 로 그
  * 뷰에 간다(고정 줄 버튼과 같은 경로) — 누른 채 클릭 허용 범위(domain
  * isOverlayDrag)를 넘게 끌면 팬으로 바뀐다. 포인터를 올리면 그 뷰의 카메라
- * 위치·시야 부채꼴과 타깃까지의 점선, 이름을 보인다. 지금 카메라가 그 뷰의
- * 포즈와 같으면 핀을 흰색으로 채운다 — 회전·팬으로 벗어나면 풀린다.
+ * 위치·시야 부채꼴과 타깃까지의 점선, 이름을 보인다. 지금 카메라의 위치·
+ * 시선 방향이 그 뷰와 같으면 핀을 흰색으로 채운다 — 회전·팬으로 벗어나면
+ * 풀린다.
  * 타깃이 지도 밖인 뷰는 장비 마커처럼 그리지 않는다.
  *
  * 장비 마커 위에 포인터를 올리면 장비 이름을 그 옆에 그린다. 마커 색은 알람
@@ -136,10 +137,12 @@ const VIEW_PIN_FILL = 'rgba(10, 12, 14, 0.82)';
 const VIEW_PIN_FILL_HOVER = 'rgba(40, 46, 52, 0.92)';
 const VIEW_PIN_NUMBER_CURRENT = '#0a0c0e';
 /**
- * 지금 카메라가 그 뷰에 있다고 보는 포즈 차이(씬 단위). 뷰로 옮긴 직후의
- * 포즈는 OrbitControls update() 의 부동소수 오차만큼만 다르다.
+ * 지금 카메라가 그 뷰에 있다고 보는 카메라 위치 차이(씬 단위)·시선 각
+ * 차이(rad). 뷰로 옮긴 직후의 포즈는 OrbitControls update() 의 부동소수
+ * 오차만큼만 다르다. 타깃 거리는 비교하지 않는다(lib isSameViewPose).
  */
 const VIEW_POSE_EPSILON = 1e-3;
+const VIEW_DIRECTION_EPSILON_RAD = 1e-3;
 
 interface SceneMinimapProps {
   sceneInfo: SavedSceneInfo | null;
@@ -253,8 +256,14 @@ export function SceneMinimap({
       pinsRef.current = pins;
       const hoveredPin = pickViewPin(pins, hover, scale);
       const currentPin = pose
-        ? (pins.find((pin) => isSamePose(pose, pin.view, VIEW_POSE_EPSILON)) ??
-          null)
+        ? (pins.find((pin) =>
+            isSameViewPose(
+              pose,
+              pin.view,
+              VIEW_POSE_EPSILON,
+              VIEW_DIRECTION_EPSILON_RAD,
+            ),
+          ) ?? null)
         : null;
       drawViewPins(context, drawFrame, scale, pins, hoveredPin, currentPin);
       markersRef.current = drawMarkers(
