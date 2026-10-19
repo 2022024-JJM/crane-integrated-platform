@@ -12,7 +12,6 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
 COPY apps/shell/package.json            ./apps/shell/package.json
 COPY apps/hanwha-ocean/package.json     ./apps/hanwha-ocean/package.json
-COPY apps/goliath-crane/package.json    ./apps/goliath-crane/package.json
 COPY apps/philly-shipyard/package.json  ./apps/philly-shipyard/package.json
 COPY apps/crane-hmi/package.json        ./apps/crane-hmi/package.json
 COPY apps/mro2/package.json             ./apps/mro2/package.json
