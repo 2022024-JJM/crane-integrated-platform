@@ -191,8 +191,40 @@ export function cameraFootprint(
 }
 
 /**
+ * 두 포즈가 같은 구도인가 — 위치·타깃의 각 축 차이가 모두 epsilon 이하.
+ * 미니맵이 지금 카메라가 그 고정 뷰에 있는지(핀 강조)를 판정한다. NaN 이
+ * 섞이면 다르다.
+ */
+export function isSamePose(
+  a: MinimapPose,
+  b: MinimapPose,
+  epsilon: number,
+): boolean {
+  for (let i = 0; i < 3; i += 1) {
+    if (!(Math.abs(a.position[i] - b.position[i]) <= epsilon)) return false;
+    if (!(Math.abs(a.target[i] - b.target[i]) <= epsilon)) return false;
+  }
+  return true;
+}
+
+/**
+ * 고정 뷰 핀의 머리 중심 — 핀 끝은 뷰 타깃(보는 곳) 픽셀이고 머리는 그
+ * `stemPx` 위에 선다. 위로 세우면 머리 윗가장자리가 이미지 위쪽 밖으로
+ * 나가는 끝점이면 아래로 뒤집는다(경계 정확값은 위로).
+ */
+export function viewPinHead(
+  tipPx: number,
+  tipPy: number,
+  stemPx: number,
+  radiusPx: number,
+): { px: number; py: number; flipped: boolean } {
+  const flipped = tipPy - stemPx - radiusPx < 0;
+  return { px: tipPx, py: flipped ? tipPy + stemPx : tipPy - stemPx, flipped };
+}
+
+/**
  * 마커 후보 중 픽셀 (px, py) 에서 `radiusPx` 안의 가장 가까운 것의 인덱스.
- * 없으면 -1. 호버 라벨용.
+ * 없으면 -1. 호버 라벨·핀 누르기 판정용.
  */
 export function nearestMarkerIndex(
   markers: ReadonlyArray<{ px: number; py: number }>,

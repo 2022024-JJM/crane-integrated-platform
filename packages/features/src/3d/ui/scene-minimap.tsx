@@ -8,7 +8,12 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type Object3D } from 'three';
-import { modelObjectRegistry, type SavedSceneInfo } from '@crane/domain/3d';
+import {
+  isOverlayDrag,
+  modelObjectRegistry,
+  type SavedSceneInfo,
+  type SavedSceneView,
+} from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
@@ -22,11 +27,13 @@ import {
   cameraFootprint,
   cameraGlyphPolygon,
   clampPanelPosition,
+  isSamePose,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
   panelPositionToRatio,
   panelRatioToPosition,
+  viewPinHead,
   worldToMinimap,
   type MinimapFrame,
 } from '../lib/minimap';
@@ -37,11 +44,12 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 모니터링 2D 미니맵 — 캔버스 좌하단 오버레이.
  *
  * 배경은 SceneMinimapCapture 가 찍어 둔 탑뷰 스냅샷이고, 그 위에 매 폴링
- * 틱마다 장비 마커(레지스트리의 현재 월드 위치 — 리그·태그로 움직인 자세를
- * 따라간다)와 카메라(시선 방향으로 도는 카메라 픽토그램 + 같은 색의 시야
- * 부채꼴, 강조색 CAMERA_COLOR 흰색)를 그린다. 순서는 마커 → 부채꼴 →
- * 픽토그램 → 호버 라벨 — 카메라가 마커에 가려지지 않는다(부채꼴은 반투명
- * 이라 안의 마커가 비친다). 부채꼴은 방향 표시일 뿐이라
+ * 틱마다 고정 뷰 핀, 장비 마커(레지스트리의 현재 월드 위치 — 리그·태그로
+ * 움직인 자세를 따라간다), 카메라(시선 방향으로 도는 카메라 픽토그램 + 같은
+ * 색의 시야 부채꼴, 강조색 CAMERA_COLOR 흰색)를 그린다. 순서는 핀 → 마커 →
+ * 부채꼴 → 픽토그램 → 호버 라벨 — 알람 색 마커가 핀에 가려지지 않고 카메라는
+ * 마커에 가려지지 않는다(부채꼴은 반투명이라 안의 마커가 비친다). 부채꼴은
+ * 방향 표시일 뿐이라
  * 각·길이가 고정이고 카메라 fov·타깃 거리를 따라가지 않는다. 영역 원은
  * 그리지 않는다 — 3D 링과
  * HUD 가 담당하고 미니맵에선 마커를 가린다. 그리기는 setInterval 로 2D
@@ -50,12 +58,20 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 같은 규칙).
  *
  * 조작: 누르면 그 지점으로, 누른 채 끌면 끄는 대로 카메라 타깃이 옮겨진다.
- * 마커 위를 눌러도 같다. 높이·시선 방향·거리는 그대로(팬과 같다 —
+ * 장비 마커 위를 눌러도 같다. 높이·시선 방향·거리는 그대로(팬과 같다 —
  * lib/minimap panPoseToPoint). 포인터 캡처로 미니맵 밖까지 끌어도 이어지고,
  * 픽셀은 이미지 안으로 클램프되어 지도 밖으로 튀지 않는다. 이동 자체는 뷰어
  * 컨트롤러 경로라 카메라 이동 제한(SceneCameraLimits)이 그대로 걸린다.
  *
- * 마커 위에 포인터를 올리면 장비 이름을 그 옆에 그린다. 마커 색은 알람
+ * 고정 뷰 핀: 우상단 고정 줄과 같은 뷰다. 핀 끝이 뷰 타깃(보는 곳)이고
+ * 머리에 고정 줄 순서의 번호를 쓴다. 핀 머리를 눌렀다 놓으면 `onSelectView` 로 그
+ * 뷰에 간다(고정 줄 버튼과 같은 경로) — 누른 채 클릭 허용 범위(domain
+ * isOverlayDrag)를 넘게 끌면 팬으로 바뀐다. 포인터를 올리면 그 뷰의 카메라
+ * 위치·시야 부채꼴과 타깃까지의 점선, 이름을 보인다. 지금 카메라가 그 뷰의
+ * 포즈와 같으면 핀을 흰색으로 채운다 — 회전·팬으로 벗어나면 풀린다.
+ * 타깃이 지도 밖인 뷰는 장비 마커처럼 그리지 않는다.
+ *
+ * 장비 마커 위에 포인터를 올리면 장비 이름을 그 옆에 그린다. 마커 색은 알람
  * severity(critical·high·medium·info) 를 따르고 없으면 노랑(MARKER_COLOR —
  * 운전 상태 색은 HUD·3D 라벨이 담당한다).
  *
@@ -73,6 +89,8 @@ const MINIMAP_CSS_WIDTH = 224;
 const DRAW_INTERVAL_MS = 66;
 const MARKER_RADIUS_PX = 2;
 const MARKER_HIT_RADIUS_PX = 8;
+/** 마커와 호버 라벨 상자 사이(CSS px). */
+const MARKER_LABEL_GAP_PX = 8;
 /**
  * 시야 부채꼴의 벌어짐 각(도)·길이(CSS px) — 카메라 fov·타깃 거리와 무관한
  * 고정값이다. 방향만 읽는 표시라 실제 절단면을 따라가면 탑뷰 근처에서
@@ -109,14 +127,31 @@ const FOOTPRINT_EDGE = zoneColorWithAlpha(CAMERA_COLOR, 0.9);
 /** 모서리 직선 굵기(CSS px). */
 const FOOTPRINT_EDGE_WIDTH_PX = 1;
 const CAMERA_GLYPH_SIZE_PX = 5;
+/** 고정 뷰 핀 — 머리 반지름, 핀 끝(타깃)에서 머리 중심까지(CSS px). */
+const VIEW_PIN_RADIUS_PX = 6;
+const VIEW_PIN_STEM_PX = 11;
+/** 핀 머리와 호버 라벨 사이(CSS px). */
+const VIEW_PIN_LABEL_GAP_PX = VIEW_PIN_RADIUS_PX + 4;
+const VIEW_PIN_FILL = 'rgba(10, 12, 14, 0.82)';
+const VIEW_PIN_FILL_HOVER = 'rgba(40, 46, 52, 0.92)';
+const VIEW_PIN_NUMBER_CURRENT = '#0a0c0e';
+/**
+ * 지금 카메라가 그 뷰에 있다고 보는 포즈 차이(씬 단위). 뷰로 옮긴 직후의
+ * 포즈는 OrbitControls update() 의 부동소수 오차만큼만 다르다.
+ */
+const VIEW_POSE_EPSILON = 1e-3;
 
 interface SceneMinimapProps {
   sceneInfo: SavedSceneInfo | null;
   alarmsByCraneId: Record<string, AlarmSeverity>;
+  /** 고정한 뷰 — 고정 줄과 같은 순서로 넘긴다. 번호는 순서 + 1. */
+  views: readonly SavedSceneView[];
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
   /** 카메라를 즉시 옮긴다(팬). */
   onMoveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
+  /** 핀을 눌러 그 뷰로 간다 — 고정 줄 버튼과 같은 핸들러. */
+  onSelectView: (view: SavedSceneView) => void;
   className?: string;
 }
 
@@ -134,11 +169,33 @@ interface DrawnMarker {
   name: string;
 }
 
+/** 고정 뷰 핀 — px·py 는 머리 중심(누르기·라벨 기준), tip 은 뷰 타깃. */
+interface DrawnViewPin {
+  view: SavedSceneView;
+  /** 고정 줄 순서의 번호(1부터). */
+  number: number;
+  px: number;
+  py: number;
+  tipPx: number;
+  tipPy: number;
+  flipped: boolean;
+}
+
+interface HoverLabel {
+  px: number;
+  py: number;
+  name: string;
+  /** 기준점과 라벨 상자 사이(CSS px). */
+  gapPx: number;
+}
+
 export function SceneMinimap({
   sceneInfo,
   alarmsByCraneId,
+  views,
   getPose,
   onMoveTo,
+  onSelectView,
   className,
 }: SceneMinimapProps) {
   const { t } = useTranslation();
@@ -157,6 +214,13 @@ export function SceneMinimap({
   const draggingRef = useRef(false);
   const hoverRef = useRef<{ px: number; py: number } | null>(null);
   const markersRef = useRef<DrawnMarker[]>([]);
+  const pinsRef = useRef<DrawnViewPin[]>([]);
+  /** 핀을 누른 채 아직 끌지 않은 상태 — 놓으면 그 뷰로 간다. */
+  const pinPressRef = useRef<{
+    view: SavedSceneView;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
   const cacheRef = useRef<MarkerCache>({
     offsetByUuid: new Map(),
     box: new Box3(),
@@ -180,8 +244,19 @@ export function SceneMinimap({
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
-      // 장비 마커 → 카메라(부채꼴·픽토그램). 카메라가 마커에 가려지지 않는다
-      // — 부채꼴은 반투명 그라데이션이라 안의 마커가 비쳐 보인다.
+      const pose = getPose();
+      const hover = hoverRef.current;
+      // 고정 뷰 핀 → 장비 마커 → 카메라(부채꼴·픽토그램). 알람 색 마커가
+      // 핀에 가려지지 않고, 카메라가 마커에 가려지지 않는다 — 부채꼴은
+      // 반투명 그라데이션이라 안의 마커가 비쳐 보인다.
+      const pins = resolveViewPins(drawFrame, scale, views);
+      pinsRef.current = pins;
+      const hoveredPin = pickViewPin(pins, hover, scale);
+      const currentPin = pose
+        ? (pins.find((pin) => isSamePose(pose, pin.view, VIEW_POSE_EPSILON)) ??
+          null)
+        : null;
+      drawViewPins(context, drawFrame, scale, pins, hoveredPin, currentPin);
       markersRef.current = drawMarkers(
         context,
         drawFrame,
@@ -190,22 +265,39 @@ export function SceneMinimap({
         alarmsByCraneId,
         cacheRef.current,
       );
-      const camera = resolveCameraDraw(drawFrame, scale, getPose());
+      const camera = resolveCameraDraw(drawFrame, scale, pose);
       if (camera) {
         drawCameraFootprint(context, scale, camera);
         drawCameraGlyph(context, scale, camera);
       }
-      const hit = resolveHover(markersRef.current, hoverRef.current, scale);
-      drawHoverLabel(context, scale, hit);
+      // 핀이 장비 마커보다 먼저다 — 누르면 핀은 뷰 이동, 마커는 팬이라
+      // 라벨이 누를 때 일어날 일을 말해야 한다.
+      const marker = hoveredPin
+        ? null
+        : resolveHover(markersRef.current, hover, scale);
+      drawHoverLabel(
+        context,
+        scale,
+        hoveredPin
+          ? {
+              px: hoveredPin.px,
+              py: hoveredPin.py,
+              name: hoveredPin.view.name,
+              gapPx: VIEW_PIN_LABEL_GAP_PX,
+            }
+          : marker
+            ? { ...marker, gapPx: MARKER_LABEL_GAP_PX }
+            : null,
+      );
     };
 
-    // prop 이 바뀌면 인터벌을 다시 건다 — 씬·알람·getPose 는 드물게 바뀌어
-    // 재등록 비용이 무시할 만하고, 렌더 중 ref 미러(react-hooks/refs 금지)를
-    // 피한다.
+    // prop 이 바뀌면 인터벌을 다시 건다 — 씬·알람·뷰·getPose 는 드물게
+    // 바뀌어 재등록 비용이 무시할 만하고, 렌더 중 ref 미러(react-hooks/refs
+    // 금지)를 피한다.
     draw();
     const timer = window.setInterval(draw, DRAW_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [visible, snapshot, sceneInfo, alarmsByCraneId, getPose]);
+  }, [visible, snapshot, sceneInfo, alarmsByCraneId, views, getPose]);
 
   const localPixel = useCallback(
     (event: PointerEvent<HTMLCanvasElement>) => {
@@ -239,6 +331,20 @@ export function SceneMinimap({
     if (!pixel || !frame) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    const pin = pickViewPin(
+      pinsRef.current,
+      pixel,
+      frame.pxWidth / MINIMAP_CSS_WIDTH,
+    );
+    if (pin) {
+      // 핀은 놓을 때 그 뷰로 간다 — 그 전에 끌면 팬으로 바뀐다.
+      pinPressRef.current = {
+        view: pin.view,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+      return;
+    }
     draggingRef.current = true;
     moveCameraTo(pixel.px, pixel.py);
   };
@@ -246,17 +352,37 @@ export function SceneMinimap({
   const handlePointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
     const pixel = localPixel(event);
     hoverRef.current = pixel;
+    const press = pinPressRef.current;
+    if (
+      press &&
+      isOverlayDrag(press.clientX, press.clientY, event.clientX, event.clientY)
+    ) {
+      pinPressRef.current = null;
+      draggingRef.current = true;
+    }
     if (draggingRef.current && pixel) {
       moveCameraTo(pixel.px, pixel.py);
     }
+    // 핀 위에서만 손가락 커서 — 나머지는 클래스의 crosshair.
+    const overPin =
+      !draggingRef.current &&
+      pixel !== null &&
+      frame !== null &&
+      pickViewPin(pinsRef.current, pixel, frame.pxWidth / MINIMAP_CSS_WIDTH) !==
+        null;
+    event.currentTarget.style.cursor = overPin ? 'pointer' : '';
   };
 
   const endDrag = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (!draggingRef.current) return;
+    const press = pinPressRef.current;
+    if (!press && !draggingRef.current) return;
+    pinPressRef.current = null;
     draggingRef.current = false;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    // 끌지 않고 놓은 핀만 그 뷰로 — 취소(pointercancel)는 옮기지 않는다.
+    if (press && event.type === 'pointerup') onSelectView(press.view);
   };
 
   // 저장 비율 → px 복원. 컨테이너는 오버레이 슬롯(캔버스 영역 inset-0)이고
@@ -490,6 +616,164 @@ function drawMarkers(
   return drawn;
 }
 
+/** 고정 뷰 → 핀 픽셀. 타깃이 지도 밖인 뷰는 뺀다(번호는 그대로). */
+function resolveViewPins(
+  frame: MinimapFrame,
+  scale: number,
+  views: readonly SavedSceneView[],
+): DrawnViewPin[] {
+  const pins: DrawnViewPin[] = [];
+  views.forEach((view, index) => {
+    const tip = worldToMinimap(frame, view.target[0], view.target[2]);
+    if (
+      tip.px < 0 ||
+      tip.py < 0 ||
+      tip.px > frame.pxWidth ||
+      tip.py > frame.pxHeight
+    ) {
+      return;
+    }
+    const head = viewPinHead(
+      tip.px,
+      tip.py,
+      VIEW_PIN_STEM_PX * scale,
+      VIEW_PIN_RADIUS_PX * scale,
+    );
+    pins.push({
+      view,
+      number: index + 1,
+      px: head.px,
+      py: head.py,
+      tipPx: tip.px,
+      tipPy: tip.py,
+      flipped: head.flipped,
+    });
+  });
+  return pins;
+}
+
+/** 포인터 아래의 핀(머리 기준, 장비 마커와 같은 반경). 없으면 null. */
+function pickViewPin(
+  pins: DrawnViewPin[],
+  pointer: { px: number; py: number } | null,
+  scale: number,
+): DrawnViewPin | null {
+  if (!pointer) return null;
+  const index = nearestMarkerIndex(
+    pins,
+    pointer.px,
+    pointer.py,
+    MARKER_HIT_RADIUS_PX * scale,
+  );
+  return index >= 0 ? pins[index] : null;
+}
+
+/**
+ * 고정 뷰 핀들 — 평소 → 현재 → 호버 순으로 그려 강조한 핀이 위에 온다.
+ * 호버한 핀은 그 뷰의 카메라 위치(점)·시야 부채꼴과 타깃까지의 점선을 먼저
+ * 깐다. 현재 핀이면 지금 카메라가 그 자리라 점·부채꼴은 생략한다.
+ */
+function drawViewPins(
+  context: CanvasRenderingContext2D,
+  frame: MinimapFrame,
+  scale: number,
+  pins: DrawnViewPin[],
+  hovered: DrawnViewPin | null,
+  current: DrawnViewPin | null,
+): void {
+  for (const pin of pins) {
+    if (pin !== hovered && pin !== current) {
+      drawViewPin(context, scale, pin, 'normal');
+    }
+  }
+  if (current && current !== hovered) {
+    drawViewPin(context, scale, current, 'current');
+  }
+  if (!hovered) return;
+  const isCurrent = hovered === current;
+  const camera = resolveCameraDraw(frame, scale, hovered.view);
+  if (camera) {
+    if (!isCurrent) drawCameraFootprint(context, scale, camera);
+    context.save();
+    context.setLineDash([2.5 * scale, 2 * scale]);
+    context.beginPath();
+    context.moveTo(camera.px, camera.py);
+    context.lineTo(hovered.tipPx, hovered.tipPy);
+    context.lineWidth = 2.4 * scale;
+    context.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    context.stroke();
+    context.lineWidth = scale;
+    context.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    context.stroke();
+    context.restore();
+    if (!isCurrent) {
+      context.beginPath();
+      context.arc(camera.px, camera.py, 2.4 * scale, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      context.fill();
+      strokeWithHalo(context, scale, 1.2);
+    }
+  }
+  drawViewPin(context, scale, hovered, isCurrent ? 'current' : 'hover');
+}
+
+/** 핀 하나 — 끝이 타깃에 닿는 물방울 모양, 머리에 번호. */
+function drawViewPin(
+  context: CanvasRenderingContext2D,
+  scale: number,
+  pin: DrawnViewPin,
+  state: 'normal' | 'hover' | 'current',
+): void {
+  const radius = VIEW_PIN_RADIUS_PX * scale;
+  const stem = VIEW_PIN_STEM_PX * scale;
+  // 머리 원에서 핀 끝 쪽으로 열린 호 — 양 끝이 끝점에서 그은 접선의 접점.
+  const tipAngle = pin.flipped ? -Math.PI / 2 : Math.PI / 2;
+  const spread = Math.acos(radius / stem);
+  context.save();
+  context.beginPath();
+  context.moveTo(pin.tipPx, pin.tipPy);
+  context.arc(
+    pin.px,
+    pin.py,
+    radius,
+    tipAngle + spread,
+    tipAngle + Math.PI * 2 - spread,
+  );
+  context.closePath();
+  context.fillStyle =
+    state === 'current'
+      ? CAMERA_COLOR
+      : state === 'hover'
+        ? VIEW_PIN_FILL_HOVER
+        : VIEW_PIN_FILL;
+  context.fill();
+  strokeWithHalo(context, scale, state === 'hover' ? 1.8 : 1.3);
+  context.fillStyle =
+    state === 'current' ? VIEW_PIN_NUMBER_CURRENT : CAMERA_COLOR;
+  context.font = `600 ${8 * scale}px system-ui, sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(String(pin.number), pin.px, pin.py + 0.4 * scale);
+  context.restore();
+}
+
+/** 현재 경로를 검은 바깥선 + 흰 안선으로 — 밝은 지도·어두운 바다 모두 읽힌다. */
+function strokeWithHalo(
+  context: CanvasRenderingContext2D,
+  scale: number,
+  widthPx: number,
+): void {
+  context.save();
+  context.lineJoin = 'round';
+  context.lineWidth = (widthPx + 1.7) * scale;
+  context.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+  context.stroke();
+  context.lineWidth = widthPx * scale;
+  context.strokeStyle = CAMERA_COLOR;
+  context.stroke();
+  context.restore();
+}
+
 /** 카메라 그리기에 필요한 픽셀 값 — 부채꼴·픽토그램이 같은 값을 쓴다. */
 interface CameraDraw {
   px: number;
@@ -602,11 +886,12 @@ function resolveHover(
 function drawHoverLabel(
   context: CanvasRenderingContext2D,
   scale: number,
-  hit: DrawnMarker | null,
+  label: HoverLabel | null,
 ): void {
-  if (!hit) return;
-  const text = hit.name;
-  const { px, py } = hit;
+  if (!label) return;
+  const text = label.name;
+  const { px, py } = label;
+  const gap = label.gapPx * scale;
   const fontPx = 11 * scale;
   context.font = `${fontPx}px system-ui, sans-serif`;
   context.textBaseline = 'middle';
@@ -615,8 +900,8 @@ function drawHoverLabel(
   const boxWidth = textWidth + paddingX * 2;
   const boxHeight = fontPx + 4 * scale;
   // 오른쪽에 자리가 없으면 왼쪽에 그린다.
-  const fitsRight = px + 8 * scale + boxWidth <= context.canvas.width;
-  const boxX = fitsRight ? px + 8 * scale : px - 8 * scale - boxWidth;
+  const fitsRight = px + gap + boxWidth <= context.canvas.width;
+  const boxX = fitsRight ? px + gap : px - gap - boxWidth;
   const boxY = py - boxHeight / 2;
   context.fillStyle = 'rgba(0, 0, 0, 0.75)';
   context.fillRect(boxX, boxY, boxWidth, boxHeight);

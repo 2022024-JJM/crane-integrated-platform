@@ -531,13 +531,16 @@ export function Monitoring3dView({
               ) : null}
               {/* 2D 미니맵(좌하단) — 실시간 관제 화면에서만. 배경은
                 Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링.
-                분할 중엔 숨긴다(카메라 표시가 기본 카메라 것이라 의미가 없다). */}
+                고정한 뷰는 고정 줄 순서의 번호 핀이다. 분할 중엔 숨긴다
+                (카메라 표시가 기본 카메라 것이라 의미가 없다). */}
               {showControlRoomWidgets && !splitActive ? (
                 <SceneMinimap
                   sceneInfo={sceneInfo}
                   alarmsByCraneId={sceneAlarms}
+                  views={pinnedViews}
                   getPose={handleGetPose}
                   onMoveTo={handlePanTo}
+                  onSelectView={handleSelectView}
                 />
               ) : null}
               {/* 관제 요약 HUD(상단 중앙) — 실시간 관제 화면에서만, 분할 중엔 숨김. */}

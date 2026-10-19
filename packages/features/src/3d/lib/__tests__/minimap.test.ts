@@ -10,9 +10,11 @@ import {
   panelPositionToRatio,
   panelRatioToPosition,
   computeMinimapFrame,
+  isSamePose,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
+  viewPinHead,
   worldToMinimap,
   type MinimapPose,
 } from '../minimap';
@@ -153,6 +155,76 @@ describe('cameraFootprint', () => {
   });
 });
 
+describe('isSamePose', () => {
+  const pose: MinimapPose = { position: [10, 20, 30], target: [0, 1, 0] };
+
+  it('같은 값이면 true, 각 축 차이가 epsilon 정확값이면 true·넘으면 false', () => {
+    expect(
+      isSamePose(pose, { position: [10, 20, 30], target: [0, 1, 0] }, 0),
+    ).toBe(true);
+    // 2진수로 정확한 값만 써서 경계가 부동소수 오차에 흔들리지 않게 한다.
+    const eps = 0.25;
+    expect(
+      isSamePose(pose, { position: [10.25, 20, 30], target: [0, 1, 0] }, eps),
+    ).toBe(true);
+    expect(
+      isSamePose(pose, { position: [10.5, 20, 30], target: [0, 1, 0] }, eps),
+    ).toBe(false);
+    expect(
+      isSamePose(pose, { position: [10, 20, 30], target: [0, 1, -0.25] }, eps),
+    ).toBe(true);
+    expect(
+      isSamePose(pose, { position: [10, 20, 30], target: [0, 1, -0.5] }, eps),
+    ).toBe(false);
+  });
+
+  it('위치가 같아도 타깃이 다르면(같은 자리에서 다른 곳을 봄) false', () => {
+    expect(
+      isSamePose(pose, { position: [10, 20, 30], target: [5, 1, 0] }, 1e-3),
+    ).toBe(false);
+  });
+
+  it('NaN·Infinity 가 섞이면 false (epsilon 이 NaN 이어도)', () => {
+    expect(
+      isSamePose(pose, { position: [NaN, 20, 30], target: [0, 1, 0] }, 1),
+    ).toBe(false);
+    expect(
+      isSamePose(pose, { position: [10, 20, 30], target: [0, Infinity, 0] }, 1),
+    ).toBe(false);
+    expect(isSamePose(pose, pose, NaN)).toBe(false);
+  });
+});
+
+describe('viewPinHead', () => {
+  it('머리는 끝점에서 stem 위, 같은 x', () => {
+    expect(viewPinHead(50, 40, 11, 6)).toEqual({
+      px: 50,
+      py: 29,
+      flipped: false,
+    });
+  });
+
+  it('머리 윗가장자리가 정확히 0 이면 위로, 그보다 위로 나가면 아래로 뒤집는다', () => {
+    // 17 - 11 - 6 = 0 → 경계 정확값은 위로
+    expect(viewPinHead(50, 17, 11, 6)).toEqual({
+      px: 50,
+      py: 6,
+      flipped: false,
+    });
+    expect(viewPinHead(50, 16.5, 11, 6)).toEqual({
+      px: 50,
+      py: 27.5,
+      flipped: true,
+    });
+    // 끝점이 이미지 위 가장자리(0)
+    expect(viewPinHead(50, 0, 11, 6)).toEqual({
+      px: 50,
+      py: 11,
+      flipped: true,
+    });
+  });
+});
+
 describe('nearestMarkerIndex', () => {
   const markers = [
     { px: 10, py: 10 },
@@ -218,21 +290,25 @@ describe('panelPositionToRatio / panelRatioToPosition', () => {
       fx: 0,
       fy: 0,
     });
-    expect(
-      panelPositionToRatio({ x: 400, y: 250 }, ...PANEL, ...BOX),
-    ).toEqual({ fx: 1, fy: 1 });
-    expect(
-      panelPositionToRatio({ x: 200, y: 125 }, ...PANEL, ...BOX),
-    ).toEqual({ fx: 0.5, fy: 0.5 });
+    expect(panelPositionToRatio({ x: 400, y: 250 }, ...PANEL, ...BOX)).toEqual({
+      fx: 1,
+      fy: 1,
+    });
+    expect(panelPositionToRatio({ x: 200, y: 125 }, ...PANEL, ...BOX)).toEqual({
+      fx: 0.5,
+      fy: 0.5,
+    });
   });
 
   it('여유 밖 px 는 비율 [0,1] 로 클램프, NaN 은 0', () => {
-    expect(
-      panelPositionToRatio({ x: -10, y: 999 }, ...PANEL, ...BOX),
-    ).toEqual({ fx: 0, fy: 1 });
-    expect(
-      panelPositionToRatio({ x: NaN, y: NaN }, ...PANEL, ...BOX),
-    ).toEqual({ fx: 0, fy: 0 });
+    expect(panelPositionToRatio({ x: -10, y: 999 }, ...PANEL, ...BOX)).toEqual({
+      fx: 0,
+      fy: 1,
+    });
+    expect(panelPositionToRatio({ x: NaN, y: NaN }, ...PANEL, ...BOX)).toEqual({
+      fx: 0,
+      fy: 0,
+    });
   });
 
   it('패널이 컨테이너 이상이면 그 축은 0 (0 나누기 없음)', () => {

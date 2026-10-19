@@ -461,3 +461,4 @@ export {
   PLAN_OVERLAY_MAX_TRIANGLES,
   isPlanOverlayEligible,
 } from './lib/plan-overlay-budget';
+export { isOverlayDrag } from './lib/overlay-pointer-forwarding';
