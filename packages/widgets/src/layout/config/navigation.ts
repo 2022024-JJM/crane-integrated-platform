@@ -158,8 +158,8 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         icon: MonitorPlay,
       },
       {
-        label: i18n.t('common:nav.virtualTags'),
-        path: `${base}/virtual-tags`,
+        label: i18n.t('common:nav.tags'),
+        path: `${base}/tags`,
         icon: Tags,
       },
       {

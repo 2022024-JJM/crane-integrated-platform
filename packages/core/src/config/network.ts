@@ -118,7 +118,10 @@ function joinPathSegments(baseUrl: string, path: string) {
 }
 
 export function getApiBaseUrl() {
-  return resolveHttpBaseUrl(import.meta.env.VITE_API_BASE_URL, defaultApiPath());
+  return resolveHttpBaseUrl(
+    import.meta.env.VITE_API_BASE_URL,
+    defaultApiPath(),
+  );
 }
 
 export function getWebSocketBaseUrl() {
@@ -146,6 +149,14 @@ export function getWebSocketUrl(path: string) {
 
 export function getCranesLiteWebSocketUrl() {
   return getWebSocketUrl('cranes-lite/all');
+}
+
+/**
+ * STOMP 엔드포인트 — 크레인 스냅샷 서버는 WebSocket 베이스(`/ws`) 자체가
+ * STOMP 핸드셰이크 경로다(SockJS 없음). 경로를 덧붙이지 않는다.
+ */
+export function getStompWebSocketUrl() {
+  return getWebSocketBaseUrl();
 }
 
 export function getApiTimeoutMs() {
@@ -191,6 +202,7 @@ export function getNetworkConfig() {
     monitoringReplayLiteApiUrl: getApiUrl('monitoring/replay-lite'),
     runtimeAlarmDictionaryApiUrl: getApiUrl('alarms/runtime'),
     cranesLiteWsUrl: getCranesLiteWebSocketUrl(),
+    stompWsUrl: getStompWebSocketUrl(),
     apiTimeoutMs: getApiTimeoutMs(),
     wsReconnectIntervalMs: getWebSocketReconnectIntervalMs(),
     wsReconnectInitialMs: getWebSocketInitialIntervalMs(),

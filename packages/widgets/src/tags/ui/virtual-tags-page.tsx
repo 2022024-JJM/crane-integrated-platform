@@ -488,69 +488,60 @@ export function VirtualTagsPage() {
         onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
         onStay={() => unsavedChangesPrompt.choose('stay')}
       />
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-foreground text-base font-semibold">
-            {t('monitoring:virtualTags.title')}
-          </h1>
-          <p className="text-muted-foreground text-xs">
-            {t('monitoring:virtualTags.subtitle')}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {/* 저장 상태는 버튼 자체가 나타낸다 — 씬 편집 헤더 바와 같은 규칙.
+      {/* 제목·설명은 태그 페이지의 탭이 대신한다. 버튼 줄만 오른쪽에. */}
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {/* 저장 상태는 버튼 자체가 나타낸다 — 씬 편집 헤더 바와 같은 규칙.
               미저장이면 붉은 점과 진한 글자, 저장되면 흐린 글자, 저장 중엔
               스피너. 저장 직후 확인은 handleSave 의 토스트가 맡는다. 점은
               글자와 겹치지 않게 테두리 우상단 모서리에 걸친다(아이콘 전용인
               헤더 바 버튼과 달리 글자가 있어 안쪽에 두면 가린다). */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isSaving}
-            className={cn(
-              'relative',
-              isDirty ? 'text-foreground' : 'text-muted-foreground',
-            )}
-            onClick={() => void handleSave()}
-          >
-            {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
-            {t('monitoring:virtualTags.save')}
-            {isDirty && !isSaving ? (
-              <span
-                aria-hidden
-                className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-red-500"
-              />
-            ) : null}
-          </Button>
-          <Button
-            type="button"
-            variant={isRunning ? 'default' : 'outline'}
-            size="sm"
-            aria-pressed={isRunning}
-            onClick={() => (isRunning ? pause() : start())}
-          >
-            {isRunning ? <Pause /> : <Play />}
-            {t(
-              isRunning
-                ? 'monitoring:virtualTags.pause'
-                : 'monitoring:virtualTags.play',
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => virtualTagRuntime.resetValues()}
-          >
-            <RotateCcw />
-            {t('monitoring:virtualTags.resetValues')}
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
-            <Plus />
-            {t('monitoring:virtualTags.add')}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isSaving}
+          className={cn(
+            'relative',
+            isDirty ? 'text-foreground' : 'text-muted-foreground',
+          )}
+          onClick={() => void handleSave()}
+        >
+          {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+          {t('monitoring:virtualTags.save')}
+          {isDirty && !isSaving ? (
+            <span
+              aria-hidden
+              className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-red-500"
+            />
+          ) : null}
+        </Button>
+        <Button
+          type="button"
+          variant={isRunning ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={isRunning}
+          onClick={() => (isRunning ? pause() : start())}
+        >
+          {isRunning ? <Pause /> : <Play />}
+          {t(
+            isRunning
+              ? 'monitoring:virtualTags.pause'
+              : 'monitoring:virtualTags.play',
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => virtualTagRuntime.resetValues()}
+        >
+          <RotateCcw />
+          {t('monitoring:virtualTags.resetValues')}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+          <Plus />
+          {t('monitoring:virtualTags.add')}
+        </Button>
       </div>
 
       <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-[11px]">

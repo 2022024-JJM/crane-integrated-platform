@@ -19,7 +19,8 @@
 | 가상 태그 영속화 어댑터 / 배포 파일 | `packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts`, `apps/shell/public/simulation/virtual-tags.json` |
 | 가상 태그 스토어 · 러너 · 카탈로그 · 종료 | `packages/features/src/3d/model/use-virtual-tag-store.ts`, `packages/features/src/3d/model/virtual-tag-runner.ts`, `packages/features/src/3d/model/use-tag-catalog.ts`, `packages/features/src/3d/model/stop-simulation.ts` |
 | 시뮬레이션 UI | 공용 패널 `packages/features/src/3d/ui/scene-simulation-panel.tsx`, 배지 `packages/features/src/3d/ui/scene-simulation-badge.tsx`, HUD 라벨 `packages/features/src/3d/lib/sim-clock.ts` |
-| 가상 태그 관리 페이지 / 시나리오 편집 | `packages/widgets/src/virtual-tags/ui/virtual-tags-page.tsx`, `packages/widgets/src/virtual-tags/ui/scenario-section.tsx` |
+| 태그 페이지(실시간 태그 | 가상 태그 탭) / 가상 태그 관리 탭 / 시나리오 편집 | `packages/widgets/src/tags/ui/tags-page.tsx`, `packages/widgets/src/tags/ui/virtual-tags-page.tsx`, `packages/widgets/src/tags/ui/scenario-section.tsx` |
+| 실시간 태그 피드 — STOMP 래퍼 / 스냅샷 방어·REST / 스토어·피드 훅·관측치 / 실시간 탭 UI | `packages/core/src/ws/stomp-client.ts`(`craneStompClient`), `packages/domain/src/monitoring/lib/crane-snapshot.ts`, `packages/domain/src/monitoring/api/get-crane-snapshots.ts`, `packages/features/src/3d/model/use-crane-snapshot-store.ts`, `packages/features/src/3d/model/use-crane-snapshot-feed.ts`, `packages/features/src/3d/lib/crane-snapshot-stats.ts`, `packages/widgets/src/tags/ui/realtime-tags-view.tsx` |
 | 리깅 스키마(관절·구속조건) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
 | 리깅 런타임(값 저장소·드라이버·readout) | `packages/features/src/3d/model/rig-value-store.ts`, `packages/features/src/3d/model/use-rig-driver.ts`, `packages/features/src/3d/model/rig-live-readouts.ts` |
 | 관절 적용 / 스무딩 / rest 캐시 / 노드 경로 | `packages/features/src/3d/lib/apply-joint.ts`, `packages/features/src/3d/lib/smooth-damp.ts`, `packages/domain/src/3d/lib/rest-pose-cache.ts`, `packages/domain/src/3d/lib/mesh-path.ts` |
@@ -67,11 +68,23 @@
 
 - 버스는 숫자 전용이다. WebSocket 브리지와 리플레이 스토어는 서버 값을 `toTagNumber` 로 바꿔 싣는다 — boolean 과 `'true'`/`'false'` 문자열은 1/0, 그 밖의 문자열·null 은 버린다.
 - 바인딩은 모니터링 뷰·에디터 모두 화면이 떠 있는 동안 항상 켜 두고 언마운트 시 값 저장소를 비운다.
-- 재생 토글(가상 태그 관리 페이지·3D 플레이 트랜스포트 바)은 러너 틱만 켜고 끈다. 일시정지하면 노드가 마지막 값에 머물고, 초기값 복귀는 리셋 버튼이 한다.
+- 재생 토글(가상 태그 탭·3D 플레이 트랜스포트 바)은 러너 틱만 켜고 끈다. 일시정지하면 노드가 마지막 값에 머물고, 초기값 복귀는 리셋 버튼이 한다.
 - 기즈모 드래그 중엔 루트 맵핑을 건너뛴다. 드래그 종료 프레임의 루트 rest handoff 는 `docs/agents/3d-editor.md`.
 - publish 옵션 `smoothTime`(`TagPublishOptions`): 생략은 기본 스무딩, 0 은 즉시 대입. 가상 태그 러너의 정상 전진은 publish 벽시계 간격(`tickMs / speed`)을 넣어 스텝 계단을 숨기고(화면 지연은 씬 시간 한 스텝), 러너 seek·리셋과 리플레이 seek 는 0 으로 내보낸다. 소비자 `createTagBindingSource` 가 `tagSetOptions` 로 값 저장소 set 옵션으로 바꾼다. 관찰자에게는 전달하지 않는다.
 - 버스 관찰자 `subscribeTagValues` 는 소비자 슬롯과 별개의 다중 구독이다(3D 플레이 통계 등이 쓴다 — `docs/agents/3d-play.md`).
 - 값 저장소의 set/reset/restore 와 스무딩 잔여는 프레임 요청·그림자 무효화가 배선돼 있다 — `docs/agents/rendering-perf.md`.
+
+### 실시간 태그 피드(크레인 스냅샷 서버)
+
+crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 현재 상태를 받아 태그 페이지의 실시간 탭이 보여 준다. 3D 모델 맵핑(태그 값 버스로 보내기)은 아직 이 피드에 물려 있지 않다 — 3D 모니터링은 여전히 `cranesLiteWebSocketClient` 를 쓴다.
+
+- 전송: `@crane/core/ws` 의 `StompClient`(`@stomp/stompjs` 래퍼). 엔드포인트는 `getStompWebSocketUrl()`(WebSocket 베이스 `/ws` 자체, SockJS 없음). `craneStompClient` 하나를 acquire/release 로 나눠 쓰고, 목적지 구독은 연결 전에 걸어도 CONNECTED 마다 다시 건다. 재연결은 stompjs 지수 백오프이고, 사용자가 끊은 것(`disconnect`)과 서버 쪽 끊김은 `isActive()` 로 가른다.
+- 데이터: `CraneSnapshot`(`@crane/domain/monitoring`) — craneId · bay · online · `tags{code → {value, quality, timestamp}}`. `/topic/cranes` 봉투(`type: 'snapshot'`)에는 push 주기 동안 바뀐 크레인만 실리므로 첫 화면과 재연결 뒤에는 `GET /api/cranes`(`getCraneSnapshots`)로 전체를 받는다. 모양이 깨진 태그 항목은 `sanitizeCraneSnapshot` 이 버린다.
+- 스토어: `useCraneSnapshotStore` — craneId → `CraneSnapshotEntry`(스냅샷 + 수신 시각 + heartbeat 가 마지막으로 뒤집힌 시각 + 태그별 변경 시각·횟수·관측 범위). 묶음마다 바뀐 크레인 항목만 새 참조라 카드는 자기 크레인만 구독한다. 연결이 끊겨도 값은 마지막 상태로 남는다.
+- 피드: `useCraneSnapshotFeed(enabled)` 가 구독·REST·참조를 맡고(마운트 = 구독), 연결 표시는 `useCraneFeedConnection()`(useSyncExternalStore). 실시간 탭의 연결 해제(툴바 톱니 → 연결 설정 팝업: 호스트 주소 `getCraneFeedUrl()` · 상태 · 연결 해제/연결 버튼)는 그 화면의 구독만 놓는다 — 같은 클라이언트를 다른 화면이 잡고 있으면 소켓은 열린 채다.
+- 상태 점: `resolveCraneLiveState` — 서버 `online=false` 나 연결 없음은 off(회색), `heartbeat` 가 `HEARTBEAT_STALE_MS` 안에 뒤집혔으면 live(초록 맥동), 값은 오는데 안 뒤집히면 stale(노랑). 첫 수신 직후엔 수신 시각을 기준으로 삼는다.
+- 표시명·단위·묶음은 `getMonitoringTagMetadata`(영문) 그대로. 묶음 안 정렬은 코드의 숫자 인식 사전순이고 시각 태그만 큰 단위 → 작은 단위(`tag-rows.ts`).
+- dev 는 `apps/shell/.env.local` 의 `VITE_DEV_PROXY_TARGET_HTTP/WS`(서버 `http://localhost:8080`)로 `/crane_rnd/{api,ws}` 를 프록시한다. 운영은 nginx 가 같은 경로를 `BACKEND_HOST:PORT` 로 보내고, 서버 쪽 `cis.web.allowed-origins` 에 셸 주소가 있어야 한다.
 
 ### 가상 태그 `@crane/domain/virtual-tag`
 

@@ -350,6 +350,25 @@ export {
 } from './model/tag-value-bus';
 export { useTagBindingSource } from './model/use-tag-binding-source';
 export { useRealtimeStore } from './model/use-realtime-store';
+export { useCraneSnapshotStore } from './model/use-crane-snapshot-store';
+export {
+  CRANE_SNAPSHOT_TOPIC,
+  getCraneFeedUrl,
+  resolveCraneFeedConnection,
+  useCraneFeedConnection,
+  useCraneSnapshotFeed,
+  type CraneFeedConnection,
+} from './model/use-crane-snapshot-feed';
+export {
+  HEARTBEAT_STALE_MS,
+  HEARTBEAT_TAG,
+  createCraneSnapshotEntry,
+  mergeCraneSnapshot,
+  resolveCraneLiveState,
+  type CraneLiveState,
+  type CraneSnapshotEntry,
+  type CraneTagStat,
+} from './lib/crane-snapshot-stats';
 export {
   buildTagMappingIndex,
   collectSceneTagKeys,

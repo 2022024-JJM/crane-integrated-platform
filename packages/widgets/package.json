@@ -11,7 +11,7 @@
     "./3d": "./src/3d/index.ts",
     "./layout": "./src/layout/index.ts",
     "./scene-editor": "./src/scene-editor/index.ts",
-    "./virtual-tags": "./src/virtual-tags/index.ts",
+    "./tags": "./src/tags/index.ts",
     "./detection-settings": "./src/detection-settings/index.ts",
     "./asset-library": "./src/asset-library/index.ts"
   },

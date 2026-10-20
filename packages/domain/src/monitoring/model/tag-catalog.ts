@@ -118,10 +118,9 @@ export function getMonitoringTagMetadata(
       : prefix;
 
     return {
-      displayName:
-        suffix === 'Distance'
-          ? `${indexedPrefix} Distance`
-          : `${indexedPrefix} ${suffix} Distance`.trim(),
+      displayName: suffix
+        ? `${indexedPrefix} ${suffix} Distance`
+        : `${indexedPrefix} Distance`,
       category: 'measurement',
       dataType: 'INT',
       unit: 'm',

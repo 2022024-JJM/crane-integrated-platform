@@ -415,8 +415,6 @@
     "emptyForFilter": "Nullae grues huic statui congruunt."
   },
   "virtualTags": {
-    "title": "Tags Ficta",
-    "subtitle": "Valores tags sine servo simula. Tags hic creata in designatione tags editoris 3D seliguntur.",
     "play": "Omnia age",
     "pause": "Siste",
     "resetValues": "Valores restitue",
@@ -487,6 +485,73 @@
     },
     "maxSpeedHint": "Celeritas maxima (unitas/s). Vacuum = sine limite.",
     "maxAccelHint": "Acceleratio maxima (unitas/s²). Vacuum = sine limite."
+  },
+  "tags": {
+    "tabs": {
+      "realtime": "Tags Temporis Veri",
+      "virtual": "Tags Ficta"
+    },
+    "searchCrane": "Gruis ID quaere (ex. 867)",
+    "allBays": "Omnes",
+    "online": "In linea",
+    "connection": {
+      "open": "Coniunctum",
+      "connecting": "Coniungens",
+      "reconnecting": "Abruptum",
+      "off": "Solutum"
+    },
+    "connect": "Coniunge",
+    "disconnect": "Solve",
+    "connectionSettings": "Coniunctionis optiones",
+    "host": "Hospes",
+    "status": "Status",
+    "banner": {
+      "loadError": "Status praesens legi non potuit. Soli valores per subscriptionem accepti monstrantur."
+    },
+    "tagCount": "{{count}} tags",
+    "noReception": "Nihil acceptum",
+    "lastReceived": "Ultimum acceptum",
+    "emptyCranes": "Nulla grus condicioni respondet.",
+    "noCranes": "Nulla grus adhuc accepta.",
+    "unknownCrane": "Valores gruis {{craneId}} nondum accepti.",
+    "liveState": {
+      "live": "In linea · heartbeat alternans",
+      "stale": "In linea · heartbeat stans (valores adhuc veniunt)",
+      "offline": "Extra lineam · servus nihil accipit",
+      "disconnected": "Abruptum · valores ultimi"
+    },
+    "back": "Index",
+    "categories": {
+      "all": "Omnia",
+      "datetime": "Tempus",
+      "measurement": "Mensurae",
+      "status": "Status · Monita"
+    },
+    "searchTag": "Tags quaere",
+    "copyJson": "JSON exscribe",
+    "copied": "Exscriptum",
+    "columns": {
+      "code": "Tag",
+      "name": "Nomen",
+      "value": "Valor",
+      "unit": "Unitas",
+      "range": "Ambitus visus",
+      "changes": "Mutationes",
+      "lastChange": "Ultima mutatio",
+      "timestamp": "Tempus datorum"
+    },
+    "age": {
+      "seconds": "ante {{value}}s",
+      "minutes": "ante {{minutes}}m {{seconds}}s"
+    },
+    "bool": {
+      "on": "ON",
+      "off": "OFF",
+      "ok": "OK",
+      "ng": "NG",
+      "one": "1",
+      "zero": "0"
+    }
   },
   "sceneCollision": {
     "contact": "Punctum contactus (proximum)",

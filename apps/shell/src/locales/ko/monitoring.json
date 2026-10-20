@@ -415,8 +415,6 @@
     "emptyForFilter": "해당 상태의 크레인이 없습니다."
   },
   "virtualTags": {
-    "title": "가상 태그",
-    "subtitle": "서버 없이 태그 값을 시뮬레이션합니다. 여기서 만든 태그를 3D 편집의 태그 매핑에서 선택합니다.",
     "play": "전체 재생",
     "pause": "일시정지",
     "resetValues": "값 초기화",
@@ -487,6 +485,73 @@
     },
     "maxSpeedHint": "최대 속도(단위/초). 비우면 제한 없음 — 파형·시나리오 목표값을 이 속도 이하로 따라갑니다.",
     "maxAccelHint": "최대 가속(단위/초²). 비우면 제한 없음."
+  },
+  "tags": {
+    "tabs": {
+      "realtime": "실시간 태그",
+      "virtual": "가상 태그"
+    },
+    "searchCrane": "크레인 ID 검색 (예: 867)",
+    "allBays": "전체",
+    "online": "온라인",
+    "connection": {
+      "open": "연결됨",
+      "connecting": "연결 중",
+      "reconnecting": "끊김",
+      "off": "해제됨"
+    },
+    "connect": "연결",
+    "disconnect": "연결 해제",
+    "connectionSettings": "연결 설정",
+    "host": "호스트",
+    "status": "상태",
+    "banner": {
+      "loadError": "현재 상태를 불러오지 못했습니다. 구독으로 받는 값만 보입니다."
+    },
+    "tagCount": "{{count}} 태그",
+    "noReception": "수신 없음",
+    "lastReceived": "마지막 수신",
+    "emptyCranes": "조건에 맞는 크레인이 없습니다.",
+    "noCranes": "아직 받은 크레인이 없습니다.",
+    "unknownCrane": "{{craneId}} 크레인의 값을 아직 받지 못했습니다.",
+    "liveState": {
+      "live": "온라인 · heartbeat 토글 중",
+      "stale": "온라인 · heartbeat 정지 (값은 수신 중)",
+      "offline": "오프라인 · 서버에 수신 없음",
+      "disconnected": "연결 끊김 · 마지막 값"
+    },
+    "back": "목록",
+    "categories": {
+      "all": "전체",
+      "datetime": "시각",
+      "measurement": "계측값",
+      "status": "상태·알람"
+    },
+    "searchTag": "태그 검색",
+    "copyJson": "JSON 복사",
+    "copied": "복사됨",
+    "columns": {
+      "code": "태그",
+      "name": "이름",
+      "value": "값",
+      "unit": "단위",
+      "range": "관측 범위",
+      "changes": "변경 횟수",
+      "lastChange": "마지막 변경",
+      "timestamp": "데이터 시각"
+    },
+    "age": {
+      "seconds": "{{value}}초 전",
+      "minutes": "{{minutes}}분 {{seconds}}초 전"
+    },
+    "bool": {
+      "on": "ON",
+      "off": "OFF",
+      "ok": "OK",
+      "ng": "NG",
+      "one": "1",
+      "zero": "0"
+    }
   },
   "sceneCollision": {
     "contact": "접촉 지점(근사)",

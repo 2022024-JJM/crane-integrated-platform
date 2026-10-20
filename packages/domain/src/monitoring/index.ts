@@ -1,4 +1,7 @@
 export type {
+  CraneSnapshot,
+  CraneSnapshotBatch,
+  CraneSnapshotTag,
   MonitoringReplaySite,
   MonitoringReplaySiteId,
   MonitoringReplayLiteQuery,
@@ -32,6 +35,15 @@ export type {
 export { getMonitoringReplaySites } from './api/get-monitoring-replay-sites';
 export { getMonitoringReplayLite } from './api/get-monitoring-replay-lite';
 export { getMonitoringTags } from './api/get-monitoring-tags';
+export { getCraneSnapshots } from './api/get-crane-snapshots';
+export {
+  compareCraneIds,
+  isCraneSnapshot,
+  isCraneSnapshotBatch,
+  isCraneSnapshotTag,
+  parseIsoMs,
+  sanitizeCraneSnapshot,
+} from './lib/crane-snapshot';
 export { getMonitoringTagMetadata } from './model/tag-catalog';
 export {
   getLatestReplayFrame,

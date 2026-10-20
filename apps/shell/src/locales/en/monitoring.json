@@ -415,8 +415,6 @@
     "emptyForFilter": "No cranes match the selected status."
   },
   "virtualTags": {
-    "title": "Virtual Tags",
-    "subtitle": "Simulate tag values without a server. Tags created here are selectable in the 3D editor tag mapping.",
     "play": "Play all",
     "pause": "Pause",
     "resetValues": "Reset values",
@@ -487,6 +485,73 @@
     },
     "maxSpeedHint": "Max speed (unit/s). Empty = no limit — the value follows waveform/scenario targets at or below this speed.",
     "maxAccelHint": "Max acceleration (unit/s²). Empty = no limit."
+  },
+  "tags": {
+    "tabs": {
+      "realtime": "Realtime Tags",
+      "virtual": "Virtual Tags"
+    },
+    "searchCrane": "Search crane ID (e.g. 867)",
+    "allBays": "All",
+    "online": "Online",
+    "connection": {
+      "open": "Connected",
+      "connecting": "Connecting",
+      "reconnecting": "Disconnected",
+      "off": "Off"
+    },
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connectionSettings": "Connection settings",
+    "host": "Host",
+    "status": "Status",
+    "banner": {
+      "loadError": "Could not load the current state. Only values received by subscription are shown."
+    },
+    "tagCount": "{{count}} tags",
+    "noReception": "No data",
+    "lastReceived": "Last received",
+    "emptyCranes": "No cranes match the filter.",
+    "noCranes": "No cranes received yet.",
+    "unknownCrane": "No values received for crane {{craneId}} yet.",
+    "liveState": {
+      "live": "Online · heartbeat toggling",
+      "stale": "Online · heartbeat stalled (values still arriving)",
+      "offline": "Offline · server receives nothing",
+      "disconnected": "Disconnected · last values"
+    },
+    "back": "List",
+    "categories": {
+      "all": "All",
+      "datetime": "Time",
+      "measurement": "Measurements",
+      "status": "Status · Alarms"
+    },
+    "searchTag": "Search tags",
+    "copyJson": "Copy JSON",
+    "copied": "Copied",
+    "columns": {
+      "code": "Tag",
+      "name": "Name",
+      "value": "Value",
+      "unit": "Unit",
+      "range": "Observed range",
+      "changes": "Changes",
+      "lastChange": "Last change",
+      "timestamp": "Data time"
+    },
+    "age": {
+      "seconds": "{{value}}s ago",
+      "minutes": "{{minutes}}m {{seconds}}s ago"
+    },
+    "bool": {
+      "on": "ON",
+      "off": "OFF",
+      "ok": "OK",
+      "ng": "NG",
+      "one": "1",
+      "zero": "0"
+    }
   },
   "sceneCollision": {
     "contact": "Contact point (approx.)",

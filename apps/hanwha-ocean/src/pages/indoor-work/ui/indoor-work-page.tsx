@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
-import { VirtualTagsPage } from '@crane/widgets/virtual-tags';
+import { TagsPage, matchTagsSubRoute } from '@crane/widgets/tags';
 import { DetectionSettingsPage } from '@crane/widgets/detection-settings';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import {
@@ -67,6 +67,7 @@ export function IndoorWorkPage() {
   }
 
   const region = getRegionById(regionId);
+  const tagsRoute = matchTagsSubRoute(subRoute);
 
   return (
     <div className="h-full min-h-0 w-full">
@@ -76,7 +77,12 @@ export function IndoorWorkPage() {
       {subRoute === '3d-viewer-edit' && (
         <SceneObjectsEditPage regionId={regionId} />
       )}
-      {subRoute === 'virtual-tags' && <VirtualTagsPage />}
+      {tagsRoute && (
+        <TagsPage
+          craneId={tagsRoute.craneId}
+          basePath={`/indoor-work/${regionId}/tags`}
+        />
+      )}
       {subRoute === 'detection-settings' && <DetectionSettingsPage />}
       {subRoute === 'crane-status' && (
         <PlaceholderView
@@ -96,12 +102,8 @@ export function IndoorWorkPage() {
           }
         />
       )}
-      {subRoute === 'alarm-history' && (
-        <AlarmHistoryView regionId={regionId} />
-      )}
-      {subRoute === '3d-replay' && (
-        <ReplayMonitoringView regionId={regionId} />
-      )}
+      {subRoute === 'alarm-history' && <AlarmHistoryView regionId={regionId} />}
+      {subRoute === '3d-replay' && <ReplayMonitoringView regionId={regionId} />}
     </div>
   );
 }
