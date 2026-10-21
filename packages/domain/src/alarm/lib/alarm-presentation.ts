@@ -1,4 +1,3 @@
-import { getRuntimeAlarmMetadata } from '../model/runtime-dictionary-cache';
 import type { Alarm, AlarmEventType, AlarmSeverity } from '../model/types';
 
 const alarmEventTranslationKey: Record<AlarmEventType, string> = {
@@ -98,24 +97,10 @@ function getAlarmActionLabel(active: boolean, language: string) {
 }
 
 function getResolvedAlarmName(alarm: Alarm) {
-  if (typeof alarm.alarmNo === 'number') {
-    const runtimeMetadata = getRuntimeAlarmMetadata(alarm.alarmNo);
-    if (runtimeMetadata?.alarmName) {
-      return runtimeMetadata.alarmName;
-    }
-  }
-
   return alarm.alarmName ?? alarm.rawTagCode ?? alarm.craneName;
 }
 
 function getResolvedAlarmDescription(alarm: Alarm) {
-  if (typeof alarm.alarmNo === 'number') {
-    const runtimeMetadata = getRuntimeAlarmMetadata(alarm.alarmNo);
-    if (runtimeMetadata?.description) {
-      return runtimeMetadata.description;
-    }
-  }
-
   return alarm.alarmDescription ?? null;
 }
 

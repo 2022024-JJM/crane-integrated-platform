@@ -39,10 +39,3 @@ export interface AlarmStatistics {
   medium: number;
   info: number;
 }
-
-export interface RuntimeAlarmDictionaryItem {
-  alarmNo: number;
-  alarmName: string;
-  description: string | null;
-  active: boolean;
-}

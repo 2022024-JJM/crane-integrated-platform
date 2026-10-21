@@ -34,7 +34,7 @@ describe('resolveConnectionView', () => {
     expect(
       resolveConnectionView('realtime', 'connecting', false, false),
     ).toEqual({ state: 'connecting', tone: 'warn' });
-    for (const socket of ['idle', 'closing', 'closed'] as const) {
+    for (const socket of ['idle', 'closed'] as const) {
       expect(resolveConnectionView('realtime', socket, false, false)).toEqual({
         state: 'closed',
         tone: 'bad',

@@ -215,7 +215,7 @@ describe('resolveCraneFeedConnection', () => {
     expect(resolveCraneFeedConnection('closed', true)).toBe('reconnecting');
     expect(resolveCraneFeedConnection('closed', false)).toBe('off');
     expect(resolveCraneFeedConnection('idle', false)).toBe('off');
-    expect(resolveCraneFeedConnection('closing', true)).toBe('reconnecting');
+    expect(resolveCraneFeedConnection('idle', true)).toBe('reconnecting');
   });
 });
 

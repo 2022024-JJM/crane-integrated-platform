@@ -1,7 +1,6 @@
 const DEFAULT_API_TIMEOUT_MS = 10_000;
 const DEFAULT_WS_RECONNECT_INTERVAL_MS = 1_000;
 const DEFAULT_WS_RECONNECT_MAX_INTERVAL_MS = 30_000;
-const DEFAULT_WS_MAX_RECONNECT_ATTEMPTS = 5;
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '');
@@ -147,10 +146,6 @@ export function getWebSocketUrl(path: string) {
   return joinPathSegments(getWebSocketBaseUrl(), getWsPath(path));
 }
 
-export function getCranesLiteWebSocketUrl() {
-  return getWebSocketUrl('cranes-lite/all');
-}
-
 /**
  * STOMP 엔드포인트 — 크레인 스냅샷 서버는 WebSocket 베이스(`/ws`) 자체가
  * STOMP 핸드셰이크 경로다(SockJS 없음). 경로를 덧붙이지 않는다.
@@ -181,32 +176,13 @@ export function getWebSocketMaxIntervalMs() {
   );
 }
 
-/**
- * @deprecated `getWebSocketInitialIntervalMs` 사용 권장. 기존 호출부 호환을 위해 유지.
- */
-export function getWebSocketReconnectIntervalMs() {
-  return getWebSocketInitialIntervalMs();
-}
-
-export function getWebSocketMaxReconnectAttempts() {
-  return parsePositiveInteger(
-    import.meta.env.VITE_WS_MAX_RECONNECT_ATTEMPTS,
-    DEFAULT_WS_MAX_RECONNECT_ATTEMPTS,
-  );
-}
-
 export function getNetworkConfig() {
   return {
     apiBaseUrl: getApiBaseUrl(),
     wsBaseUrl: getWebSocketBaseUrl(),
-    monitoringReplayLiteApiUrl: getApiUrl('monitoring/replay-lite'),
-    runtimeAlarmDictionaryApiUrl: getApiUrl('alarms/runtime'),
-    cranesLiteWsUrl: getCranesLiteWebSocketUrl(),
     stompWsUrl: getStompWebSocketUrl(),
     apiTimeoutMs: getApiTimeoutMs(),
-    wsReconnectIntervalMs: getWebSocketReconnectIntervalMs(),
     wsReconnectInitialMs: getWebSocketInitialIntervalMs(),
     wsReconnectMaxMs: getWebSocketMaxIntervalMs(),
-    wsMaxReconnectAttempts: getWebSocketMaxReconnectAttempts(),
   };
 }

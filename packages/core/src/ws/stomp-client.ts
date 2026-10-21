@@ -61,7 +61,7 @@ function parseBody(body: string): unknown {
 }
 
 /**
- * `@stomp/stompjs` 를 `WebSocketClient` 와 같은 모양(acquire/release 참조
+ * `@stomp/stompjs` 를 참조 카운트 연결(acquire/release 참조
  * 카운트 · 상태 리스너 · 목적지별 구독)으로 감싼다.
  *
  * - 구독은 연결 전에 걸어도 된다 — 목적지별 핸들러 집합을 들고 있다가
@@ -125,7 +125,7 @@ export class StompClient {
   }
 
   /**
-   * 참조 카운팅 연결 획득 — `WebSocketClient.acquire` 와 같은 계약. 첫
+   * 참조 카운팅 연결 획득. 첫
    * acquire 가 connect, 마지막 release 가 disconnect 이고, release 는
    * StrictMode 더블마운트 때문에 microtask 로 미룬다.
    */

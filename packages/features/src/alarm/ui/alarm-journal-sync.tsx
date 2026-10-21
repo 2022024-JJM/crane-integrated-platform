@@ -7,7 +7,7 @@ import { useRealtimeAlarmStore } from '../model/use-realtime-alarm-store';
 
 /**
  * 실시간 알람 스토어 → 영속 journal 브릿지. 앱 셸 runtime effects 에
- * RealtimeAlarmSync 옆에 1회 마운트한다. useRealtimeAlarmStore 는 수정 없이
+ * 1회 마운트한다. useRealtimeAlarmStore 는 수정 없이
  * 밖에서 구독만 한다 — history 는 id dedupe 로 앞에 쌓이므로 prev 에 없는
  * id 가 새 알람(발생·해제 레코드 모두)이다.
  */
