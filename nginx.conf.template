@@ -79,6 +79,27 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
+    # STOMP 핸드셰이크 경로는 /ws 자체(끝 슬래시 없음)라 아래 접두 location
+    # (/ws/, /crane_rnd/ws/)에 걸리지 않는다 — 정확 일치로 먼저 받는다. 빠지면
+    # SPA 폴백이 index.html 을 돌려줘 실시간 태그·3D 실시간이 연결되지 않는다.
+    location = /ws {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400s;
+    }
+
+    location = /crane_rnd/ws {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400s;
+    }
+
     # WebSocket proxy → backend server
     location /ws/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/ws/;
