@@ -68,7 +68,7 @@
 - 알람 장비 수 — 페이지가 넘긴 `alarmsByCraneId`, 최고 severity 색.
 - 영역 침범 수 — 씬에 영역이 있을 때만, 정지 중엔 "n · 정지"(`docs/agents/3d-zone.md`).
 - 충돌 상태 — 활성일 때만(`docs/agents/3d-collision.md`).
-- 연결 — `use-realtime-connection-state.ts`. 시뮬레이션은 재생/정지(라벨에 `×배속 mm:ss`, `lib/sim-clock.ts`), 실시간은 cranes-lite WebSocket `subscribeState` 상태에 화면 반영 보류를 덧입힘, 3D 플레이는 `play3dPlaying` / `play3dPaused`.
+- 연결 — `use-realtime-connection-state.ts`. 시뮬레이션은 재생/정지(라벨에 `×배속 mm:ss`, `lib/sim-clock.ts`), 실시간은 크레인 스냅샷 STOMP(`craneStompClient`) `subscribeState` 상태에 화면 반영 보류를 덧입힘, 3D 플레이는 `play3dPlaying` / `play3dPaused`.
 
 ### 충돌 감지 표시 (LiDAR 근접 존, 필리 실외 화면만)
 

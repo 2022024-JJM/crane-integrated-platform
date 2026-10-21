@@ -76,12 +76,13 @@
 
 ### 실시간 태그 피드(크레인 스냅샷 서버)
 
-crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 현재 상태를 받아 태그 페이지의 실시간 탭이 보여 준다. 3D 모델 맵핑(태그 값 버스로 보내기)은 아직 이 피드에 물려 있지 않다 — 3D 모니터링은 여전히 `cranesLiteWebSocketClient` 를 쓴다.
+crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 현재 상태를 받아 태그 페이지의 실시간 탭이 보여 주고, 3D 모니터링 실시간 모드(`mode='realtime'`)의 값 생산자이기도 하다.
 
 - 전송: `@crane/core/ws` 의 `StompClient`(`@stomp/stompjs` 래퍼). 엔드포인트는 `getStompWebSocketUrl()`(WebSocket 베이스 `/ws` 자체, SockJS 없음). `craneStompClient` 하나를 acquire/release 로 나눠 쓰고, 목적지 구독은 연결 전에 걸어도 CONNECTED 마다 다시 건다. 재연결은 stompjs 지수 백오프이고, 사용자가 끊은 것(`disconnect`)과 서버 쪽 끊김은 `isActive()` 로 가른다.
 - 데이터: `CraneSnapshot`(`@crane/domain/monitoring`) — craneId · bay · online · `tags{code → {value, quality, timestamp}}`. `/topic/cranes` 봉투(`type: 'snapshot'`)에는 push 주기 동안 바뀐 크레인만 실리므로 첫 화면과 재연결 뒤에는 `GET /api/cranes`(`getCraneSnapshots`)로 전체를 받는다. 모양이 깨진 태그 항목은 `sanitizeCraneSnapshot` 이 버린다.
 - 스토어: `useCraneSnapshotStore` — craneId → `CraneSnapshotEntry`(스냅샷 + 수신 시각 + heartbeat 가 마지막으로 뒤집힌 시각 + 태그별 변경 시각·횟수·관측 범위). 묶음마다 바뀐 크레인 항목만 새 참조라 카드는 자기 크레인만 구독한다. 연결이 끊겨도 값은 마지막 상태로 남는다.
 - 피드: `useCraneSnapshotFeed(enabled)` 가 구독·REST·참조를 맡고(마운트 = 구독), 연결 표시는 `useCraneFeedConnection()`(useSyncExternalStore). 실시간 탭의 연결 해제(툴바 톱니 → 연결 설정 팝업: 호스트 주소 `getCraneFeedUrl()` · 상태 · 연결 해제/연결 버튼)는 그 화면의 구독만 놓는다 — 같은 클라이언트를 다른 화면이 잡고 있으면 소켓은 열린 채다.
+- 3D 실시간 모드: `useCraneSnapshotRealtimeBridge(enabled)`(`packages/features/src/3d/model/use-crane-snapshot-realtime-bridge.ts`, `OutdoorWorkModelSimulation` 이 `mode === 'realtime'` 로 켠다)가 피드를 켜고, 스토어에 새 스냅샷이 들어온 크레인의 태그 **전부**를 `${craneId}:${tagCode}` 키로 `useRealtimeStore` 버퍼에 쌓는다 — 바뀐 태그만 쌓지 않는다. 묶음에는 바뀐 크레인만 실리고 `heartbeat` 가 매초 뒤집히므로 살아 있는 크레인은 매초 재발행되어 `tagLiveValues.at` 가 갱신되고(정지 중 ↔ 두절 판정, `lib/model-runtime-status.ts`), 죽은 크레인은 묶음에서 빠져 at 이 멈춘다. 켤 때와 보류(held) 해제 때는 스토어의 스냅샷 전부를 한 번 쌓는다. 러너(`useRealtimeRunner`)·보류(`scene-collision-hold.ts`)는 그대로이고 HUD 연결 칸(`use-realtime-connection-state.ts`)은 `craneStompClient` 상태를 본다.
 - 상태 점: `resolveCraneLiveState` — 서버 `online=false` 나 연결 없음은 off(회색), `heartbeat` 가 `HEARTBEAT_STALE_MS` 안에 뒤집혔으면 live(초록 맥동), 값은 오는데 안 뒤집히면 stale(노랑). 첫 수신 직후엔 수신 시각을 기준으로 삼는다.
 - 표시명·단위·묶음은 `getMonitoringTagMetadata`(영문) 그대로. 묶음 안 정렬은 코드의 숫자 인식 사전순이고 시각 태그만 큰 단위 → 작은 단위(`tag-rows.ts`).
 - dev 는 `apps/shell/.env.local` 의 `VITE_DEV_PROXY_TARGET_HTTP/WS`(서버 `http://localhost:8080`)로 `/crane_rnd/{api,ws}` 를 프록시한다. 운영은 nginx 가 같은 경로를 `BACKEND_HOST:PORT` 로 보내고, 서버 쪽 `cis.web.allowed-origins` 에 셸 주소가 있어야 한다.
@@ -94,7 +95,7 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 영속화는 씬과 같은 규칙(`virtual-tag-storage.ts`). dev 는 `POST /__dev/virtual-tags` 로 배포 파일 `apps/shell/public/simulation/virtual-tags.json` 에 기록하며 이 파일이 클론·배포의 기준값이라 커밋한다. 운영은 localStorage `crane:virtual-tags` 에 배포 해시 도장(`baseVersion`)과 함께 봉투로 저장하고, 새 배포가 나오면 배포본이 이긴다. API 경로 문자열은 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있다 — `docs/agents/3d-editor.md`.
 - `virtualTagRuntime`(모듈 전역 `setInterval`, Canvas 불필요)이 틱마다 버스로 내보낸다.
 - 재생을 켜는 곳: 모니터링 `mode='simulation'` 은 `useSceneData` 의 `autoStartSimulation`(기본 true — 대시보드 3D 미리보기 모달은 ▶ 토글이 없는 뷰라 false 로 정지 상태로 연다). 3D 플레이(`mode='play3d'`, 소스 시뮬레이션)은 상단 트랜스포트 바 ▶ 가 켠다(자동 재생 없음). 실시간 페이지(`mode='realtime'`)에는 시뮬레이션 UI 가 없다.
-- 콤보박스 목록은 `useTagCatalog` 하나를 본다. 실서버가 붙으면 여기에 `getMonitoringTags()` 결과를 `source:'server'` 로 합치고 WebSocket 러너를 켜면 되며, 씬 JSON·맵핑 UI·드라이버는 무변경이다.
+- 콤보박스 목록은 `useTagCatalog` 하나를 본다. 서버 태그를 합치려면 여기에 스냅샷 스토어의 태그 코드(표시명은 `getMonitoringTagMetadata`)를 `source:'server'` 로 더하면 되며, 씬 JSON·맵핑 UI·드라이버는 무변경이다(값 생산자는 이미 붙어 있다).
 
 ### 시뮬레이션 시계·시나리오
 
@@ -157,6 +158,6 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 
 - 라벨 값 줄의 단위 표시·표시용 환산. 서버 태그의 원시 단위가 m 가 아니면(dock-in `tl_distance` 는 맵핑 scale 이 0.1 이다) 숫자가 m 로 읽히지 않는다.
 - 맵핑되지 않은 태그(Load 등)를 라벨에 보이는 것.
-- 실서버 태그 합류: `useTagCatalog` 에 `getMonitoringTags()` 결과를 `source:'server'` 로 합치고 WebSocket 러너를 켜는 것. 씬 JSON·맵핑 UI·드라이버는 그대로 둔다.
+- 실서버 태그를 태그 콤보박스에 합류: `useTagCatalog` 에 스냅샷 스토어의 태그 코드(표시명은 `getMonitoringTagMetadata`)를 `source:'server'` 로 합치는 것. 크레인 스냅샷 서버에는 태그 정의 API 가 없다. 값 생산자(3D 실시간 브리지)는 이미 붙어 있다.
 - 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 태그만)·dock-in(서버 리플레이만)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
 - 상태 태그를 연결한 배포 씬은 없다. 서버의 상태 값 형식이 정해지면 맞춘다 — 비트 묶음 워드(역할별 비트 번호), 반전 비트, 모션 run 비트(지금 가동은 축 값 변화로 추정한다), 모션별 Slowdown·Endstop 비트(지금은 역할마다 태그 하나라 모션별로 오면 역할 값을 태그 목록으로 넓혀야 한다).

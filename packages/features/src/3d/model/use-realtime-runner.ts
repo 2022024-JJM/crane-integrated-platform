@@ -5,7 +5,7 @@ import { publishTagValue } from './tag-value-bus';
 /**
  * 실시간 WebSocket 값을 R3F 렌더 루프(useFrame)에 동기화한다.
  *
- * useRealtimeWebSocketBridge가 수신한 값을 useRealtimeStore 버퍼에 쌓고,
+ * useCraneSnapshotRealtimeBridge 가 스냅샷에서 꺼낸 값을 useRealtimeStore 버퍼에 쌓고,
  * 이 runner가 매 프레임 버퍼를 drain하여 태그 값 버스로 내보낸다. 버스 →
  * 태그 바인딩 소스 → 값 저장소 → 드라이버 순으로 노드에 닿는다.
  *

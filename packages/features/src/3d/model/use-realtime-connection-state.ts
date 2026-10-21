@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { cranesLiteWebSocketClient } from '@crane/core/ws';
+import { craneStompClient } from '@crane/core/ws';
 import type { WebSocketConnectionState } from '@crane/core/ws';
 import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
 import { useRealtimeStore } from './use-realtime-store';
@@ -12,7 +12,7 @@ export type SceneConnectionMode = 'simulation' | 'realtime' | 'play3d';
  * 관제 HUD "연결" 칸의 상태 키와 색조. 키는 i18n `monitoring:hud.linkState.*`
  * 에 그대로 대응한다.
  * - simulation: 가상 태그 러너 재생 여부(simulationRunning / simulationPaused)
- * - realtime: cranes-lite WebSocket 연결 상태(open·connecting·closed…)에
+ * - realtime: 크레인 스냅샷 STOMP(craneStompClient) 연결 상태(open·connecting·closed…)에
  *   화면 반영 보류(held)를 덧입힌다 — 연결돼 있어도 보류 중이면 그걸 보여야
  *   "값이 안 오는 게 서버 탓인지 정지 탓인지" 를 HUD 에서 구분한다.
  * - play3d: 활성 소스(리플레이·시뮬레이션)의 재생 여부(play3dPlaying /
@@ -60,11 +60,11 @@ export function resolveConnectionView(
 }
 
 function subscribeSocket(onChange: () => void): () => void {
-  return cranesLiteWebSocketClient.subscribeState(() => onChange());
+  return craneStompClient.subscribeState(() => onChange());
 }
 
 function readSocket(): WebSocketConnectionState {
-  return cranesLiteWebSocketClient.getState();
+  return craneStompClient.getState();
 }
 
 /**

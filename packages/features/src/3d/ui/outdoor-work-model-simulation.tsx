@@ -30,7 +30,7 @@ import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
-import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
+import { useCraneSnapshotRealtimeBridge } from '../model/use-crane-snapshot-realtime-bridge';
 import type { LabelStateRecord } from '../lib/model-label-state';
 import type { OutlineStateRecord } from '../lib/model-outline-state';
 import { SceneFloodlightFixture } from './scene-floodlight-fixture';
@@ -251,7 +251,7 @@ export function OutdoorWorkModelSimulation({
   // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
   useRealtimeRunner();
-  useRealtimeWebSocketBridge(mode === 'realtime');
+  useCraneSnapshotRealtimeBridge(mode === 'realtime');
 
   const maps = sceneInfo?.maps ?? [];
   const models = sceneInfo?.models ?? [];
