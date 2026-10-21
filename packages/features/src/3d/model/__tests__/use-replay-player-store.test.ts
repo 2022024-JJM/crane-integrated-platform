@@ -11,7 +11,7 @@ import {
 
 /**
  * craneId의 하이픈은 태그 키에서 언더스코어로 치환된다 —
- * 'crane-1' 프레임 값이 'crane_1:X' 키로 버스에 실리는 것까지 특성화한다.
+ * 'crane-1' 프레임 값이 'crane_1.X' 키로 버스에 실리는 것까지 특성화한다.
  * 버스 소비자를 가짜로 꽂아 마지막 값을 키별로 기록한다.
  */
 function frame(x: number): ReplayLiteFrame {
@@ -33,7 +33,7 @@ function store() {
 }
 
 const received = new Map<string, number>();
-const xValue = () => received.get('crane_1:X') ?? 0;
+const xValue = () => received.get('crane_1.X') ?? 0;
 
 beforeEach(() => {
   useReplayPlayerStore.setState({
@@ -95,8 +95,8 @@ describe('loadFrames', () => {
     };
     store().loadFrames([bits], [1000]);
 
-    expect(received.get('crane_1:crane_control_on')).toBe(1);
-    expect(received.get('crane_1:accs_bypass_on')).toBe(0);
+    expect(received.get('crane_1.crane_control_on')).toBe(1);
+    expect(received.get('crane_1.accs_bypass_on')).toBe(0);
     expect(received.has('crane_1:NUMERIC_TEXT')).toBe(false);
     expect(received.has('crane_1:EMPTY')).toBe(false);
   });

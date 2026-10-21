@@ -153,7 +153,7 @@ describe('sanitizeSceneInfo — 모델', () => {
           model({
             position: [0, 0, 5],
             valueMapList: [
-              { type: 'PZ', key: 'C_171:tl_distance', scale: 0.1, offset: 71 },
+              { type: 'PZ', key: 'C_171.tl_distance', scale: 0.1, offset: 71 },
             ],
           }),
         ],
@@ -165,7 +165,7 @@ describe('sanitizeSceneInfo — 모델', () => {
       {
         id: 'legacy-pz',
         target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        tagKey: 'C_171:tl_distance',
+        realtimeTagKey: 'C_171.tl_distance',
         scale: 0.1,
         offset: 66,
       },
@@ -188,7 +188,7 @@ describe('sanitizeSceneInfo — 모델', () => {
                   channel: 'rotation',
                   axis: 'x',
                 },
-                tagKey: 'C_1:luff',
+                realtimeTagKey: 'C_1.luff',
               },
             ],
             valueMapList: [{ type: 'PX', key: 'ignored' }],
@@ -766,21 +766,29 @@ describe('sanitizeSceneInfo — 모델 영역(zones)', () => {
 });
 
 describe('sanitizeSceneInfo — 상태 태그(statusTags)', () => {
-  it('유효한 역할만 남기고, 전부 무효·미지정이면 필드를 생략한다', () => {
+  it('유효한 역할만 남기고(레거시 문자열은 실시간 슬롯), 전부 무효·미지정이면 필드를 생략한다', () => {
     const out = sanitizeSceneInfo(
       scene({
         models: [
           model({
             id: 'a',
-            statusTags: { controlOn: ' A:on ', fault: 1, junk: 'A:x' },
+            statusTags: {
+              controlOn: ' A.on ',
+              fault: 1,
+              bypass: { virtualTagKey: ' V.b ' },
+              junk: 'A.x',
+            },
           }),
           model({ id: 'b', statusTags: { controlOn: '' } }),
-          model({ id: 'c', statusTags: ['A:on'] }),
+          model({ id: 'c', statusTags: ['A.on'] }),
           model({ id: 'd' }),
         ],
       }),
     );
-    expect(out.models[0].statusTags).toEqual({ controlOn: 'A:on' });
+    expect(out.models[0].statusTags).toEqual({
+      controlOn: { realtimeTagKey: 'A.on' },
+      bypass: { virtualTagKey: 'V.b' },
+    });
     expect(out.models[1].statusTags).toBeUndefined();
     expect(out.models[2].statusTags).toBeUndefined();
     expect(out.models[3].statusTags).toBeUndefined();

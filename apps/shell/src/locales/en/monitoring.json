@@ -88,8 +88,6 @@
       "channel": "Type",
       "axis": "Axis",
       "joint": "Joint",
-      "tag": "Tag",
-      "tagPlaceholder": "Select tag",
       "tagSearch": "Search key or name",
       "tagEmpty": "No virtual tags. Create them on the Virtual Tags page.",
       "tagUnknown": "Unknown tag",
@@ -143,6 +141,30 @@
         "slowdown": "Slowdown",
         "endstop": "Endstop"
       }
+    },
+    "tagPick": {
+      "title": "Link tag",
+      "slots": {
+        "realtime": "Realtime",
+        "virtual": "Simulation"
+      },
+      "pick": "Pick a tag…",
+      "clear": "Unlink",
+      "search": "Search by crane ID or tag name (e.g. C_171, tl_distance)",
+      "currentValue": "Current value",
+      "craneList": "Equipment",
+      "preview": "Preview",
+      "recent": "Last 60 s · updated every second",
+      "dataType": "Data type",
+      "category": "Category",
+      "bay": "Bay",
+      "unit": "Unit",
+      "range": "Range",
+      "noSelection": "Pick a tag from the list to see its current value here.",
+      "noCranes": "No cranes received from the server. Check the connection.",
+      "emptyTags": "No matches.",
+      "cancel": "Cancel",
+      "apply": "Link"
     },
     "ruler": {
       "title": "Ruler",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CraneSnapshotEntry, CraneTagStat } from '@crane/features/3d';
+import type { CraneSnapshotEntry, CraneTagStat } from '../crane-snapshot-stats';
 import {
   buildTagRows,
   countTagRowsByCategory,

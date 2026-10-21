@@ -57,18 +57,42 @@ function tone(map: Record<string, TagReading>, keys = KEYS) {
 }
 
 describe('collectModelStatusKeys', () => {
+  const rt = (key: string) => ({ realtimeTagKey: key });
+
   it('움직임 키는 맵핑만, 수신 키는 맵핑 + 상태 태그', () => {
-    const keys = collectModelStatusKeys({
-      tagMappings: [{ tagKey: 'A:x' }, { tagKey: 'A:y' }],
-      statusTags: { controlOn: 'A:on', bypass: 'A:bypass' },
-    } as unknown as Parameters<typeof collectModelStatusKeys>[0]);
+    const keys = collectModelStatusKeys(
+      {
+        tagMappings: [rt('A:x'), rt('A:y')],
+        statusTags: { controlOn: rt('A:on'), bypass: rt('A:bypass') },
+      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
+      'realtime',
+    );
     expect(keys.motion).toEqual(['A:x', 'A:y']);
     expect(keys.liveness).toEqual(['A:x', 'A:y', 'A:on', 'A:bypass']);
     expect(keys.status).toEqual({ controlOn: 'A:on', bypass: 'A:bypass' });
   });
 
+  it('활성 슬롯의 키만 든다 — 가상 슬롯에서는 가상 키만', () => {
+    const model = {
+      tagMappings: [{ realtimeTagKey: 'A:x', virtualTagKey: 'V:x' }],
+      statusTags: {
+        controlOn: { realtimeTagKey: 'A:on', virtualTagKey: 'V:on' },
+        fault: rt('A:fault'),
+      },
+    } as unknown as Parameters<typeof collectModelStatusKeys>[0];
+    expect(collectModelStatusKeys(model, 'virtual')).toEqual({
+      motion: ['V:x'],
+      liveness: ['V:x', 'V:on'],
+      status: { controlOn: 'V:on' },
+    });
+    expect(collectModelStatusKeys(model, 'realtime').status).toEqual({
+      controlOn: 'A:on',
+      fault: 'A:fault',
+    });
+  });
+
   it('맵핑도 상태 태그도 없으면 전부 빈다', () => {
-    expect(collectModelStatusKeys({})).toEqual({
+    expect(collectModelStatusKeys({}, 'realtime')).toEqual({
       motion: [],
       liveness: [],
       status: {},
@@ -76,18 +100,29 @@ describe('collectModelStatusKeys', () => {
   });
 
   it('축 태그와 같은 키를 상태 태그로 써도 수신 키는 한 번만 들어간다', () => {
-    const keys = collectModelStatusKeys({
-      tagMappings: [{ tagKey: 'A:x' }],
-      statusTags: { controlOn: 'A:x', fault: 'A:x' },
-    } as unknown as Parameters<typeof collectModelStatusKeys>[0]);
+    const keys = collectModelStatusKeys(
+      {
+        tagMappings: [rt('A:x')],
+        statusTags: { controlOn: rt('A:x'), fault: rt('A:x') },
+      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
+      'realtime',
+    );
     expect(keys.liveness).toEqual(['A:x']);
     expect(keys.status).toEqual({ controlOn: 'A:x', fault: 'A:x' });
   });
 
   it('문자열이 아니거나 빈 키는 버린다(sanitize 를 안 거친 입력)', () => {
-    const keys = collectModelStatusKeys({
-      statusTags: { controlOn: '', fault: 42, bypass: null, freeSwing: 'A:s' },
-    } as unknown as Parameters<typeof collectModelStatusKeys>[0]);
+    const keys = collectModelStatusKeys(
+      {
+        statusTags: {
+          controlOn: rt(''),
+          fault: { realtimeTagKey: 42 },
+          bypass: null,
+          freeSwing: rt('A:s'),
+        },
+      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
+      'realtime',
+    );
     expect(keys.status).toEqual({ freeSwing: 'A:s' });
     expect(keys.liveness).toEqual(['A:s']);
   });

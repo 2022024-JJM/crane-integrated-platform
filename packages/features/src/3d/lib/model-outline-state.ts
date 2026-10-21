@@ -4,8 +4,8 @@ import type {
 } from '@crane/core/types/status';
 import {
   OUTLINE_STATUS_TAG_ROLES,
-  type ModelStatusTags,
   type OutlineStatusTagRole,
+  type ResolvedStatusTagKeys,
 } from '@crane/domain/3d';
 import {
   isEmptyLabelPreview,
@@ -44,7 +44,7 @@ function toOutlineState(bits: OutlineBits): EquipmentOutlineState {
 
 export function resolveOutlineState(
   tone: EquipmentRuntimeStatus,
-  status: ModelStatusTags,
+  status: ResolvedStatusTagKeys,
   get: (key: string) => TagReading | undefined,
 ): EquipmentOutlineState {
   if (tone === 'offline') return 'commError';

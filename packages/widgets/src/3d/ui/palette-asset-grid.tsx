@@ -1,12 +1,11 @@
-import { Search } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { humanizeModelPath, type ScenePlaceableModel } from '@crane/domain/3d';
 import type { ScenePaletteModel } from '@crane/features/asset-library';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
-import { Input } from '@crane/ui/atoms/input';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
+import { SearchField } from '@crane/ui/molecules/search-field';
 import { toPaletteThumbnailUrl } from '../lib/palette-thumbnail';
 import { SceneModelPreview } from './scene-model-preview';
 
@@ -71,19 +70,13 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
       {showToolbar ? (
         <div className="shrink-0 px-1 pt-1 pb-2">
           <div className="flex items-center gap-2">
-            <div
-              className={`border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 ${controlClassName} flex min-w-0 flex-1 items-center border px-2 transition-colors focus-within:ring-3`}
-            >
-              <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
-              <Input
-                value={assetSearch}
-                onChange={(event) => {
-                  handleAssetSearchChange(event.target.value);
-                }}
-                placeholder={t('monitoring:editor.searchModels')}
-                className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
-              />
-            </div>
+            <SearchField
+              value={assetSearch}
+              onChange={(event) => {
+                handleAssetSearchChange(event.target.value);
+              }}
+              placeholder={t('monitoring:editor.searchModels')}
+            />
             <div className="flex h-6 shrink-0 items-center">
               <Badge
                 render={<div />}

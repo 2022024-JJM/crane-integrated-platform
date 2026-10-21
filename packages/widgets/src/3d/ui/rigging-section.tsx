@@ -9,6 +9,7 @@ import {
 import { useMemo } from 'react';
 import {
   getDrivenJointIds,
+  getPrimaryTagKey,
   getRigJointUnit,
   modelObjectRegistry,
   RIG_HINGE_DEFAULT_RANGE,
@@ -436,12 +437,14 @@ export function RiggingSection({
 }: RiggingSectionProps) {
   useRigLivePoll();
   const simulating = useVirtualTagStore((s) => s.isRunning);
-  // 관절 id → 연결된 태그 키(태그 매핑 탭의 joint 대상).
+  // 관절 id → 연결된 태그 키(태그 매핑 탭의 joint 대상). 표시용이라 소스와
+  // 무관한 대표 키(실시간 우선)다.
   const taggedByJoint = useMemo(() => {
     const out = new Map<string, string>();
     for (const m of model.tagMappings ?? []) {
-      if (m.target.kind === 'joint' && m.tagKey) {
-        out.set(m.target.jointId, m.tagKey);
+      const key = getPrimaryTagKey(m);
+      if (m.target.kind === 'joint' && key) {
+        out.set(m.target.jointId, key);
       }
     }
     return out;

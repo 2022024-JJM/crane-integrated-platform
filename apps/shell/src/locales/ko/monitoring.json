@@ -88,8 +88,6 @@
       "channel": "타입",
       "axis": "축",
       "joint": "관절",
-      "tag": "태그",
-      "tagPlaceholder": "태그 선택",
       "tagSearch": "키·이름 검색",
       "tagEmpty": "가상 태그가 없습니다. 가상 태그 페이지에서 만드세요.",
       "tagUnknown": "미등록 태그",
@@ -143,6 +141,30 @@
         "slowdown": "Slowdown",
         "endstop": "Endstop"
       }
+    },
+    "tagPick": {
+      "title": "태그 연결",
+      "slots": {
+        "realtime": "실시간",
+        "virtual": "시뮬레이션"
+      },
+      "pick": "태그 선택…",
+      "clear": "연결 해제",
+      "search": "크레인 번호나 태그 이름으로 검색 (예: C_171, tl_distance)",
+      "currentValue": "현재 값",
+      "craneList": "장비 목록",
+      "preview": "미리보기",
+      "recent": "최근 60초 · 1초마다 갱신",
+      "dataType": "데이터 형식",
+      "category": "분류",
+      "bay": "구역",
+      "unit": "단위",
+      "range": "범위",
+      "noSelection": "목록에서 태그를 고르면 여기에 현재 값이 보입니다.",
+      "noCranes": "서버에서 받은 크레인이 없습니다. 연결 상태를 확인하세요.",
+      "emptyTags": "검색 결과가 없습니다.",
+      "cancel": "취소",
+      "apply": "연결"
     },
     "ruler": {
       "title": "눈금",

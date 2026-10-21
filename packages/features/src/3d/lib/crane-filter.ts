@@ -1,4 +1,4 @@
-import type { CraneSnapshotEntry } from '@crane/features/3d';
+import type { CraneSnapshotEntry } from './crane-snapshot-stats';
 
 export interface BayOption {
   bay: string;

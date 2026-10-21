@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
-import { toTagNumber, type CraneSnapshot } from '@crane/domain/monitoring';
+import {
+  buildCraneTagKey,
+  toTagNumber,
+  type CraneSnapshot,
+} from '@crane/domain/monitoring';
 import { useCraneSnapshotFeed } from './use-crane-snapshot-feed';
 import { useCraneSnapshotStore } from './use-crane-snapshot-store';
 import { useRealtimeStore } from './use-realtime-store';
@@ -10,7 +14,7 @@ import { useRealtimeStore } from './use-realtime-store';
  * `useRealtimeStore` 버퍼에 쌓는다. 러너(`useRealtimeRunner`)가 매 프레임
  * 버퍼를 drain 해 태그 값 버스로 보낸다.
  *
- * - 키는 `${craneId}:${tagCode}` — 리플레이·가상 태그와 같은 키 공간이라
+ * - 키는 `${craneId}.${tagCode}`(`buildCraneTagKey`) — 리플레이와 같은 키 공간이라
  *   씬의 태그 맵핑이 소스를 바꿔도 살아남는다.
  * - 바뀐 태그만이 아니라 스냅샷의 태그 **전부**를 쌓는다. 서버는 바뀐
  *   크레인만 묶음에 싣고 `heartbeat` 가 매초 뒤집히므로 살아 있는 크레인은
@@ -53,11 +57,10 @@ export function useCraneSnapshotRealtimeBridge(enabled: boolean) {
 /** 스냅샷 한 대분의 태그를 버퍼에 쌓는다. 숫자로 못 바꾸는 값은 버린다. */
 function pushSnapshot(snapshot: CraneSnapshot) {
   const push = useRealtimeStore.getState().pushValue;
-  const craneId = snapshot.craneId.replace(/-/g, '_');
   for (const [code, tag] of Object.entries(snapshot.tags)) {
     const value = toTagNumber(tag.value);
     if (value === null) continue;
-    push(`${craneId}:${code}`, value);
+    push(buildCraneTagKey(snapshot.craneId, code), value);
   }
 }
 

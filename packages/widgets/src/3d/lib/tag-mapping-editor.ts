@@ -40,7 +40,10 @@ export function findTagMappingConflicts(
   return conflicts;
 }
 
-/** 새 맵핑 기본값 — 모델 루트 · 위치 · x · 태그 미선택. 카드 안에서 고른다. */
+/**
+ * 새 맵핑 기본값 — 모델 루트 · 위치 · x · 태그 미선택(두 슬롯 다 없음). 카드
+ * 안에서 고른다.
+ */
 export function createTagMapping(
   target: TagMappingTarget = {
     kind: 'node',
@@ -49,7 +52,7 @@ export function createTagMapping(
     axis: 'x',
   },
 ): TagMapping {
-  return { id: `map-${createId().slice(0, 8)}`, target, tagKey: '' };
+  return { id: `map-${createId().slice(0, 8)}`, target };
 }
 
 /** 카드 readout: 태그값 → 적용값(offset + value × scale). */

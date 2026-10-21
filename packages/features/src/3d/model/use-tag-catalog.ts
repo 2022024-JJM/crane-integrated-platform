@@ -2,11 +2,10 @@ import { useEffect, useMemo } from 'react';
 import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /**
- * 태그 콤보박스가 보는 목록. 소스별 항목을 한 모양으로 합친다.
- *
- * 지금은 가상 태그 스토어뿐이다. 서버 태그를 합치려면 스냅샷 스토어의 태그 코드
- * (표시명은 `getMonitoringTagMetadata`)를 `source: 'server'` 로 여기서 합치면
- * 콤보박스·맵핑 UI 는 손대지 않아도 된다.
+ * 가상 태그 목록 — 태그 연결 다이얼로그의 가상 탭과 카드 칩(이름·단위)이
+ * 본다. 실시간(서버) 태그는 여기 합치지 않는다 — 다이얼로그의 실시간 탭이
+ * 크레인 스냅샷 스토어에서 크레인별로 직접 고른다(widgets/3d
+ * ui/tag-pick-realtime-tab.tsx). `source` 는 항목의 출처 표시용이다.
  */
 export interface TagCatalogEntry {
   key: string;

@@ -1,5 +1,9 @@
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
-import type { SavedModelInfo } from '@crane/domain/3d';
+import {
+  getSlotTagKey,
+  type SavedModelInfo,
+  type TagSlot,
+} from '@crane/domain/3d';
 
 /**
  * 태그 활동 판정 — 태그 값 버스의 수신·변화 시각에서 "움직이는가, 오고 있는가"
@@ -8,8 +12,8 @@ import type { SavedModelInfo } from '@crane/domain/3d';
  *
  * 값이 바뀌면 움직이는 것이고, 수신이 끊기면 통신두절이라는 규칙은 생산자
  * (가상 태그·WebSocket·리플레이)와 무관하게 성립한다. 움직임 판정 키는 모델의
- * `tagMappings` 가 참조하는 tagKey 들이다 — craneId 가 없는 모델(필리 씬)도
- * 맵핑만 있으면 판정이 나온다.
+ * `tagMappings` 가 활성 슬롯(lib/tag-slot.ts)으로 참조하는 키들이다 —
+ * craneId 가 없는 모델(필리 씬)도 맵핑만 있으면 판정이 나온다.
  *
  * 창 크기: 리플레이 기본 프레임 간격이 5초라 moving 창을 그보다 넓게 잡아야
  * 프레임 사이에서 멈춘 것으로 깜빡이지 않는다. offline 창은 WebSocket 재연결
@@ -63,14 +67,15 @@ export const STATUS_WINDOW_FLOOR_MS = {
   offline: 4_000,
 } as const;
 
-/** 모델이 참조하는 태그 키 목록(중복 제거, 맵핑 순서 유지). */
+/** 모델이 활성 슬롯으로 참조하는 태그 키 목록(중복 제거, 맵핑 순서 유지). */
 export function collectModelTagKeys(
   model: Pick<SavedModelInfo, 'tagMappings'>,
+  slot: TagSlot,
 ): string[] {
   const keys: string[] = [];
   const seen = new Set<string>();
   for (const mapping of model.tagMappings ?? []) {
-    const key = mapping.tagKey;
+    const key = getSlotTagKey(mapping, slot);
     if (typeof key !== 'string' || key.length === 0 || seen.has(key)) continue;
     seen.add(key);
     keys.push(key);

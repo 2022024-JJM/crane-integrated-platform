@@ -2,12 +2,26 @@ import { ArrowLeft, Copy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseIsoMs } from '@crane/domain/monitoring';
-import { useCraneSnapshotStore } from '@crane/features/3d';
+import {
+  CraneLiveDot,
+  TAG_CATEGORIES,
+  buildTagRows,
+  countTagRowsByCategory,
+  filterTagRows,
+  formatClock,
+  formatTagNumber,
+  resolveBoolDisplay,
+  useCraneSnapshotStore,
+  type BoolTone,
+  type TagCategory,
+  type TagRow,
+} from '@crane/features/3d';
+import { useNow } from '@crane/core/lib/use-now';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Button } from '@crane/ui/atoms/button';
-import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
+import { SearchField } from '@crane/ui/molecules/search-field';
 import {
   Table,
   TableBody,
@@ -18,20 +32,7 @@ import {
 } from '@crane/ui/molecules/table';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import { copyText } from '../lib/copy-text';
-import { formatClock, formatTagNumber } from '../lib/format-clock';
-import {
-  TAG_CATEGORIES,
-  buildTagRows,
-  countTagRowsByCategory,
-  filterTagRows,
-  resolveBoolDisplay,
-  type BoolTone,
-  type TagCategory,
-  type TagRow,
-} from '../lib/tag-rows';
-import { useNow } from '../model/use-now';
 import { AgeText } from './age-text';
-import { CraneLiveDot } from './crane-live-dot';
 
 const COLUMNS = [
   ['code', ''],
@@ -141,13 +142,12 @@ export function CraneDetail({
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Input
-              type="search"
+            <SearchField
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('monitoring:tags.searchTag')}
               aria-label={t('monitoring:tags.searchTag')}
-              className="bg-muted h-7 w-60 max-w-full text-xs"
+              className="w-60 max-w-full flex-none"
             />
             <ToggleGroup
               value={[category]}

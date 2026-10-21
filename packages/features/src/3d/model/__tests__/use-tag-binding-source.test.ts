@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, renderHook } from '@testing-library/react';
-import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { SavedSceneInfo, TagSlot } from '@crane/domain/3d';
 import { useTagBindingSource } from '../use-tag-binding-source';
 import { rigValueStore } from '../rig-value-store';
 import { hasTagIngest, publishTagValue, setTagIngest } from '../tag-value-bus';
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
-function scene(tagKey: string): SavedSceneInfo {
+function scene(realtimeTagKey: string, virtualTagKey?: string): SavedSceneInfo {
   return {
     maps: [],
     models: [
@@ -24,7 +24,8 @@ function scene(tagKey: string): SavedSceneInfo {
           {
             id: 'map-1',
             target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-            tagKey,
+            realtimeTagKey,
+            ...(virtualTagKey ? { virtualTagKey } : {}),
             scale: 2,
             offset: 1,
           },
@@ -42,14 +43,14 @@ afterEach(() => {
 
 describe('useTagBindingSource', () => {
   it('enabled 면 버스 값이 맵핑 주소에 offset + v·scale 로 실린다', () => {
-    renderHook(() => useTagBindingSource(scene('C_1:z'), true));
+    renderHook(() => useTagBindingSource(scene('C_1:z'), true, 'realtime'));
     expect(hasTagIngest()).toBe(true);
     publishTagValue('C_1:z', 10);
     expect(rigValueStore.getTarget('m1/map-1')).toBe(21);
   });
 
   it('publish 옵션 — smoothTime 0 은 즉시 대입, 양수는 그 초로 스무딩, 생략은 기본', () => {
-    renderHook(() => useTagBindingSource(scene('k'), true));
+    renderHook(() => useTagBindingSource(scene('k'), true, 'realtime'));
     publishTagValue('k', 10, { smoothTime: 0 });
     expect(rigValueStore.get('m1/map-1')).toBe(21);
     expect(rigValueStore.hasPendingSmoothing()).toBe(false);
@@ -66,7 +67,7 @@ describe('useTagBindingSource', () => {
 
   it('씬이 바뀌면 재시작 없이 인덱스만 갈아 끼운다', () => {
     const { rerender } = renderHook(
-      ({ info }) => useTagBindingSource(info, true),
+      ({ info }) => useTagBindingSource(info, true, 'realtime'),
       { initialProps: { info: scene('old') } },
     );
     rerender({ info: scene('new') });
@@ -76,9 +77,34 @@ describe('useTagBindingSource', () => {
     expect(rigValueStore.getTarget('m1/map-1')).toBe(3);
   });
 
+  it('슬롯이 바뀌면 그 슬롯의 키만 받는다 — 3D 플레이 소스 전환(리마운트 없음)', () => {
+    const info = scene('C_1:z', 'V:z');
+    const { rerender } = renderHook(
+      ({ slot }: { slot: TagSlot }) => useTagBindingSource(info, true, slot),
+      { initialProps: { slot: 'realtime' as TagSlot } },
+    );
+    publishTagValue('V:z', 1);
+    expect(rigValueStore.has('m1/map-1')).toBe(false);
+    publishTagValue('C_1:z', 1);
+    expect(rigValueStore.getTarget('m1/map-1')).toBe(3);
+
+    rerender({ slot: 'virtual' });
+    expect(hasTagIngest()).toBe(true);
+    publishTagValue('C_1:z', 10);
+    expect(rigValueStore.getTarget('m1/map-1')).toBe(3);
+    publishTagValue('V:z', 10);
+    expect(rigValueStore.getTarget('m1/map-1')).toBe(21);
+  });
+
+  it('활성 슬롯에 키가 없는 맵핑은 아무 값도 받지 않는다', () => {
+    renderHook(() => useTagBindingSource(scene('C_1:z'), true, 'virtual'));
+    publishTagValue('C_1:z', 10);
+    expect(rigValueStore.size).toBe(0);
+  });
+
   it('enabled=false 로 바뀌면 버스에서 떨어지고 값 저장소를 비운다', () => {
     const { rerender } = renderHook(
-      ({ on }) => useTagBindingSource(scene('k'), on),
+      ({ on }) => useTagBindingSource(scene('k'), on, 'realtime'),
       { initialProps: { on: true } },
     );
     publishTagValue('k', 5);
@@ -91,7 +117,9 @@ describe('useTagBindingSource', () => {
   });
 
   it('언마운트 시 정리한다', () => {
-    const { unmount } = renderHook(() => useTagBindingSource(scene('k'), true));
+    const { unmount } = renderHook(() =>
+      useTagBindingSource(scene('k'), true, 'realtime'),
+    );
     publishTagValue('k', 5);
     unmount();
     expect(hasTagIngest()).toBe(false);
@@ -99,7 +127,7 @@ describe('useTagBindingSource', () => {
   });
 
   it('처음부터 꺼져 있으면 아무것도 걸지 않는다', () => {
-    renderHook(() => useTagBindingSource(scene('k'), false));
+    renderHook(() => useTagBindingSource(scene('k'), false, 'realtime'));
     expect(hasTagIngest()).toBe(false);
   });
 });

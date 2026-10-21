@@ -50,6 +50,14 @@ export {
 } from './lib/crane-history';
 export { getMonitoringTagMetadata } from './model/tag-catalog';
 export { toTagNumber } from './lib/tag-number';
+export {
+  buildCraneTagKey,
+  CRANE_TAG_KEY_SEPARATOR,
+  normalizeCraneKey,
+  normalizeLegacyCraneTagKey,
+  parseCraneTagKey,
+} from './lib/crane-tag-key';
+export type { CraneTagKeyParts } from './lib/crane-tag-key';
 export { formatReplayTimestamp } from './lib/format-replay-timestamp';
 export { parseReplayTimestamp } from './lib/parse-replay-timestamp';
 export { getReplayFrameDurationsMs } from './lib/parse-interval';

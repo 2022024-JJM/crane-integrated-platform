@@ -10,44 +10,62 @@ function mapping(overrides: Partial<TagMapping> = {}): TagMapping {
   return {
     id: 'm1',
     target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-    tagKey: 'GC_04:gantry_position',
+    realtimeTagKey: 'C_171.tl_distance',
+    virtualTagKey: 'GC_04:gantry_position',
     ...overrides,
   };
 }
 
 describe('buildLabelReadings', () => {
-  it('라벨에 보이기로 한 맵핑만, 맵핑 순서대로 담는다', () => {
-    expect(
-      buildLabelReadings([
-        mapping({ id: 'a', showOnLabel: true, caption: '주행' }),
-        mapping({ id: 'b', tagKey: 'GC_04:trolley_position' }),
-        mapping({
-          id: 'c',
-          tagKey: 'GC_04:trolley_position_2',
-          showOnLabel: true,
-        }),
-      ]),
-    ).toEqual([
+  it('라벨에 보이기로 한 맵핑만, 맵핑 순서대로, 활성 슬롯의 키로 담는다', () => {
+    const mappings = [
+      mapping({ id: 'a', showOnLabel: true, caption: '주행' }),
+      mapping({ id: 'b', virtualTagKey: 'GC_04:trolley_position' }),
+      mapping({
+        id: 'c',
+        realtimeTagKey: 'C_171.ts1_distance',
+        virtualTagKey: 'GC_04:trolley_position_2',
+        showOnLabel: true,
+      }),
+    ];
+    expect(buildLabelReadings(mappings, 'realtime')).toEqual([
+      { id: 'a', caption: '주행', tagKey: 'C_171.tl_distance' },
+      { id: 'c', caption: '', tagKey: 'C_171.ts1_distance' },
+    ]);
+    expect(buildLabelReadings(mappings, 'virtual')).toEqual([
       { id: 'a', caption: '주행', tagKey: 'GC_04:gantry_position' },
       { id: 'c', caption: '', tagKey: 'GC_04:trolley_position_2' },
     ]);
   });
 
+  it('활성 슬롯에 키가 없는 맵핑은 줄도 없다', () => {
+    const virtualOnly = [
+      mapping({ realtimeTagKey: undefined, showOnLabel: true }),
+    ];
+    expect(buildLabelReadings(virtualOnly, 'realtime')).toHaveLength(0);
+    expect(buildLabelReadings(virtualOnly, 'virtual')).toHaveLength(1);
+  });
+
   it('관절 대상 맵핑도 값을 보일 수 있다', () => {
     expect(
-      buildLabelReadings([
-        mapping({
-          id: 'j',
-          target: { kind: 'joint', jointId: 'joint-1' },
-          tagKey: 'LLC_002:luff_angle',
-          showOnLabel: true,
-        }),
-      ]),
+      buildLabelReadings(
+        [
+          mapping({
+            id: 'j',
+            target: { kind: 'joint', jointId: 'joint-1' },
+            virtualTagKey: 'LLC_002:luff_angle',
+            showOnLabel: true,
+          }),
+        ],
+        'virtual',
+      ),
     ).toHaveLength(1);
   });
 
   it('표시를 끈 맵핑은 이름이 있어도 담지 않는다', () => {
-    expect(buildLabelReadings([mapping({ caption: '주행' })])).toHaveLength(0);
+    expect(
+      buildLabelReadings([mapping({ caption: '주행' })], 'realtime'),
+    ).toHaveLength(0);
   });
 
   it('showOnLabel 이 true 가 아닌 오염값은 표시하지 않는다', () => {
@@ -56,20 +74,23 @@ describe('buildLabelReadings', () => {
       mapping({ id: 'm2', showOnLabel: 1 as unknown as boolean }),
       mapping({ id: 'm3', showOnLabel: false }),
     ];
-    expect(buildLabelReadings(polluted)).toHaveLength(0);
+    expect(buildLabelReadings(polluted, 'realtime')).toHaveLength(0);
   });
 
   it('태그가 빈 맵핑은 건너뛴다', () => {
     expect(
-      buildLabelReadings([mapping({ tagKey: '', showOnLabel: true })]),
+      buildLabelReadings(
+        [mapping({ realtimeTagKey: '', showOnLabel: true })],
+        'realtime',
+      ),
     ).toHaveLength(0);
   });
 
   it('보일 것이 없으면 늘 같은 빈 배열 참조를 돌려준다', () => {
-    const none = buildLabelReadings(undefined);
+    const none = buildLabelReadings(undefined, 'realtime');
     expect(none).toEqual([]);
-    expect(buildLabelReadings([])).toBe(none);
-    expect(buildLabelReadings([mapping()])).toBe(none);
+    expect(buildLabelReadings([], 'realtime')).toBe(none);
+    expect(buildLabelReadings([mapping()], 'virtual')).toBe(none);
   });
 });
 

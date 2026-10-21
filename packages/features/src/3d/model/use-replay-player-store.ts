@@ -1,5 +1,9 @@
 import { create } from 'zustand';
-import { toTagNumber, type ReplayLiteFrame } from '@crane/domain/monitoring';
+import {
+  buildCraneTagKey,
+  toTagNumber,
+  type ReplayLiteFrame,
+} from '@crane/domain/monitoring';
 import { rigValueStore } from './rig-value-store';
 import { notifySceneSeek } from './scene-seek-signal';
 import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
@@ -18,8 +22,6 @@ function applyReplayFrame(
   }
 
   for (const crane of frame.cranes) {
-    const craneId = crane.craneId.replace(/-/g, '_');
-
     for (const [tagCode, raw] of Object.entries(crane.values)) {
       // 상태 비트는 어댑터가 'true'/'false' 로 싣는다 — 0/1 로 되돌려 실시간과
       // 같은 값이 버스에 흐르게 한다.
@@ -28,7 +30,7 @@ function applyReplayFrame(
         continue;
       }
 
-      publishTagValue(`${craneId}:${tagCode}`, value, options);
+      publishTagValue(buildCraneTagKey(crane.craneId, tagCode), value, options);
     }
   }
 }

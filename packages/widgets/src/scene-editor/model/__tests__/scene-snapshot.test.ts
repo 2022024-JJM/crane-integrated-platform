@@ -405,12 +405,12 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
     const a = {
       id: 'm-a',
       target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-      tagKey: 'k',
+      realtimeTagKey: 'k',
     } as const;
     const b = {
       id: 'm-b',
       target: { kind: 'joint', jointId: 'luff' },
-      tagKey: 'k2',
+      virtualTagKey: 'k2',
     } as const;
     expect(
       isSceneInfoEqual(
@@ -444,7 +444,16 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
       isSceneInfoEqual(
         scene({ models: [model({ tagMappings: [a] })] }),
         scene({
-          models: [model({ tagMappings: [{ ...a, tagKey: 'other' }] })],
+          models: [model({ tagMappings: [{ ...a, realtimeTagKey: 'other' }] })],
+        }),
+      ),
+    ).toBe(false);
+    // 가상 슬롯만 바뀌어도 다르다 — 빠지면 시뮬레이션 태그 연결이 저장되지 않는다.
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({
+          models: [model({ tagMappings: [{ ...a, virtualTagKey: 'v' }] })],
         }),
       ),
     ).toBe(false);
@@ -454,6 +463,15 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
         scene({ models: [model({ tagMappings: [{ ...a, scale: 2 }] })] }),
       ),
     ).toBe(false);
+    // 슬롯 없음 ≡ 빈 문자열
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({
+          models: [model({ tagMappings: [{ ...a, virtualTagKey: '' }] })],
+        }),
+      ),
+    ).toBe(true);
     // 필드 없음 ≡ 빈 배열
     expect(
       isSceneInfoEqual(
@@ -783,14 +801,16 @@ describe('isSceneInfoEqual — 모델 영역(zones)', () => {
 });
 
 describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
-  const tags = { controlOn: 'A:on', bypass: 'A:bypass' };
+  const rt = (key: string) => ({ realtimeTagKey: key });
+  const tags = { controlOn: rt('A:on'), bypass: rt('A:bypass') };
 
-  it('역할 추가·삭제·키 변경은 각각 다르다', () => {
+  it('역할 추가·삭제·키 변경·가상 슬롯 변경은 각각 다르다', () => {
     const base = scene({ models: [model({ statusTags: tags })] });
     for (const next of [
-      { ...tags, fault: 'A:fault' },
-      { controlOn: 'A:on' },
-      { ...tags, bypass: 'A:other' },
+      { ...tags, fault: rt('A:fault') },
+      { controlOn: rt('A:on') },
+      { ...tags, bypass: rt('A:other') },
+      { ...tags, bypass: { ...tags.bypass, virtualTagKey: 'V:bypass' } },
     ]) {
       expect(
         isSceneInfoEqual(
@@ -805,7 +825,9 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
     expect(
       isSceneInfoEqual(
         scene({ models: [model()] }),
-        scene({ models: [model({ statusTags: { freeSwing: 'A:swing' } })] }),
+        scene({
+          models: [model({ statusTags: { freeSwing: rt('A:swing') } })],
+        }),
       ),
     ).toBe(false);
   });
@@ -816,14 +838,16 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
         scene({ models: [model({ statusTags: tags })] }),
         scene({
           models: [
-            model({ statusTags: { bypass: 'A:bypass', controlOn: 'A:on' } }),
+            model({
+              statusTags: { bypass: rt('A:bypass'), controlOn: rt('A:on') },
+            }),
           ],
         }),
       ),
     ).toBe(true);
   });
 
-  it('필드 없음·빈 객체·빈 문자열은 같은 상태다', () => {
+  it('필드 없음·빈 객체·빈 슬롯은 같은 상태다', () => {
     const none = scene({ models: [model()] });
     expect(
       isSceneInfoEqual(none, scene({ models: [model({ statusTags: {} })] })),
@@ -831,7 +855,13 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
     expect(
       isSceneInfoEqual(
         none,
-        scene({ models: [model({ statusTags: { controlOn: '' } })] }),
+        scene({ models: [model({ statusTags: { controlOn: {} } })] }),
+      ),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        none,
+        scene({ models: [model({ statusTags: { controlOn: rt('') } })] }),
       ),
     ).toBe(true);
   });
@@ -839,11 +869,18 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
   it('스냅샷(JSON)에도 실린다 — 저장 직전 정규화를 거친 값으로', () => {
     const snapshot = createSceneSnapshot(
       scene({
-        models: [model({ statusTags: { controlOn: ' A:on ', fault: '' } })],
+        models: [
+          model({
+            statusTags: {
+              controlOn: { realtimeTagKey: ' A:on ', virtualTagKey: '' },
+              fault: rt(''),
+            },
+          }),
+        ],
       }),
     );
     expect(JSON.parse(snapshot ?? '{}').models[0].statusTags).toEqual({
-      controlOn: 'A:on',
+      controlOn: { realtimeTagKey: 'A:on' },
     });
   });
 
@@ -851,14 +888,14 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
     const base = scene({ models: [model({ statusTags: tags })] });
     for (const role of ['commError', 'slowdown', 'endstop'] as const) {
       const linked = scene({
-        models: [model({ statusTags: { ...tags, [role]: 'A:bit' } })],
+        models: [model({ statusTags: { ...tags, [role]: rt('A:bit') } })],
       });
       expect(isSceneInfoEqual(base, linked)).toBe(false);
       expect(
         isSceneInfoEqual(
           linked,
           scene({
-            models: [model({ statusTags: { ...tags, [role]: 'A:other' } })],
+            models: [model({ statusTags: { ...tags, [role]: rt('A:other') } })],
           }),
         ),
       ).toBe(false);
@@ -866,7 +903,7 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
         isSceneInfoEqual(
           linked,
           scene({
-            models: [model({ statusTags: { [role]: 'A:bit', ...tags } })],
+            models: [model({ statusTags: { [role]: rt('A:bit'), ...tags } })],
           }),
         ),
       ).toBe(true);
@@ -877,10 +914,14 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
     expect(
       isSceneInfoEqual(
         scene({
-          models: [model({ statusTags: { slowdown: 'A:a', endstop: 'A:b' } })],
+          models: [
+            model({ statusTags: { slowdown: rt('A:a'), endstop: rt('A:b') } }),
+          ],
         }),
         scene({
-          models: [model({ statusTags: { slowdown: 'A:b', endstop: 'A:a' } })],
+          models: [
+            model({ statusTags: { slowdown: rt('A:b'), endstop: rt('A:a') } }),
+          ],
         }),
       ),
     ).toBe(false);
@@ -892,17 +933,17 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
         models: [
           model({
             statusTags: {
-              endstop: ' A:end ',
-              slowdown: 'A:slow',
-              commError: '',
+              endstop: rt(' A:end '),
+              slowdown: { virtualTagKey: 'V:slow' },
+              commError: rt(''),
             },
           }),
         ],
       }),
     );
     expect(JSON.parse(snapshot ?? '{}').models[0].statusTags).toEqual({
-      slowdown: 'A:slow',
-      endstop: 'A:end',
+      slowdown: { virtualTagKey: 'V:slow' },
+      endstop: { realtimeTagKey: 'A:end' },
     });
   });
 });
@@ -1062,7 +1103,7 @@ describe('isSceneInfoEqual — 태그 맵핑의 라벨 표시', () => {
         {
           id: 'tm1',
           target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-          tagKey: 'GC_04:gantry_position',
+          virtualTagKey: 'GC_04:gantry_position',
           ...overrides,
         },
       ],

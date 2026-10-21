@@ -3,10 +3,12 @@ import type {
   EquipmentRuntimeStatus,
 } from '@crane/core/types/status';
 import {
+  resolveStatusTagKeys,
   STATUS_TAG_ROLES,
-  type ModelStatusTags,
+  type ResolvedStatusTagKeys,
   type SavedModelInfo,
   type StatusTagRole,
+  type TagSlot,
 } from '@crane/domain/3d';
 import {
   DEFAULT_STATUS_WINDOWS,
@@ -50,18 +52,22 @@ export interface ModelStatusKeys {
   motion: string[];
   /** 수신 판정 키 — 움직임 키 + 상태 태그 키. */
   liveness: string[];
-  status: ModelStatusTags;
+  /** 역할 → 활성 슬롯의 키. */
+  status: ResolvedStatusTagKeys;
 }
 
+/** 모델의 판정 키를 활성 슬롯(lib/tag-slot.ts)으로 푼다. */
 export function collectModelStatusKeys(
   model: Pick<SavedModelInfo, 'tagMappings' | 'statusTags'>,
+  slot: TagSlot,
 ): ModelStatusKeys {
-  const motion = collectModelTagKeys(model);
+  const motion = collectModelTagKeys(model, slot);
   const liveness = [...motion];
   const seen = new Set(motion);
-  const status: ModelStatusTags = {};
+  const resolved = resolveStatusTagKeys(model.statusTags, slot);
+  const status: ResolvedStatusTagKeys = {};
   for (const role of STATUS_TAG_ROLES) {
-    const key = model.statusTags?.[role];
+    const key = resolved[role];
     if (typeof key !== 'string' || key.length === 0) continue;
     status[role] = key;
     if (seen.has(key)) continue;

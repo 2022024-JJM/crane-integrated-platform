@@ -1,4 +1,8 @@
-import type { TagMapping } from '../model/tag-mapping-types';
+import {
+  getSlotTagKey,
+  type TagMapping,
+  type TagSlot,
+} from '../model/tag-mapping-types';
 
 /**
  * 모델 라벨 위에 쌓이는 태그 값(ACMS 매뉴얼 II-6 의 GC 원점 거리가 출발점).
@@ -28,22 +32,24 @@ export const LABEL_READING_DECIMALS = 1;
 const NO_READINGS: readonly ModelLabelReading[] = [];
 
 /**
- * 라벨에 보일 맵핑만 골라 목록으로 만든다. 없으면 **같은 빈 배열 참조**를
- * 돌려준다 — 모델마다 새 배열을 만들면 memo 된 GltfModel 이 렌더마다 다시
- * 그려진다.
+ * 라벨에 보일 맵핑만 골라 목록으로 만든다. 키는 활성 슬롯의 것 — 그 슬롯에
+ * 키가 없는 맵핑은 줄도 없다. 없으면 **같은 빈 배열 참조**를 돌려준다 —
+ * 모델마다 새 배열을 만들면 memo 된 GltfModel 이 렌더마다 다시 그려진다.
  */
 export function buildLabelReadings(
   mappings: readonly TagMapping[] | undefined,
+  slot: TagSlot,
 ): readonly ModelLabelReading[] {
   if (!mappings) return NO_READINGS;
   const readings: ModelLabelReading[] = [];
   for (const mapping of mappings) {
     if (mapping.showOnLabel !== true) continue;
-    if (!mapping.tagKey) continue;
+    const tagKey = getSlotTagKey(mapping, slot);
+    if (!tagKey) continue;
     readings.push({
       id: mapping.id,
       caption: mapping.caption ?? '',
-      tagKey: mapping.tagKey,
+      tagKey,
     });
   }
   return readings.length > 0 ? readings : NO_READINGS;

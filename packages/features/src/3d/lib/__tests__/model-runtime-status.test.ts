@@ -20,22 +20,24 @@ function activities(map: Record<string, TagActivity>) {
 }
 
 describe('collectModelTagKeys', () => {
-  it('맵핑의 tagKey 를 순서대로, 중복·빈 키 제거', () => {
+  it('맵핑의 활성 슬롯 키를 순서대로, 중복·빈 키 제거', () => {
     const model = {
       tagMappings: [
-        { tagKey: 'A:x' },
-        { tagKey: 'A:y' },
-        { tagKey: 'A:x' },
-        { tagKey: '' },
-        { tagKey: 42 },
+        { realtimeTagKey: 'A:x', virtualTagKey: 'V:x' },
+        { realtimeTagKey: 'A:y' },
+        { realtimeTagKey: 'A:x' },
+        { realtimeTagKey: '' },
+        { realtimeTagKey: 42 },
+        { virtualTagKey: 'V:only' },
       ],
     } as unknown as Parameters<typeof collectModelTagKeys>[0];
-    expect(collectModelTagKeys(model)).toEqual(['A:x', 'A:y']);
+    expect(collectModelTagKeys(model, 'realtime')).toEqual(['A:x', 'A:y']);
+    expect(collectModelTagKeys(model, 'virtual')).toEqual(['V:x', 'V:only']);
   });
 
   it('맵핑 없음은 빈 배열', () => {
-    expect(collectModelTagKeys({})).toEqual([]);
-    expect(collectModelTagKeys({ tagMappings: [] })).toEqual([]);
+    expect(collectModelTagKeys({}, 'realtime')).toEqual([]);
+    expect(collectModelTagKeys({ tagMappings: [] }, 'virtual')).toEqual([]);
   });
 });
 

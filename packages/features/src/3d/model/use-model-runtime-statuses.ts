@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { SavedSceneInfo, TagSlot } from '@crane/domain/3d';
 import {
   collectModelStatusKeys,
   isSameLabelStateRecord,
@@ -50,6 +50,12 @@ export interface UseModelRuntimeStatusesOptions {
 
 /**
  * 씬 모델별 운전 상태·라벨 표시 상태·외곽선 — 태그 값 버스의 live 캐시를
+ * 1초마다 읽어 판정한다. 판정 키는 활성 슬롯(`slot`, lib/tag-slot.ts)의
+ * 것이다 — 슬롯이 바뀌면 키 목록을 다시 만든다.
+ */
+
+/**
+ * 씬 모델별 운전 상태·라벨 표시 상태·외곽선 — 태그 값 버스의 live 캐시를
  * 1초마다 읽어 판정한다. 운전 상태는 라벨의 상자 색(tone) 그 자체다
  * (lib/model-label-state.ts `resolveLabelState`) — 따로 판정하면 HUD 의 가동
  * 수와 녹색 라벨 수가 어긋난다. 외곽선의 수신 끊김도 같은 tone 에서 온다
@@ -64,15 +70,16 @@ export interface UseModelRuntimeStatusesOptions {
  */
 export function useModelStatusRecords(
   sceneInfo: SavedSceneInfo | null,
+  slot: TagSlot,
   { paused = false, timeScale = 1 }: UseModelRuntimeStatusesOptions = {},
 ): ModelStatusRecords {
   const keysByModel = useMemo(() => {
     const map = new Map<string, ModelStatusKeys>();
     for (const model of sceneInfo?.models ?? []) {
-      map.set(model.id, collectModelStatusKeys(model));
+      map.set(model.id, collectModelStatusKeys(model, slot));
     }
     return map;
-  }, [sceneInfo]);
+  }, [sceneInfo, slot]);
 
   const [records, setRecords] = useState<ModelStatusRecords>(EMPTY);
 
@@ -123,7 +130,8 @@ export function useModelStatusRecords(
 /** 운전 상태만 — 라벨을 그리지 않는 소비자(3D 플레이 통계 기록기)용. */
 export function useModelRuntimeStatuses(
   sceneInfo: SavedSceneInfo | null,
+  slot: TagSlot,
   options?: UseModelRuntimeStatusesOptions,
 ): RuntimeStatusRecord {
-  return useModelStatusRecords(sceneInfo, options).runtime;
+  return useModelStatusRecords(sceneInfo, slot, options).runtime;
 }

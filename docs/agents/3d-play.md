@@ -107,7 +107,7 @@ i18n 은 `monitoring:play3d.*`.
 ### 장비 운전 상태 · 라벨 표시 상태 · 외곽선
 
 - `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트·저널이 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
-- 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 tagKey 들로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
+- 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 활성 슬롯 키들(리플레이 소스는 실시간 키, 시뮬레이션 소스는 가상 키 — `resolveActiveTagSlot`, `docs/agents/tag-mapping-rig.md`)로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
 - **라벨 표시 상태** `EquipmentLabelState` = tone(fault · running · standby · off · offline · unknown) + 아이콘 둘(bypass · freeSwing). 앞의 넷은 ACMS 의 Crane ID Box 네 가지이고, 모델의 상태 태그(`statusTags` — `docs/agents/tag-mapping-rig.md`)로 가른다. 판정·우선순위는 `model-label-state.ts`(`resolveLabelState`, 비트 문턱 `STATUS_BIT_ON_THRESHOLD`, 테스트 대상). tone 이 곧 운전 상태다.
   - 수신 판정에는 상태 태그 키도 들어가고, 움직임 판정에는 축 태그(`tagMappings`)만 들어간다.
   - 운전 전원 off 가 움직임보다 앞선다. 받은 적이 없거나 수신이 끊기면 아이콘을 끈다(낡은 값).

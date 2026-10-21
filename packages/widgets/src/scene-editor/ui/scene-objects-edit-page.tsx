@@ -31,6 +31,7 @@ import {
   useSceneEditorViewStore,
   useTagBindingSource,
   stopSimulation,
+  EDITOR_TAG_SLOT,
   type SceneTransformMode,
 } from '@crane/features/3d';
 import {
@@ -378,7 +379,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // "시뮬레이션" 탭은 2026-09-17 에 뺐다) — 화면에 들어올 때와 떠날 때
   // 시뮬레이션을 **종료**(시간 0·시나리오 해제·배속 1)하는 것은 가상 태그
   // 관리 페이지 ▶ 로 켜진 전역 러너가 여기로 넘어오지 않게 하는 방어다.
-  useTagBindingSource(sceneInfo, true);
+  // 슬롯은 모드 없는 화면의 기본(실시간) — 에디터에는 값 생산자가 없다.
+  useTagBindingSource(sceneInfo, true, EDITOR_TAG_SLOT);
   useEffect(() => {
     stopSimulation();
     return () => stopSimulation();

@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  BayChip,
+  collectBays,
+  countOnline,
+  filterCraneIds,
   getCraneFeedUrl,
   useCraneSnapshotStore,
   type CraneFeedConnection,
 } from '@crane/features/3d';
-import { Button } from '@crane/ui/atoms/button';
-import { Input } from '@crane/ui/atoms/input';
-import { collectBays, countOnline, filterCraneIds } from '../lib/crane-filter';
-import { useNow } from '../model/use-now';
+import { useNow } from '@crane/core/lib/use-now';
+import { SearchField } from '@crane/ui/molecules/search-field';
 import { ConnectionSettings } from './connection-settings';
 import { ConnectionStatus } from './connection-status';
 import { CraneCard } from './crane-card';
@@ -45,13 +47,12 @@ export function CraneList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Input
-          type="search"
+        <SearchField
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('monitoring:tags.searchCrane')}
           aria-label={t('monitoring:tags.searchCrane')}
-          className="bg-muted h-7 w-60 max-w-full text-xs"
+          className="w-60 max-w-full flex-none"
         />
         <div
           role="group"
@@ -115,33 +116,5 @@ export function CraneList({
         </div>
       )}
     </div>
-  );
-}
-
-function BayChip({
-  label,
-  count,
-  pressed,
-  mono,
-  onClick,
-}: {
-  label: string;
-  count: number;
-  pressed: boolean;
-  mono?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      variant={pressed ? 'secondary' : 'outline'}
-      size="xs"
-      aria-pressed={pressed}
-      className="rounded-full font-normal"
-      onClick={onClick}
-    >
-      <span className={mono ? 'font-mono' : undefined}>{label}</span>
-      <span className="text-muted-foreground">{count}</span>
-    </Button>
   );
 }

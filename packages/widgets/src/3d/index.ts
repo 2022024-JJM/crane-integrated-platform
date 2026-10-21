@@ -12,7 +12,6 @@ export { PalettePlacedObjects } from './ui/palette-placed-objects';
 export { PaletteMapSection } from './ui/palette-map-section';
 export { PaletteViewSection } from './ui/palette-view-section';
 export { PaletteEnvironmentSection } from './ui/palette-environment-section';
-export { TagKeyCombobox } from './ui/tag-key-combobox';
 export {
   getPlacedObjectItems,
   type PlacedObjectItem,

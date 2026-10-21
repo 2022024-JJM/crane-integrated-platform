@@ -236,29 +236,29 @@ describe('tagRowLabel', () => {
     expect(tagRowLabel('v2', sim)).toEqual({ label: 'v2', unit: '' });
   });
   it('시뮬레이션: 정의가 없으면 키 그대로', () => {
-    expect(tagRowLabel('gc_01:mh1_weight', sim)).toEqual({
-      label: 'gc_01:mh1_weight',
+    expect(tagRowLabel('gc_01.mh1_weight', sim)).toEqual({
+      label: 'gc_01.mh1_weight',
       unit: '',
     });
   });
   it('리플레이: craneKey:tagCode → 장비 이름 · 카탈로그 표시명·단위', () => {
-    expect(tagRowLabel('gc_01:mh1_weight', replay)).toEqual({
+    expect(tagRowLabel('gc_01.mh1_weight', replay)).toEqual({
       label: 'GC#1 · MH#1 Weight',
       unit: 'ton',
     });
   });
   it('리플레이: 하이픈 craneId 는 밑줄로 맞추고, 장비 이름이 비면 craneKey', () => {
-    expect(tagRowLabel('goliath_crane_1:ah2_height', replay)).toEqual({
+    expect(tagRowLabel('goliath_crane_1.ah2_height', replay)).toEqual({
       label: 'goliath_crane_1 · AH#2 Height',
       unit: 'm',
     });
   });
   it('리플레이: 씬에 크레인이 없거나 scene 이 null 이면 craneKey 를 이름으로', () => {
-    expect(tagRowLabel('zz_9:mh1_height', replay)).toEqual({
+    expect(tagRowLabel('zz_9.mh1_height', replay)).toEqual({
       label: 'zz_9 · MH#1 Height',
       unit: 'm',
     });
-    expect(tagRowLabel('gc_01:mh1_height', { ...replay, scene: null })).toEqual(
+    expect(tagRowLabel('gc_01.mh1_height', { ...replay, scene: null })).toEqual(
       { label: 'gc_01 · MH#1 Height', unit: 'm' },
     );
   });
@@ -268,7 +268,7 @@ describe('tagRowLabel', () => {
     }
   });
   it('리플레이: 카탈로그 단위가 없으면 빈 문자열', () => {
-    expect(tagRowLabel('gc_01:heartbeat', replay)).toEqual({
+    expect(tagRowLabel('gc_01.heartbeat', replay)).toEqual({
       label: 'GC#1 · Heartbeat',
       unit: '',
     });

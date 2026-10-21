@@ -122,9 +122,9 @@ describe('useCraneSnapshotRealtimeBridge', () => {
     expect(buffer()).toEqual([]);
     await flushRest();
     expect(buffer()).toEqual([
-      { key: 'C_171:tl_distance', value: 12.5 },
-      { key: 'C_171:heartbeat', value: 1 },
-      { key: 'C_171:e_stop_on', value: 0 },
+      { key: 'C_171.tl_distance', value: 12.5 },
+      { key: 'C_171.heartbeat', value: 1 },
+      { key: 'C_171.e_stop_on', value: 0 },
     ]);
   });
 
@@ -136,9 +136,9 @@ describe('useCraneSnapshotRealtimeBridge', () => {
       );
     });
     expect(buffer()).toEqual([
-      { key: 'C_1:a', value: 1 },
-      { key: 'C_1:b', value: 2 },
-      { key: 'C_2:a', value: 3 },
+      { key: 'C_1.a', value: 1 },
+      { key: 'C_1.b', value: 2 },
+      { key: 'C_2.a', value: 3 },
     ]);
     drain();
     // a 는 그대로, b 만 바뀐 묶음 — 바뀐 태그만이 아니라 C_1 전부가 온다.
@@ -146,8 +146,8 @@ describe('useCraneSnapshotRealtimeBridge', () => {
       stomp.topicHandler?.(batch(crane('C_1', { a: 1, b: 5 })));
     });
     expect(buffer()).toEqual([
-      { key: 'C_1:a', value: 1 },
-      { key: 'C_1:b', value: 5 },
+      { key: 'C_1.a', value: 1 },
+      { key: 'C_1.b', value: 5 },
     ]);
   });
 
@@ -157,8 +157,8 @@ describe('useCraneSnapshotRealtimeBridge', () => {
       .applySnapshots([crane('C_7', { x: 4 }), crane('C_8', { x: 9 })], 0);
     renderHook(() => useCraneSnapshotRealtimeBridge(true));
     expect(buffer()).toEqual([
-      { key: 'C_7:x', value: 4 },
-      { key: 'C_8:x', value: 9 },
+      { key: 'C_7.x', value: 4 },
+      { key: 'C_8.x', value: 9 },
     ]);
   });
 
@@ -171,7 +171,7 @@ describe('useCraneSnapshotRealtimeBridge', () => {
     act(() => useRealtimeStore.getState().hold());
     expect(buffer()).toEqual([]);
     act(() => useRealtimeStore.getState().release());
-    expect(buffer()).toEqual([{ key: 'C_7:x', value: 4 }]);
+    expect(buffer()).toEqual([{ key: 'C_7.x', value: 4 }]);
     drain();
     act(() => useRealtimeStore.getState().release());
     expect(buffer()).toEqual([]);
@@ -198,7 +198,7 @@ describe('useCraneSnapshotRealtimeBridge', () => {
     act(() => {
       stomp.topicHandler?.(batch(broken));
     });
-    expect(buffer()).toEqual([{ key: 'C_1:ok', value: 1 }]);
+    expect(buffer()).toEqual([{ key: 'C_1.ok', value: 1 }]);
   });
 
   it('언마운트하면 피드를 놓고 그 뒤의 스냅샷·보류 해제는 쌓지 않는다', () => {

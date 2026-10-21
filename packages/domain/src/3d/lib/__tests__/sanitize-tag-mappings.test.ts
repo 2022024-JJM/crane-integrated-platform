@@ -3,6 +3,7 @@ import {
   convertLegacyRigBindings,
   convertLegacyValueMapList,
   resolveModelTagMappings,
+  sanitizeTagKeySlots,
   sanitizeTagMappings,
 } from '../sanitize-tag-mappings';
 import type { RigDefinition } from '../../model/rig-types';
@@ -35,10 +36,49 @@ function node(
   return {
     id,
     target: { kind: 'node', node: path, channel: 'position', axis },
-    tagKey: 'C_1:pos',
+    realtimeTagKey: 'C_1.pos',
     ...rest,
   };
 }
+
+describe('sanitizeTagKeySlots', () => {
+  it('두 슬롯을 trim 해 싣고, 빈 슬롯은 필드를 생략한다', () => {
+    expect(
+      sanitizeTagKeySlots({ realtimeTagKey: ' C_1.z ', virtualTagKey: '' }),
+    ).toEqual({ realtimeTagKey: 'C_1.z' });
+    expect(sanitizeTagKeySlots({ virtualTagKey: ' GC_04.z ' })).toEqual({
+      virtualTagKey: 'GC_04.z',
+    });
+    expect(
+      sanitizeTagKeySlots({ realtimeTagKey: 'C_1.z', virtualTagKey: 'V.z' }),
+    ).toEqual({ realtimeTagKey: 'C_1.z', virtualTagKey: 'V.z' });
+  });
+
+  it('레거시 단일 tagKey 는 실시간 슬롯으로 — 명시 realtimeTagKey 가 있으면 그것이 이긴다', () => {
+    expect(sanitizeTagKeySlots({ tagKey: ' C_1.z ' })).toEqual({
+      realtimeTagKey: 'C_1.z',
+    });
+    expect(
+      sanitizeTagKeySlots({ tagKey: 'old', realtimeTagKey: 'new' }),
+    ).toEqual({ realtimeTagKey: 'new' });
+    expect(sanitizeTagKeySlots({ tagKey: 'old', virtualTagKey: 'v' })).toEqual({
+      realtimeTagKey: 'old',
+      virtualTagKey: 'v',
+    });
+  });
+
+  it('둘 다 비거나 문자열이 아니거나 객체가 아니면 null', () => {
+    expect(sanitizeTagKeySlots({})).toBeNull();
+    expect(
+      sanitizeTagKeySlots({ realtimeTagKey: '  ', virtualTagKey: '' }),
+    ).toBeNull();
+    expect(
+      sanitizeTagKeySlots({ realtimeTagKey: 3, virtualTagKey: null }),
+    ).toBe(null);
+    expect(sanitizeTagKeySlots(null)).toBeNull();
+    expect(sanitizeTagKeySlots('C_1.z')).toBeNull();
+  });
+});
 
 describe('sanitizeTagMappings', () => {
   it('배열이 아니면 undefined, 비면 undefined(필드 생략)', () => {
@@ -48,46 +88,78 @@ describe('sanitizeTagMappings', () => {
     expect(sanitizeTagMappings([null, 'x', {}])).toBeUndefined();
   });
 
-  it('유효 항목은 tagKey trim·scale/offset 유한수만 살려 통과한다', () => {
+  it('유효 항목은 키 trim·scale/offset 유한수만 살려 통과한다', () => {
     expect(
       sanitizeTagMappings([
-        node('m1', { tagKey: ' C_1:z ', scale: 0.1, offset: NaN }),
+        node('m1', { realtimeTagKey: ' C_1.z ', scale: 0.1, offset: NaN }),
       ]),
-    ).toEqual([node('m1', { tagKey: 'C_1:z', scale: 0.1 })]);
+    ).toEqual([node('m1', { realtimeTagKey: 'C_1.z', scale: 0.1 })]);
   });
 
-  it('id 없음·중복, 빈 tagKey, 깨진 target 은 개별로 버린다', () => {
+  it('가상 키만 있는 맵핑도 유효하다(philly 형태)', () => {
+    expect(
+      sanitizeTagMappings([
+        {
+          ...node('m1'),
+          realtimeTagKey: undefined,
+          virtualTagKey: 'GC_04.gantry_position',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'm1',
+        target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+        virtualTagKey: 'GC_04.gantry_position',
+      },
+    ]);
+  });
+
+  it('레거시 단일 tagKey 는 실시간 슬롯으로 옮기고 저장본에서 사라진다', () => {
+    const out = sanitizeTagMappings([
+      { ...node('m1'), realtimeTagKey: undefined, tagKey: 'C_171.tl_distance' },
+    ]);
+    expect(out).toEqual([
+      {
+        id: 'm1',
+        target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+        realtimeTagKey: 'C_171.tl_distance',
+      },
+    ]);
+    expect(out?.[0]).not.toHaveProperty('tagKey');
+  });
+
+  it('id 없음·중복, 두 키 모두 빈 항목, 깨진 target 은 개별로 버린다', () => {
     const out = sanitizeTagMappings([
       node('m1'),
       node('m1', { axis: 'x' }), // id 중복
       { ...node('m2', { axis: 'y' }), id: '' },
-      node('m3', { axis: 'x', tagKey: '   ' }),
+      node('m3', { axis: 'x', realtimeTagKey: '   ', virtualTagKey: ' ' }),
       {
         id: 'm4',
         target: { kind: 'node', node: '', channel: 'spin', axis: 'x' },
-        tagKey: 'k',
+        realtimeTagKey: 'k',
       },
       {
         id: 'm5',
         target: { kind: 'node', node: '', channel: 'scale', axis: 'w' },
-        tagKey: 'k',
+        realtimeTagKey: 'k',
       },
       {
         id: 'm6',
         target: { kind: 'node', node: 3, channel: 'scale', axis: 'x' },
-        tagKey: 'k',
+        realtimeTagKey: 'k',
       },
-      { id: 'm7', target: { kind: 'ghost' }, tagKey: 'k' },
-      { id: 'm8', target: null, tagKey: 'k' },
+      { id: 'm7', target: { kind: 'ghost' }, realtimeTagKey: 'k' },
+      { id: 'm8', target: null, realtimeTagKey: 'k' },
     ]);
     expect(out?.map((m) => m.id)).toEqual(['m1']);
   });
 
   it('같은 대상(노드·채널·축)은 첫 항목만 남긴다(first-wins), 다른 축은 공존', () => {
     const out = sanitizeTagMappings([
-      node('first', { tagKey: 'a' }),
-      node('second', { tagKey: 'b' }),
-      node('other-axis', { axis: 'x', tagKey: 'c' }),
+      node('first', { realtimeTagKey: 'a' }),
+      node('second', { realtimeTagKey: 'b' }),
+      node('other-axis', { axis: 'x', realtimeTagKey: 'c' }),
     ]);
     expect(out?.map((m) => m.id)).toEqual(['first', 'other-axis']);
   });
@@ -101,10 +173,10 @@ describe('sanitizeTagMappings', () => {
   });
 
   it('joint 대상: 리그 없음·없는 관절·driven 관절은 버리고, 중복 관절은 첫 항목', () => {
-    const j = (id: string, jointId: string, tagKey = 'k'): TagMapping => ({
+    const j = (id: string, jointId: string, key = 'k'): TagMapping => ({
       id,
       target: { kind: 'joint', jointId },
-      tagKey,
+      realtimeTagKey: key,
     });
     expect(sanitizeTagMappings([j('a', 'luff')])).toBeUndefined();
     expect(
@@ -120,7 +192,13 @@ describe('sanitizeTagMappings', () => {
     ).toEqual([j('a', 'luff')]);
     expect(
       sanitizeTagMappings(
-        [{ id: 'x', target: { kind: 'joint', jointId: '' }, tagKey: 'k' }],
+        [
+          {
+            id: 'x',
+            target: { kind: 'joint', jointId: '' },
+            realtimeTagKey: 'k',
+          },
+        ],
         { rig },
       ),
     ).toBeUndefined();
@@ -177,7 +255,7 @@ describe('sanitizeTagMappings — 라벨 표시(showOnLabel·caption)', () => {
     const out = sanitizeTagMappings([node('m1')]);
     expect(Object.keys(JSON.parse(JSON.stringify(out))[0]).sort()).toEqual([
       'id',
-      'tagKey',
+      'realtimeTagKey',
       'target',
     ]);
   });
@@ -190,17 +268,17 @@ describe('convertLegacyValueMapList', () => {
     scale: [2, 2, 2] as [number, number, number],
   };
 
-  it('PZ offset 은 배치 위치를 빼서 rest-Δ 로 옮긴다 (dock-in 형태)', () => {
+  it('PZ offset 은 배치 위치를 빼서 rest-Δ 로 옮기고 키는 실시간 슬롯 (dock-in 형태)', () => {
     expect(
       convertLegacyValueMapList(
-        [{ type: 'PZ', key: 'C_171:tl_distance', scale: 0.1, offset: 71 }],
+        [{ type: 'PZ', key: 'C_171.tl_distance', scale: 0.1, offset: 71 }],
         placement,
       ),
     ).toEqual([
       {
         id: 'legacy-pz',
         target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        tagKey: 'C_171:tl_distance',
+        realtimeTagKey: 'C_171.tl_distance',
         scale: 0.1,
         offset: 66,
       },
@@ -233,18 +311,18 @@ describe('convertLegacyValueMapList', () => {
       {
         id: 'legacy-ry',
         target: { kind: 'node', node: '', channel: 'rotation', axis: 'y' },
-        tagKey: 'r',
+        realtimeTagKey: 'r',
         offset: -30,
       },
       {
         id: 'legacy-rx',
         target: { kind: 'node', node: '', channel: 'rotation', axis: 'x' },
-        tagKey: 'rx',
+        realtimeTagKey: 'rx',
       },
       {
         id: 'legacy-sx',
         target: { kind: 'node', node: '', channel: 'scale', axis: 'x' },
-        tagKey: 's',
+        realtimeTagKey: 's',
         offset: -2,
       },
     ]);
@@ -265,7 +343,7 @@ describe('convertLegacyRigBindings', () => {
   it('joint 맵핑으로 옮기고 결정론적 id 를 준다', () => {
     expect(
       convertLegacyRigBindings([
-        { jointId: 'luff', key: ' C_1:luff ', scale: 0.5, offset: -1 },
+        { jointId: 'luff', key: ' C_1.luff ', scale: 0.5, offset: -1 },
         { jointId: '', key: 'k' },
         { jointId: 'x', key: '' },
         'x',
@@ -274,7 +352,7 @@ describe('convertLegacyRigBindings', () => {
       {
         id: 'legacy-joint-luff',
         target: { kind: 'joint', jointId: 'luff' },
-        tagKey: 'C_1:luff',
+        realtimeTagKey: 'C_1.luff',
         scale: 0.5,
         offset: -1,
       },
@@ -310,9 +388,9 @@ describe('resolveModelTagMappings', () => {
     const out = resolveModelTagMappings(
       {
         ...base,
-        valueMapList: [{ type: 'PZ', key: 'C_1:z', scale: 0.1, offset: 71 }],
+        valueMapList: [{ type: 'PZ', key: 'C_1.z', scale: 0.1, offset: 71 }],
         rigBindings: [
-          { jointId: 'luff', key: 'C_1:luff' },
+          { jointId: 'luff', key: 'C_1.luff' },
           { jointId: 'upper', key: 'driven' },
         ],
       },
@@ -322,14 +400,14 @@ describe('resolveModelTagMappings', () => {
       {
         id: 'legacy-pz',
         target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        tagKey: 'C_1:z',
+        realtimeTagKey: 'C_1.z',
         scale: 0.1,
         offset: 66,
       },
       {
         id: 'legacy-joint-luff',
         target: { kind: 'joint', jointId: 'luff' },
-        tagKey: 'C_1:luff',
+        realtimeTagKey: 'C_1.luff',
       },
     ]);
   });

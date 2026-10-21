@@ -3,6 +3,8 @@ import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
   formatReplayTimestamp,
   getMonitoringTagMetadata,
+  normalizeCraneKey,
+  parseCraneTagKey,
 } from '@crane/domain/monitoring';
 import type { VirtualTagDefinition } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from './model-runtime-status';
@@ -425,7 +427,7 @@ export interface TagRowLabel {
 
 /**
  * 축 표의 행 라벨 — 원시 태그 키 대신 이름·단위. 시뮬레이션은 가상 태그 정의의
- * 이름·단위, 리플레이는 버스 키 `${craneId(하이픈→밑줄)}:${tagCode}` 를 나눠
+ * 이름·단위, 리플레이는 버스 키 `${craneId(하이픈→밑줄)}.${tagCode}` 를 나눠
  * 씬 모델의 장비 이름 + 태그 카탈로그 표시명·단위. 어느 쪽도 못 풀면 키 그대로.
  */
 export function tagRowLabel(
@@ -441,14 +443,13 @@ export function tagRowLabel(
     if (!def) return { label: key, unit: '' };
     return { label: def.name || key, unit: def.unit ?? '' };
   }
-  const sep = key.indexOf(':');
-  if (sep <= 0 || sep >= key.length - 1) return { label: key, unit: '' };
-  const craneKey = key.slice(0, sep);
-  const tagCode = key.slice(sep + 1);
+  const parts = parseCraneTagKey(key);
+  if (!parts) return { label: key, unit: '' };
+  const { craneKey, tagCode } = parts;
   const model = ctx.scene?.models.find(
     (m) =>
       typeof m.craneId === 'string' &&
-      m.craneId.replace(/-/g, '_') === craneKey,
+      normalizeCraneKey(m.craneId) === craneKey,
   );
   const meta = getMonitoringTagMetadata(tagCode);
   return {

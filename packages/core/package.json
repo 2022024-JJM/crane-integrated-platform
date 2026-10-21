@@ -31,6 +31,7 @@
     "./lib/asset-url": "./src/lib/asset-url.ts",
     "./lib/use-section-collapse-group": "./src/lib/use-section-collapse-group.ts",
     "./lib/use-fullscreen": "./src/lib/use-fullscreen.ts",
+    "./lib/use-now": "./src/lib/use-now.ts",
     "./lib/use-ime-safe-blur": "./src/lib/use-ime-safe-blur.ts",
     "./lib/export-csv": "./src/lib/export-csv.ts",
     "./lib/top-view-pose": "./src/lib/top-view-pose.ts",

@@ -143,33 +143,46 @@ export {
   convertLegacyRigBindings,
   convertLegacyValueMapList,
   resolveModelTagMappings,
+  sanitizeTagKeySlots,
   sanitizeTagMappings,
 } from './lib/sanitize-tag-mappings';
 export {
+  getPrimaryTagKey,
   getRigOccupiedTargetKeys,
+  getSlotField,
+  getSlotTagKey,
   getTagMappingTargetKey,
   getTagMappingUnit,
+  hasAnyTagKey,
+  isTagKeySlotsEqual,
+  setSlotTagKey,
   TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
+  TAG_SLOTS,
 } from './model/tag-mapping-types';
 export { sanitizeModelStatusTags } from './lib/sanitize-status-tags';
 export {
   LABEL_STATUS_TAG_ROLES,
   OUTLINE_STATUS_TAG_ROLES,
+  resolveStatusTagKeys,
   STATUS_TAG_ROLES,
 } from './model/status-tag-types';
 export type {
   ModelStatusTags,
   OutlineStatusTagRole,
+  ResolvedStatusTagKeys,
+  StatusTagBinding,
   StatusTagRole,
 } from './model/status-tag-types';
 export type {
+  TagKeySlots,
   TagMapping,
   TagMappingChannel,
   TagMappingJointTarget,
   TagMappingNodeTarget,
   TagMappingTarget,
   TagMappingUnit,
+  TagSlot,
 } from './model/tag-mapping-types';
 export {
   getDrivenJointIds,

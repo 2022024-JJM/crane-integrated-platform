@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import {
   resolveCraneLiveState,
   type CraneSnapshotEntry,
-} from '@crane/features/3d';
+} from '../lib/crane-snapshot-stats';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
 

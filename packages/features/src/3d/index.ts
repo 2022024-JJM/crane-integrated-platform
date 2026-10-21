@@ -370,10 +370,41 @@ export {
   type CraneTagStat,
 } from './lib/crane-snapshot-stats';
 export {
+  TAG_CATEGORIES,
+  buildTagRows,
+  compareTagRows,
+  countTagRowsByCategory,
+  filterTagRows,
+  resolveBoolDisplay,
+  type BoolDisplay,
+  type BoolTone,
+  type TagCategory,
+  type TagRow,
+} from './lib/tag-rows';
+export {
+  collectBays,
+  countOnline,
+  filterCraneIds,
+  type BayOption,
+} from './lib/crane-filter';
+export {
+  formatClock,
+  formatTagNumber,
+  resolveAge,
+  type AgeLabel,
+} from './lib/format-clock';
+export { CraneLiveDot } from './ui/crane-live-dot';
+export { BayChip } from './ui/bay-chip';
+export {
   buildTagMappingIndex,
   collectSceneTagKeys,
   type TagMappingIndex,
 } from './lib/tag-mapping-index';
+export {
+  EDITOR_TAG_SLOT,
+  resolveActiveTagSlot,
+  tagSlotOfPlay3dSource,
+} from './lib/tag-slot';
 export {
   resetVirtualTagLoadState,
   useVirtualTagStore,

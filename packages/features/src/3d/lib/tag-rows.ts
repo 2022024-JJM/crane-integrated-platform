@@ -1,5 +1,5 @@
 import { getMonitoringTagMetadata } from '@crane/domain/monitoring';
-import type { CraneSnapshotEntry, CraneTagStat } from '@crane/features/3d';
+import type { CraneSnapshotEntry, CraneTagStat } from './crane-snapshot-stats';
 
 export type TagCategory = 'datetime' | 'measurement' | 'status';
 

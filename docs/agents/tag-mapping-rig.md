@@ -8,19 +8,22 @@
 
 | 관심사 | 위치 |
 |---|---|
-| 태그 맵핑 스키마 / 방어 / 레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/domain/src/3d/lib/sanitize-tag-mappings.ts` |
+| 태그 맵핑 스키마(두 슬롯) / 방어 / 레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`(`TagSlot`·`TagKeySlots`·`getSlotTagKey`·`setSlotTagKey`·`isTagKeySlotsEqual`), `packages/domain/src/3d/lib/sanitize-tag-mappings.ts`(`sanitizeTagKeySlots`) |
+| 활성 슬롯 해석(모드·3D 플레이 소스 → 실시간|가상) | `packages/features/src/3d/lib/tag-slot.ts`(`resolveActiveTagSlot`·`tagSlotOfPlay3dSource`·`EDITOR_TAG_SLOT`, 테스트 대상) |
+| 크레인 태그 키 조립·파싱(`${craneId}.${tagCode}`) | `packages/domain/src/monitoring/lib/crane-tag-key.ts`(`buildCraneTagKey`·`parseCraneTagKey`·`normalizeCraneKey`) |
 | 라벨의 태그 값 줄(목록 구성·표기 / 값 읽기 / 표시) | `packages/domain/src/3d/lib/label-reading.ts`(테스트 대상), `packages/features/src/3d/model/tag-value-bus.ts`(`readTagLiveValue`), `packages/domain/src/3d/ui/model-label.tsx` |
 | 상태 태그 스키마 / 방어 / 편집 로직 / 미리보기 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/3d/lib/sanitize-status-tags.ts`, `packages/widgets/src/3d/lib/status-tag-editor.ts`, `packages/features/src/3d/model/use-label-preview-store.ts` |
 | 서버 값 → 버스 숫자 | `packages/domain/src/monitoring/lib/tag-number.ts` (`toTagNumber`) |
 | 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스 | `packages/features/src/3d/model/tag-value-bus.ts`, `packages/features/src/3d/lib/tag-mapping-index.ts`, `packages/features/src/3d/model/use-tag-binding-source.ts` |
 | 채널 Δ 적용 / 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/apply-channel.ts`, `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts` |
-| 태그 맵핑 편집 UI(인스펙터 탭) | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`, `packages/widgets/src/3d/ui/tag-key-combobox.tsx`, `packages/widgets/src/3d/lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상) |
+| 태그 맵핑 편집 UI(인스펙터 탭) / 슬롯 두 줄 / 태그 연결 다이얼로그 | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`, `packages/widgets/src/3d/ui/tag-slot-field.tsx`, `packages/widgets/src/3d/ui/tag-pick-dialog.tsx`(+ `tag-pick-realtime-tab.tsx`·`tag-pick-virtual-tab.tsx`·`tag-sparkline.tsx`), `packages/widgets/src/3d/lib/tag-mapping-editor.ts`(충돌 판정·기본값·대상 설명, 테스트 대상), `packages/widgets/src/3d/lib/tag-pick.ts`(필터·선택·칩, 테스트 대상), `packages/widgets/src/3d/lib/tag-history.ts` + `model/use-tag-value-history.ts`(미리보기 최근 60초, 테스트 대상) |
 | 가상 태그 정의·파형·방어·시나리오·한계 | `packages/domain/src/virtual-tag/model/types.ts`, `packages/domain/src/virtual-tag/lib/tag-pattern.ts`, `packages/domain/src/virtual-tag/lib/sanitize-virtual-tags.ts`, `packages/domain/src/virtual-tag/lib/scenario.ts`, `packages/domain/src/virtual-tag/lib/rate-limit.ts` |
 | 가상 태그 영속화 어댑터 / 배포 파일 | `packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts`, `apps/shell/public/simulation/virtual-tags.json` |
 | 가상 태그 스토어 · 러너 · 카탈로그 · 종료 | `packages/features/src/3d/model/use-virtual-tag-store.ts`, `packages/features/src/3d/model/virtual-tag-runner.ts`, `packages/features/src/3d/model/use-tag-catalog.ts`, `packages/features/src/3d/model/stop-simulation.ts` |
 | 시뮬레이션 UI | 공용 패널 `packages/features/src/3d/ui/scene-simulation-panel.tsx`, 배지 `packages/features/src/3d/ui/scene-simulation-badge.tsx`, HUD 라벨 `packages/features/src/3d/lib/sim-clock.ts` |
 | 태그 페이지(실시간 태그 | 가상 태그 탭) / 가상 태그 관리 탭 / 시나리오 편집 | `packages/widgets/src/tags/ui/tags-page.tsx`, `packages/widgets/src/tags/ui/virtual-tags-page.tsx`, `packages/widgets/src/tags/ui/scenario-section.tsx` |
 | 실시간 태그 피드 — STOMP 래퍼 / 스냅샷 방어·REST / 스토어·피드 훅·관측치 / 실시간 탭 UI | `packages/core/src/ws/stomp-client.ts`(`craneStompClient`), `packages/domain/src/monitoring/lib/crane-snapshot.ts`, `packages/domain/src/monitoring/api/get-crane-snapshots.ts`, `packages/features/src/3d/model/use-crane-snapshot-store.ts`, `packages/features/src/3d/model/use-crane-snapshot-feed.ts`, `packages/features/src/3d/lib/crane-snapshot-stats.ts`, `packages/widgets/src/tags/ui/realtime-tags-view.tsx` |
+| 실시간 태그 표 헬퍼(행 구성·분류·불리언 표기 / 구역 칩·크레인 필터 / 시계·숫자 표기 / 상태 점·구역 칩 UI) — 태그 페이지와 태그 연결 다이얼로그가 같이 쓴다 | `packages/features/src/3d/lib/tag-rows.ts`, `packages/features/src/3d/lib/crane-filter.ts`, `packages/features/src/3d/lib/format-clock.ts`(셋 다 테스트 대상), `packages/features/src/3d/ui/{crane-live-dot,bay-chip}.tsx`, 벽시계 틱 `packages/core/src/lib/use-now.ts` |
 | 리깅 스키마(관절·구속조건) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
 | 리깅 런타임(값 저장소·드라이버·readout) | `packages/features/src/3d/model/rig-value-store.ts`, `packages/features/src/3d/model/use-rig-driver.ts`, `packages/features/src/3d/model/rig-live-readouts.ts` |
 | 관절 적용 / 스무딩 / rest 캐시 / 노드 경로 | `packages/features/src/3d/lib/apply-joint.ts`, `packages/features/src/3d/lib/smooth-damp.ts`, `packages/domain/src/3d/lib/rest-pose-cache.ts`, `packages/domain/src/3d/lib/mesh-path.ts` |
@@ -30,43 +33,55 @@
 
 ### 태그 맵핑 `tagMappings[]`
 
-모델 인스턴스 필드. "서버(PLC) 태그 값 하나 → 트랜스폼 채널 하나" 의 목록이다.
+모델 인스턴스 필드. "태그 값 하나 → 트랜스폼 채널 하나" 의 목록이다.
 
 - 대상은 두 종류다. `{kind:'node', node, channel:position|rotation|scale, axis}` — `node: ''` 는 모델 루트. `{kind:'joint', jointId}` — 할당된 리그의 관절.
-- 태그는 `tagKey` 문자열(`${craneId}:${tagCode}` 공간)로만 참조한다.
+- 태그는 **슬롯 둘**(`TagKeySlots`)로 참조한다 — `realtimeTagKey`(서버 키 `${craneId}.${tagCode}`, 모니터링 실시간·3D 플레이 리플레이가 읽는다)와 `virtualTagKey`(가상 태그 키, 시뮬레이션이 읽는다). 둘 다 선택이고 둘 다 비면 sanitize 가 맵핑을 버린다. 어느 슬롯을 읽을지는 `lib/tag-slot.ts` 의 `resolveActiveTagSlot(mode, play3dSource)` 한 곳 — 실시간·리플레이 → realtime, 시뮬레이션(대시보드 미리보기·3D 플레이 시뮬레이션 소스) → virtual, 모드 없는 화면(에디터·대시보드)은 realtime. 소비자는 전부 슬롯을 인자로 받고 memo 의존성에 둔다(3D 플레이 소스 전환은 리마운트가 아니다).
 - 적용 공식은 `offset + value × scale` 을 **rest 기준 Δ** 로 더하는 것. 루트의 rest 는 씬 배치 transform, 내부 노드는 GLTF rest 다.
 - 같은 대상 중복은 sanitize 가 첫 항목만 남기고(first-wins), 리그 관절이 점유한 노드·축은 드라이버가 관절을 우선한다. 편집 UI 는 둘 다 amber 로 경고한다(`tag-mapping-editor.ts`).
-- 레거시 `valueMapList`(루트 6칸 절대 대입)·`rigBindings`(관절 바인딩)는 로드 시 `sanitize-tag-mappings.ts` 가 `tagMappings` 로 변환하고 저장본에서 사라진다. 절대 좌표 → Δ 변환은 `offset' = offset − placement[axis]` 이며 테스트가 좌표 동일성을 고정한다. 두 필드는 타입에 `@deprecated` 입력 전용으로만 남아 있다.
+- 실시간 키의 구분자는 점(`C_171.tl_distance`, `buildCraneTagKey`) — ISL TagKey 표기와 같다. 단일 키 시절의 콜론 표기(`C_171:tl_distance`)는 레거시 변환 때 점으로 옮긴다(`sanitize-tag-mappings.ts` 의 `toDottedLegacyKey` = monitoring 의 `normalizeLegacyCraneTagKey`, 같은 레이어라 import 대신 같은 규칙을 둘이 든다). 가상 태그 키는 가상 태그 정의가 정한다(지금은 `GC_04:gantry_position` 꼴).
+- 레거시는 셋이다 — 단일 키 `tagKey` 는 `sanitizeTagKeySlots` 가 **실시간 슬롯**으로 옮긴다(그 시절 배포 씬 dock-in 의 키가 서버 키였고, 가상 키였던 philly-2dock 은 데이터를 `virtualTagKey` 로 옮겼다). `valueMapList`(루트 6칸 절대 대입)·`rigBindings`(관절 바인딩)는 로드 시 `sanitize-tag-mappings.ts` 가 실시간 슬롯 맵핑으로 변환한다. 셋 다 저장본에서 사라진다. 절대 좌표 → Δ 변환은 `offset' = offset − placement[axis]` 이며 테스트가 좌표 동일성을 고정한다. `valueMapList`·`rigBindings` 는 타입에 `@deprecated` 입력 전용으로만 남아 있고 `tagKey` 는 타입에 없다.
+- 표시용 대표 키는 `getPrimaryTagKey`(실시간 우선) — 관절 배지·대시보드 장비 목록처럼 소스와 무관한 곳만 쓴다.
 
 ### 라벨의 태그 값 줄
 
 맵핑 카드의 "라벨에 표시"(`TagMapping.showOnLabel`, true 만 저장)를 켜면 모델 라벨의 상자 위에 그 태그 값이 한 줄로 붙는다. 여러 개면 위쪽으로 쌓이고 첫 맵핑이 상자에 가장 가깝다. 상자는 값 줄 수와 무관하게 제자리에 있다. 짧은 이름(`caption`)을 넣으면 값 앞에 붙고, 표시를 꺼도 이름은 보존한다.
 
 - 값은 scale·offset 을 거치지 않은 **태그 원시값**이다. 화면 구성(배치·맵핑 계수)이 틀려도 숫자는 PLC 와 같아야 한다.
-- 라벨은 domain 이라 값 버스를 모른다. features·widgets 가 목록(`buildLabelReadings`)과 읽기 함수(`readTagLiveValue`)를 `GltfModel` prop 으로 넘기고, 라벨은 `useFrame` 에서 표기가 바뀔 때만 DOM 에 쓴다.
+- 라벨은 domain 이라 값 버스를 모른다. features·widgets 가 목록(`buildLabelReadings(mappings, slot)` — 활성 슬롯의 키, 그 슬롯에 키가 없는 맵핑은 줄도 없다)과 읽기 함수(`readTagLiveValue`)를 `GltfModel` prop 으로 넘기고, 라벨은 `useFrame` 에서 표기가 바뀔 때만 DOM 에 쓴다.
 - 목록은 모델마다 참조를 고정해 넘긴다 — 아니면 memo 된 `GltfModel` 이 렌더마다 다시 그려진다.
 - 모양은 ACMS 매뉴얼의 GC 원점 거리 그대로 상자 없는 청록색 숫자다. 단위는 붙이지 않는다.
 - 라벨을 숨긴 모델(`labelHidden`)·이름이 빈 모델은 값 줄도 없다.
 
 ### 상태 태그 `statusTags`
 
-모델 인스턴스 필드. "상태 역할 하나 ← 태그 하나" 의 객체이고 역할은 `STATUS_TAG_ROLES` 다. 노드를 움직이지 않는다. 역할은 그리는 곳으로 두 묶음이다 — 라벨 묶음 `LABEL_STATUS_TAG_ROLES`(운전 전원·고장·Bypass·Free Swing)은 라벨의 색·아이콘을, 외곽선 묶음 `OUTLINE_STATUS_TAG_ROLES`(통신불량·Slowdown·Endstop)은 장비 외곽선을 정한다. Bypass·Free Swing·Slowdown·Endstop 은 화면 문구도 언어와 무관하게 영어다.
+모델 인스턴스 필드. "상태 역할 하나 ← 연결 하나(두 슬롯)" 의 객체이고 역할은 `STATUS_TAG_ROLES` 다. 노드를 움직이지 않는다. 역할은 그리는 곳으로 두 묶음이다 — 라벨 묶음 `LABEL_STATUS_TAG_ROLES`(운전 전원·고장·Bypass·Free Swing)은 라벨의 색·아이콘을, 외곽선 묶음 `OUTLINE_STATUS_TAG_ROLES`(통신불량·Slowdown·Endstop)은 장비 외곽선을 정한다. Bypass·Free Swing·Slowdown·Endstop 은 화면 문구도 언어와 무관하게 영어다.
 
-- 태그는 `tagMappings` 와 같은 키 공간의 `tagKey` 문자열로 참조한다. 값은 0/1 숫자이고 on 문턱·판정 우선순위는 `docs/agents/3d-play.md` 의 "장비 운전 상태 · 라벨 표시 상태 · 외곽선".
+- 역할 값은 맵핑과 같은 `TagKeySlots`(`StatusTagBinding` — `realtimeTagKey`·`virtualTagKey`)다. 런타임은 `resolveStatusTagKeys(statusTags, slot)` 으로 활성 슬롯의 역할 → 키(`ResolvedStatusTagKeys`)를 풀어 판정한다. 값은 0/1 숫자이고 on 문턱·판정 우선순위는 `docs/agents/3d-play.md` 의 "장비 운전 상태 · 라벨 표시 상태 · 외곽선".
 - 통신불량은 장비 PLC 와 연계 PLC 사이 통신이 끊겼다는 비트다. 서버는 값을 계속 주지만 그 값이 장비의 지금 상태가 아니다. 연결하지 않으면 회색 외곽선은 수신 끊김에서만 나온다.
-- Slowdown·Endstop 은 역할마다 태그 하나를 따로 잇는다.
-- 연결하지 않은 역할은 키가 없고, 연결된 역할이 없으면 필드가 빠진다. sanitize 는 모르는 역할·문자열이 아닌 값·빈 키를 버리고 역할 순서를 고정한다.
-- 편집은 인스펙터 "태그 매핑" 탭의 목록 아래 구역이다(`tag-mapping-section.tsx` 의 `StatusTagRows`). 묶음마다 작은 제목 아래에 역할 카드가 쌓이고, 움직임 카드는 라벨 묶음 끝에 있다. 역할마다 카드 하나 — 머리줄에 역할 이름과 미리보기 값, 아랫줄에 태그 선택. 연결된 역할은 카드 테두리를 강조한다. 카드 위 한 줄에는 지금 라벨·외곽선이 그려지는 모양을 글자로 적은 줄(왼쪽, `describeLabelState`)과 미리보기 초기화 버튼(오른쪽, 항상 보인다)이 있다. 편집 채널은 `updateSelectedStatusTags` 로 `tagMappings` 와 같은 규칙(같은 참조 = no-op)이다.
+- Slowdown·Endstop 은 역할마다 연결 하나를 따로 잇는다.
+- 연결하지 않은 역할은 키가 없고, 연결된 역할이 없으면 필드가 빠진다. sanitize 는 모르는 역할·두 슬롯 다 빈 값을 버리고(단일 키 시절의 문자열은 실시간 슬롯으로 받는다) 역할 순서를 고정한다.
+- 편집은 인스펙터 "태그 매핑" 탭의 목록 아래 구역이다(`tag-mapping-section.tsx` 의 `StatusTagRows`). 묶음마다 작은 제목 아래에 역할 카드가 쌓이고, 움직임 카드는 라벨 묶음 끝에 있다. 역할마다 카드 하나 — 머리줄에 역할 이름과 미리보기 값, 아래에 슬롯 두 줄(`TagSlotField`, 맵핑 카드와 같다). 연결된 역할은 카드 테두리를 강조한다. 카드 위 한 줄에는 지금 라벨·외곽선이 그려지는 모양을 글자로 적은 줄(왼쪽, `describeLabelState`)과 미리보기 초기화 버튼(오른쪽, 항상 보인다)이 있다. 편집 채널은 `updateSelectedStatusTags` 로 `tagMappings` 와 같은 규칙(같은 참조 = no-op — `status-tag-editor.ts` 의 `setStatusTagBinding`)이다.
 - 탭의 두 구역은 화면에서 "트랜스폼"(맵핑 목록)·"상태"(상태 태그)라고 부른다. 각각 접고 펼 수 있고 접힌 채 연다(`inspector-fields.tsx` 의 `CollapsibleSection`, 열림 상태는 탭이 가진다). 제목 옆 개수가 접힌 구역의 내용 유무를 알리고, 내용은 열려 있을 때만 마운트한다.
 - **미리보기**: 역할마다, 그리고 움직임에 값(없음·Off·On)을 고르면 에디터 캔버스의 그 모델 라벨과 외곽선이 고른 값으로 바로 그려진다. 에디터에는 값 생산자가 없어 연결만으로는 라벨이 늘 상태 미확인이고 외곽선이 없기 때문이다. 태그 연결 여부와 무관하고, 판정은 실제 값과 같은 우선순위를 탄다(`resolvePreviewLabelState`·`resolvePreviewOutlineState`). 값은 세션 스토어 `useLabelPreviewStore` 에 있고 대상은 한 번에 모델 하나다.
   - 미리보기 대상은 선택된 모델이라 외곽선이 선택 테두리와 같은 자리에 온다. 외곽선이 있는 동안은 모델 전체의 선택 테두리를 그리지 않고 상태 외곽선이 그 자리를 맡는다(`gltf-model.tsx`). 안쪽 노드 선택은 둘 다 그린다.
-- 시뮬레이션·리플레이에서 확인하려면 0/1 범위의 가상 태그를 만들어 연결한다. 시나리오 키프레임은 `hold` 보간을 쓴다.
+- 시뮬레이션에서 확인하려면 가상 슬롯에 0/1 범위의 가상 태그를 연결한다(시나리오 키프레임은 `hold` 보간). 실시간·리플레이는 실시간 슬롯의 서버 비트(`crane_control_on`·`crane_system_error`·`accs_bypass_on` 등)를 읽는다.
+
+### 태그 연결 다이얼로그 `tag-pick-dialog.tsx`
+
+맵핑 카드·상태 태그 카드의 슬롯 줄(`TagSlotField` — 실시간 · 시뮬레이션 두 줄, × 는 그 슬롯만 비운다)을 누르면 열리는 shadcn `Dialog`(`@crane/ui/molecules/dialog`, 포털 규약 `usePortalContainer`·`z-9999`). 머리줄은 제목과 닫기 버튼 한 줄뿐이다. **탭이 곧 슬롯**이다(`@crane/ui/molecules/tabs` — 에디터 팔레트 탭과 같은 모양, 탭 이름은 `monitoring:tags.tabs.*`) — 두 탭의 선택을 초안으로 들고 "연결" 한 번에 바뀐 슬롯만 적용하고(`isTagKeySlotsEqual` 로 dirty 판정), 본문은 열려 있을 때만 마운트해 열 때마다 `value`·누른 슬롯으로 돌아온다. 검색창은 팔레트·태그 페이지와 같은 `SearchField`.
+
+- **실시간 탭**: 검색창과 그 아래 구역 칩(`BayChip`, 태그 페이지와 같다) › 크레인 목록(상태 점 `CraneLiveDot`) › 그 크레인의 태그 목록(머리글 "이름 · 현재 값", 분류 묶음 `TAG_CATEGORIES`, 현재 값·단위, 불리언은 태그 페이지와 같은 글자) › 미리보기(큰 현재 값, 최근 60초 스파크라인, 데이터 형식·분류·구역). 데이터는 다이얼로그 본문이 켠 `useCraneSnapshotFeed(true)`(REST 전체 + STOMP) — 에디터에는 다른 참조자가 없어 닫으면 소켓이 닫히고, 브리지가 없어 버스로는 가지 않는다(모델이 움직이지 않는다). 검색창 하나가 두 목록을 겨눈다 — 크레인(ID·구역)에 맞으면 크레인을 거르고, 아니면 태그(코드·표시명)를 거른다(`lib/tag-pick.ts` `filterPickCranes`·`filterPickTags`). 처음 고르는 크레인은 연결된 키의 크레인 › 모델 `craneId` › 첫 크레인(`pickInitialCrane`). 행을 누르면 `buildCraneTagKey(craneId, code)` 가 초안이 되고 선택 강조·미리보기는 초안을 되읽는다.
+- **최근 60초**(`model/use-tag-value-history.ts`): 고른 태그가 바뀌면 `getCraneHistory`(1초 간격, 60초)로 채우고 스냅샷 스토어 구독으로 뒤에 붙인다(`lib/tag-history.ts` `appendSample` 이 창 밖을 버린다). 조회가 실패하면 라이브 표본만 쌓인다. 그리기는 `tag-sparkline.tsx`.
+- **가상 탭**: `useTagCatalog`(가상 태그 스토어) 목록에서 하나를 고른다. 연결된 키가 목록에 없으면 amber 항목으로 보존한다 — 사용자가 다시 고르기 전까지 지우지 않는다. 가상 태그가 실시간 태그 모양으로 재편되기 전까지의 목록형 선택이다.
+- 카드 칩(`describeSlotChip`): 실시간 키는 `크레인 · 코드`(툴팁에 카탈로그 표시명·단위), 가상 키는 키 그대로(툴팁에 이름). 목록에서 못 찾는 키는 amber.
 
 ### 값 흐름
 
-생산자(가상 태그 러너 / WebSocket 러너 / 리플레이) → `publishTagValue(key, v)`(`tag-value-bus.ts`, 표시용 `tagLiveValues` 캐시) → `useTagBindingSource` 가 건 `createTagBindingSource(resolve)` → `rigValueStore`(smooth) → `useRigDriver`(Canvas 안 `RigDriver`) 가 매 프레임 노드별로 rest 로 되돌린 뒤 채널 Δ 를 누적한다(`apply-channel.ts`).
+생산자(가상 태그 러너 / WebSocket 러너 / 리플레이) → `publishTagValue(key, v)`(`tag-value-bus.ts`, 표시용 `tagLiveValues` 캐시) → `useTagBindingSource(sceneInfo, enabled, slot)` 가 건 `createTagBindingSource(resolve)` — 인덱스(`buildTagMappingIndex(sceneInfo, slot)`)는 활성 슬롯의 키로만 만든다 → `rigValueStore`(smooth) → `useRigDriver`(Canvas 안 `RigDriver`) 가 매 프레임 노드별로 rest 로 되돌린 뒤 채널 Δ 를 누적한다(`apply-channel.ts`).
 
-- 버스는 숫자 전용이다. WebSocket 브리지와 리플레이 스토어는 서버 값을 `toTagNumber` 로 바꿔 싣는다 — boolean 과 `'true'`/`'false'` 문자열은 1/0, 그 밖의 문자열·null 은 버린다.
+- 슬롯을 받는 소비자: 바인딩 인덱스·`collectSceneTagKeys`(3D 플레이 통계·리포트의 "맵핑 없음"), 운전 상태·라벨·외곽선 판정 키(`collectModelTagKeys`·`collectModelStatusKeys` → `useModelStatusRecords(sceneInfo, slot)`), 라벨 값 줄(`buildLabelReadings`). 모니터링 뷰는 `resolveActiveTagSlot(mode, play3dSource)`, 3D 플레이 통계·리포트는 `tagSlotOfPlay3dSource(source)`, 에디터는 `EDITOR_TAG_SLOT`.
+- 버스는 숫자 전용이다. WebSocket 브리지와 리플레이 스토어는 서버 값을 `toTagNumber` 로 바꿔 싣고 키는 `buildCraneTagKey` 로 만든다 — boolean 과 `'true'`/`'false'` 문자열은 1/0, 그 밖의 문자열·null 은 버린다.
 - 바인딩은 모니터링 뷰·에디터 모두 화면이 떠 있는 동안 항상 켜 두고 언마운트 시 값 저장소를 비운다.
 - 재생 토글(가상 태그 탭·3D 플레이 트랜스포트 바)은 러너 틱만 켜고 끈다. 일시정지하면 노드가 마지막 값에 머물고, 초기값 복귀는 리셋 버튼이 한다.
 - 기즈모 드래그 중엔 루트 맵핑을 건너뛴다. 드래그 종료 프레임의 루트 rest handoff 는 `docs/agents/3d-editor.md`.
@@ -79,10 +94,10 @@
 crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 현재 상태를 받아 태그 페이지의 실시간 탭이 보여 주고, 3D 모니터링 실시간 모드(`mode='realtime'`)의 값 생산자이기도 하다.
 
 - 전송: `@crane/core/ws` 의 `StompClient`(`@stomp/stompjs` 래퍼). 엔드포인트는 `getStompWebSocketUrl()`(WebSocket 베이스 `/ws` 자체, SockJS 없음). `craneStompClient` 하나를 acquire/release 로 나눠 쓰고, 목적지 구독은 연결 전에 걸어도 CONNECTED 마다 다시 건다. 재연결은 stompjs 지수 백오프이고, 사용자가 끊은 것(`disconnect`)과 서버 쪽 끊김은 `isActive()` 로 가른다.
-- 데이터: `CraneSnapshot`(`@crane/domain/monitoring`) — craneId · bay · online · `tags{code → {value, quality, timestamp}}`. `/topic/cranes` 봉투(`type: 'snapshot'`)에는 push 주기 동안 바뀐 크레인만 실리므로 첫 화면과 재연결 뒤에는 `GET /api/cranes`(`getCraneSnapshots`)로 전체를 받는다. 모양이 깨진 태그 항목은 `sanitizeCraneSnapshot` 이 버린다.
+- 데이터: `CraneSnapshot`(`@crane/domain/monitoring`) — craneId · bay · online · `tags{code → {value, quality, timestamp}}`. `/topic/cranes` 봉투(`type: 'snapshot'`)에는 push 주기 동안 바뀐 크레인만 실리므로 피드를 켤 때 `GET /api/cranes`(`getCraneSnapshots`)로 전체를 받는다. stompjs 자동 재연결 뒤에는 다시 받지 않는다 — 살아 있는 크레인은 heartbeat 로 다음 묶음에 실려 오지만, 끊긴 동안 offline 으로 바뀐 크레인의 전이는 놓칠 수 있다. 모양이 깨진 태그 항목은 `sanitizeCraneSnapshot` 이 버린다.
 - 스토어: `useCraneSnapshotStore` — craneId → `CraneSnapshotEntry`(스냅샷 + 수신 시각 + heartbeat 가 마지막으로 뒤집힌 시각 + 태그별 변경 시각·횟수·관측 범위). 묶음마다 바뀐 크레인 항목만 새 참조라 카드는 자기 크레인만 구독한다. 연결이 끊겨도 값은 마지막 상태로 남는다.
 - 피드: `useCraneSnapshotFeed(enabled)` 가 구독·REST·참조를 맡고(마운트 = 구독), 연결 표시는 `useCraneFeedConnection()`(useSyncExternalStore). 실시간 탭의 연결 해제(툴바 톱니 → 연결 설정 팝업: 호스트 주소 `getCraneFeedUrl()` · 상태 · 연결 해제/연결 버튼)는 그 화면의 구독만 놓는다 — 같은 클라이언트를 다른 화면이 잡고 있으면 소켓은 열린 채다.
-- 3D 실시간 모드: `useCraneSnapshotRealtimeBridge(enabled)`(`packages/features/src/3d/model/use-crane-snapshot-realtime-bridge.ts`, `OutdoorWorkModelSimulation` 이 `mode === 'realtime'` 로 켠다)가 피드를 켜고, 스토어에 새 스냅샷이 들어온 크레인의 태그 **전부**를 `${craneId}:${tagCode}` 키로 `useRealtimeStore` 버퍼에 쌓는다 — 바뀐 태그만 쌓지 않는다. 묶음에는 바뀐 크레인만 실리고 `heartbeat` 가 매초 뒤집히므로 살아 있는 크레인은 매초 재발행되어 `tagLiveValues.at` 가 갱신되고(정지 중 ↔ 두절 판정, `lib/model-runtime-status.ts`), 죽은 크레인은 묶음에서 빠져 at 이 멈춘다. 켤 때와 보류(held) 해제 때는 스토어의 스냅샷 전부를 한 번 쌓는다. 러너(`useRealtimeRunner`)·보류(`scene-collision-hold.ts`)는 그대로이고 HUD 연결 칸(`use-realtime-connection-state.ts`)은 `craneStompClient` 상태를 본다.
+- 3D 실시간 모드: `useCraneSnapshotRealtimeBridge(enabled)`(`packages/features/src/3d/model/use-crane-snapshot-realtime-bridge.ts`, `OutdoorWorkModelSimulation` 이 `mode === 'realtime'` 로 켠다)가 피드를 켜고, 스토어에 새 스냅샷이 들어온 크레인의 태그 **전부**를 `${craneId}.${tagCode}` 키로 `useRealtimeStore` 버퍼에 쌓는다 — 바뀐 태그만 쌓지 않는다. 묶음에는 바뀐 크레인만 실리고 `heartbeat` 가 매초 뒤집히므로 살아 있는 크레인은 매초 재발행되어 `tagLiveValues.at` 가 갱신되고(정지 중 ↔ 두절 판정, `lib/model-runtime-status.ts`), 죽은 크레인은 묶음에서 빠져 at 이 멈춘다. 켤 때와 보류(held) 해제 때는 스토어의 스냅샷 전부를 한 번 쌓는다. 러너(`useRealtimeRunner`)·보류(`scene-collision-hold.ts`)는 그대로이고 HUD 연결 칸(`use-realtime-connection-state.ts`)은 `craneStompClient` 상태를 본다.
 - 상태 점: `resolveCraneLiveState` — 서버 `online=false` 나 연결 없음은 off(회색), `heartbeat` 가 `HEARTBEAT_STALE_MS` 안에 뒤집혔으면 live(초록 맥동), 값은 오는데 안 뒤집히면 stale(노랑). 첫 수신 직후엔 수신 시각을 기준으로 삼는다.
 - 표시명·단위·묶음은 `getMonitoringTagMetadata`(영문) 그대로. 묶음 안 정렬은 코드의 숫자 인식 사전순이고 시각 태그만 큰 단위 → 작은 단위(`tag-rows.ts`).
 - dev 는 `apps/shell/.env.local` 의 `VITE_DEV_PROXY_TARGET_HTTP/WS`(서버 `http://localhost:8080`)로 `/crane_rnd/{api,ws}` 를 프록시한다. 운영은 nginx 가 같은 경로를 `BACKEND_HOST:PORT` 로 보내고, 서버 쪽 `cis.web.allowed-origins` 에 셸 주소가 있어야 한다.
@@ -95,7 +110,7 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 영속화는 씬과 같은 규칙(`virtual-tag-storage.ts`). dev 는 `POST /__dev/virtual-tags` 로 배포 파일 `apps/shell/public/simulation/virtual-tags.json` 에 기록하며 이 파일이 클론·배포의 기준값이라 커밋한다. 운영은 localStorage `crane:virtual-tags` 에 배포 해시 도장(`baseVersion`)과 함께 봉투로 저장하고, 새 배포가 나오면 배포본이 이긴다. API 경로 문자열은 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있다 — `docs/agents/3d-editor.md`.
 - `virtualTagRuntime`(모듈 전역 `setInterval`, Canvas 불필요)이 틱마다 버스로 내보낸다.
 - 재생을 켜는 곳: 모니터링 `mode='simulation'` 은 `useSceneData` 의 `autoStartSimulation`(기본 true — 대시보드 3D 미리보기 모달은 ▶ 토글이 없는 뷰라 false 로 정지 상태로 연다). 3D 플레이(`mode='play3d'`, 소스 시뮬레이션)은 상단 트랜스포트 바 ▶ 가 켠다(자동 재생 없음). 실시간 페이지(`mode='realtime'`)에는 시뮬레이션 UI 가 없다.
-- 콤보박스 목록은 `useTagCatalog` 하나를 본다. 서버 태그를 합치려면 여기에 스냅샷 스토어의 태그 코드(표시명은 `getMonitoringTagMetadata`)를 `source:'server'` 로 더하면 되며, 씬 JSON·맵핑 UI·드라이버는 무변경이다(값 생산자는 이미 붙어 있다).
+- 태그 연결 다이얼로그의 가상 탭과 카드 칩은 `useTagCatalog`(가상 태그 스토어) 하나를 본다. 서버 태그는 여기 합치지 않는다 — 다이얼로그의 실시간 탭이 스냅샷 스토어에서 크레인별로 직접 고른다.
 
 ### 시뮬레이션 시계·시나리오
 
@@ -141,7 +156,9 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 러너가 한계를 적용하는 대상은 목표값이다. 한계를 우회해 값을 즉시 넣어야 하면 manual·리셋 경로(텔레포트)를 쓴다. seek 는 우회하지 않는다.
 - 시뮬레이션 값은 씬 시간의 함수다 — 재생 tick 과 seek 가 같은 고정 스텝 적분기(`advanceTo`)를 쓴다. seek 에서 목표값을 직접 대입하거나 벽시계 dt 로 적분하지 않는다. 3D 플레이 타임라인의 사건 시각으로 옮기면 재생 때 그 시각의 자세가 나와야 한다(`docs/agents/3d-play.md`).
 - 위치 불연속(seek·리셋)의 publish 는 `smoothTime: 0` 이다 — 스무딩을 타면 자세가 미끄러져 감지기가 가짜 전이를 낸다.
-- `TagMapping` 에 필드를 추가하면 `sanitize-tag-mappings.ts` 와 `scene-snapshot.ts` 의 `isTagMappingListEqual` 을 함께 고친다.
+- `TagMapping`·`StatusTagBinding` 에 필드를 추가하면 `sanitize-tag-mappings.ts`(`sanitizeTagKeySlots`)와 `scene-snapshot.ts` 의 `isTagMappingListEqual`·`isStatusTagsEqual`(둘 다 `isTagKeySlotsEqual` 로 두 슬롯 비교)을 함께 고친다 — 한쪽 슬롯만 바꾼 편집이 동등 단락에 먹혀 저장되지 않는다.
+- 어느 슬롯을 읽을지는 `resolveActiveTagSlot` 한 곳이 정한다. 소비자에 `mode`·`source` 분기를 따로 두지 않고 슬롯을 인자로 받아 memo 의존성에 넣는다 — 3D 플레이의 소스 전환은 리마운트가 아니다.
+- 두 슬롯을 한 인덱스에 함께 넣지 않는다 — 가상 태그가 서버 키와 같은 표기를 쓰면 마지막 publish 가 이겨 소스가 섞인다.
 - 라벨의 태그 값 줄은 버스의 마지막 값(`readTagLiveValue`)만 읽는다. 맵핑의 적용값(`offset + value × scale`)이나 화면 위치에서 계산하지 않는다.
 
 ## 하지 않기로 한 것
@@ -151,13 +168,15 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 벽시계 dt 를 그대로 적분하는 rate limit — 큰 dt 는 가속 프로파일이 1~2틱으로 붕괴해 stop‑go 히치가 나고, 틱 지터로 같은 씬 시각의 값이 달라진다. 씬 시간 `tickMs` 고정 스텝으로 적분한다.
 - 에디터에 시뮬레이션·시나리오 UI 를 두지 않는다 — 진입·이탈의 `stopSimulation()` 은 관리 페이지에서 켜진 러너가 넘어오지 않게 하는 방어다. 재생 UI 는 관리 페이지와 3D 플레이 트랜스포트 바에만 있다.
 - 시뮬레이션 알림 toast — 배너·HUD·헤더 배지와 겹쳐 보여 소리·브라우저 알림만 쓴다(`docs/agents/monitoring-ui.md`).
-- 레거시 `valueMapList`·`rigBindings` 를 저장본에 다시 쓰는 것 — 입력 전용, 로드 시 변환 후 소멸.
+- 레거시 `valueMapList`·`rigBindings`·단일 `tagKey` 를 저장본에 다시 쓰는 것 — 입력 전용, 로드 시 변환 후 소멸.
+- 서버 태그를 `useTagCatalog` 에 합쳐 콤보박스 하나로 고르는 것 — 크레인 20대 × 태그 45개가 한 목록에 섞여 고를 수 없고, 서버에는 태그 정의 API 가 없다. 크레인 › 태그 두 단계의 다이얼로그로 고른다.
 - 리그 관절의 회전 중심(pivot) 오프셋 필드 — 최적화가 옮긴 원점을 리그에서 되감는 우회였다. 값을 GLB 를 열어 손으로 재야 하고 재최적화·새 버전에서 틀어지며 회전 중심의 원천이 자산과 리그 둘이 된다. 모델에 Empty 를 둔다.
 
 ## 미룬 것
 
 - 라벨 값 줄의 단위 표시·표시용 환산. 서버 태그의 원시 단위가 m 가 아니면(dock-in `tl_distance` 는 맵핑 scale 이 0.1 이다) 숫자가 m 로 읽히지 않는다.
 - 맵핑되지 않은 태그(Load 등)를 라벨에 보이는 것.
-- 실서버 태그를 태그 콤보박스에 합류: `useTagCatalog` 에 스냅샷 스토어의 태그 코드(표시명은 `getMonitoringTagMetadata`)를 `source:'server'` 로 합치는 것. 크레인 스냅샷 서버에는 태그 정의 API 가 없다. 값 생산자(3D 실시간 브리지)는 이미 붙어 있다.
-- 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 태그만)·dock-in(서버 리플레이만)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
+- 다이얼로그의 "같은 태그를 전체 크레인에 적용" — 크레인마다 GLB 노드 경로가 달라(`3_Bay_C_800_Head_01` vs `3_Bay_C_172_Head`) 루트 대상에만 맞는다. 여러 크레인의 맵핑은 한 대를 에디터에서 맞춘 뒤 스크립트로 씬 JSON 에 일괄 생성하는 쪽이 맞다.
+- 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 슬롯만 — 리플레이 소스에서는 "맵핑 없음")·dock-in(실시간 슬롯 `C_xxx:tl_distance` 주행만)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
+- dock-in 크레인의 횡행(`ts{n}_distance` → `…_Head_0n` position)·권상(`mh{n}_height`/`ah{n}_height` → `…_Hook_0m` position y) 맵핑. 서버 값의 단위(정수 — tl 은 0.1 m 로 보이나 ts·mh 는 다르다)·기준점·방향·트롤리/훅 번호 대응표가 PLC 쪽에서 와야 scale·offset 을 정할 수 있다.
 - 상태 태그를 연결한 배포 씬은 없다. 서버의 상태 값 형식이 정해지면 맞춘다 — 비트 묶음 워드(역할별 비트 번호), 반전 비트, 모션 run 비트(지금 가동은 축 값 변화로 추정한다), 모션별 Slowdown·Endstop 비트(지금은 역할마다 태그 하나라 모션별로 오면 역할 값을 태그 목록으로 넓혀야 한다).

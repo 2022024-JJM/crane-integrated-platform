@@ -109,9 +109,12 @@ export function useCollisionDashboard(): {
     return sceneOverview.equipment.map((row) => ({
       ...row,
       tags: row.tags.map((tag) => {
-        const def = defsByKey.get(tag.tagKey);
+        const def = tag.virtualTagKey
+          ? defsByKey.get(tag.virtualTagKey)
+          : undefined;
         return {
           tagKey: tag.tagKey,
+          virtualTagKey: tag.virtualTagKey,
           label: def?.name || tag.tagKey,
           unit: def?.unit ?? null,
           min: def ? def.min : null,

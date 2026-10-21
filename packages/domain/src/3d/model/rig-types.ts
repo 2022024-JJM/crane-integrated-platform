@@ -93,7 +93,7 @@ export interface RigDefinition {
  */
 export interface RigBinding {
   jointId: string;
-  /** `${craneId}:${tagCode}` — valueMapList 키와 같은 공간. */
+  /** `${craneId}:${tagCode}`(단일 키 시절 표기 — 로드 시 점 표기로 옮긴다) — valueMapList 키와 같은 공간. */
   key: string;
   scale?: number;
   offset?: number;

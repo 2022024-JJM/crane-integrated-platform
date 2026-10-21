@@ -88,8 +88,6 @@
       "channel": "Genus",
       "axis": "Axis",
       "joint": "Articulus",
-      "tag": "Tag",
-      "tagPlaceholder": "Tag selige",
       "tagSearch": "Clavem aut nomen quaere",
       "tagEmpty": "Nulla tags ficta. In pagina Tags Fictorum crea.",
       "tagUnknown": "Tag ignotum",
@@ -143,6 +141,30 @@
         "slowdown": "Slowdown",
         "endstop": "Endstop"
       }
+    },
+    "tagPick": {
+      "title": "Tag iungere",
+      "slots": {
+        "realtime": "Tempus reale",
+        "virtual": "Simulatio"
+      },
+      "pick": "Tag elige…",
+      "clear": "Solvere",
+      "search": "Quaere per numerum gruis aut nomen tag (e.g. C_171, tl_distance)",
+      "currentValue": "Valor praesens",
+      "craneList": "Index machinarum",
+      "preview": "Praevisio",
+      "recent": "Ultima 60 s · singulis secundis renovatur",
+      "dataType": "Genus datorum",
+      "category": "Classis",
+      "bay": "Regio",
+      "unit": "Unitas",
+      "range": "Ambitus",
+      "noSelection": "Tag ex indice elige ut valor praesens hic appareat.",
+      "noCranes": "Nullae grues a servo acceptae. Nexum inspice.",
+      "emptyTags": "Nihil inventum.",
+      "cancel": "Abrogare",
+      "apply": "Iungere"
     },
     "ruler": {
       "title": "Regula",

@@ -70,7 +70,10 @@ export interface DashboardActiveAlarmStats {
 
 /** 씬 tagMappings 기반 장비별 라이브 태그 목록. 값은 UI 가 폴링으로 읽는다. */
 export interface DashboardEquipmentTag {
+  /** 값을 읽는 키 — 맵핑의 대표 키(실시간 우선). */
   tagKey: string;
+  /** 맵핑의 가상 키 — 가상 태그 정의(이름·단위·범위) 조회용. 없으면 null. */
+  virtualTagKey: string | null;
   /** 가상 태그 카탈로그 표시명. 정의가 없으면 tagKey 그대로. */
   label: string;
   unit: string | null;

@@ -142,7 +142,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "tagKey": "GC_04:gantry_position"
+          "virtualTagKey": "GC_04:gantry_position"
         },
         {
           "id": "map-a890d17b",
@@ -152,7 +152,7 @@
             "channel": "position",
             "axis": "x"
           },
-          "tagKey": "GC_04:trolley_position"
+          "virtualTagKey": "GC_04:trolley_position"
         },
         {
           "id": "map-37300718",
@@ -162,7 +162,7 @@
             "channel": "position",
             "axis": "x"
           },
-          "tagKey": "GC_04:trolley_position_2"
+          "virtualTagKey": "GC_04:trolley_position_2"
         }
       ]
     },
@@ -200,7 +200,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "tagKey": "LLC_002:gantry_position"
+          "virtualTagKey": "LLC_002:gantry_position"
         },
         {
           "id": "map-d6890e5a",
@@ -208,7 +208,7 @@
             "kind": "joint",
             "jointId": "joint-8d326e4d"
           },
-          "tagKey": "LLC_002:luff_angle"
+          "virtualTagKey": "LLC_002:luff_angle"
         },
         {
           "id": "map-d5c8438e",
@@ -218,7 +218,7 @@
             "channel": "rotation",
             "axis": "y"
           },
-          "tagKey": "LLC_002:slew_angle"
+          "virtualTagKey": "LLC_002:slew_angle"
         }
       ],
       "zones": [
@@ -264,7 +264,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "tagKey": "LLC_002:gantry_position_2"
+          "virtualTagKey": "LLC_002:gantry_position_2"
         },
         {
           "id": "map-95881074",
@@ -272,7 +272,7 @@
             "kind": "joint",
             "jointId": "joint-8d326e4d"
           },
-          "tagKey": "LLC_002:luff_angle"
+          "virtualTagKey": "LLC_002:luff_angle"
         },
         {
           "id": "map-60bd1bd8",
@@ -282,7 +282,7 @@
             "channel": "rotation",
             "axis": "y"
           },
-          "tagKey": "LLC_002:slew_angle"
+          "virtualTagKey": "LLC_002:slew_angle"
         }
       ]
     },

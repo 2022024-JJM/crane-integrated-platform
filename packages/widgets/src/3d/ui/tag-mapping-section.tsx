@@ -1,8 +1,10 @@
-import { AlertTriangle, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getDrivenJointIds,
+  getSlotTagKey,
   getTagMappingUnit,
+  hasAnyTagKey,
   LABEL_STATUS_TAG_ROLES,
   modelObjectRegistry,
   OUTLINE_STATUS_TAG_ROLES,
@@ -11,6 +13,7 @@ import {
   type ModelStatusTags,
   type RigDefinition,
   type SavedModelInfo,
+  type StatusTagBinding,
   type StatusTagRole,
   type TagMapping,
 } from '@crane/domain/3d';
@@ -37,7 +40,7 @@ import {
   PREVIEW_CHOICES,
   describeLabelState,
   fromPreviewChoice,
-  setStatusTag,
+  setStatusTagBinding,
   toPreviewChoice,
 } from '../lib/status-tag-editor';
 import {
@@ -63,15 +66,16 @@ import {
   NumberField,
   type InspectorT,
 } from './inspector-fields';
-import { TagKeyCombobox } from './tag-key-combobox';
+import { TagSlotField } from './tag-slot-field';
 
 /**
  * 인스펙터 "태그 매핑" 탭 — 맵핑을 하나씩 추가하는 목록.
  *
  * 관절 카드와 같은 문법이다: `+` 가 기본값 카드(모델 루트·위치·x·태그 없음)를
  * 만들고, 카드 안에서 위→아래 순서로 노드 → 타입 → 축 → 태그를 고른다.
- * 리그가 할당된 모델은 대상을 "관절"로 바꿔 관절에 직접 꽂을 수 있다(구속조건
- * 체인을 탄다).
+ * 태그는 슬롯 두 줄(실시간 · 시뮬레이션, `TagSlotField`)이고 줄을 누르면 태그
+ * 연결 다이얼로그가 열린다. 리그가 할당된 모델은 대상을 "관절"로 바꿔 관절에
+ * 직접 꽂을 수 있다(구속조건 체인을 탄다).
  *
  * 편집은 전부 onUpdate(updater) 한 채널 — undo/redo·dirty 에 잡힌다. 라이브
  * readout(태그값 → 적용값)은 15Hz 폴링으로 tagLiveValues/rigLiveReadouts 를
@@ -96,6 +100,7 @@ export type StatusTagsUpdater = (tags: ModelStatusTags) => ModelStatusTags;
 
 const NO_MAPPINGS: TagMapping[] = [];
 const NO_STATUS_TAGS: ModelStatusTags = {};
+const NO_BINDING: StatusTagBinding = {};
 
 export interface TagMappingSectionProps {
   model: SavedModelInfo;
@@ -135,6 +140,7 @@ function MappingCard({
   unresolved,
   tagValue,
   appliedValue,
+  modelCraneId,
   onChange,
   onRemove,
   t,
@@ -147,6 +153,7 @@ function MappingCard({
   unresolved: boolean;
   tagValue: number | undefined;
   appliedValue: number | undefined;
+  modelCraneId: string | undefined;
   onChange: (patch: Partial<TagMapping>) => void;
   onRemove: () => void;
   t: InspectorT;
@@ -299,16 +306,19 @@ function MappingCard({
         </Field>
       )}
 
-      <Field compact label={t('monitoring:inspector.mapping.tag')}>
-        <TagKeyCombobox
-          value={mapping.tagKey}
-          onChange={(tagKey) => onChange({ tagKey })}
-          className="h-6 rounded-sm text-[11px]"
-          t={t}
-        />
-      </Field>
+      <TagSlotField
+        value={mapping}
+        onChange={(next) =>
+          onChange({
+            realtimeTagKey: next.realtimeTagKey,
+            virtualTagKey: next.virtualTagKey,
+          })
+        }
+        modelCraneId={modelCraneId}
+        t={t}
+      />
 
-      {mapping.tagKey ? (
+      {hasAnyTagKey(mapping) ? (
         <>
           {/* scale·offset 은 한 줄이다. scale 라벨을 라벨 열에 두어 첫 입력이
               위 줄들의 입력과 같은 자리에서 시작하고, 두 입력이 남는 폭을
@@ -449,11 +459,13 @@ function StatusTagCard({
 
 function StatusTagRows({
   modelId,
+  modelCraneId,
   tags,
   onUpdate,
   t,
 }: {
   modelId: string;
+  modelCraneId: string | undefined;
   tags: ModelStatusTags;
   onUpdate: (updater: StatusTagsUpdater) => void;
   t: InspectorT;
@@ -533,12 +545,12 @@ function StatusTagRows({
           title={t(`monitoring:inspector.statusTags.groups.${group.id}`)}
         >
           {group.roles.map((role) => {
-            const key = tags[role] ?? '';
+            const binding = tags[role] ?? NO_BINDING;
             const roleLabel = t(
               `monitoring:inspector.statusTags.roles.${role}`,
             );
             return (
-              <StatusTagCard key={role} linked={key !== ''}>
+              <StatusTagCard key={role} linked={hasAnyTagKey(binding)}>
                 <div className="flex items-center gap-2">
                   <span className="text-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
                     {roleLabel}
@@ -554,31 +566,14 @@ function StatusTagRows({
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <TagKeyCombobox
-                    value={key}
-                    onChange={(next) =>
-                      onUpdate((prev) => setStatusTag(prev, role, next))
-                    }
-                    className="h-6 rounded-sm text-[11px]"
-                    t={t}
-                  />
-                  {key ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-muted-foreground shrink-0"
-                      aria-label={t('monitoring:inspector.statusTags.clear')}
-                      title={t('monitoring:inspector.statusTags.clear')}
-                      onClick={() =>
-                        onUpdate((prev) => setStatusTag(prev, role, ''))
-                      }
-                    >
-                      <X className="size-3.5" />
-                    </Button>
-                  ) : null}
-                </div>
+                <TagSlotField
+                  value={binding}
+                  onChange={(next) =>
+                    onUpdate((prev) => setStatusTagBinding(prev, role, next))
+                  }
+                  modelCraneId={modelCraneId}
+                  t={t}
+                />
               </StatusTagCard>
             );
           })}
@@ -682,9 +677,15 @@ export function TagMappingSection({
               root !== null &&
               mapping.target.node !== '' &&
               !knownPaths.has(mapping.target.node);
-            const tagValue = mapping.tagKey
-              ? tagLiveValues.get(mapping.tagKey)?.value
-              : undefined;
+            // readout 은 값이 들어온 슬롯을 보인다 — 에디터엔 생산자가 없어
+            // 보통 둘 다 비어 있고, 어느 쪽이든 오면 그 값이다(실시간 우선).
+            const realtimeKey = getSlotTagKey(mapping, 'realtime');
+            const virtualKey = getSlotTagKey(mapping, 'virtual');
+            const tagValue =
+              (realtimeKey
+                ? tagLiveValues.get(realtimeKey)?.value
+                : undefined) ??
+              (virtualKey ? tagLiveValues.get(virtualKey)?.value : undefined);
             const applied =
               mapping.target.kind === 'joint'
                 ? readout?.jointValues.get(mapping.target.jointId)
@@ -704,6 +705,7 @@ export function TagMappingSection({
                 }
                 tagValue={tagValue}
                 appliedValue={applied}
+                modelCraneId={model.craneId}
                 onChange={(patch) => updateMapping(mapping.id, patch)}
                 onRemove={() =>
                   onUpdate((prev) => prev.filter((m) => m.id !== mapping.id))
@@ -728,6 +730,7 @@ export function TagMappingSection({
       >
         <StatusTagRows
           modelId={model.id}
+          modelCraneId={model.craneId}
           tags={statusTags}
           onUpdate={onUpdateStatusTags}
           t={t}

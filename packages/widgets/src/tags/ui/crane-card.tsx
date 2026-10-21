@@ -1,10 +1,12 @@
 import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { CraneSnapshotEntry } from '@crane/features/3d';
+import {
+  CraneLiveDot,
+  formatClock,
+  type CraneSnapshotEntry,
+} from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
-import { formatClock } from '../lib/format-clock';
 import { AgeText } from './age-text';
-import { CraneLiveDot } from './crane-live-dot';
 
 /**
  * 크레인 카드 — 상태 점 · 크레인 ID · 태그 개수 · 마지막 수신(시계 아이콘,

@@ -25,6 +25,8 @@ import { isPlanLookCamera } from '../lib/plan-look';
 import { stopSimulation } from '../model/stop-simulation';
 import { readTagLiveValue } from '../model/tag-value-bus';
 import type { MonitoringViewMode } from '../model/types';
+import { usePlay3dStore } from '../model/use-play3d-store';
+import { resolveActiveTagSlot } from '../lib/tag-slot';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
@@ -260,17 +262,20 @@ export function OutdoorWorkModelSimulation({
   const floodlights = sceneInfo?.floodlights;
   const metersPerUnit = getSceneMetersPerUnit(regionId);
   // 라벨 위 태그 값 목록 — 모델마다 참조를 고정해야 memo 된 GltfModel 이
-  // 렌더마다 다시 그려지지 않는다.
+  // 렌더마다 다시 그려지지 않는다. 키는 활성 슬롯의 것 — 3D 플레이의 소스
+  // 전환은 리마운트가 아니라 여기 의존성으로 따라간다.
+  const play3dSource = usePlay3dStore((s) => s.source);
+  const tagSlot = resolveActiveTagSlot(mode, play3dSource);
   const sceneModels = sceneInfo?.models;
   const labelReadingsById = useMemo(
     () =>
       new Map(
         (sceneModels ?? []).map((model) => [
           model.id,
-          buildLabelReadings(model.tagMappings),
+          buildLabelReadings(model.tagMappings, tagSlot),
         ]),
       ),
-    [sceneModels],
+    [sceneModels, tagSlot],
   );
 
   const onResetCameraRef = useRef(onResetCamera);

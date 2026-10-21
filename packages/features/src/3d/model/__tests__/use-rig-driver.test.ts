@@ -388,7 +388,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
         {
           id: 'root-z',
           target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-          tagKey: 'C_1:z',
+          realtimeTagKey: 'C_1:z',
         },
         {
           id: 'arm-rot',
@@ -398,7 +398,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
             channel: 'rotation',
             axis: 'z',
           },
-          tagKey: 'C_1:arm',
+          realtimeTagKey: 'C_1:arm',
         },
         {
           id: 'hand-scale',
@@ -408,7 +408,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
             channel: 'scale',
             axis: 'y',
           },
-          tagKey: 'C_1:hand',
+          realtimeTagKey: 'C_1:hand',
         },
       ],
       ...overrides,
@@ -455,7 +455,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
                   channel: 'position',
                   axis: 'x',
                 },
-                tagKey: 'k',
+                realtimeTagKey: 'k',
               },
             ],
           }),
@@ -489,7 +489,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
             channel: 'position',
             axis: 'x',
           },
-          tagKey: 'k',
+          realtimeTagKey: 'k',
         },
       ],
     });
@@ -626,7 +626,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
                     channel: 'rotation',
                     axis: 'z',
                   },
-                  tagKey: 'C_1:arm',
+                  realtimeTagKey: 'C_1:arm',
                 },
               ],
             }),

@@ -8,6 +8,7 @@ import {
   getTagMappingTargetKey,
   TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
+  type TagKeySlots,
   type TagMapping,
   type TagMappingChannel,
   type TagMappingTarget,
@@ -35,6 +36,50 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isRigAxis(value: unknown): value is RigAxis {
   return (RIG_AXES as readonly unknown[]).includes(value);
+}
+
+function trimKey(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * 단일 키 시절의 실시간 키 `크레인:코드` 를 지금 표기 `크레인.코드` 로. 이미
+ * 점이 있거나 콜론이 없으면 그대로. `@crane/domain/monitoring` 의
+ * `normalizeLegacyCraneTagKey` 와 같은 규칙이다 — 같은 레이어 슬라이스 간
+ * import 를 하지 않아 여기 한 번 더 적는다. 바꾸면 둘 다 고친다.
+ */
+function toDottedLegacyKey(key: string): string {
+  if (key.includes('.')) return key;
+  const colon = key.indexOf(':');
+  if (colon <= 0 || colon >= key.length - 1) return key;
+  return `${key.slice(0, colon)}.${key.slice(colon + 1)}`;
+}
+
+function legacyKey(value: unknown): string | undefined {
+  const trimmed = trimKey(value);
+  return trimmed === undefined ? undefined : toDottedLegacyKey(trimmed);
+}
+
+/**
+ * 두 슬롯 키를 정규화한다. 레거시 `tagKey`(단일 키 시절)는 실시간 슬롯으로
+ * 옮기며 콜론 표기를 점으로 바꾼다 — 그 시절 배포 씬(dock-in)의 키가 서버
+ * 키였다. 가상 키였던 배포 씬(philly)은 데이터를 `virtualTagKey` 로 직접
+ * 옮겼다. 둘 다 비면 null.
+ *
+ * 맵핑과 상태 태그 역할이 같은 함수를 쓴다.
+ */
+export function sanitizeTagKeySlots(raw: unknown): TagKeySlots | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const realtimeTagKey = trimKey(r.realtimeTagKey) ?? legacyKey(r.tagKey);
+  const virtualTagKey = trimKey(r.virtualTagKey);
+  if (!realtimeTagKey && !virtualTagKey) return null;
+  const out: TagKeySlots = {};
+  if (realtimeTagKey) out.realtimeTagKey = realtimeTagKey;
+  if (virtualTagKey) out.virtualTagKey = virtualTagKey;
+  return out;
 }
 
 function isChannel(value: unknown): value is TagMappingChannel {
@@ -82,7 +127,8 @@ export function sanitizeTagMappings(
     if (!item || typeof item !== 'object') continue;
     const m = item as Record<string, unknown>;
     if (!isNonEmptyString(m.id) || seenIds.has(m.id)) continue;
-    if (typeof m.tagKey !== 'string' || m.tagKey.trim().length === 0) continue;
+    const slots = sanitizeTagKeySlots(m);
+    if (!slots) continue;
     const target = sanitizeTarget(m.target);
     if (!target) continue;
     if (target.kind === 'joint') {
@@ -93,7 +139,7 @@ export function sanitizeTagMappings(
     const targetKey = getTagMappingTargetKey(target);
     if (seenTargets.has(targetKey)) continue;
 
-    const mapping: TagMapping = { id: m.id, target, tagKey: m.tagKey.trim() };
+    const mapping: TagMapping = { id: m.id, target, ...slots };
     if (isFiniteNumber(m.scale)) mapping.scale = m.scale;
     if (isFiniteNumber(m.offset)) mapping.offset = m.offset;
     // 라벨 표시는 true 만, 이름은 trim 해서 비지 않을 때만 싣는다.
@@ -144,7 +190,8 @@ interface LegacyPlacement {
  * 없어 실데이터 영향은 없다.
  *
  * id 는 결정론적(`legacy-pz`)이다 — 변환이 멱등해야 같은 파일을 두 번
- * 로드해도 히스토리·dirty 가 어긋나지 않는다.
+ * 로드해도 히스토리·dirty 가 어긋나지 않는다. 키는 실시간 슬롯 — 이 형식을
+ * 쓴 씬(dock-in)의 키가 서버 키다.
  */
 export function convertLegacyValueMapList(
   raw: unknown,
@@ -170,7 +217,7 @@ export function convertLegacyValueMapList(
         channel: spec.channel,
         axis: spec.axis,
       },
-      tagKey: v.key.trim(),
+      realtimeTagKey: toDottedLegacyKey(v.key.trim()),
     };
     if (isFiniteNumber(v.scale)) mapping.scale = v.scale;
     const offset = legacyOffset - rest;
@@ -192,7 +239,7 @@ export function convertLegacyRigBindings(raw: unknown): TagMapping[] {
     const mapping: TagMapping = {
       id: `legacy-joint-${b.jointId}`,
       target: { kind: 'joint', jointId: b.jointId },
-      tagKey: b.key.trim(),
+      realtimeTagKey: toDottedLegacyKey(b.key.trim()),
     };
     if (isFiniteNumber(b.scale)) mapping.scale = b.scale;
     if (isFiniteNumber(b.offset)) mapping.offset = b.offset;

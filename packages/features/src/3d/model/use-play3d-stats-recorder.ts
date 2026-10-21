@@ -19,6 +19,7 @@ import {
   reportExcludedModelIds,
 } from '../lib/play3d-scope';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
+import { tagSlotOfPlay3dSource } from '../lib/tag-slot';
 import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
 import {
   diffZoneIntrusions,
@@ -269,10 +270,14 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   );
   const source = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
-  const rawStatuses = useModelRuntimeStatuses(sceneInfo, {
-    paused: !transport.isPlaying,
-    timeScale: transport.speed,
-  });
+  const rawStatuses = useModelRuntimeStatuses(
+    sceneInfo,
+    tagSlotOfPlay3dSource(source),
+    {
+      paused: !transport.isPlaying,
+      timeScale: transport.speed,
+    },
+  );
   const excluded = useMemo(
     () => reportExcludedModelIds(sceneInfo),
     [sceneInfo],
@@ -532,9 +537,12 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     return () => window.clearInterval(timer);
   }, []);
 
-  // 태그 집계 — 버스 publish 마다(맵핑된 키만). 한계 포화는 시뮬레이션만.
+  // 태그 집계 — 버스 publish 마다(소스 슬롯으로 맵핑된 키만). 한계 포화는
+  // 시뮬레이션만. 소스가 바뀌면 키 집합도 바뀌므로 의존성에 둔다.
   useEffect(() => {
-    const keys = new Set(collectSceneTagKeys(sceneInfo));
+    const keys = new Set(
+      collectSceneTagKeys(sceneInfo, tagSlotOfPlay3dSource(source)),
+    );
     if (keys.size === 0) return;
     return subscribeTagValues((key, value) => {
       if (!keys.has(key)) return;
@@ -553,5 +561,5 @@ export function usePlay3dStatsRecorder(regionId: string): void {
       }
       accumulateTagValue(agg, value, readPlay3dPositionMs(), maxSpeed);
     });
-  }, [sceneInfo]);
+  }, [sceneInfo, source]);
 }

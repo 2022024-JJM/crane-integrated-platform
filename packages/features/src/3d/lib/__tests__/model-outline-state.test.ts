@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
-import type { ModelStatusTags } from '@crane/domain/3d';
+import type { ModelStatusTags, ResolvedStatusTagKeys } from '@crane/domain/3d';
 import {
   EMPTY_LABEL_PREVIEW,
   STATUS_BIT_ON_THRESHOLD,
@@ -28,18 +28,29 @@ function bit(value: number): TagReading {
   return { value, at: NOW, changedAt: LONG_AGO };
 }
 
-const STATUS: ModelStatusTags = {
+/** 활성 슬롯으로 푼 상태 키 — resolveOutlineState 가 받는 모양. */
+const STATUS: ResolvedStatusTagKeys = {
   controlOn: 'on',
   commError: 'comm',
   slowdown: 'slow',
   endstop: 'end',
 };
 
+const rt = (key: string) => ({ realtimeTagKey: key });
+
+/** 같은 연결을 씬 모델의 상태 태그(두 슬롯 객체) 모양으로. */
+const STATUS_TAGS: ModelStatusTags = {
+  controlOn: rt('on'),
+  commError: rt('comm'),
+  slowdown: rt('slow'),
+  endstop: rt('end'),
+};
+
 /** 수신 중인 장비(tone 은 외곽선과 무관한 아무 값)의 외곽선. */
 function outline(
   map: Record<string, TagReading>,
   tone: EquipmentRuntimeStatus = 'standby',
-  status: ModelStatusTags = STATUS,
+  status: ResolvedStatusTagKeys = STATUS,
 ) {
   return resolveOutlineState(tone, status, readings(map));
 }
@@ -101,7 +112,10 @@ describe('resolveOutlineState — 수신 끊김', () => {
   });
 
   it('라벨 판정의 offline 창 경계를 그대로 따른다 — 정확값은 수신 중, +1ms 는 회색', () => {
-    const keys = collectModelStatusKeys({ statusTags: STATUS });
+    const keys = collectModelStatusKeys(
+      { statusTags: STATUS_TAGS },
+      'realtime',
+    );
     const at = (age: number) =>
       readings({ end: { value: 1, at: NOW - age, changedAt: 0 } });
     const resolve = (age: number) => {
@@ -114,7 +128,10 @@ describe('resolveOutlineState — 수신 끊김', () => {
   });
 
   it('낡은 비트도 다른 키가 오고 있으면 마지막 값으로 읽는다', () => {
-    const keys = collectModelStatusKeys({ statusTags: STATUS });
+    const keys = collectModelStatusKeys(
+      { statusTags: STATUS_TAGS },
+      'realtime',
+    );
     const get = readings({
       on: bit(1),
       end: { value: 1, at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 },
@@ -156,9 +173,16 @@ describe('resolveOutlineState — 모르는 값', () => {
   it('빈 키·문자열이 아닌 키는 연결하지 않은 것과 같다(sanitize 를 안 거친 입력)', () => {
     // 판정에 들어오는 키는 collectModelStatusKeys 가 거른 것이다 — 방어는 그
     // 경계에 있다.
-    const keys = collectModelStatusKeys({
-      statusTags: { commError: '', slowdown: 42, endstop: null },
-    } as unknown as Parameters<typeof collectModelStatusKeys>[0]);
+    const keys = collectModelStatusKeys(
+      {
+        statusTags: {
+          commError: rt(''),
+          slowdown: { realtimeTagKey: 42 },
+          endstop: null,
+        },
+      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
+      'realtime',
+    );
     expect(keys.status).toEqual({});
     expect(outline({ '': bit(1), '42': bit(1) }, 'running', keys.status)).toBe(
       'none',
@@ -180,7 +204,7 @@ describe('resolveOutlineState — 모르는 값', () => {
   });
 
   it('같은 태그를 두 역할에 이으면 둘 다 그 값을 읽는다', () => {
-    const status: ModelStatusTags = { slowdown: 'ac', endstop: 'ac' };
+    const status: ResolvedStatusTagKeys = { slowdown: 'ac', endstop: 'ac' };
     expect(outline({ ac: bit(1) }, 'running', status)).toBe('endstop');
     expect(outline({ ac: bit(0) }, 'running', status)).toBe('none');
   });
@@ -188,10 +212,17 @@ describe('resolveOutlineState — 모르는 값', () => {
 
 describe('collectModelStatusKeys — 외곽선 역할', () => {
   it('외곽선 역할의 키도 수신 키에 들어가고 움직임 키에는 들어가지 않는다', () => {
-    const keys = collectModelStatusKeys({
-      tagMappings: [{ tagKey: 'A:x' }],
-      statusTags: { commError: 'A:comm', slowdown: 'A:slow', endstop: 'A:end' },
-    } as unknown as Parameters<typeof collectModelStatusKeys>[0]);
+    const keys = collectModelStatusKeys(
+      {
+        tagMappings: [rt('A:x')],
+        statusTags: {
+          commError: rt('A:comm'),
+          slowdown: rt('A:slow'),
+          endstop: rt('A:end'),
+        },
+      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
+      'realtime',
+    );
     expect(keys.motion).toEqual(['A:x']);
     expect(keys.liveness).toEqual(['A:x', 'A:comm', 'A:slow', 'A:end']);
     expect(keys.status).toEqual({
@@ -202,7 +233,10 @@ describe('collectModelStatusKeys — 외곽선 역할', () => {
   });
 
   it('외곽선 태그만 단 모델도 수신이 끊기면 offline 이 된다', () => {
-    const keys = collectModelStatusKeys({ statusTags: { endstop: 'A:end' } });
+    const keys = collectModelStatusKeys(
+      { statusTags: { endstop: rt('A:end') } },
+      'realtime',
+    );
     const stale = readings({
       'A:end': { value: 0, at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 },
     });
@@ -210,7 +244,10 @@ describe('collectModelStatusKeys — 외곽선 역할', () => {
   });
 
   it('외곽선 비트는 라벨의 색·아이콘을 바꾸지 않는다', () => {
-    const keys = collectModelStatusKeys({ statusTags: STATUS });
+    const keys = collectModelStatusKeys(
+      { statusTags: STATUS_TAGS },
+      'realtime',
+    );
     const base = { on: bit(1) };
     const withOutline = {
       on: bit(1),

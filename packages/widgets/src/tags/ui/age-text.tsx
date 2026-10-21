@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { resolveAge } from '../lib/format-clock';
+import { resolveAge } from '@crane/features/3d';
 
 /** 경과 시간 문구 — "0.3초 전" / "12초 전" / "1분 3초 전". */
 export function AgeText({ ageMs }: { ageMs: number }) {

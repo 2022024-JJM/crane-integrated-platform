@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadSceneInfoByRegionId } from '@crane/domain/3d';
+import { getPrimaryTagKey, loadSceneInfoByRegionId } from '@crane/domain/3d';
 import { getRegionTitleKey, type Region } from '@crane/domain/region';
 import { useSceneInfoStore } from '@crane/features/3d';
-import type { DashboardEquipmentRow } from './types';
+import type { DashboardEquipmentRow, DashboardEquipmentTag } from './types';
 
 /**
  * 씬 배치 기반 지역 개요 — 캔버스 없이 씬 JSON 만 읽는다.
@@ -63,25 +63,29 @@ export function useSceneOverview(regions: Region[]): SceneOverview {
       }
       equipmentCountByRegion[region.id] = sceneInfo.models.length;
       for (const model of sceneInfo.models) {
-        const tagKeys = [
-          ...new Set(
-            (model.tagMappings ?? []).map((mapping) => mapping.tagKey),
-          ),
-        ];
-        if (tagKeys.length === 0) continue;
+        // 대시보드는 관제 문맥이라 대표 키(실시간 우선)로 값을 읽고, 가상
+        // 키는 가상 태그 정의(이름·단위·범위) 조회용으로 함께 든다.
+        const tagsByKey = new Map<string, DashboardEquipmentTag>();
+        for (const mapping of model.tagMappings ?? []) {
+          const tagKey = getPrimaryTagKey(mapping);
+          if (!tagKey || tagsByKey.has(tagKey)) continue;
+          tagsByKey.set(tagKey, {
+            tagKey,
+            virtualTagKey: mapping.virtualTagKey ?? null,
+            label: tagKey,
+            unit: null,
+            min: null,
+            max: null,
+          });
+        }
+        if (tagsByKey.size === 0) continue;
         equipment.push({
           modelId: model.id,
           regionId: region.id,
           equipName: model.equipName,
           regionTitleKey: getRegionTitleKey(region.id),
           previewAssetId: model.asset?.id ?? null,
-          tags: tagKeys.map((tagKey) => ({
-            tagKey,
-            label: tagKey,
-            unit: null,
-            min: null,
-            max: null,
-          })),
+          tags: [...tagsByKey.values()],
         });
       }
     }
