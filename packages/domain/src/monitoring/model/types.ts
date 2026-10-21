@@ -1,23 +1,10 @@
-export type ReplayLiteValue = string | number | null;
+export type ReplayLiteValue = string | number | boolean | null;
 export type ReplayLiteValueMap = Record<string, ReplayLiteValue>;
-export type MonitoringLiveValue = string | number | boolean | null;
-
-export interface ReplayTagSchemaItem {
-  displayName: string;
-  category: string;
-  dataType: string | null;
-  unit: string | null;
-  alarm: boolean;
-  slot: number | null;
-}
-
-export type ReplayTagSchema = Record<string, ReplayTagSchemaItem>;
 
 export interface ReplayLiteCraneSnapshot {
   craneId: string;
   craneNo: string;
   snapshotAt: string | null;
-  tagSchema: ReplayTagSchema | null;
   values: ReplayLiteValueMap;
 }
 
@@ -33,58 +20,43 @@ export interface ReplayLiteResponse {
   frames: ReplayLiteFrame[];
 }
 
-export type MonitoringReplaySiteId = 'internal' | 'external';
-
-export interface MonitoringReplaySite {
-  siteId: string;
-  siteName: string;
-  workType: string;
-  notes: string | null;
-}
-
-export interface PlaybackFrameResponse {
-  time: string;
-  values: Record<string, unknown>;
-}
-
-export interface OperationIntervalResponse {
-  onAt: string;
-  offAt: string;
-}
-
-export interface PlaybackResponse {
-  craneId: string;
-  tagSchema: Record<string, unknown>;
-  baseline: PlaybackFrameResponse | null;
-  timeline: OperationIntervalResponse[];
-  frames: PlaybackFrameResponse[];
-}
-
-export type PlaybackSiteResponse = PlaybackResponse[];
-
 export interface MonitoringReplayLiteQuery {
   regionId: string;
   from: string;
   to: string;
 }
 
-export interface MonitoringTagDefinition {
-  tagDefinitionId: number;
-  tagCode: string;
-  displayName: string;
-  dataType: string | null;
-  unit: string | null;
+/**
+ * `GET /api/cranes/{craneId}/history` 조회 조건. 시각은 ISO-8601(UTC),
+ * `step` 은 `5s`·`1m` 꼴(생략 시 서버 기본값).
+ */
+export interface CraneHistoryQuery {
+  craneId: string;
+  from: string;
+  to: string;
+  step?: string;
 }
 
-export interface RealtimeCraneLiteMessage {
-  eventType: 'snapshot.delta';
+/** 이력 프레임 한 장 — 그 시각의 전체 태그 값(sample-and-hold). */
+export interface CraneHistoryFrame {
+  time: string;
+  values: Record<string, number | boolean>;
+}
+
+/**
+ * `GET /api/cranes/{craneId}/history` 응답. `frames` 는 `from` 부터 `step`
+ * 간격이고 첫 프레임에 `baseline`(from 이전 마지막 행, 없으면 null)이 이미
+ * 반영돼 있다. `truncated` 는 행 상한에 걸려 `to` 전에 끝났다는 뜻.
+ */
+export interface CraneHistoryFrames {
   craneId: string;
-  tagCode: string;
-  value: MonitoringLiveValue;
-  timestamp: string;
-  quality: number;
-  changed: boolean;
-  occurredAt: string;
+  from: string;
+  to: string;
+  step: string;
+  tags: string[];
+  baseline: CraneHistoryFrame | null;
+  frames: CraneHistoryFrame[];
+  truncated: boolean;
 }
 
 /**
@@ -116,22 +88,4 @@ export interface CraneSnapshotBatch {
   type: 'snapshot';
   sentAt: string | null;
   cranes: unknown[];
-}
-
-export interface MonitoringReplayRow {
-  id: string;
-  frameTimestamp: string;
-  snapshotAt: string | null;
-  craneId: string;
-  craneNo: string;
-  tagCode: string;
-  displayName: string;
-  category: string;
-  dataType: string | null;
-  unit: string | null;
-  direction: string | null;
-  value: MonitoringLiveValue;
-  alarm: boolean;
-  stale: boolean;
-  changed: boolean;
 }

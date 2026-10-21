@@ -22,7 +22,6 @@ function frame(x: number): ReplayLiteFrame {
         craneId: 'crane-1',
         craneNo: '1',
         snapshotAt: null,
-        tagSchema: null,
         values: { X: x, NOTE: 'not-a-number' },
       },
     ],
@@ -85,7 +84,6 @@ describe('loadFrames', () => {
           craneId: 'crane-1',
           craneNo: '1',
           snapshotAt: null,
-          tagSchema: null,
           values: {
             crane_control_on: 'true',
             accs_bypass_on: 'false',

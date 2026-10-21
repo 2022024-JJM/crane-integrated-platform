@@ -6,8 +6,8 @@
  *
  * - number: 유한수만.
  * - boolean: true = 1, false = 0.
- * - string: `'true'`/`'false'` 만(대소문자·앞뒤 공백 무시). 플레이백 어댑터
- *   (playback-adapter `normalizeReplayValue`)가 boolean 을 이 문자열로 싣는다.
+ * - string: `'true'`/`'false'` 만(대소문자·앞뒤 공백 무시). 예전 리플레이
+ *   응답이 boolean 을 이 문자열로 실었다 — 호환으로 남긴다.
  *   숫자 문자열(`'12'`)은 받지 않는다 — 문자열로 오는 태그가 축에 꽂혀
  *   움직이는 것은 서버 형식을 확인한 뒤에 정한다.
  * - 그 외(null·빈 문자열·객체): null. 호출자가 버린다.

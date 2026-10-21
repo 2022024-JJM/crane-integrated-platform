@@ -4,8 +4,8 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
 /**
  * 태그 콤보박스가 보는 목록. 소스별 항목을 한 모양으로 합친다.
  *
- * 지금은 가상 태그 스토어뿐이다. 실서버가 붙으면 `getMonitoringTags()`
- * (`@crane/domain/monitoring`) 결과를 `source: 'server'` 로 여기서 합치면
+ * 지금은 가상 태그 스토어뿐이다. 서버 태그를 합치려면 스냅샷 스토어의 태그 코드
+ * (표시명은 `getMonitoringTagMetadata`)를 `source: 'server'` 로 여기서 합치면
  * 콤보박스·맵핑 UI 는 손대지 않아도 된다.
  */
 export interface TagCatalogEntry {

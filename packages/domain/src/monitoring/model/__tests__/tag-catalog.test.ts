@@ -48,21 +48,4 @@ describe('getMonitoringTagMetadata — 서버 태그 코드의 영문 표시명'
       'Some New Bit',
     );
   });
-
-  it('서버 스키마 항목이 있으면 그 값을 우선하고 빈 표시명만 코드에서 만든다', () => {
-    expect(
-      getMonitoringTagMetadata('mh1_weight', {
-        displayName: '',
-        category: '',
-        dataType: 'REAL',
-        unit: 'kg',
-        alarm: false,
-        slot: 3,
-      }),
-    ).toMatchObject({
-      displayName: 'Mh1 Weight',
-      category: 'status',
-      unit: 'kg',
-    });
-  });
 });

@@ -1,57 +1,70 @@
 import { getCraneIdsByRegion } from '../../shared';
 
+/** 이력 프레임 간격 — 서버 `step`. 1h 상한에서 721 프레임이다. */
 const DEFAULT_REPLAY_INTERVAL = '5s';
+/** 서버 `cis.query.max-range` 와 같다. */
 const MAX_REPLAY_RANGE_MS = 60 * 60 * 1000;
-const SAMPLE_REPLAY_FROM_ISO = '2024-02-01T09:00:00Z';
-const SAMPLE_REPLAY_TO_ISO = '2024-02-01T10:00:00Z';
+/** 검색 폼 기본 구간 — 지금까지 최근 10분. */
+export const DEFAULT_REPLAY_RANGE_MS = 10 * 60 * 1000;
+
+const DATE_TIME_LOCAL_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 function padDateTimeSegment(value: number) {
   return String(value).padStart(2, '0');
 }
 
-function normalizeDateTimeLocalValue(value: string) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return trimmedValue;
-  }
-
-  const [datePart, timePart = '00:00:00'] = trimmedValue.split('T');
-  const [hours = '00', minutes = '00', seconds = '00'] = timePart.split(':');
-
-  return `${datePart}T${hours}:${minutes}:${seconds}`;
+/**
+ * datetime-local 입력값(`YYYY-MM-DDTHH:mm[:ss]`, 브라우저 로컬 시간) → Date.
+ * 형식이 다르거나 날짜가 아니면 null.
+ */
+export function parseDateTimeLocalValue(value: string): Date | null {
+  const match = value.trim().match(DATE_TIME_LOCAL_PATTERN);
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second = '0'] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second),
+  );
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function toIsoString(value: Date | string) {
-  if (typeof value === 'string') {
-    return `${normalizeDateTimeLocalValue(value)}Z`;
-  }
-
+/** Date → ISO-8601 UTC, 초 단위(`2026-10-21T00:15:30Z`). 서버 `from`/`to` 형식. */
+export function toIsoString(value: Date) {
   return value.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
+/**
+ * Date 또는 ISO 문자열 → datetime-local 입력값(브라우저 로컬 시간, 초 포함).
+ * 읽을 수 없는 값은 빈 문자열.
+ */
 export function toDateTimeLocalValue(value: Date | string) {
-  if (typeof value === 'string') {
-    return normalizeDateTimeLocalValue(
-      value.replace(/\.\d{3}Z$/, 'Z').replace(/Z$/, ''),
-    );
-  }
-
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return '';
   return [
-    value.getFullYear(),
-    padDateTimeSegment(value.getMonth() + 1),
-    padDateTimeSegment(value.getDate()),
+    date.getFullYear(),
+    padDateTimeSegment(date.getMonth() + 1),
+    padDateTimeSegment(date.getDate()),
   ]
     .join('-')
     .concat(
-      `T${padDateTimeSegment(value.getHours())}:${padDateTimeSegment(
-        value.getMinutes(),
-      )}:${padDateTimeSegment(value.getSeconds())}`,
+      `T${padDateTimeSegment(date.getHours())}:${padDateTimeSegment(
+        date.getMinutes(),
+      )}:${padDateTimeSegment(date.getSeconds())}`,
     );
 }
 
+/**
+ * datetime-local 입력값 → 서버 ISO(UTC). 형식이 다르면 빈 문자열이라 조회가
+ * 나가지 않는다.
+ */
 export function fromDateTimeLocalValue(value: string) {
-  return toIsoString(value);
+  const date = parseDateTimeLocalValue(value);
+  return date ? toIsoString(date) : '';
 }
 
 export function getReplayDefaultCraneIds(regionId: string) {
@@ -62,16 +75,22 @@ export function getDefaultReplayInterval() {
   return DEFAULT_REPLAY_INTERVAL;
 }
 
-export function buildDefaultReplayQuery(regionId: string) {
+/** 기본 조회 구간 — `now` 까지 최근 `DEFAULT_REPLAY_RANGE_MS`. 초 아래는 버린다. */
+export function buildDefaultReplayQuery(
+  regionId: string,
+  now: Date = new Date(),
+) {
+  const to = new Date(Math.floor(now.getTime() / 1000) * 1000);
+  const from = new Date(to.getTime() - DEFAULT_REPLAY_RANGE_MS);
   return {
-    from: SAMPLE_REPLAY_FROM_ISO,
-    to: SAMPLE_REPLAY_TO_ISO,
+    from: toIsoString(from),
+    to: toIsoString(to),
     craneIds: getReplayDefaultCraneIds(regionId),
   };
 }
 
-export function buildDefaultReplayFormValues(regionId: string) {
-  const query = buildDefaultReplayQuery(regionId);
+export function buildDefaultReplayFormValues(regionId: string, now?: Date) {
+  const query = buildDefaultReplayQuery(regionId, now);
 
   return {
     from: toDateTimeLocalValue(query.from),
@@ -80,29 +99,26 @@ export function buildDefaultReplayFormValues(regionId: string) {
   };
 }
 
-export function buildSampleReplayFormValues(regionId: string) {
-  return {
-    from: toDateTimeLocalValue(SAMPLE_REPLAY_FROM_ISO),
-    to: toDateTimeLocalValue(SAMPLE_REPLAY_TO_ISO),
-    craneIds: getReplayDefaultCraneIds(regionId),
-  };
-}
+export type ReplayValidationReason =
+  | 'missing'
+  | 'invalid'
+  | 'order'
+  | 'tooLarge';
 
-export type ReplayValidationReason = 'missing' | 'invalid' | 'order' | 'tooLarge';
-
+/** 검색 폼 값 검증. 서버는 `from < to`, 구간 ≤ 1h 를 요구한다. */
 export function validateReplayDateTimeRange(from: string, to: string) {
   if (!from || !to) {
     return { isValid: false, reason: 'missing' as const };
   }
 
-  const parsedFrom = new Date(from);
-  const parsedTo = new Date(to);
+  const parsedFrom = parseDateTimeLocalValue(from);
+  const parsedTo = parseDateTimeLocalValue(to);
 
-  if (Number.isNaN(parsedFrom.getTime()) || Number.isNaN(parsedTo.getTime())) {
+  if (!parsedFrom || !parsedTo) {
     return { isValid: false, reason: 'invalid' as const };
   }
 
-  if (parsedFrom > parsedTo) {
+  if (parsedFrom.getTime() >= parsedTo.getTime()) {
     return { isValid: false, reason: 'order' as const };
   }
 

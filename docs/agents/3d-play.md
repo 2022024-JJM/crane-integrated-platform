@@ -18,6 +18,7 @@
 | 타임라인·재생바 공용 | 눈금 행 `ui/play3d-tick-row.tsx`, hover 요약 `ui/play3d-hover-summary.tsx`, 분리 트리거 핸들 `@crane/ui/molecules/tooltip-handle` |
 | 장비 운전 상태 · 라벨 표시 상태 · 외곽선 | 타입 `packages/core/src/types/status.ts` (`EquipmentRuntimeStatus`, `EquipmentLabelState`, `EquipmentOutlineState`), 판정 `packages/features/src/3d/lib/{model-runtime-status,model-label-state,model-outline-state}.ts`, 훅 `model/use-model-runtime-statuses.ts`, 외곽선 모양 `packages/domain/src/3d/lib/status-outline-style.ts` |
 | 리플레이 프레임 시각 | `packages/features/src/3d/model/scene-time-source.ts`, `@crane/domain/monitoring` 의 `parseReplayTimestamp` |
+| 리플레이 데이터(크레인 스냅샷 서버 이력) | `packages/domain/src/monitoring/api/get-monitoring-replay-lite.ts`(크레인별 `GET /api/cranes/{id}/history` → `lib/crane-history.ts` 로 합침), 기본 구간·step·폼 값 변환 `config/replay-defaults.ts`, 구간 검색 `packages/features/src/monitoring/model/use-monitoring-replay-{search,player,ui-state}.ts` |
 | 앱 배치 | `apps/{hanwha-ocean,goliath-crane}/src/pages/*/ui/replay-monitoring-view.tsx` (`ResizablePanelGroup` 우측에 리포트) |
 
 i18n 은 `monitoring:play3d.*`.
@@ -38,6 +39,7 @@ i18n 은 `monitoring:play3d.*`.
 - 전환은 **리마운트가 아니라 상태 전환**이다. 씬·GLB·카메라·검색 상태·프레임이 유지되고, `Play3dView` 의 effect 가 떠나는 소스만 정리한다 — 시뮬레이션을 떠나면 `stopSimulation`, 리플레이를 떠나면 pause + seekTo(0).
 - `useSceneData(mode='play3d')` 는 진입에 resetReplay + 가상 태그 로드만 한다. 자동 재생은 없다 — 시뮬레이션 소스도 트랜스포트 바 ▶ 가 켠다.
 - 리플레이 소스는 `timeSource='replay'` 로 현장 시각·조명이 프레임 시각을 따르고(`docs/agents/rendering-perf.md`), `SceneClockMenu` 는 숨긴다.
+- 리플레이 데이터는 크레인 스냅샷 서버의 이력이다. 구간 검색(datetime-local 은 브라우저 로컬 시간, 서버에는 UTC ISO 로 보낸다)마다 region 레지스트리의 크레인별 `GET /api/cranes/{id}/history` 를 같은 `step`(`getDefaultReplayInterval`)으로 받아 `buildReplayFromCraneHistories` 가 한 시간 축으로 합친다 — 같은 격자의 프레임을 한 장으로 묶고, 값이 없는 크레인은 프레임에서 빠진다. 서버가 모르는 크레인(404)은 빠지고 다른 실패는 조회 오류로 보인다. 기본 구간은 최근 `DEFAULT_REPLAY_RANGE_MS`, 구간 상한 1h 와 `from < to` 는 서버 `cis.query` 규칙과 같다.
 
 ### 트랜스포트 어댑터
 
