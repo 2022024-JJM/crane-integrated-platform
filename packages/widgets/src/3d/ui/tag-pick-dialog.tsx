@@ -26,8 +26,11 @@ export interface TagPickDialogProps {
   value: TagKeySlots;
   /** 모델의 craneId — 실시간 탭이 그 크레인을 먼저 고른다. */
   modelCraneId?: string;
-  /** "연결" — 두 슬롯 초안을 한 번에 넘긴다. 바뀐 슬롯만 다르다. */
-  onApply: (next: TagKeySlots) => void;
+  /**
+   * "연결" — 두 슬롯 초안을 한 번에 넘긴다. 바뀐 슬롯만 다르다. `slot` 은
+   * 연결을 누를 때 보던 탭이다.
+   */
+  onApply: (next: TagKeySlots, slot: TagSlot) => void;
 }
 
 /**
@@ -149,7 +152,7 @@ function TagPickDialogBody({
           type="button"
           size="sm"
           disabled={!dirty}
-          onClick={() => onApply(draft)}
+          onClick={() => onApply(draft, slot)}
         >
           {t('monitoring:inspector.tagPick.apply')}
         </Button>

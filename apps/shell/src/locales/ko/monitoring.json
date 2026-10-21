@@ -144,6 +144,7 @@
     },
     "tagPick": {
       "title": "태그 연결",
+      "tag": "태그",
       "slots": {
         "realtime": "실시간",
         "virtual": "시뮬레이션"

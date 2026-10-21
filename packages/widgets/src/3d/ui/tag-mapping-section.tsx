@@ -73,9 +73,11 @@ import { TagSlotField } from './tag-slot-field';
  *
  * 관절 카드와 같은 문법이다: `+` 가 기본값 카드(모델 루트·위치·x·태그 없음)를
  * 만들고, 카드 안에서 위→아래 순서로 노드 → 타입 → 축 → 태그를 고른다.
- * 태그는 슬롯 두 줄(실시간 · 시뮬레이션, `TagSlotField`)이고 줄을 누르면 태그
- * 연결 다이얼로그가 열린다. 리그가 할당된 모델은 대상을 "관절"로 바꿔 관절에
- * 직접 꽂을 수 있다(구속조건 체인을 탄다).
+ * 카드 머리줄의 순번(# 1, # 2 …)은 목록 순서 — 저장 순서이자 같은 대상 중복을
+ * 앞 항목이 이기는 순서다. 태그는 한 줄(`TagSlotField` — 실시간 · 시뮬레이션
+ * 전환 버튼 + 고른 슬롯의 키 칸)이고 칸을 누르면 태그 연결 다이얼로그가
+ * 열린다. 리그가 할당된 모델은 대상을 "관절"로 바꿔 관절에 직접 꽂을 수
+ * 있다(구속조건 체인을 탄다).
  *
  * 편집은 전부 onUpdate(updater) 한 채널 — undo/redo·dirty 에 잡힌다. 라이브
  * readout(태그값 → 적용값)은 15Hz 폴링으로 tagLiveValues/rigLiveReadouts 를
@@ -132,6 +134,7 @@ function ConflictNote({
 }
 
 function MappingCard({
+  index,
   mapping,
   rig,
   options,
@@ -145,6 +148,8 @@ function MappingCard({
   onRemove,
   t,
 }: {
+  /** 목록 안 순서(0부터) — 머리줄에 #1 부터 적는다. */
+  index: number;
   mapping: TagMapping;
   rig: RigDefinition | undefined;
   options: ModelNodeOption[];
@@ -177,6 +182,14 @@ function MappingCard({
       )}
     >
       <div className="flex items-center gap-1.5">
+        <span
+          className={cn(
+            'text-foreground shrink-0 font-mono text-[11px] font-medium',
+            !rig && 'flex-1',
+          )}
+        >
+          # {index + 1}
+        </span>
         {rig ? (
           <div
             className="flex flex-1 gap-0.5"
@@ -206,11 +219,7 @@ function MappingCard({
               </button>
             ))}
           </div>
-        ) : (
-          <span className="text-muted-foreground flex-1 text-[10px]">
-            {t('monitoring:inspector.mapping.targetNode')}
-          </span>
-        )}
+        ) : null}
         {unresolved ? (
           <AlertTriangle
             className="size-3.5 shrink-0 text-amber-500"
@@ -566,7 +575,10 @@ function StatusTagRows({
                     />
                   </div>
                 </div>
+                {/* 모델을 바꾸면 처음 보일 슬롯을 그 모델의 연결로 다시
+                    고른다 — 이 구역은 모델이 바뀌어도 리마운트되지 않는다. */}
                 <TagSlotField
+                  key={modelId}
                   value={binding}
                   onChange={(next) =>
                     onUpdate((prev) => setStatusTagBinding(prev, role, next))
@@ -671,7 +683,7 @@ export function TagMappingSection({
         }
       >
         <div className="space-y-1.5">
-          {mappings.map((mapping) => {
+          {mappings.map((mapping, index) => {
             const nodeUnresolved =
               mapping.target.kind === 'node' &&
               root !== null &&
@@ -694,6 +706,7 @@ export function TagMappingSection({
             return (
               <MappingCard
                 key={mapping.id}
+                index={index}
                 mapping={mapping}
                 rig={rig}
                 options={options}

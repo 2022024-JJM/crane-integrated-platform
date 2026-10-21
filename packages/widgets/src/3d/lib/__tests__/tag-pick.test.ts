@@ -8,7 +8,9 @@ import {
   filterPickTags,
   filterTagCatalog,
   pickInitialCrane,
+  pickInitialSlot,
   resolveSelectedCrane,
+  splitChipTail,
   selectedCodeForCrane,
 } from '../tag-pick';
 
@@ -143,6 +145,33 @@ describe('pickInitialCrane / resolveSelectedCrane', () => {
   });
 });
 
+describe('pickInitialSlot', () => {
+  it('키가 있는 첫 슬롯 — 둘 다 있으면 실시간, 시뮬레이션만 있으면 시뮬레이션', () => {
+    expect(
+      pickInitialSlot({
+        realtimeTagKey: 'C_171.tl_distance',
+        virtualTagKey: 'GC_04:gantry_position',
+      }),
+    ).toBe('realtime');
+    expect(pickInitialSlot({ virtualTagKey: 'GC_04:gantry_position' })).toBe(
+      'virtual',
+    );
+    expect(pickInitialSlot({ realtimeTagKey: 'C_171.tl_distance' })).toBe(
+      'realtime',
+    );
+  });
+
+  it('둘 다 비면 실시간 — 빈 문자열은 키가 없는 것으로 본다', () => {
+    expect(pickInitialSlot({})).toBe('realtime');
+    expect(pickInitialSlot({ realtimeTagKey: '', virtualTagKey: '' })).toBe(
+      'realtime',
+    );
+    expect(
+      pickInitialSlot({ realtimeTagKey: '', virtualTagKey: 'V:only' }),
+    ).toBe('virtual');
+  });
+});
+
 describe('selectedCodeForCrane / describeTagKey / describeSlotChip / describePickSelection', () => {
   it('연결된 키가 그 크레인 것일 때만 코드를 돌려준다', () => {
     expect(selectedCodeForCrane('C_171.tl_distance', 'C_171')).toBe(
@@ -176,10 +205,14 @@ describe('selectedCodeForCrane / describeTagKey / describeSlotChip / describePic
     ];
     const realtime = describeSlotChip('C_171.tl_distance', 'realtime', catalog);
     expect(realtime.text).toBe('C_171 · tl_distance');
+    expect(realtime.lead).toBe('C_171 · ');
+    expect(realtime.tail).toBe('tl_distance');
     expect(realtime.unknown).toBe(false);
     expect(realtime.title).toContain('m');
     expect(describeSlotChip('gantry', 'realtime', catalog)).toEqual({
       text: 'gantry',
+      lead: '',
+      tail: 'gantry',
       title: undefined,
       unknown: true,
     });
@@ -187,6 +220,8 @@ describe('selectedCodeForCrane / describeTagKey / describeSlotChip / describePic
       describeSlotChip('GC_04:gantry_position', 'virtual', catalog),
     ).toEqual({
       text: 'GC_04:gantry_position',
+      lead: 'GC_04:',
+      tail: 'gantry_position',
       title: 'GC-04 주행 · m',
       unknown: false,
     });
@@ -195,6 +230,42 @@ describe('selectedCodeForCrane / describeTagKey / describeSlotChip / describePic
       describeSlotChip('V:same', 'virtual', catalog).title,
     ).toBeUndefined();
     expect(describeSlotChip('V:gone', 'virtual', catalog).unknown).toBe(true);
+  });
+
+  it('칩의 앞부분·코드는 마지막 : 또는 . 에서 나누고, 이어 붙이면 늘 text 다', () => {
+    const split = (key: string, slot: 'realtime' | 'virtual' = 'virtual') => {
+      const chip = describeSlotChip(key, slot, []);
+      expect(chip.lead + chip.tail).toBe(chip.text);
+      return [chip.lead, chip.tail];
+    };
+    // 구분자가 여럿이면 마지막 것 — 점·콜론이 섞여도 같다.
+    expect(split('A:B:c')).toEqual(['A:B:', 'c']);
+    expect(split('A:b.c')).toEqual(['A:b.', 'c']);
+    // 못 푸는 실시간 키(가상 표기)도 같은 규칙.
+    expect(split('GC_04:gantry_position', 'realtime')).toEqual([
+      'GC_04:',
+      'gantry_position',
+    ]);
+    // 구분자가 양 끝이거나 없으면 나누지 않는다 — 빈 코드를 만들지 않는다.
+    expect(split('GC_04:')).toEqual(['', 'GC_04:']);
+    expect(split(':gantry')).toEqual(['', ':gantry']);
+    expect(split('plain')).toEqual(['', 'plain']);
+    expect(split('')).toEqual(['', '']);
+  });
+
+  it('코드 끝 4글자를 따로 떼어 번호가 보이게 하고, 8글자 이하는 나누지 않는다', () => {
+    expect(splitChipTail('trolley_position_2')).toEqual({
+      head: 'trolley_positi',
+      end: 'on_2',
+    });
+    expect(splitChipTail('trolley_position')).toEqual({
+      head: 'trolley_posi',
+      end: 'tion',
+    });
+    // 경계 — 8글자는 그대로, 9글자부터 나눈다.
+    expect(splitChipTail('abcdefgh')).toEqual({ head: 'abcdefgh', end: '' });
+    expect(splitChipTail('abcdefghi')).toEqual({ head: 'abcde', end: 'fghi' });
+    expect(splitChipTail('')).toEqual({ head: '', end: '' });
   });
 
   it('빵부스러기는 크레인 › 분류 › 이름 (코드)', () => {
