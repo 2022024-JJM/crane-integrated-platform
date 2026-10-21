@@ -11,19 +11,27 @@ export type {
   ReplayLiteResponse,
 } from './model/types';
 export {
+  DEFAULT_REPLAY_DURATION,
   DEFAULT_REPLAY_RANGE_MS,
+  REPLAY_DURATIONS_MS,
+  REPLAY_DURATION_KEYS,
   buildDefaultReplayQuery,
   buildDefaultReplayFormValues,
+  buildDefaultReplayStart,
+  getReplayStartMax,
   fromDateTimeLocalValue,
   getDefaultReplayInterval,
   getReplayDefaultCraneIds,
+  isReplayDuration,
   parseDateTimeLocalValue,
+  resolveReplayRange,
   toDateTimeLocalValue,
-  validateReplayDateTimeRange,
+  validateReplayStart,
 } from './config/replay-defaults';
 export type {
-  ReplayValidationReason,
   MonitoringReplayUiState,
+  ReplayDuration,
+  ReplayValidationReason,
 } from './config/replay-defaults';
 export { getMonitoringReplayLite } from './api/get-monitoring-replay-lite';
 export { getCraneHistory } from './api/get-crane-history';

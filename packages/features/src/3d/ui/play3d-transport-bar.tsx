@@ -89,9 +89,6 @@ export function Play3dTransportBar({
   const reachedMs = usePlay3dStatsStore((s) => s.data.reachedMs);
   const windowEndMs = usePlay3dStatsStore((s) => s.data.windowEndMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
-  const replayTimestamp = useReplayPlayerStore(
-    (s) => s.frames[s.frameIndex]?.timestamp ?? null,
-  );
   const replayFrameCount = useReplayPlayerStore((s) => s.frames.length);
   const replayFrameIndex = useReplayPlayerStore((s) => s.frameIndex);
 
@@ -119,10 +116,6 @@ export function Play3dTransportBar({
     [events, windowEndMs, replayFrames, reachedMs, version],
   );
 
-  const positionLabel =
-    source === 'replay'
-      ? (formatReplayTimestamp(replayTimestamp, 'time') ?? '--:--:--')
-      : formatSimClock(positionMs);
   const lengthLabel =
     durationMs !== null
       ? formatSimClock(durationMs)
@@ -179,18 +172,22 @@ export function Play3dTransportBar({
                 </Button>
               }
             />
-            <PopoverPopup align="start" side="bottom" className="w-72 p-3">
+            <PopoverPopup align="start" side="bottom" className="w-72 p-4">
               <ReplaySearchForm
                 bare
-                draftFrom={search.draftFrom}
-                draftTo={search.draftTo}
-                onDraftFromChange={search.setDraftFrom}
-                onDraftToChange={search.setDraftTo}
+                draftStart={search.draftStart}
+                onDraftStartChange={search.setDraftStart}
+                onResetDraftStart={search.resetDraftStart}
+                draftEnd={search.draftEnd}
+                duration={search.duration}
+                durations={search.durations}
+                onDurationChange={search.setDuration}
                 onSearch={search.submitSearch}
                 canSearch={search.canSearch}
                 validationReason={search.validationReason}
                 isLoading={search.isLoading}
                 isError={search.isError}
+                isEmpty={search.isEmpty}
                 errorMessage={search.errorMessage}
               />
             </PopoverPopup>
@@ -333,10 +330,10 @@ export function Play3dTransportBar({
         <div className="text-muted-foreground ml-auto flex items-center gap-2 font-mono text-[11px] tabular-nums">
           {hasContent ? (
             <>
-              <span className="text-foreground">{positionLabel}</span>
-              <span>
-                {formatSimClock(positionMs)} / {lengthLabel}
+              <span className="text-foreground">
+                {formatSimClock(positionMs)}
               </span>
+              <span>/ {lengthLabel}</span>
             </>
           ) : (
             <span>{t('common:replay.noData')}</span>

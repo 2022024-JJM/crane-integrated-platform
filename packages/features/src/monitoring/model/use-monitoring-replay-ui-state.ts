@@ -13,10 +13,13 @@ export function useMonitoringReplayUiState(
   });
 
   return {
-    draftFrom: search.draftFrom,
-    draftTo: search.draftTo,
-    setDraftFrom: search.setDraftFrom,
-    setDraftTo: search.setDraftTo,
+    draftStart: search.draftStart,
+    setDraftStart: search.setDraftStart,
+    resetDraftStart: search.resetDraftStart,
+    draftEnd: search.draftEnd,
+    duration: search.duration,
+    setDuration: search.setDuration,
+    durations: search.durations,
     submitSearch: search.submitSearch,
     canSearch: search.canSearch,
     validationReason: search.validationReason,
@@ -24,6 +27,7 @@ export function useMonitoringReplayUiState(
     viewingTo: search.viewingTo,
     isLoading: player.isLoading,
     isError: player.isError,
+    isEmpty: player.isEmpty,
     errorMessage: player.errorMessage,
   };
 }

@@ -275,12 +275,22 @@
     "speed": "Speed",
     "loading": "Loading...",
     "searchForm": "Select Range",
+    "startAt": "Start time",
+    "resetStart": "Reset",
+    "resetStartLabel": "Reset start time",
+    "durationLabel": "Duration",
+    "queryTime": "Query time",
+    "emptyResult": "No data in the selected range.",
+    "duration": {
+      "10m": "10 min",
+      "30m": "30 min",
+      "1h": "1 hour"
+    },
     "fetch": "Load",
     "validation": {
-      "missing": "Start time and end time are required.",
-      "invalid": "Please enter a valid time range.",
-      "order": "Start time must be earlier than end time.",
-      "tooLarge": "Load range must be within 1 hour."
+      "missing": "Select a start time.",
+      "invalid": "The start time could not be read.",
+      "future": "Only past times can be queried."
     },
     "frameInfo": "Frame {{current}} / {{total}}",
     "noData": "No data"

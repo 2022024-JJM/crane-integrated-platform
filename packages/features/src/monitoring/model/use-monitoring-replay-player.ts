@@ -45,6 +45,9 @@ export function useMonitoringReplayPlayer({
   return {
     isLoading: replayQuery.isLoading,
     isError: replayQuery.isError,
+    /** 조회는 성공했는데 구간에 프레임이 하나도 없음. */
+    isEmpty:
+      replayQuery.data !== undefined && replayQuery.data.frames.length === 0,
     errorMessage:
       replayQuery.error instanceof Error
         ? replayQuery.error.message

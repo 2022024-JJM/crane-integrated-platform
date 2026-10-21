@@ -275,12 +275,22 @@
     "speed": "Velocitas",
     "loading": "Onerans...",
     "searchForm": "Spatium Eligere",
+    "startAt": "Tempus initii",
+    "resetStart": "Restituere",
+    "resetStartLabel": "Tempus initii restituere",
+    "durationLabel": "Longitudo",
+    "queryTime": "Tempus quaesitum",
+    "emptyResult": "Nulla data in spatio electo.",
+    "duration": {
+      "10m": "10 min",
+      "30m": "30 min",
+      "1h": "1 hora"
+    },
     "fetch": "Onerare",
     "validation": {
-      "missing": "Tempus initii et finis requiruntur.",
-      "invalid": "Spatium temporis validum inserere debes.",
-      "order": "Tempus initii ante tempus finis esse debet.",
-      "tooLarge": "Spatium onerationis intra unam horam esse debet."
+      "missing": "Tempus initii elige.",
+      "invalid": "Tempus initii legi non potest.",
+      "future": "Tantum tempora praeterita quaeri possunt."
     },
     "frameInfo": "Imago {{current}} / {{total}}",
     "noData": "Nulla data"
