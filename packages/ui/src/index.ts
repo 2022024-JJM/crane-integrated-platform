@@ -15,6 +15,7 @@ export * from './atoms/calendar';
 export * from './molecules/card';
 export * from './molecules/date-picker';
 export * from './molecules/date-time-picker';
+export * from './molecules/time-scroll-picker';
 export * from './molecules/table';
 export * from './molecules/tooltip';
 export * from './molecules/tooltip-handle';

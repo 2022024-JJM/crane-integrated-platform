@@ -95,12 +95,13 @@ function DatePicker({
         aria-label={ariaLabel}
         disabled={disabled}
         className={cn(
-          'inline-flex w-full items-center rounded-md border bg-background text-foreground transition-colors',
+          'bg-background text-foreground inline-flex w-full items-center rounded-md border transition-colors',
           'border-border hover:border-primary/40',
-          'focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25',
+          'focus:border-ring focus:ring-ring/25 focus:ring-2 focus:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-50',
           SIZE_CLASSES[size],
-          error && 'border-destructive focus:border-destructive focus:ring-destructive/25',
+          error &&
+            'border-destructive focus:border-destructive focus:ring-destructive/25',
           !selectedDate && 'text-muted-foreground',
           className,
         )}
@@ -111,11 +112,12 @@ function DatePicker({
         <CalendarIcon
           size={ICON_PIXELS[size]}
           stroke="currentColor"
-          className="shrink-0 text-foreground opacity-70"
+          className="text-foreground shrink-0 opacity-70"
         />
       </PopoverTrigger>
       <PopoverPopup className="w-auto p-0" align="start">
         <Calendar
+          className="bg-transparent"
           mode="single"
           selected={selectedDate}
           defaultMonth={selectedDate}

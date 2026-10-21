@@ -191,6 +191,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 네비게이션 구성 | `packages/widgets/src/layout/config/navigation.ts` |
 | 공용 3D viewer shell | `packages/ui/src/organisms/three-scene-viewer.tsx` |
 | 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx` (base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
+| 달력 / 날짜·시간 선택기 / 시간 스크롤 선택기 | `packages/ui/src/atoms/calendar.tsx`(shadcn Base UI 판, `captionLayout="dropdown"` 이면 연·월 드롭다운. `components` 재정의는 모듈 스코프 함수여야 한다 — 인라인이면 상위 리렌더마다 달력 DOM 이 리마운트되어 열린 드롭다운이 닫힌다), `packages/ui/src/molecules/{date-picker,date-time-picker}.tsx`(`timeInput="scroll"` 로 오전/오후·시·분·초 스크롤, `timeHint` 는 시간 입력 오른쪽 말풍선), `packages/ui/src/molecules/time-scroll-picker.tsx`(외부 라이브러리 없이 스크롤 스냅으로 만든 열) |
 | 3D 런타임 상태(Zustand) | `packages/features/src/3d/model/` |
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
