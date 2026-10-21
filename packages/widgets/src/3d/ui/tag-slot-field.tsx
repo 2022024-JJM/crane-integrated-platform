@@ -37,9 +37,10 @@ const SLOT_ICONS: Record<TagSlot, LucideIcon> = {
  * 탭으로 열리고, × 는 그 슬롯만 비운다. 맵핑 카드와 상태 태그 카드가 같이
  * 쓴다.
  *
- * 전환 버튼의 점이 슬롯별 연결 여부(초록, 못 찾는 키는 amber)이고, 툴팁에 그
- * 슬롯의 키를 적어 전환하지 않고도 다른 슬롯을 볼 수 있다. 처음 보일 슬롯은
- * 연결된 쪽(`pickInitialSlot`)이고, 다이얼로그에서 연결하면 그때 보던 탭으로
+ * 전환 버튼의 아이콘 색이 슬롯별 연결 여부(주황 — 다이얼로그 푸터의 연결된
+ * 키와 같은 색, 못 찾는 키는 amber)이고, 툴팁에 그 슬롯의 키를 적어
+ * 전환하지 않고도 다른 슬롯을 볼 수 있다. 처음 보일 슬롯은 연결된
+ * 쪽(`pickInitialSlot`)이고, 다이얼로그에서 연결하면 그때 보던 탭으로
  * 옮긴다. 고른 슬롯은 화면 상태라 저장되지 않는다.
  *
  * 칩은 lib/tag-pick.ts `describeSlotChip` — 목록에서 못 찾는 키는 amber 로
@@ -94,23 +95,23 @@ export function TagSlotField({
                 aria-label={optionTitle}
                 title={optionTitle}
                 className={cn(
-                  'relative flex size-6 cursor-pointer items-center justify-center rounded-sm border',
+                  'flex size-6 cursor-pointer items-center justify-center rounded-sm border',
                   slot === option
                     ? 'border-primary/50 bg-primary/15 text-foreground'
                     : 'border-border text-muted-foreground hover:bg-muted',
                 )}
                 onClick={() => setSlot(option)}
               >
-                <Icon className="size-3" aria-hidden />
-                {optionChip ? (
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'absolute top-0.5 right-0.5 size-[5px] rounded-full',
-                      optionChip.unknown ? 'bg-amber-500' : 'bg-green-500',
-                    )}
-                  />
-                ) : null}
+                <Icon
+                  className={cn(
+                    'size-3',
+                    optionChip &&
+                      (optionChip.unknown
+                        ? 'text-amber-500'
+                        : 'text-orange-400'),
+                  )}
+                  aria-hidden
+                />
               </button>
             );
           })}
