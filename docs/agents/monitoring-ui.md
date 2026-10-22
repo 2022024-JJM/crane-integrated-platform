@@ -12,9 +12,9 @@
 | 카메라 이동 범위 제한 | 적용 `packages/features/src/3d/ui/scene-camera-limits.tsx` (`SceneCameraLimits`), 수식 `lib/camera-limits.ts`, 기준 지도 `packages/domain/src/3d/lib/camera-bounds-maps.ts` |
 | 지도 표면 raycast | `packages/domain/src/3d/lib/map-surface-raycast.ts` (`raycastMapSurfaceY`) |
 | 캔버스 위 오버레이(라벨·눈금)의 휠·드래그 넘김 | 수식 `packages/domain/src/3d/lib/overlay-pointer-forwarding.ts`, 훅 `packages/domain/src/3d/model/use-overlay-pointer-forwarding.ts`, 적용 `packages/domain/src/3d/ui/{model-label,scene-ruler}.tsx` |
-| 관제 요약 HUD | `packages/features/src/3d/ui/scene-status-hud.tsx`, 날씨 `model/use-scene-weather.ts`, 권고 `lib/wind-advisory.ts`, 연결 `model/use-realtime-connection-state.ts` |
+| 관제 요약 HUD | `packages/features/src/3d/ui/scene-status-hud.tsx`, 알람 목록 `ui/scene-status-hud-alarm-list.tsx`, 위험 비네트 `ui/scene-danger-vignette.tsx`, 이상 조건 `lib/hud-conditions.ts`·`model/use-hud-conditions.ts`, 전이 시각 `lib/status-since.ts`, 수신 `lib/feed-freshness.ts`, 날씨 `model/use-scene-weather.ts`, 권고·게이지 `lib/wind-advisory.ts` |
 | 경보 알림 채널 | `packages/core/src/lib/alert-notifications.ts` (`notifyAlert`, `useAlertNotificationSettings`) |
-| 알림 발신자 | `packages/features/src/3d/ui/scene-alert-notifier.tsx`, `packages/features/src/alarm/model/use-critical-alarm-banner.ts` |
+| 알림 발신자 | `packages/features/src/3d/ui/scene-alert-notifier.tsx`, `packages/features/src/alarm/model/use-critical-alarm-notifier.ts` |
 | 미니맵 | 계산 `packages/features/src/3d/lib/minimap.ts`, 픽셀 후처리 `lib/minimap-image.ts`, 스토어 `model/use-scene-minimap-store.ts` |
 | 미니맵 UI | `packages/features/src/3d/ui/scene-minimap-capture.tsx`, `ui/scene-minimap.tsx`, `ui/scene-minimap-toggle.tsx` |
 | 충돌 감지 표시(LiDAR 근접 존) | 씬 레이어 `packages/features/src/3d/ui/collision-guard-scene-layer.tsx`(`CollisionGuard` + 에고 카메라 리그), 토글 `ui/collision-guard-toggle.tsx`, HUD `ui/collision-guard-hud.tsx`, 도움말 `ui/collision-guard-help.tsx`, 존 빌더 `lib/goliath-collision-zone.ts`, 존 파생 `model/use-goliath-collision-zones.ts`, 스토어 `model/use-collision-guard-store.ts`, 감지 객체 시뮬레이션 `model/use-collision-guard-simulation.ts` |
@@ -57,18 +57,24 @@
 
 ### 관제 요약 HUD (상단 중앙)
 
-`scene-status-hud.tsx`, pointer-events-none. 독 배치의 실시간 화면에서만 마운트한다. `mode`·`sceneInfo` prop 을 받는다.
+`scene-status-hud.tsx`, 독 배치의 실시간 화면에서만 마운트한다. 한 줄 막대 + 그 아래 펼침 목록(`scene-status-hud-alarm-list.tsx`). 막대는 pointer-events-none 이고 알람 요약 버튼과 펼침 목록만 포인터를 받는다 — 목록은 스크롤이라 휠을 캔버스로 넘기지 않는다(고정 뷰 줄과 같은 취급).
 
-칸:
+칸(왼쪽부터):
 
-- 현장 시각 — `useSceneSunState`(`docs/agents/rendering-perf.md`).
-- 풍속/풍향 — `use-scene-weather.ts` 가 `scene-site-geo` 좌표로 open-meteo 를 주기 조회한다. 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. `@crane/domain/weather` 의 `WeatherSnapshot.windSpeed`(m/s)·`windDirection` 은 응답에 없으면 null. 권고 단계는 `wind-advisory.ts`(`WIND_CAUTION_MS`·`WIND_STOP_MS`, 현장 규정에 맞춰 상수만 조정).
-- 가동 n / 상태 확인 N — 장비 운전 상태(`docs/agents/3d-play.md`). 값 생산이 멈춘 동안(충돌 pinned·영역 hold·실시간 보류·시뮬 정지)은 "정지 중".
-- 두절 — 0 이면 숨김.
-- 알람 장비 수 — 페이지가 넘긴 `alarmsByCraneId`, 최고 severity 색.
-- 영역 침범 수 — 씬에 영역이 있을 때만, 정지 중엔 "n · 정지"(`docs/agents/3d-zone.md`).
-- 충돌 상태 — 활성일 때만(`docs/agents/3d-collision.md`).
-- 연결 — `use-realtime-connection-state.ts`. 시뮬레이션은 재생/정지(라벨에 `×배속 mm:ss`, `lib/sim-clock.ts`), 실시간은 크레인 스냅샷 STOMP(`craneStompClient`) `subscribeState` 상태에 화면 반영 보류를 덧입힘, 3D 플레이는 `play3dPlaying` / `play3dPaused`.
+- 알람 요약 — 이상 조건(아래)이 없으면 "이상 없음", 있으면 "위험 n · 주의 m" 버튼. 누르면 아래로 크레인 기준 알람 목록이 펼쳐진다. 위험이 0 에서 1 이 되면 자동으로 펼치고 조건이 전부 사라지면 접는다. 펼침 상태는 영속하지 않는다.
+- 크레인 N대 — 운전 상태(`docs/agents/3d-play.md`)의 적층 막대 + 가동·대기·전원 Off·고장·통신두절 수치. N 은 상태를 아는 장비 수이고 미확인은 title 에만. 색은 `RUNTIME_STATUS_COLORS`(라벨과 같은 색), 통신두절만 빗금. "대기" 는 standby(운전 전원 On, 멈춤)의 HUD 짧은 라벨이고 풀네임은 title 이다. 고장·통신두절 수치는 0 이면 흐리고 1 이상이면 강조.
+- 풍속 — `use-scene-weather.ts` 가 `scene-site-geo` 좌표로 open-meteo 를 주기 조회한다(기상 예보 값이지 현장 풍속계가 아니다 — title 에 적는다). 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. 값·16방위 아래 게이지(`windGaugeFraction`, 상한 `WIND_GAUGE_MAX_MS`)에 주의·중지 눈금(`windGaugeMarks`)이 있고 권고 단계(`wind-advisory.ts`, `WIND_CAUTION_MS`·`WIND_STOP_MS`)가 색·칩을 정한다.
+- 현장 시각 · 수신 — 현장 시각은 `useSceneSunState`(`docs/agents/rendering-perf.md`). 수신 줄은 `lib/feed-freshness.ts` 가 크레인 스냅샷 피드의 소켓 상태(`useCraneFeedConnection`)·화면 반영 보류(`useRealtimeStore.held`)·마지막 묶음 수신 시각(`useCraneSnapshotStore.lastReceivedAt`)을 한 상태로 합친 것이다. 보류가 소켓보다 앞서고, 연결됐는데 묶음이 `FEED_STALE_MS` 넘게 없으면 stale. 1초 틱은 이 줄만 다시 그린다.
+
+**이상 조건** — `lib/hud-conditions.ts`(`buildHudConditions`), 훅 `model/use-hud-conditions.ts` 를 `Monitoring3dView` 가 한 번 부르고 HUD 와 위험 비네트가 같은 결과를 읽는다.
+
+- 입력: 페이지가 넘긴 region 활성 알람(`alarms` prop — features/alarm `useRegionActiveAlarms`, 같은 레이어라 뷰가 직접 읽지 않는다), 운전 상태·라벨의 Bypass·전이 시각(`useModelStatusRecords` 의 `since`, `lib/status-since.ts`), 영역 침범·정지(`useSceneZoneStore`), 활성 충돌 기록(`useSceneCollisionStore`).
+- 등급은 둘이다. 위험 = 충돌·stop 영역 침범·고장·critical/high 알람. 주의 = warn 영역 침범·통신두절·medium 알람·Bypass. info 알람은 넣지 않는다.
+- 행은 크레인마다 하나다. 가장 심각한 조건이 제목, 나머지가 상세 줄. 위험 → 주의, 같은 등급은 제목 조건이 최근인 행이 먼저. 요약 수는 조건이 아니라 행 수다. 씬에 없는 크레인의 알람은 `crane:<craneId>` 키로 따로 선다.
+- 영역 침범은 알람 스토어의 `zone_intrusion` 로컬 알람이 아니라 영역 스토어에서 직접 읽고(정지 여부·침입자가 알람에 없다) 들어간 쪽 크레인에 붙는다. 알람 쪽 `zone_intrusion` 은 거른다.
+- [보기] — 영역 행은 영역 중심(`handleViewZone`), 그 외는 모델 바운즈 중심(`computeObjectViewPose`)으로 카메라를 보낸다. 씬에 없는 크레인의 행은 버튼이 없다. 분할 중이면 나가서 보여 준다.
+
+**위험 비네트** — `ui/scene-danger-vignette.tsx`. 위험 행이 하나라도 있으면 옅은 붉은 비네트(정적). 충돌·영역 침범 비네트가 떠 있으면 그리지 않는다.
 
 ### 충돌 감지 표시 (LiDAR 근접 존, 필리 실외 화면만)
 
@@ -93,7 +99,7 @@
 발신자는 둘이다.
 
 - `scene-alert-notifier.tsx` — 앱 셸 runtime effects 에 마운트. 충돌 새 기록·영역 새 침범 쌍. **toast 없음**, 소리·브라우저 알림만 — 비네트·HUD·헤더 배지와 겹친다.
-- `use-critical-alarm-banner.ts` — critical·high 새 알람. 배너가 있으니 toast 없이 소리·브라우저만. 영역 침범 로컬 알람(`eventType 'zone_intrusion'`)은 배너 대상에서 제외한다 — 3D 화면 경보와 겹침 방지.
+- `use-critical-alarm-notifier.ts` — critical·high 새 알람(실시간 페이지가 부른다). 화면 표시는 관제 HUD 가 맡아 toast·배너 없이 소리·브라우저만. 영역 침범 로컬 알람(`eventType 'zone_intrusion'`)은 제외한다 — 3D 화면 경보와 겹침 방지.
 
 실시간 화면의 사건만 알림으로 나간다(`docs/agents/3d-zone.md` 의 저널 규칙과 같은 게이트).
 
@@ -111,9 +117,9 @@
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
-- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
+- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
 - 레일 토글의 켜짐은 배경 채움이고, 탑뷰만 에디터 도구 모음처럼 아이콘 아래 점이다(`SceneToolbarButton` 의 `pressedDot`, 점 클래스 `TOOLBAR_PRESSED_DOT_CLASS` 를 에디터와 공유). 2D/3D 는 레일이 아니라 우상단 토글이다(`docs/agents/rendering-perf.md` "평면도 룩").
-- 우상단 슬롯(`fullscreenTopRightOverlay`)은 위에서부터 고정 뷰 줄(`SceneViewBar`) → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`) → 페이지의 알람 패널이다. 고정 뷰 줄이 비면 `null` 이라 간격 없이 토글이 맨 위다. 탑뷰 상태는 뷰어의 `onTopViewActiveChange` 로 받는다.
+- 우상단 슬롯(`fullscreenTopRightOverlay`)은 위에서부터 고정 뷰 줄(`SceneViewBar`) → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`)이다. 고정 뷰 줄이 비면 `null` 이라 간격 없이 토글이 맨 위다. 탑뷰 상태는 뷰어의 `onTopViewActiveChange` 로 받는다.
 - `toolbarTrailing` 을 카메라 묶음 안에 끼우는 것은 dock 배치뿐이다. 가로 툴바는 앞에 붙는다.
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
 
@@ -152,6 +158,8 @@
 - 전체화면 주인이 언마운트되면 전체화면을 끝낸다. 한 시점에 주인은 하나다.
 - `notifyAlert` 호출자가 제목·본문을 번역한다. 채널에 i18n 을 넣지 않는다.
 - HUD·미니맵은 독 배치의 실시간 화면(`toolbarLayout='dock'` 이고 `mode !== 'play3d'`)에만 마운트한다.
+- 실시간 화면의 알람 목록은 관제 HUD 의 펼침 목록 하나다. 알람·고장·통신두절·Bypass·영역 침범·충돌은 `useHudConditions` 한 결과를 읽고 위험 비네트도 같은 결과를 본다 — 같은 사건을 다른 곳에서 따로 세지 않는다.
+- 비네트는 한 번에 하나다. 위험 비네트는 충돌·영역 침범 비네트가 떠 있으면 그리지 않는다.
 - 독 레일 순서는 카메라 묶음 → 화면 표시 묶음. 감지 스위치·시뮬레이션 ▶ 는 독에 두지 않는다(감지 설정 페이지·3D 플레이 트랜스포트 바가 담당).
 
 ## 하지 않기로 한 것
@@ -162,6 +170,9 @@
 - 경계 위반 시 되밀기 — 프레임 평행이동 취소 + 투영이 대안.
 - 씬 감지 사건(충돌·침범)의 toast — 비네트·HUD·헤더 배지와 겹친다.
 - 3D 플레이에 HUD·미니맵.
+- 우상단 알람 목록·독 레일의 알람 토글·상단 중앙 critical 배너 — HUD 요약·펼침 목록·비네트와 같은 사건이 세 군데에 떠 겹쳤다. 소리·브라우저 알림만 `use-critical-alarm-notifier.ts` 에 남겼다.
+- HUD 펼침 목록의 휠·pointerdown 캔버스 전달 — 스크롤 목록이라 휠을 넘기면 목록이 안 넘어간다.
+- HUD 에 info 알람 — 요약 수만 부풀리고 관제가 할 행동이 없다.
 - 독의 하단 패널(크레인 실시간 상태 테이블)·감지 묶음.
 - 미니맵 마커·카메라 그리기를 React state 로 — 매 틱 리렌더.
 - 미니맵 시야 부채꼴을 카메라 fov·타깃 거리에 맞추기 — 탑뷰 근처에선 사라지고 멀리서 낮게 보면 지도를 덮어 방향을 읽기 어렵다. 리사이즈로 종횡비가 바뀔 때마다 각도 흔들린다.

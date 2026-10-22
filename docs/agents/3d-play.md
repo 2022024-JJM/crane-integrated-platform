@@ -112,19 +112,15 @@ i18n 은 `monitoring:play3d.*`.
 - **라벨 표시 상태** `EquipmentLabelState` = tone(fault · running · standby · off · offline · unknown) + 아이콘 둘(bypass · freeSwing). 앞의 넷은 ACMS 의 Crane ID Box 네 가지이고, 모델의 상태 태그(`statusTags` — `docs/agents/tag-mapping-rig.md`)로 가른다. 판정·우선순위는 `model-label-state.ts`(`resolveLabelState`, 비트 문턱 `STATUS_BIT_ON_THRESHOLD`, 테스트 대상). tone 이 곧 운전 상태다.
   - 수신 판정에는 상태 태그 키도 들어가고, 움직임 판정에는 축 태그(`tagMappings`)만 들어간다.
   - 운전 전원 off 가 움직임보다 앞선다. 받은 적이 없거나 수신이 끊기면 아이콘을 끈다(낡은 값).
-  - 수신은 되지만 운전 전원을 모르는 멈춘 장비는 unknown 이다(색 없음, 아는 아이콘은 그린다). 상태 태그가 없는 씬은 움직일 때만 가동이고 멈추면 unknown 이라, HUD 의 "상태 확인" 수와 리포트 가동률의 분모에도 멈춘 시간이 들어가지 않는다.
+  - 수신은 되지만 운전 전원을 모르는 멈춘 장비는 unknown 이다(색 없음, 아는 아이콘은 그린다). 상태 태그가 없는 씬은 움직일 때만 가동이고 멈추면 unknown 이라, HUD 의 크레인 수와 리포트 가동률의 분모에도 멈춘 시간이 들어가지 않는다.
   - 에디터의 미리보기(`docs/agents/tag-mapping-rig.md`)는 같은 우선순위를 고른 값으로 탄다. 모니터링 화면의 판정에는 들어가지 않는다.
 - **외곽선** `EquipmentOutlineState` = none · commError · slowdown · endstop. ACMS 의 Crane 외곽선 네 가지이고 모델의 외곽선 상태 태그로 가른다. 판정·우선순위는 `model-outline-state.ts`(`resolveOutlineState`, 테스트 대상).
   - 라벨의 색과 독립이다 — 가동 중인 장비도 외곽선이 생기고, 외곽선 비트는 tone·아이콘을 바꾸지 않는다.
   - 통신불량이 Endstop·Slowdown 보다 앞선다. 수신이 끊기면(tone offline) 비트와 무관하게 통신불량이고, 받은 적이 없으면 외곽선이 없다.
   - 그리기는 `GltfModel` 이 모델 전체를 실루엣 테두리로 두른다(`docs/agents/3d-collision.md`). 색·두께·렌더 순서는 `status-outline-style.ts` — 색은 ACMS 매뉴얼 그림에서 뽑았고, 황색은 매뉴얼에 외곽선 그림이 없어 Crane ID Box 의 황색이다.
-- 훅 `use-model-runtime-statuses.ts` 는 1Hz 폴링이고 `useModelStatusRecords` 가 세 기록(운전 상태·라벨 표시 상태·외곽선)을 **같은 판정 한 번**에서 낸다. 운전 상태는 라벨의 tone 그 자체다. 기록마다 같으면 참조를 유지하고, 표시 상태 객체는 내용이 같으면 같은 객체다(`getLabelState`). 맵핑이 없는 모델도 unknown 으로 기록에 들어간다(전 모델). `Monitoring3dView` 가 한 번 부르고 라벨·관제 HUD 가 공유한다. `useModelRuntimeStatuses` 는 운전 상태만 돌려주는 같은 훅이다(통계 기록기).
+- 훅 `use-model-runtime-statuses.ts` 는 1Hz 폴링이고 `useModelStatusRecords` 가 네 기록(운전 상태·라벨 표시 상태·외곽선·전이 시각 `since` — `lib/status-since.ts`, 관제 HUD 알람 목록의 "n분째")을 **같은 판정 한 번**에서 낸다. 운전 상태는 라벨의 tone 그 자체다. 기록마다 같으면 참조를 유지하고, 표시 상태 객체는 내용이 같으면 같은 객체다(`getLabelState`). 맵핑이 없는 모델도 unknown 으로 기록에 들어간다(전 모델). `Monitoring3dView` 가 한 번 부르고 라벨·관제 HUD 가 공유한다. `useModelRuntimeStatuses` 는 운전 상태만 돌려주는 같은 훅이다(통계 기록기).
   - 라벨: `@crane/domain/3d` `ModelLabel` 의 `state` prop. 상자 색이 곧 tone 이다. 고장·가동·운전 전원 On·Off 는 ACMS 매뉴얼의 Crane ID Box 그대로(그림에서 뽑은 색, 검은 테두리)이고 통신두절·미확인은 기존 색이다. 통신두절만 이름 앞에 끊김 아이콘을 두고 흐리게 한다. Bypass·Free Swing 은 상자 안 이름 뒤의 흰 칩에 붉은 아이콘으로 그린다. 알람이 있으면 상자는 알람색이 되고 그동안만 tone 이 이름 앞 점으로 옮겨 간다. 거리 숨김·축소에서 빠지는 것은 알람 라벨뿐이다. 툴팁 문구는 `titles` prop 으로 호출자가 번역해 넘긴다.
 - 옵션 `{ paused, timeScale }`: 정지 중 재판정을 건너뛰고 창을 1/배속(`scaleStatusWindows`)으로 조정한다 — 일시정지 뒤 전 장비 두절, 저배속에서 프레임 사이마다 멈춘 것으로 깜빡이는 것 방지. 기록기와 `Monitoring3dView` 3D 플레이 모드가 같은 옵션을 넘긴다.
-
-### HUD 연결 칸
-
-연결 상태 칸은 `use-realtime-connection-state.ts` 가 `play3dPlaying` / `play3dPaused` 를 낸다. HUD 자체는 실시간 화면에만 마운트된다(`docs/agents/monitoring-ui.md`).
 
 ### 전제
 
@@ -186,7 +182,7 @@ i18n 은 `monitoring:play3d.*`.
 - 고장·Bypass 라벨을 거리 축소에서 빼는 것 — 그 라벨만 커 보인다. 상태는 색과 아이콘으로만 나타낸다.
 - Bypass 아이콘의 흐려졌다 밝아지는 애니메이션(`animate-pulse`) — 그라데이션처럼 보인다.
 - Bypass·Free Swing 아이콘을 상자 밖에 두는 것 — 상자 안의 흰 칩이 더 잘 읽힌다.
-- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트·저널 어디에도 두지 않는다. 그 장비는 unknown 이다.
+- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트·저널 어디에도 두지 않는다. 그 장비는 unknown 이다. 관제 HUD 의 "대기" 는 standby(운전 전원 On, 멈춤)의 짧은 라벨이지 이 상태가 아니다.
 - 화면마다 다른 상태 목록 — 라벨은 여섯 가지인데 리포트는 네 가지인 식으로 나누면 같은 장비가 화면마다 다른 이름으로 불린다.
 
 ## 미룬 것

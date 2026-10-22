@@ -78,7 +78,7 @@ export function ZoneAlarmBridge() {
             active: kind === 'enter',
             at: now,
             openedAt: openedAt.get(subject),
-            // color 는 우상단 알람 목록의 색 점(getZoneAlarmMeta) — 영역 정의 색.
+            // color 는 영역 정의 색 — 알람 소비자가 getZoneAlarmMeta 로 읽는다.
             eventData: {
               zoneKey: intrusion.zoneKey,
               intruder: ref.intruderId,
