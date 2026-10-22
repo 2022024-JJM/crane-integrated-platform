@@ -26,9 +26,11 @@
 export const ANIMATING_FPS = 30;
 export const SLOW_FPS = 0.2;
 /**
- * 애니메이션 소스가 멈춘 뒤에도 프레임을 잇는 유예(ms) — 값 저장소 스무딩
- * (smoothTime 0.35s)이 정착하고 카메라 감쇠가 끝날 시간. 이게 없으면 재생을
- * 멈춘 순간 크레인이 목표 직전에서 얼어붙는다.
+ * 애니메이션 소스가 멈춘 뒤에도 프레임을 잇는 유예(ms) — 값 저장소 기본 스무딩
+ * (`DEFAULT_SMOOTH_TIME`)이 정착하고 카메라 감쇠가 끝날 시간. 이게 없으면 재생을
+ * 멈춘 순간 크레인이 목표 직전에서 얼어붙는다. 실시간 수신 간격 스무딩은 이보다
+ * 길 수 있다(상한 `REALTIME_SMOOTH_MAX_S`) — 유예를 넘긴 꼬리는 드라이버의
+ * self-invalidate 체인이 잇고 smooth-damp 의 정착 스냅이 그 체인을 끝낸다.
  */
 export const ANIMATION_GRACE_MS = 1500;
 

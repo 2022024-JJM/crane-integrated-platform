@@ -38,11 +38,11 @@
 세 캔버스 모두 `frameloop='demand'` 다. 프레임은 `SceneFrameGovernor` 가 만든다.
 
 - 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 가상 태그 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 바다가 켜진 씬(`resolveSeaVisible`), 영역 침범 활성.
-- 소스가 멈춘 뒤 `ANIMATION_GRACE_MS` 동안은 계속 틱을 돌려 스무딩이 정착하게 한다.
+- 소스가 멈춘 뒤 `ANIMATION_GRACE_MS` 동안은 계속 틱을 돌려 스무딩이 정착하게 한다. 유예보다 긴 스무딩(실시간 수신 간격, 상한 `REALTIME_SMOOTH_MAX_S`)의 꼬리는 아래 드라이버 체인이 잇는다.
 - solar 태양만 있으면 `SLOW_FPS` 로 드물게 그린다. 정지 씬은 틱이 없다.
 - 조작(OrbitControls·표면 카메라)은 스스로 `invalidate` 해 주사율로 그려진다. drei `OrbitControls`·`TransformControls`·`Text` 와 R3F 리컨실러(prop 변경·마운트)도 스스로 invalidate 한다.
 
-React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestSceneFrame()` 을 부른다. 거버너가 자기 `invalidate` 를 여기에 등록한다. 이미 배선된 곳: `rigValueStore` 의 set/reset/restore, `SceneLighting` 의 조명 설정·씬 시계 구독, `SceneEnvironment` 의 배경 교체. 스무딩 잔여는 `useRigDriver` 가 `hasPendingSmoothing()` 으로 프레임마다 다음 프레임을 스스로 요청해 러너 없이 들어온 값도 끝까지 수렴한다 — 단 거버너가 주기 틱을 돌리는 동안(`isSceneFrameTickerActive()`)은 부르지 않는다. useFrame 안에서 부른 invalidate 는 R3F 가 `frames=2` 로 두어 rAF 루프가 주사율로 자체 지속되므로, 이 가드가 없으면 재생 중 fps 상한이 무력화된다.
+React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestSceneFrame()` 을 부른다. 거버너가 자기 `invalidate` 를 여기에 등록한다. 이미 배선된 곳: `rigValueStore` 의 set/reset/restore, `SceneLighting` 의 조명 설정·씬 시계 구독, `SceneEnvironment` 의 배경 교체. 스무딩 잔여는 `useRigDriver` 가 `hasPendingSmoothing()` 으로 프레임마다 다음 프레임을 스스로 요청해 러너 없이 들어온 값도 끝까지 수렴한다 — 단 거버너가 주기 틱을 돌리는 동안(`isSceneFrameTickerActive()`)은 부르지 않는다. 이 체인은 `smooth-damp.ts` 의 정착 스냅(`SMOOTH_SETTLE_EPS` — 잔차·속도가 함께 임계 아래면 target 에 고정)으로 끝난다. 지수 수렴은 어떤 값에서도 target 과 정확히 같아지지 않아(고정점 ~1e-14) 스냅이 없으면 `hasPendingSmoothing` 이 영원히 true 로 남고 유휴 화면이 주사율로 그려진다. useFrame 안에서 부른 invalidate 는 R3F 가 `frames=2` 로 두어 rAF 루프가 주사율로 자체 지속되므로, 이 가드가 없으면 재생 중 fps 상한이 무력화된다.
 
 성능 확인은 `localStorage crane:perf-hud='1'` 로 켜는 HUD(드로우콜·삼각형·프레임 ms·fps — demand 루프라 fps 는 실제로 그린 빈도). 드로우콜·삼각형은 shadow pass 뒤 메인 패스 + 바다 미러 패스의 합이다(shadow pass 는 three 가 그 뒤 `info.reset()` 을 불러 빠진다). 에디터 perf HUD 의 드로우콜·삼각형은 GizmoHelper 의 Hud 가 마지막으로 그린 기즈모 씬 값이라 참고하지 않고 fps·ms 만 본다.
 

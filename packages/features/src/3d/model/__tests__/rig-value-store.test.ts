@@ -354,9 +354,22 @@ describe('rigValueStore — demand 캔버스 프레임 요청 (scene-frame-reque
     rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.1 });
     expect(frames).toBe(2);
     for (let i = 0; i < 600; i++) rigValueStore.step(1 / 60);
-    // 정착: value === target 이면 같은 target 재설정은 no-op.
-    const settled = rigValueStore.get('m/j');
-    rigValueStore.set('m/j', settled, { smooth: true, smoothTime: 0.1 });
+    // 정착: step 만으로 value === target 이 된다(smooth-damp 정착 스냅). 그러면
+    // 같은 target 재설정은 no-op — 프레임 요청도 없다.
+    expect(rigValueStore.get('m/j')).toBe(10);
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.1 });
+    expect(frames).toBe(2);
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+  });
+
+  it('스무딩이 정착하면 hasPendingSmoothing 이 step 만으로 false 로 내려간다 — 유휴 프레임 요청 종료 조건', () => {
+    rigValueStore.set('m/j', 37.25, { smooth: true, smoothTime: 0.35 });
+    rigValueStore.set('m/k', -12, { smooth: true, smoothTime: 2 });
+    expect(rigValueStore.hasPendingSmoothing()).toBe(true);
+    for (let i = 0; i < 900; i++) rigValueStore.step(1 / 30);
+    expect(rigValueStore.get('m/j')).toBe(37.25);
+    expect(rigValueStore.get('m/k')).toBe(-12);
     expect(rigValueStore.hasPendingSmoothing()).toBe(false);
   });
 
