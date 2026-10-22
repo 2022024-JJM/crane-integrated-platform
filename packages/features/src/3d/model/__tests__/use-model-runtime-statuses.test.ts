@@ -144,11 +144,16 @@ function poll(times = 1) {
 }
 
 describe('useModelStatusRecords', () => {
-  it('씬이 없으면 세 기록 모두 빈다', () => {
+  it('씬이 없으면 네 기록 모두 빈다', () => {
     const { result } = renderHook(() =>
       useModelStatusRecords(null, 'realtime'),
     );
-    expect(result.current).toEqual({ runtime: {}, labels: {}, outlines: {} });
+    expect(result.current).toEqual({
+      runtime: {},
+      labels: {},
+      outlines: {},
+      since: { tone: {}, bypass: {} },
+    });
   });
 
   it('아무것도 못 받았으면 unknown — 아이콘도 없다', () => {
@@ -500,5 +505,73 @@ describe('useModelStatusRecords — 외곽선', () => {
     act(() => tagLiveValues.clear());
     poll();
     expect(result.current.outlines.m1).toBe('none');
+  });
+});
+
+describe('useModelStatusRecords — 전이 시각', () => {
+  it('첫 판정 시각이 모든 모델의 tone 시각이고 Bypass 는 비어 있다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() =>
+      useModelStatusRecords(scene, 'realtime'),
+    );
+    expect(result.current.since).toEqual({
+      tone: { m1: 1_000_000 },
+      bypass: {},
+    });
+  });
+
+  it('상태가 그대로면 시각·참조를 유지하고, 바뀌면 그 판정 시각으로 리셋된다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() =>
+      useModelStatusRecords(scene, 'realtime'),
+    );
+    const first = result.current.since;
+    poll(3);
+    expect(result.current.since).toBe(first);
+    act(() => publishTagValue('GC_04:fault', 1));
+    poll();
+    expect(result.current.runtime.m1).toBe('fault');
+    expect(result.current.since.tone.m1).toBe(
+      1_000_000 + RUNTIME_STATUS_POLL_MS * 4,
+    );
+  });
+
+  it('Bypass 가 켜지면 그 시각이 들어오고 꺼지면 빠진다 — tone 시각은 그대로', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() =>
+      useModelStatusRecords(scene, 'realtime'),
+    );
+    act(() => publishTagValue('GC_04:on', 1));
+    poll();
+    const toneSince = result.current.since.tone;
+    act(() => publishTagValue('GC_04:bypass', 1));
+    poll();
+    expect(result.current.since.bypass).toEqual({
+      m1: 1_000_000 + RUNTIME_STATUS_POLL_MS * 2,
+    });
+    expect(result.current.since.tone).toBe(toneSince);
+    act(() => publishTagValue('GC_04:bypass', 0));
+    poll();
+    expect(result.current.since.bypass).toEqual({});
+    expect(result.current.since.tone).toBe(toneSince);
+  });
+
+  it('paused 면 전이 시각도 그대로다', () => {
+    const scene = statusScene();
+    const { result, rerender } = renderHook(
+      ({ paused }) => useModelStatusRecords(scene, 'realtime', { paused }),
+      { initialProps: { paused: false } },
+    );
+    act(() => publishTagValue('GC_04:on', 1));
+    poll();
+    const before = result.current.since;
+    rerender({ paused: true });
+    poll(60);
+    expect(result.current.since).toBe(before);
+    rerender({ paused: false });
+    expect(result.current.runtime.m1).toBe('offline');
+    expect(result.current.since.tone.m1).toBe(
+      1_000_000 + RUNTIME_STATUS_POLL_MS * 61,
+    );
   });
 });

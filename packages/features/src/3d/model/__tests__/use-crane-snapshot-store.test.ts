@@ -22,7 +22,12 @@ function snapshot(
 }
 
 beforeEach(() => {
-  useCraneSnapshotStore.setState({ cranes: {}, order: [], loadError: false });
+  useCraneSnapshotStore.setState({
+    cranes: {},
+    order: [],
+    loadError: false,
+    lastReceivedAt: null,
+  });
 });
 
 describe('useCraneSnapshotStore — applySnapshots', () => {
@@ -52,6 +57,18 @@ describe('useCraneSnapshotStore — applySnapshots', () => {
     expect(after.cranes.C_2).toBe(before.cranes.C_2);
     expect(after.cranes.C_1).not.toBe(before.cranes.C_1);
     expect(after.order).toBe(before.order);
+  });
+
+  it('묶음을 받을 때마다 마지막 수신 시각이 그 시각이 되고 clear 로 비운다', () => {
+    const store = useCraneSnapshotStore.getState();
+    expect(store.lastReceivedAt).toBeNull();
+    store.applySnapshots([snapshot('C_1', { a: 1 })], 1_000);
+    expect(useCraneSnapshotStore.getState().lastReceivedAt).toBe(1_000);
+    // 새 크레인이 없는 묶음도 수신이다.
+    store.applySnapshots([snapshot('C_1', { a: 1 })], 2_000);
+    expect(useCraneSnapshotStore.getState().lastReceivedAt).toBe(2_000);
+    store.clear();
+    expect(useCraneSnapshotStore.getState().lastReceivedAt).toBeNull();
   });
 
   it('빈 묶음은 상태 참조를 바꾸지 않는다', () => {

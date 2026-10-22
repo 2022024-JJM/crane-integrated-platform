@@ -62,3 +62,37 @@ export function formatClockHm(hour: number, minute: number): string | null {
   if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
+
+/**
+ * HUD 풍속 게이지의 오른쪽 끝(m/s). 주의·중지 눈금은 이 값에 대한 비율이라
+ * 기준값을 바꾸면 눈금이 따라온다.
+ */
+export const WIND_GAUGE_MAX_MS = 20;
+
+/** 풍속 → 게이지 채움 비율 [0, 1]. 못 읽는 값은 null, 상한 초과는 1. */
+export function windGaugeFraction(
+  windSpeed: number | null | undefined,
+  max = WIND_GAUGE_MAX_MS,
+): number | null {
+  if (
+    windSpeed === null ||
+    windSpeed === undefined ||
+    !Number.isFinite(windSpeed) ||
+    windSpeed < 0 ||
+    !(max > 0)
+  ) {
+    return null;
+  }
+  return Math.min(1, windSpeed / max);
+}
+
+/** 주의·중지 눈금 위치(비율). 상한을 넘는 기준값은 1 에 붙는다. */
+export function windGaugeMarks(max = WIND_GAUGE_MAX_MS): {
+  caution: number;
+  stop: number;
+} {
+  return {
+    caution: Math.min(1, WIND_CAUTION_MS / max),
+    stop: Math.min(1, WIND_STOP_MS / max),
+  };
+}

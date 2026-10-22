@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   WIND_CAUTION_MS,
+  WIND_GAUGE_MAX_MS,
   WIND_STOP_MS,
   compassPoint,
   formatClockHm,
   resolveWindAdvisory,
+  windGaugeFraction,
+  windGaugeMarks,
 } from '../wind-advisory';
 
 describe('resolveWindAdvisory', () => {
@@ -52,5 +55,32 @@ describe('formatClockHm', () => {
     expect(formatClockHm(23, 59)).toBe('23:59');
     expect(formatClockHm(9.5, 0)).toBeNull();
     expect(formatClockHm(NaN, 0)).toBeNull();
+  });
+});
+
+describe('windGaugeFraction', () => {
+  it('상한 대비 비율, 상한 정확값은 1, 초과도 1', () => {
+    expect(windGaugeFraction(0)).toBe(0);
+    expect(windGaugeFraction(WIND_GAUGE_MAX_MS / 2)).toBe(0.5);
+    expect(windGaugeFraction(WIND_GAUGE_MAX_MS)).toBe(1);
+    expect(windGaugeFraction(WIND_GAUGE_MAX_MS + 1)).toBe(1);
+  });
+
+  it('null·undefined·NaN·음수·상한 0 은 null', () => {
+    expect(windGaugeFraction(null)).toBeNull();
+    expect(windGaugeFraction(undefined)).toBeNull();
+    expect(windGaugeFraction(NaN)).toBeNull();
+    expect(windGaugeFraction(-0.1)).toBeNull();
+    expect(windGaugeFraction(5, 0)).toBeNull();
+  });
+});
+
+describe('windGaugeMarks', () => {
+  it('주의·중지 기준값의 비율이고 상한을 넘으면 1 에 붙는다', () => {
+    expect(windGaugeMarks()).toEqual({
+      caution: WIND_CAUTION_MS / WIND_GAUGE_MAX_MS,
+      stop: WIND_STOP_MS / WIND_GAUGE_MAX_MS,
+    });
+    expect(windGaugeMarks(WIND_CAUTION_MS)).toEqual({ caution: 1, stop: 1 });
   });
 });

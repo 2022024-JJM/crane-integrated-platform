@@ -13,6 +13,8 @@ interface CraneSnapshotState {
   order: string[];
   /** 초기 REST 조회 실패. 구독은 계속 시도한다. */
   loadError: boolean;
+  /** 마지막 묶음(REST·STOMP)을 받은 벽시계(ms). 아직이면 null — HUD 수신 줄. */
+  lastReceivedAt: number | null;
   applySnapshots: (snapshots: CraneSnapshot[], receivedAt: number) => void;
   setLoadError: (loadError: boolean) => void;
   clear: () => void;
@@ -30,6 +32,7 @@ export const useCraneSnapshotStore = create<CraneSnapshotState>()(
     cranes: {},
     order: [],
     loadError: false,
+    lastReceivedAt: null,
 
     applySnapshots: (snapshots, receivedAt) => {
       if (snapshots.length === 0) return;
@@ -54,14 +57,19 @@ export const useCraneSnapshotStore = create<CraneSnapshotState>()(
       }
       set(
         added
-          ? { cranes, order: Object.keys(cranes).sort(compareCraneIds) }
-          : { cranes },
+          ? {
+              cranes,
+              order: Object.keys(cranes).sort(compareCraneIds),
+              lastReceivedAt: receivedAt,
+            }
+          : { cranes, lastReceivedAt: receivedAt },
       );
     },
 
     setLoadError: (loadError) => {
       if (get().loadError !== loadError) set({ loadError });
     },
-    clear: () => set({ cranes: {}, order: [], loadError: false }),
+    clear: () =>
+      set({ cranes: {}, order: [], loadError: false, lastReceivedAt: null }),
   }),
 );

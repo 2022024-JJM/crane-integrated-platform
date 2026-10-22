@@ -17,6 +17,12 @@ import {
   scaleStatusWindows,
   type RuntimeStatusRecord,
 } from '../lib/model-runtime-status';
+import {
+  EMPTY_STATUS_SINCE,
+  bypassOnRecord,
+  trackSince,
+  type StatusSinceRecords,
+} from '../lib/status-since';
 import { tagLiveValues } from './tag-value-bus';
 
 /** 상태 재판정 주기. 창(8s/20s)에 비해 충분히 촘촘하고 커밋은 초당 1회 이하. */
@@ -29,12 +35,19 @@ export interface ModelStatusRecords {
   labels: LabelStateRecord;
   /** 장비 외곽선 — 통신불량·Slowdown·Endstop. */
   outlines: OutlineStateRecord;
+  /**
+   * 전이 시각 — 운전 상태가 지금 값이 된 시각, Bypass 가 켜진 시각(lib/
+   * status-since.ts). 관제 HUD 알람 목록의 "n분째" 재료다. 판정과 같은 tick 의
+   * 시각이라 상태와 어긋나지 않는다.
+   */
+  since: StatusSinceRecords;
 }
 
 const EMPTY: ModelStatusRecords = Object.freeze({
   runtime: Object.freeze({}),
   labels: Object.freeze({}),
   outlines: Object.freeze({}),
+  since: EMPTY_STATUS_SINCE,
 });
 
 export interface UseModelRuntimeStatusesOptions {
@@ -49,20 +62,15 @@ export interface UseModelRuntimeStatusesOptions {
 }
 
 /**
- * 씬 모델별 운전 상태·라벨 표시 상태·외곽선 — 태그 값 버스의 live 캐시를
- * 1초마다 읽어 판정한다. 판정 키는 활성 슬롯(`slot`, lib/tag-slot.ts)의
- * 것이다 — 슬롯이 바뀌면 키 목록을 다시 만든다.
- */
-
-/**
- * 씬 모델별 운전 상태·라벨 표시 상태·외곽선 — 태그 값 버스의 live 캐시를
- * 1초마다 읽어 판정한다. 운전 상태는 라벨의 상자 색(tone) 그 자체다
- * (lib/model-label-state.ts `resolveLabelState`) — 따로 판정하면 HUD 의 가동
- * 수와 녹색 라벨 수가 어긋난다. 외곽선의 수신 끊김도 같은 tone 에서 온다
- * (lib/model-outline-state.ts).
+ * 씬 모델별 운전 상태·라벨 표시 상태·외곽선·전이 시각 — 태그 값 버스의 live
+ * 캐시를 1초마다 읽어 판정한다. 판정 키는 활성 슬롯(`slot`, lib/tag-slot.ts)의
+ * 것이다 — 슬롯이 바뀌면 키 목록을 다시 만든다. 운전 상태는 라벨의 상자
+ * 색(tone) 그 자체다(lib/model-label-state.ts `resolveLabelState`) — 따로
+ * 판정하면 HUD 의 가동 수와 녹색 라벨 수가 어긋난다. 외곽선의 수신 끊김도
+ * 같은 tone 에서 온다(lib/model-outline-state.ts).
  *
  * 결과가 같으면 이전 참조를 그대로 돌려줘 리렌더가 없다(상태가 실제로 바뀌는
- * 순간에만 커밋, 세 기록 각각). 프레임 속도 값(tagLiveValues)을 React 상태로
+ * 순간에만 커밋, 네 기록 각각). 프레임 속도 값(tagLiveValues)을 React 상태로
  * 올리지 않는 규칙은 rig-live-readouts 와 같다.
  *
  * 맵핑이 없는 모델도 'unknown' 으로 기록에 들어간다 — 소비자가 "모델 수"와
@@ -108,14 +116,32 @@ export function useModelStatusRecords(
         const nextOutlines = isSameOutlineStateRecord(prev.outlines, outlines)
           ? prev.outlines
           : outlines;
+        const toneSince = trackSince(
+          prev.since.tone,
+          prev.runtime,
+          runtime,
+          now,
+        );
+        const bypassSince = trackSince(
+          prev.since.bypass,
+          bypassOnRecord(prev.labels),
+          bypassOnRecord(labels),
+          now,
+        );
+        const nextSince =
+          toneSince === prev.since.tone && bypassSince === prev.since.bypass
+            ? prev.since
+            : { tone: toneSince, bypass: bypassSince };
         return nextRuntime === prev.runtime &&
           nextLabels === prev.labels &&
-          nextOutlines === prev.outlines
+          nextOutlines === prev.outlines &&
+          nextSince === prev.since
           ? prev
           : {
               runtime: nextRuntime,
               labels: nextLabels,
               outlines: nextOutlines,
+              since: nextSince,
             };
       });
     };
