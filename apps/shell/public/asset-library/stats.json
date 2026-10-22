@@ -20,6 +20,69 @@
       "animations": 0
     }
   },
+  "/asset-library/files/c-171/v2/c_171.glb": {
+    "hash": "4dc93312",
+    "bytes": 438044,
+    "stats": {
+      "triangles": 22972,
+      "vertices": 42753,
+      "meshes": 14,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 14,
+      "nodes": 10,
+      "textureMemoryBytes": 0,
+      "size": [
+        11.101,
+        7.447,
+        37.25
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/c-866/v2/c_866.glb": {
+    "hash": "68cad4e2",
+    "bytes": 327036,
+    "stats": {
+      "triangles": 16776,
+      "vertices": 32381,
+      "meshes": 8,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 8,
+      "nodes": 6,
+      "textureMemoryBytes": 0,
+      "size": [
+        7.457,
+        7.106,
+        39.13
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/c-869/v2/c_869.glb": {
+    "hash": "696ef5e1",
+    "bytes": 397148,
+    "stats": {
+      "triangles": 22546,
+      "vertices": 38557,
+      "meshes": 11,
+      "materials": 4,
+      "textures": 0,
+      "drawCalls": 11,
+      "nodes": 9,
+      "textureMemoryBytes": 0,
+      "size": [
+        8.07,
+        6.058,
+        43.008
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/car/v1/Car.glb": {
     "hash": "e7469399",
     "bytes": 3728248,

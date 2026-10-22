@@ -3,7 +3,7 @@
   "models": [
     {
       "id": "49fb6e30-bc93-4dbd-a86c-51110cb519a3",
-      "equipName": "",
+      "equipName": "해양 1공장 - 3Bay",
       "path": "/models/1p_3bay.glb",
       "asset": {
         "id": "1p-3bay",
@@ -25,11 +25,11 @@
         1,
         1
       ],
-      "valueMapList": []
+      "locked": true
     },
     {
       "id": "58c98310-fea9-4e77-8f19-9a3dc5c3a152",
-      "equipName": "",
+      "equipName": "해양 3공장",
       "path": "/models/3p.glb",
       "asset": {
         "id": "3p",
@@ -51,11 +51,11 @@
         1,
         1
       ],
-      "valueMapList": []
+      "locked": true
     },
     {
       "id": "63b712a6-d5cb-4bfe-b231-14622a3a5535",
-      "equipName": "",
+      "equipName": "조립 5공장 - 1Bay",
       "path": "/models/5p_1bay.glb",
       "asset": {
         "id": "5p-1bay",
@@ -77,11 +77,11 @@
         1,
         1
       ],
-      "valueMapList": []
+      "locked": true
     },
     {
       "id": "bbf269d9-4ad3-4b10-87a7-a294f8689c2f",
-      "equipName": "",
+      "equipName": "조립 5공장 - 2Bay",
       "path": "/models/5p_2bay.glb",
       "asset": {
         "id": "5p-2bay",
@@ -103,16 +103,16 @@
         1,
         1
       ],
-      "valueMapList": []
+      "locked": true
     },
     {
       "id": "6e85691d-49f7-4baf-a24b-4ab98018024e",
       "equipName": "C-171",
       "craneId": "C_171",
-      "path": "/models/c_171.glb",
+      "path": "/asset-library/files/c-171/v2/c_171.glb",
       "asset": {
         "id": "c-171",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -130,12 +130,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_171:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_171.tl_distance",
           "scale": 0.1,
-          "offset": 71
+          "offset": -151.475
         }
       ]
     },
@@ -164,12 +170,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_172:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_172.tl_distance",
           "scale": 0.1,
-          "offset": 71
+          "offset": -90.475
         }
       ]
     },
@@ -198,12 +210,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_173:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_173.tl_distance",
           "scale": 0.1,
-          "offset": 71
+          "offset": -120.475
         }
       ]
     },
@@ -232,12 +250,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_800:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_800.tl_distance",
           "scale": 0.1,
-          "offset": 71
+          "offset": -60.474999999999994
         }
       ]
     },
@@ -266,12 +290,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_801:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_801.tl_distance",
           "scale": 0.1,
-          "offset": 71
+          "offset": -30.474999999999994
         }
       ]
     },
@@ -300,12 +330,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_810:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_810.tl_distance",
           "scale": 0.1,
-          "offset": 43
+          "offset": -169.091
         }
       ]
     },
@@ -334,12 +370,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_811:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_811.tl_distance",
           "scale": 0.1,
-          "offset": 43
+          "offset": -109.09100000000001
         }
       ]
     },
@@ -368,12 +410,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_812:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_812.tl_distance",
           "scale": 0.1,
-          "offset": 43
+          "offset": -49.090999999999994
         }
       ]
     },
@@ -402,12 +450,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_1806:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_1806.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -223.826
         }
       ]
     },
@@ -436,12 +490,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_865:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_865.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -193.826
         }
       ]
     },
@@ -449,10 +509,10 @@
       "id": "613b067a-0323-4b52-ab51-69df75193d9f",
       "equipName": "C-866",
       "craneId": "C_866",
-      "path": "/models/c_866.glb",
+      "path": "/asset-library/files/c-866/v2/c_866.glb",
       "asset": {
         "id": "c-866",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -470,12 +530,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_866:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_866.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -153.826
         }
       ]
     },
@@ -504,12 +570,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_863:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_863.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -103.826
         }
       ]
     },
@@ -538,12 +610,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_867:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_867.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -63.826
         }
       ]
     },
@@ -572,12 +650,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_864:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_864.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -23.826
         }
       ]
     },
@@ -606,12 +690,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_870:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_870.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -223.939
         }
       ]
     },
@@ -619,10 +709,10 @@
       "id": "10e29bf4-1c3f-4973-a7a9-752265b614b8",
       "equipName": "C-869",
       "craneId": "C_869",
-      "path": "/models/c_869.glb",
+      "path": "/asset-library/files/c-869/v2/c_869.glb",
       "asset": {
         "id": "c-869",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -640,12 +730,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_869:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_869.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -163.939
         }
       ]
     },
@@ -674,12 +770,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_868:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_868.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -123.939
         }
       ]
     },
@@ -708,12 +810,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_871:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_871.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -83.939
         }
       ]
     },
@@ -742,12 +850,18 @@
         1,
         1
       ],
-      "valueMapList": [
+      "tagMappings": [
         {
-          "type": "PZ",
-          "key": "C_862:tl_distance",
+          "id": "legacy-pz",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_862.tl_distance",
           "scale": 0.1,
-          "offset": 0
+          "offset": -33.939
         }
       ]
     }
@@ -771,7 +885,8 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     },
     {
       "id": "1498dcd4-8329-4f12-8b34-99bf9767976a",
@@ -791,7 +906,8 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     },
     {
       "id": "0f93dad9-eb09-46ad-b004-8191305aef14",
@@ -811,7 +927,8 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     },
     {
       "id": "929cd23b-f018-4edb-98d0-eda104331f85",
@@ -831,7 +948,8 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     },
     {
       "id": "6fcd5342-8f91-4e1a-8ff7-be756cbada9e",
@@ -851,7 +969,8 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     },
     {
       "id": "6ccbab6c-4cee-42cc-afb3-237997eb52c3",
@@ -871,7 +990,8 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     },
     {
       "id": "164472d9-a2d8-4eba-bb48-35f22120e073",
@@ -891,19 +1011,39 @@
         5,
         5,
         5
-      ]
+      ],
+      "locked": true
     }
   ],
   "camera": {
     "position": [
-      143.86124404706814,
-      124.49410175448281,
-      278.0425099365812
+      121.13634986333605,
+      123.21399243094599,
+      279.38914189185556
     ],
     "target": [
-      144.8031132679004,
-      -26.735998793455057,
-      150.17744431256983
+      121.9036676531344,
+      0.010532824432533582,
+      175.22060407686803
     ]
+  },
+  "views": [
+    {
+      "id": "312a93c6-0c73-4131-9ffe-09bb53b5d085",
+      "name": "메인 뷰",
+      "position": [
+        143.86124404706814,
+        124.49410175448278,
+        278.0425099365812
+      ],
+      "target": [
+        144.8031132679004,
+        -26.735998793455057,
+        150.17744431256983
+      ]
+    }
+  ],
+  "mainViewByRegion": {
+    "dock-in": "312a93c6-0c73-4131-9ffe-09bb53b5d085"
   }
 }

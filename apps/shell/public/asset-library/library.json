@@ -1539,9 +1539,44 @@
           "note": "",
           "createdAt": "2026-08-15T13:02:37.000Z",
           "createdBy": "jobeomhee"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/c-171/v2/c_171.glb"
+            },
+            "fileName": "c_171.glb",
+            "format": "glb",
+            "sizeBytes": 438044,
+            "contentHash": "sha256:cb8dfc3863a4fc0606f8b365a3fa2944362d1f6a1e7678a624ff266692e2adb6",
+            "originalSizeBytes": 2377848
+          },
+          "note": "노드 분리",
+          "createdAt": "2026-10-22T07:31:47.859Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 22972,
+            "vertices": 42753,
+            "meshes": 14,
+            "materials": 4,
+            "textures": 0,
+            "drawCalls": 14,
+            "nodes": 21,
+            "textureMemoryBytes": 0,
+            "size": [
+              11.100993377483444,
+              7.4469948224590325,
+              37.25
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -1550,8 +1585,52 @@
         "updatedAt": "2026-10-01T08:05:37.144Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-22T07:31:51.577Z",
+      "history": [
+        {
+          "id": "e0e7d23f-260d-4397-a7b3-7cb0efb39704",
+          "at": "2026-10-22T07:31:47.859Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "53bb3365-c8af-4213-b8ff-58679707fdf9",
+          "at": "2026-10-22T07:31:48.860Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "4771267a-2de7-45b1-a7c9-0e1eadb93552",
+          "at": "2026-10-22T07:31:49.177Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "be33425d-e4ab-4257-8ae1-6b6af6c477c9",
+          "at": "2026-10-22T07:31:49.394Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "30c7d824-260a-4b7f-ba00-4ba0d87ac74e",
+          "at": "2026-10-22T07:31:51.577Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        }
+      ]
     },
     {
       "id": "c-172",
@@ -2012,9 +2091,44 @@
           "note": "",
           "createdAt": "2026-08-15T13:02:37.000Z",
           "createdBy": "jobeomhee"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/c-866/v2/c_866.glb"
+            },
+            "fileName": "c_866.glb",
+            "format": "glb",
+            "sizeBytes": 327036,
+            "contentHash": "sha256:ecd603aea744ac4dc9577393a29a3fd253cf334c2499e710367c6db264f60695",
+            "originalSizeBytes": 1794648
+          },
+          "note": "노드 분리",
+          "createdAt": "2026-10-22T07:32:23.662Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 16776,
+            "vertices": 32381,
+            "meshes": 8,
+            "materials": 4,
+            "textures": 0,
+            "drawCalls": 8,
+            "nodes": 13,
+            "textureMemoryBytes": 0,
+            "size": [
+              7.456533306914755,
+              7.105792895010838,
+              39.13008117675781
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -2023,8 +2137,52 @@
         "updatedAt": "2026-10-01T08:06:44.653Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-22T07:32:28.961Z",
+      "history": [
+        {
+          "id": "d6e550d4-c02b-405d-9fdb-cf009c74a0b2",
+          "at": "2026-10-22T07:32:23.662Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "1436963e-5506-4f15-b36e-e43a48fb7e4d",
+          "at": "2026-10-22T07:32:25.563Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "c7607e0f-c6e6-4f94-a248-51373cea3fb4",
+          "at": "2026-10-22T07:32:25.811Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "68728a6a-e324-489b-8bf4-06cceb9e2d65",
+          "at": "2026-10-22T07:32:25.995Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "e8c64b36-5fd6-4b41-abf0-072bccddf9f4",
+          "at": "2026-10-22T07:32:28.961Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        }
+      ]
     },
     {
       "id": "c-867",
@@ -2141,9 +2299,27 @@
           "note": "",
           "createdAt": "2026-08-15T13:02:37.000Z",
           "createdBy": "jobeomhee"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/c-869/v2/c_869.glb"
+            },
+            "fileName": "c_869.glb",
+            "format": "glb",
+            "sizeBytes": 397148,
+            "contentHash": "sha256:be371a2a47e60131136b3a8363d1b025d35fddb2576e0dc12fb00e7422c93657",
+            "originalSizeBytes": 2153800
+          },
+          "note": "노드 분리",
+          "createdAt": "2026-10-22T07:32:44.943Z",
+          "createdBy": "crane.ocean"
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -2152,8 +2328,52 @@
         "updatedAt": "2026-10-01T08:07:02.254Z"
       },
       "createdAt": "2026-04-03T09:02:47.000Z",
-      "updatedAt": "2026-08-15T13:02:37.000Z",
-      "history": []
+      "updatedAt": "2026-10-22T07:32:48.878Z",
+      "history": [
+        {
+          "id": "7c6f9f34-fde6-4029-bbf0-23a5cc4a16e3",
+          "at": "2026-10-22T07:32:44.943Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "5b2b92df-315f-443a-8148-c0923e869148",
+          "at": "2026-10-22T07:32:46.861Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "5e5071a1-5e67-4694-823d-3d9aa9555564",
+          "at": "2026-10-22T07:32:47.112Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "6655d049-38b5-4fd3-8be3-41d2507395e2",
+          "at": "2026-10-22T07:32:47.327Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "45d5df24-88f3-4f76-a3f4-05a0972f861b",
+          "at": "2026-10-22T07:32:48.878Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
+        }
+      ]
     },
     {
       "id": "c-870",
