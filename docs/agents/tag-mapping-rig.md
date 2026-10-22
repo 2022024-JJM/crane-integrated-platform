@@ -179,6 +179,6 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 라벨 값 줄의 단위 표시·표시용 환산. 서버 태그의 원시 단위가 m 가 아니면(dock-in `tl_distance` 는 맵핑 scale 이 0.1 이다) 숫자가 m 로 읽히지 않는다.
 - 맵핑되지 않은 태그(Load 등)를 라벨에 보이는 것.
 - 다이얼로그의 "같은 태그를 전체 크레인에 적용" — 크레인마다 GLB 노드 경로가 달라(`3_Bay_C_800_Head_01` vs `3_Bay_C_172_Head`) 루트 대상에만 맞는다. 여러 크레인의 맵핑은 한 대를 에디터에서 맞춘 뒤 스크립트로 씬 JSON 에 일괄 생성하는 쪽이 맞다.
-- 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 슬롯만 — 리플레이 소스에서는 "맵핑 없음")·dock-in(실시간 슬롯 `C_xxx:tl_distance` 주행만)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
-- dock-in 크레인의 횡행(`ts{n}_distance` → `…_Head_0n` position)·권상(`mh{n}_height`/`ah{n}_height` → `…_Hook_0m` position y) 맵핑. 서버 값의 단위(정수 — tl 은 0.1 m 로 보이나 ts·mh 는 다르다)·기준점·방향·트롤리/훅 번호 대응표가 PLC 쪽에서 와야 scale·offset 을 정할 수 있다.
-- 상태 태그를 연결한 배포 씬은 없다. 서버의 상태 값 형식이 정해지면 맞춘다 — 비트 묶음 워드(역할별 비트 번호), 반전 비트, 모션 run 비트(지금 가동은 축 값 변화로 추정한다), 모션별 Slowdown·Endstop 비트(지금은 역할마다 태그 하나라 모션별로 오면 역할 값을 태그 목록으로 넓혀야 한다).
+- 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 슬롯만 — 리플레이 소스에서는 "맵핑 없음")·dock-in(실시간 슬롯 — 주행 `legacy-pz`, 횡행·권상 `map-ts{n}`·`map-mh{n}`·`map-ah{n}`)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
+- dock-in 횡행(`ts{n}_distance` → `…_Head_0n` position z)·권상(`mh{n}_height`/`ah{n}_height` → `…_Hook_0m` position y)의 scale·offset 은 가정값이다 — 횡행 scale 0.001, 횡행 값 0 = 트롤리가 거더 끝(트롤리가 하나면 모델 −z 끝, 둘이면 각자 가까운 끝), 권상 scale 0.01·offset = −(배치 y + 훅 바닥 y), 번호는 같은 트롤리 안 큰 훅이 주권. 서버 값의 단위·기준점·방향·트롤리/훅 번호 대응표가 PLC 쪽에서 오면 바꾼다.
+- 상태 태그를 연결한 배포 씬은 dock-in 하나다(운전 전원 `crane_control_on`, 고장 `crane_system_error`, Bypass `accs_bypass_on`). 서버의 상태 값 형식이 정해지면 맞춘다 — 비트 묶음 워드(역할별 비트 번호), 반전 비트, 모션 run 비트(지금 가동은 축 값 변화로 추정한다), 모션별 Slowdown·Endstop 비트(지금은 역할마다 태그 하나라 모션별로 오면 역할 값을 태그 목록으로 넓혀야 한다).

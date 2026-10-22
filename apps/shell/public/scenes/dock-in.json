@@ -25,6 +25,7 @@
         1,
         1
       ],
+      "labelHidden": true,
       "locked": true
     },
     {
@@ -51,6 +52,7 @@
         1,
         1
       ],
+      "labelHidden": true,
       "locked": true
     },
     {
@@ -77,6 +79,7 @@
         1,
         1
       ],
+      "labelHidden": true,
       "locked": true
     },
     {
@@ -103,6 +106,7 @@
         1,
         1
       ],
+      "labelHidden": true,
       "locked": true
     },
     {
@@ -142,8 +146,91 @@
           "realtimeTagKey": "C_171.tl_distance",
           "scale": 0.1,
           "offset": -151.475
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_171_Body/[0]3_Bay_C_171_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_171.ts1_distance",
+          "scale": 0.001,
+          "offset": -12.04
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_171_Body/[0]3_Bay_C_171_Head_01/[0]3_Bay_C_171_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_171.mh1_height",
+          "scale": 0.01,
+          "offset": -21.37
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_171_Body/[0]3_Bay_C_171_Head_01/[1]3_Bay_C_171_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_171.ah1_height",
+          "scale": 0.01,
+          "offset": -21.48
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_171_Body/[1]3_Bay_C_171_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_171.ts2_distance",
+          "scale": -0.001,
+          "offset": 11.88
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_171_Body/[1]3_Bay_C_171_Head_02/[0]3_Bay_C_171_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_171.mh2_height",
+          "scale": 0.01,
+          "offset": -21.37
+        },
+        {
+          "id": "map-ah2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_171_Body/[1]3_Bay_C_171_Head_02/[1]3_Bay_C_171_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_171.ah2_height",
+          "scale": 0.01,
+          "offset": -21.48
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_171.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_171.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_171.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "656ab87e-a892-49c8-992e-d43ccda13d64",
@@ -182,8 +269,55 @@
           "realtimeTagKey": "C_172.tl_distance",
           "scale": 0.1,
           "offset": -90.475
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_172_Body/[0]3_Bay_C_172_Head",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_172.ts1_distance",
+          "scale": 0.001,
+          "offset": -20.58
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_172_Body/[0]3_Bay_C_172_Head/[0]3_Bay_C_172_Head_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_172.ah1_height",
+          "scale": 0.01,
+          "offset": -14.01
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_172_Body/[0]3_Bay_C_172_Head/[1]3_Bay_C_172_Head_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_172.mh1_height",
+          "scale": 0.01,
+          "offset": -13
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_172.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_172.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_172.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "969fcd67-1346-4ce0-a885-b549ca1c5bdc",
@@ -222,8 +356,55 @@
           "realtimeTagKey": "C_173.tl_distance",
           "scale": 0.1,
           "offset": -120.475
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_173_Body/[0]3_Bay_C_173_Head",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_173.ts1_distance",
+          "scale": 0.001,
+          "offset": -20.58
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_173_Body/[0]3_Bay_C_173_Head/[0]3_Bay_C_173_Head_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_173.ah1_height",
+          "scale": 0.01,
+          "offset": -14.01
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_173_Body/[0]3_Bay_C_173_Head/[1]3_Bay_C_173_Head_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_173.mh1_height",
+          "scale": 0.01,
+          "offset": -13
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_173.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_173.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_173.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "7332781e-f10e-460b-8e72-e4decfaa5fb2",
@@ -262,8 +443,91 @@
           "realtimeTagKey": "C_800.tl_distance",
           "scale": 0.1,
           "offset": -60.474999999999994
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_800_Body/[0]3_Bay_C_800_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_800.ts1_distance",
+          "scale": 0.001,
+          "offset": -12.04
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_800_Body/[0]3_Bay_C_800_Head_01/[0]3_Bay_C_800_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_800.mh1_height",
+          "scale": 0.01,
+          "offset": -20.37
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_800_Body/[0]3_Bay_C_800_Head_01/[1]3_Bay_C_800_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_800.ah1_height",
+          "scale": 0.01,
+          "offset": -20.47
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_800_Body/[1]3_Bay_C_800_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_800.ts2_distance",
+          "scale": -0.001,
+          "offset": 11.88
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_800_Body/[1]3_Bay_C_800_Head_02/[0]3_Bay_C_800_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_800.mh2_height",
+          "scale": 0.01,
+          "offset": -20.37
+        },
+        {
+          "id": "map-ah2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_800_Body/[1]3_Bay_C_800_Head_02/[1]3_Bay_C_800_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_800.ah2_height",
+          "scale": 0.01,
+          "offset": -20.47
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_800.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_800.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_800.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "1785ccac-d65f-492c-a0be-4d11e234ee48",
@@ -302,8 +566,55 @@
           "realtimeTagKey": "C_801.tl_distance",
           "scale": 0.1,
           "offset": -30.474999999999994
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_801_Body/[0]3_Bay_C_801_Head",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_801.ts1_distance",
+          "scale": 0.001,
+          "offset": -15.65
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_801_Body/[0]3_Bay_C_801_Head/[0]3_Bay_C_801_Head_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_801.ah1_height",
+          "scale": 0.01,
+          "offset": -15.08
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Bay_C_801_Body/[0]3_Bay_C_801_Head/[1]3_Bay_C_801_Head_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_801.mh1_height",
+          "scale": 0.01,
+          "offset": -15.01
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_801.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_801.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_801.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "524e86da-b6b8-4071-9369-ca24978309a0",
@@ -342,8 +653,91 @@
           "realtimeTagKey": "C_810.tl_distance",
           "scale": 0.1,
           "offset": -169.091
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_810_Body/[0]3_Factory_C_810_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_810.ts1_distance",
+          "scale": -0.001,
+          "offset": 17.2
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_810_Body/[0]3_Factory_C_810_Head_01/[0]3_Factory_C_810_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_810.mh1_height",
+          "scale": 0.01,
+          "offset": -25.61
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_810_Body/[0]3_Factory_C_810_Head_01/[1]3_Factory_C_810_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_810.mh2_height",
+          "scale": 0.01,
+          "offset": -25.61
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_810_Body/[1]3_Factory_C_810_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_810.ts2_distance",
+          "scale": 0.001,
+          "offset": -15.61
+        },
+        {
+          "id": "map-mh3",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_810_Body/[1]3_Factory_C_810_Head_02/[0]3_Factory_C_810_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_810.mh3_height",
+          "scale": 0.01,
+          "offset": -25.61
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_810_Body/[1]3_Factory_C_810_Head_02/[1]3_Factory_C_810_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_810.ah1_height",
+          "scale": 0.01,
+          "offset": -25.71
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_810.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_810.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_810.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "c148f689-6971-420a-8329-f964206c7412",
@@ -382,8 +776,91 @@
           "realtimeTagKey": "C_811.tl_distance",
           "scale": 0.1,
           "offset": -109.09100000000001
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[0]3_Factory_C_811_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_811.ts1_distance",
+          "scale": -0.001,
+          "offset": 14.12
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[0]3_Factory_C_811_Head_01/[0]3_Factory_C_811_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_811.mh1_height",
+          "scale": 0.01,
+          "offset": -16.98
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[0]3_Factory_C_811_Head_01/[1]3_Factory_C_811_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_811.ah1_height",
+          "scale": 0.01,
+          "offset": -17.09
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[1]3_Factory_C_811_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_811.ts2_distance",
+          "scale": 0.001,
+          "offset": -15.74
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[1]3_Factory_C_811_Head_02/[0]3_Factory_C_811_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_811.mh2_height",
+          "scale": 0.01,
+          "offset": -16.98
+        },
+        {
+          "id": "map-ah2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[1]3_Factory_C_811_Head_02/[1]3_Factory_C_811_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_811.ah2_height",
+          "scale": 0.01,
+          "offset": -17.09
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_811.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_811.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_811.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "9593b1be-b80d-4a2a-ae76-e847691237c6",
@@ -422,8 +899,91 @@
           "realtimeTagKey": "C_812.tl_distance",
           "scale": 0.1,
           "offset": -49.090999999999994
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[0]3_Factory_C_811_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_812.ts1_distance",
+          "scale": -0.001,
+          "offset": 14.12
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[0]3_Factory_C_811_Head_01/[0]3_Factory_C_811_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_812.mh1_height",
+          "scale": 0.01,
+          "offset": -17.98
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[0]3_Factory_C_811_Head_01/[1]3_Factory_C_811_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_812.ah1_height",
+          "scale": 0.01,
+          "offset": -18.09
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[1]3_Factory_C_811_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_812.ts2_distance",
+          "scale": 0.001,
+          "offset": -15.74
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[1]3_Factory_C_811_Head_02/[0]3_Factory_C_811_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_812.mh2_height",
+          "scale": 0.01,
+          "offset": -17.98
+        },
+        {
+          "id": "map-ah2",
+          "target": {
+            "kind": "node",
+            "node": "[0]3_Factory_C_811_Body/[1]3_Factory_C_811_Head_02/[1]3_Factory_C_811_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_812.ah2_height",
+          "scale": 0.01,
+          "offset": -18.09
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_812.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_812.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_812.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "bfeaedd8-c425-4ec3-b0aa-523bfc7c200d",
@@ -462,8 +1022,55 @@
           "realtimeTagKey": "C_1806.tl_distance",
           "scale": 0.1,
           "offset": -223.826
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_1806_Body/[0]1_Bay_C_1806_Body_Head",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_1806.ts1_distance",
+          "scale": 0.001,
+          "offset": -15.99
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_1806_Body/[0]1_Bay_C_1806_Body_Head/[0]1_Bay_C_1806_Head_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_1806.mh1_height",
+          "scale": 0.01,
+          "offset": -7.99
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_1806_Body/[0]1_Bay_C_1806_Body_Head/[1]1_Bay_C_1806_Head_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_1806.ah1_height",
+          "scale": 0.01,
+          "offset": -9.04
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_1806.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_1806.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_1806.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "dc482c76-0946-4130-856e-9e1c8da02a25",
@@ -502,8 +1109,55 @@
           "realtimeTagKey": "C_865.tl_distance",
           "scale": 0.1,
           "offset": -193.826
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_865_Body/[0]1_Bay_C_865_Body_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_865.ts1_distance",
+          "scale": 0.001,
+          "offset": -20.05
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_865_Body/[0]1_Bay_C_865_Body_Head_01/[0]1_Bay_C_865_Body_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_865.mh1_height",
+          "scale": 0.01,
+          "offset": -7.78
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_865_Body/[0]1_Bay_C_865_Body_Head_01/[1]1_Bay_C_865_Body_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_865.ah1_height",
+          "scale": 0.01,
+          "offset": -8.84
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_865.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_865.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_865.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "613b067a-0323-4b52-ab51-69df75193d9f",
@@ -542,8 +1196,55 @@
           "realtimeTagKey": "C_866.tl_distance",
           "scale": 0.1,
           "offset": -153.826
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_866_Body/[0]1_Bay_C_866_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_866.ts1_distance",
+          "scale": 0.001,
+          "offset": -20.07
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_866_Body/[0]1_Bay_C_866_Head_01/[0]1_Bay_C_866_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_866.mh1_height",
+          "scale": 0.01,
+          "offset": -7.73
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_866_Body/[0]1_Bay_C_866_Head_01/[1]1_Bay_C_866_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_866.ah1_height",
+          "scale": 0.01,
+          "offset": -8.78
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_866.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_866.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_866.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "cd9cc19e-8fb6-4d37-bd68-0f6309878436",
@@ -582,8 +1283,43 @@
           "realtimeTagKey": "C_863.tl_distance",
           "scale": 0.1,
           "offset": -103.826
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_863_Body/[0]1_Bay_C_863_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_863.ts1_distance",
+          "scale": 0.001,
+          "offset": -7.55
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_863_Body/[0]1_Bay_C_863_Head_01/[0]1_Bay_C_863_Head_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_863.mh1_height",
+          "scale": 0.01,
+          "offset": -7.54
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_863.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_863.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_863.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "0dba4194-f688-4731-930c-76a44c25fb76",
@@ -622,8 +1358,79 @@
           "realtimeTagKey": "C_867.tl_distance",
           "scale": 0.1,
           "offset": -63.826
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_867_Body/[0]1_Bay_C_867_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_867.ts1_distance",
+          "scale": -0.001,
+          "offset": 13.86
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_867_Body/[0]1_Bay_C_867_Head_01/[0]1_Bay_C_867_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_867.mh1_height",
+          "scale": 0.01,
+          "offset": -16.26
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_867_Body/[0]1_Bay_C_867_Head_01/[1]1_Bay_C_867_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_867.ah1_height",
+          "scale": 0.01,
+          "offset": -16.34
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_867_Body/[1]1_Bay_C_867_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_867.ts2_distance",
+          "scale": 0.001,
+          "offset": -14.73
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_867_Body/[1]1_Bay_C_867_Head_02/[0]1_Bay_C_867_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_867.mh2_height",
+          "scale": 0.01,
+          "offset": -15.9
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_867.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_867.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_867.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "171017df-e04d-4ef7-bc7b-1fc7e54999fe",
@@ -662,8 +1469,43 @@
           "realtimeTagKey": "C_864.tl_distance",
           "scale": 0.1,
           "offset": -23.826
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_864_Body/[0]1_Bay_C_864_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_864.ts1_distance",
+          "scale": 0.001,
+          "offset": -7.96
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]1_Bay_C_864_Body/[0]1_Bay_C_864_Head_01/[0]1_Bay_C_863_Head_Hook_01001",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_864.mh1_height",
+          "scale": 0.01,
+          "offset": -7.56
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_864.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_864.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_864.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "8d41dfab-b8f9-48c2-83c2-b25a9d83e7c7",
@@ -702,8 +1544,91 @@
           "realtimeTagKey": "C_870.tl_distance",
           "scale": 0.1,
           "offset": -223.939
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_870_Body/[0]2_Bay_C_870_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_870.ts1_distance",
+          "scale": 0.001,
+          "offset": -15.48
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_870_Body/[0]2_Bay_C_870_Head_01/[0]2_Bay_C_870_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_870.mh1_height",
+          "scale": 0.01,
+          "offset": -20.94
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_870_Body/[0]2_Bay_C_870_Head_01/[1]2_Bay_C_870_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_870.mh2_height",
+          "scale": 0.01,
+          "offset": -20.94
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_870_Body/[1]2_Bay_C_870_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_870.ts2_distance",
+          "scale": -0.001,
+          "offset": 14.27
+        },
+        {
+          "id": "map-mh3",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_870_Body/[1]2_Bay_C_870_Head_02/[0]2_Bay_C_870_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_870.mh3_height",
+          "scale": 0.01,
+          "offset": -20.94
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_870_Body/[1]2_Bay_C_870_Head_02/[1]2_Bay_C_870_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_870.ah1_height",
+          "scale": 0.01,
+          "offset": -21.05
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_870.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_870.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_870.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "10e29bf4-1c3f-4973-a7a9-752265b614b8",
@@ -742,8 +1667,79 @@
           "realtimeTagKey": "C_869.tl_distance",
           "scale": 0.1,
           "offset": -163.939
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_869_Body/[0]2_Bay_C_869_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_869.ts1_distance",
+          "scale": -0.001,
+          "offset": 14.58
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_869_Body/[0]2_Bay_C_869_Head_01/[0]2_Bay_C_869_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_869.mh1_height",
+          "scale": 0.01,
+          "offset": -13.93
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_869_Body/[0]2_Bay_C_869_Head_01/[1]2_Bay_C_869_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_869.ah1_height",
+          "scale": 0.01,
+          "offset": -14.01
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_869_Body/[1]2_Bay_C_869_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_869.ts2_distance",
+          "scale": 0.001,
+          "offset": -14.99
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_869_Body/[1]2_Bay_C_869_Head_02/[0]2_Bay_C_869_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_869.mh2_height",
+          "scale": 0.01,
+          "offset": -13.57
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_869.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_869.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_869.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "a3520796-7a5e-4e38-85f2-f85a7b9fa341",
@@ -782,8 +1778,43 @@
           "realtimeTagKey": "C_868.tl_distance",
           "scale": 0.1,
           "offset": -123.939
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_868_Body/[0]2_Bay_C_868_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_868.ts1_distance",
+          "scale": 0.001,
+          "offset": -9.77
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_868_Body/[0]2_Bay_C_868_Head_01/[0]2_Bay_C_868_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_868.mh1_height",
+          "scale": 0.01,
+          "offset": -10.27
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_868.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_868.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_868.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "ec242f39-4164-4fa7-a2f6-aaacacd85aa6",
@@ -822,8 +1853,91 @@
           "realtimeTagKey": "C_871.tl_distance",
           "scale": 0.1,
           "offset": -83.939
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_871_Body/[0]2_Bay_C_871_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_871.ts1_distance",
+          "scale": 0.001,
+          "offset": -15.43
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_871_Body/[0]2_Bay_C_871_Head_01/[0]2_Bay_C_871_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_871.mh1_height",
+          "scale": 0.01,
+          "offset": -21.23
+        },
+        {
+          "id": "map-mh2",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_871_Body/[0]2_Bay_C_871_Head_01/[1]2_Bay_C_871_Head_01_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_871.mh2_height",
+          "scale": 0.01,
+          "offset": -21.23
+        },
+        {
+          "id": "map-ts2",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_871_Body/[1]2_Bay_C_871_Head_02",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_871.ts2_distance",
+          "scale": -0.001,
+          "offset": 14.14
+        },
+        {
+          "id": "map-mh3",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_871_Body/[1]2_Bay_C_871_Head_02/[0]2_Bay_C_871_Head_02_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_871.mh3_height",
+          "scale": 0.01,
+          "offset": -21.23
+        },
+        {
+          "id": "map-ah1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_871_Body/[1]2_Bay_C_871_Head_02/[1]2_Bay_C_871_Head_02_Hook_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_871.ah1_height",
+          "scale": 0.01,
+          "offset": -21.34
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_871.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_871.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_871.accs_bypass_on"
+        }
+      }
     },
     {
       "id": "4bc3b060-5dbb-466c-9cd9-a73beaffb214",
@@ -862,8 +1976,43 @@
           "realtimeTagKey": "C_862.tl_distance",
           "scale": 0.1,
           "offset": -33.939
+        },
+        {
+          "id": "map-ts1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_862_Bode/[0]2_Bay_C_862_Head_01",
+            "channel": "position",
+            "axis": "z"
+          },
+          "realtimeTagKey": "C_862.ts1_distance",
+          "scale": 0.001,
+          "offset": -7.83
+        },
+        {
+          "id": "map-mh1",
+          "target": {
+            "kind": "node",
+            "node": "[0]2_Bay_C_862_Bode/[0]2_Bay_C_862_Head_01/[0]2_Bay_C_862_Head_01_Hook_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "realtimeTagKey": "C_862.mh1_height",
+          "scale": 0.01,
+          "offset": -6.86
         }
-      ]
+      ],
+      "statusTags": {
+        "controlOn": {
+          "realtimeTagKey": "C_862.crane_control_on"
+        },
+        "fault": {
+          "realtimeTagKey": "C_862.crane_system_error"
+        },
+        "bypass": {
+          "realtimeTagKey": "C_862.accs_bypass_on"
+        }
+      }
     }
   ],
   "texts": [
@@ -1017,14 +2166,14 @@
   ],
   "camera": {
     "position": [
-      121.13634986333605,
-      123.21399243094599,
-      279.38914189185556
+      143.96060775096873,
+      121.16244844268361,
+      276.7057144960122
     ],
     "target": [
-      121.9036676531344,
-      0.010532824432533582,
-      175.22060407686803
+      144.902476971801,
+      -30.06765210525434,
+      148.84064887200083
     ]
   },
   "views": [
