@@ -136,6 +136,7 @@ export { SceneMinimap } from './ui/scene-minimap';
 export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
 export { SceneStatusHud } from './ui/scene-status-hud';
+export { SceneDangerVignette } from './ui/scene-danger-vignette';
 export { SceneSimulationPanel } from './ui/scene-simulation-panel';
 export { formatSimClock } from './lib/sim-clock';
 export { stopSimulation } from './model/stop-simulation';
@@ -153,12 +154,15 @@ export {
   filterAcceptedZoneTransitions,
   findRegionOfModel,
 } from './lib/zone-journal-map';
+export { useHudConditions } from './model/use-hud-conditions';
 export {
-  resolveConnectionView,
-  useRealtimeConnectionState,
-  type SceneConnectionMode,
-  type SceneConnectionView,
-} from './model/use-realtime-connection-state';
+  buildHudConditions,
+  resolveHudElapsed,
+  type HudCondition,
+  type HudConditionRow,
+  type HudConditionSummary,
+} from './lib/hud-conditions';
+export type { StatusSinceRecords } from './lib/status-since';
 export {
   useModelRuntimeStatuses,
   useModelStatusRecords,

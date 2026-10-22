@@ -1,293 +1,481 @@
 import {
-  Activity,
-  AlertTriangle,
-  Bell,
-  Clock,
-  Radio,
-  Radius,
-  Wind,
+  ChevronDown,
+  ChevronUp,
+  CircleCheck,
+  LoaderCircle,
+  Triangle,
+  Wifi,
   WifiOff,
+  Wind,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedSceneInfo } from '@crane/domain/3d';
-import type { AlarmSeverity } from '@crane/domain/alarm';
+import type { WeatherSnapshot } from '@crane/domain/weather';
+import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
+import { useNow } from '@crane/core/lib/use-now';
 import { cn } from '@crane/core/lib/utils';
 import {
+  resolveFeedFreshness,
+  type FeedFreshnessTone,
+} from '../lib/feed-freshness';
+import {
+  resolveHudElapsed,
+  type HudConditionRow,
+  type HudConditionSummary,
+} from '../lib/hud-conditions';
+import {
+  RUNTIME_STATUS_COLORS,
   countRuntimeStatuses,
+  type RuntimeStatusCounts,
   type RuntimeStatusRecord,
 } from '../lib/model-runtime-status';
 import {
+  WIND_CAUTION_MS,
+  WIND_STOP_MS,
   compassPoint,
   formatClockHm,
   resolveWindAdvisory,
+  windGaugeFraction,
+  windGaugeMarks,
 } from '../lib/wind-advisory';
-import { useSceneCollisionStore } from '../model/use-scene-collision-store';
+import { useCraneFeedConnection } from '../model/use-crane-snapshot-feed';
+import { useCraneSnapshotStore } from '../model/use-crane-snapshot-store';
+import { useRealtimeStore } from '../model/use-realtime-store';
 import { useSceneSunState } from '../model/use-scene-sun-state';
 import { useSceneWeather } from '../model/use-scene-weather';
-import { useSceneZoneStore } from '../model/use-scene-zone-store';
-import { usePlay3dStore } from '../model/use-play3d-store';
-import { useVirtualTagStore } from '../model/use-virtual-tag-store';
-import { virtualTagRuntime } from '../model/virtual-tag-runner';
-import { useRigLivePoll } from '../model/rig-live-readouts';
-import { formatSimClock } from '../lib/sim-clock';
-import {
-  useRealtimeConnectionState,
-  type SceneConnectionMode,
-} from '../model/use-realtime-connection-state';
+import { SceneStatusHudAlarmList } from './scene-status-hud-alarm-list';
 
 /**
- * 관제 요약 HUD — 3D 캔버스 상단 중앙 한 줄.
- * `현장 시각 · 풍속 · 가동 n/N · 두절 m · 알람 k`
+ * 관제 요약 HUD — 실시간 관제 화면의 3D 캔버스 상단 중앙 한 줄.
+ * `[이상 없음 | 위험 n · 주의 m ▾] · 크레인 N대 막대·수치 · 풍속 게이지 · 현장 시각/수신`
  *
- * 값의 출처는 전부 이미 있는 것들이다: 현장 시각은 씬 시계(useSceneSunState,
- * 리플레이면 프레임 시각), 풍속은 현장 좌표의 open-meteo(useSceneWeather),
- * 가동·두절은 운전 상태(useModelStatusRecords — 뷰가 한 번 판정해 넘긴다),
- * 알람은 페이지가 넘긴 크레인별 활성 알람 — 페이지가 넘기지 않으면 칸을
- * 숨긴다(0 으로 그리면 "알람 없음"으로 읽힌다). 클릭할 것이 없어
- * pointer-events-none — 아래 캔버스 조작을 막지 않는다.
+ * 값의 출처는 전부 이미 있는 것들이다. 이상 조건은 뷰가 합친 결과
+ * (model/use-hud-conditions.ts — 알람 스토어의 알람 + 고장·통신두절·Bypass·
+ * 영역 침범·충돌)이고, 크레인 수치는 운전 상태 기록(뷰가 한 번 판정해
+ * 넘긴다), 풍속은 현장 좌표의 open-meteo(useSceneWeather), 현장 시각은 씬
+ * 시계(useSceneSunState), 수신은 크레인 스냅샷 피드의 소켓·마지막 묶음 시각
+ * (lib/feed-freshness.ts)이다.
  *
- * 각 칸은 [아이콘·작은 라벨 / 큰 값] 세로 2줄이라 값이 먼저 읽힌다. 색
- * 규칙: 풍속은 작업 권고 단계(lib/wind-advisory — 주의 amber·중지 red), 가동은
- * 1대라도 돌면 emerald, 두절은 1대라도 있으면 amber(0이면 칸 자체를 숨김),
- * 알람은 최고 severity 색이고 0이면 흰색. 충돌 경보 배너와 같은 상단 중앙을
- * 쓰므로 Monitoring3dView 가 배너를 이 아래(top-16)로 내린다.
+ * 알람 요약 칸만 버튼이다 — 누르면 HUD 아래로 크레인 기준 알람 목록이
+ * 펼쳐진다(scene-status-hud-alarm-list.tsx). 위험이 0 에서 1 이 되는 순간
+ * 자동으로 펼치고 조건이 전부 사라지면 접는다. 버튼·목록만 포인터를 받고
+ * 나머지는 pointer-events-none 이라 아래 캔버스 조작을 막지 않는다. 목록은
+ * 스크롤이라 휠을 캔버스로 넘기지 않는다(우상단 고정 뷰 줄과 같은 취급).
+ *
+ * 색 규칙: 위험 red·주의 amber. 크레인 막대·점은 운전 상태 색
+ * (RUNTIME_STATUS_COLORS — 라벨과 같은 색, 통신두절만 빗금). 고장·통신두절
+ * 수치는 0 이면 흐리고 1 이상이면 붉게·누렇게 굵어진다. 풍속은 작업 권고 단계
+ * (lib/wind-advisory — 주의 amber·중지 red), 수신 줄의 아이콘은 신선도 색조다.
  */
-
-const SEVERITY_ORDER: AlarmSeverity[] = ['critical', 'high', 'medium', 'info'];
-const SEVERITY_VALUE_CLASS: Record<AlarmSeverity, string> = {
-  critical: 'text-red-400',
-  high: 'text-orange-400',
-  medium: 'text-amber-300',
-  info: 'text-sky-300',
-};
 
 interface SceneStatusHudProps {
   regionId: string;
   runtimeStatuses: RuntimeStatusRecord;
-  /** 없으면 알람 칸을 숨긴다 — 알람을 장면에 그리지 않는 화면. */
-  alarmsByCraneId?: Record<string, AlarmSeverity>;
-  /**
-   * 영역 칸은 씬에 영역이 하나라도 있을 때만 보인다. 현장 시각·풍속은 씬
-   * 지역(`siteLocation`)을 따른다.
-   */
+  conditions: HudConditionSummary;
+  /** 현장 시각·풍속은 씬 지역(`siteLocation`)을 따른다. */
   sceneInfo?: SavedSceneInfo | null;
-  /** 값 출처 — 연결 칸의 문구·색(시뮬레이션 재생 / WebSocket 연결 / 3D 플레이). */
-  mode?: SceneConnectionMode;
-  /** 시각 출처 — 리플레이 화면은 'replay'. */
-  timeSource?: 'clock' | 'replay';
+  /** 목록 행의 [보기]. 없으면 버튼을 그리지 않는다. */
+  onViewRow?: (row: HudConditionRow) => void;
   className?: string;
 }
 
 export function SceneStatusHud({
   regionId,
   runtimeStatuses,
-  alarmsByCraneId,
+  conditions,
   sceneInfo = null,
-  mode = 'simulation',
-  timeSource = 'clock',
+  onViewRow,
   className,
 }: SceneStatusHudProps) {
   const { t } = useTranslation();
-  // 시뮬레이션 시계(배속·경과)는 러너 mutable 값 — 500ms 폴링.
-  useRigLivePoll(500);
-  const simSpeed = useVirtualTagStore((s) => s.speed);
-  const simRunning = useVirtualTagStore((s) => s.isRunning);
-  const connection = useRealtimeConnectionState(mode);
-  const play3dSource = usePlay3dStore((s) => s.source);
-  // 시뮬레이션 시계(배속·경과)를 연결 라벨에 잇는 화면 — 미리보기·3D 플레이
-  // 시뮬레이션 소스. 실시간은 시뮬레이션이 없다.
-  const showSimClock =
-    mode === 'simulation' ||
-    (mode === 'play3d' && play3dSource === 'simulation');
-  const collisionMode = useSceneCollisionStore((s) => s.activeMode);
-  const zonesEnabled = useSceneZoneStore((s) => s.enabled);
-  const intrusions = useSceneZoneStore((s) => s.intrusions);
-  const zoneHeld = useSceneZoneStore((s) => s.held);
-  const sceneHasZones = (sceneInfo?.models ?? []).some(
-    (m) => (m.zones?.length ?? 0) > 0,
-  );
-  const stopIntruded = intrusions.some((i) => i.level === 'stop');
-  // 값 생산이 멈춘 상태 — 가동 "0 / N" 은 오해를 부르므로 "정지 중" 으로.
-  const paused =
-    collisionMode === 'pinned' ||
-    zoneHeld !== null ||
-    connection.state === 'held' ||
-    connection.state === 'simulationPaused' ||
-    connection.state === 'play3dPaused';
-  const sun = useSceneSunState(regionId, sceneInfo?.siteLocation, timeSource);
-  const weather = useSceneWeather(regionId, sceneInfo?.siteLocation);
+  const listId = useId();
+  const hasConditions = conditions.rows.length > 0;
+  const [expanded, setExpanded] = useState(false);
+  // 렌더 중 파생 상태 — 위험이 0→1 이면 펼치고, 조건이 전부 사라지면 접는다.
+  const [seen, setSeen] = useState({
+    danger: conditions.danger,
+    any: hasConditions,
+  });
+  if (seen.danger !== conditions.danger || seen.any !== hasConditions) {
+    setSeen({ danger: conditions.danger, any: hasConditions });
+    if (seen.danger === 0 && conditions.danger > 0) setExpanded(true);
+    else if (seen.any && !hasConditions) setExpanded(false);
+  }
+  const listOpen = expanded && hasConditions;
+
   const counts = countRuntimeStatuses(runtimeStatuses);
+  const sun = useSceneSunState(regionId, sceneInfo?.siteLocation, 'clock');
+  const weather = useSceneWeather(regionId, sceneInfo?.siteLocation);
   const clock = sun?.parts
     ? formatClockHm(sun.parts.hour, sun.parts.minute)
     : null;
-  const advisory = resolveWindAdvisory(weather?.windSpeed);
-  const direction = compassPoint(weather?.windDirection);
-  const hasWind =
-    weather?.windSpeed !== null && weather?.windSpeed !== undefined;
-
-  const alarmSeverities = alarmsByCraneId
-    ? Object.values(alarmsByCraneId)
-    : null;
-  const topSeverity = SEVERITY_ORDER.find((severity) =>
-    alarmSeverities?.includes(severity),
-  );
 
   return (
     <div
       data-slot="scene-status-hud"
       className={cn(
-        'pointer-events-none absolute top-1.5 left-1/2 z-10 flex -translate-x-1/2 items-stretch divide-x divide-white/15 rounded-lg border border-white/15 bg-black/75 px-1 text-white shadow-lg backdrop-blur-md',
+        'pointer-events-none absolute top-1.5 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-neutral-50',
         className,
       )}
     >
-      <HudCell
-        icon={<Clock className="size-3.5" aria-hidden />}
-        label={t('monitoring:hud.siteTime')}
-        value={clock ?? '--:--'}
-      />
-      <HudCell
-        icon={<Wind className="size-3.5" aria-hidden />}
-        label={
-          advisory === 'stop'
-            ? t('monitoring:hud.windStopShort')
-            : advisory === 'caution'
-              ? t('monitoring:hud.windCautionShort')
-              : t('monitoring:hud.wind')
-        }
-        title={
-          advisory === 'stop'
-            ? t('monitoring:hud.windStop')
-            : advisory === 'caution'
-              ? t('monitoring:hud.windCaution')
-              : undefined
-        }
-        value={
-          hasWind
-            ? `${weather.windSpeed!.toFixed(1)} m/s${direction ? ` ${direction}` : ''}`
-            : t('monitoring:hud.windUnavailable')
-        }
-        valueClassName={cn(
-          advisory === 'caution' && 'text-amber-300',
-          advisory === 'stop' && 'text-red-400',
-          !hasWind && 'text-white/50',
-        )}
-      />
-      <HudCell
-        icon={<Activity className="size-3.5" aria-hidden />}
-        label={t('monitoring:hud.runningShort')}
-        title={t('monitoring:hud.running')}
-        value={
-          paused
-            ? t('monitoring:hud.pausedValue')
-            : `${counts.running} / ${counts.known}`
-        }
-        valueClassName={cn(
-          paused && 'text-white/50',
-          !paused && counts.running > 0 && 'text-emerald-300',
-        )}
-      />
-      {counts.offline > 0 ? (
-        <HudCell
-          icon={<WifiOff className="size-3.5" aria-hidden />}
-          label={t('monitoring:hud.offlineShort')}
-          title={t('monitoring:hud.offline')}
-          value={String(counts.offline)}
-          valueClassName="text-amber-300"
+      <div
+        role="status"
+        aria-label={t('monitoring:hud.summary')}
+        className="flex h-11 items-center rounded border border-white/10 bg-[#111113]/92 px-1 whitespace-nowrap shadow-lg backdrop-blur-md"
+      >
+        <AlarmSummaryCell
+          conditions={conditions}
+          expanded={listOpen}
+          listId={listId}
+          onToggle={() => setExpanded((open) => !open)}
+        />
+        <Divider />
+        <CraneStatusCell counts={counts} />
+        <Divider />
+        <WindCell weather={weather} />
+        <Divider />
+        <div className="flex flex-col gap-1.5 pr-3 pl-3.5 text-[11px] leading-none text-neutral-400">
+          <span>
+            {t('monitoring:hud.siteTime')}{' '}
+            <b className="text-xs font-bold text-neutral-50">
+              {clock ?? '--:--'}
+            </b>
+          </span>
+          <FeedLine />
+        </div>
+      </div>
+      {listOpen ? (
+        <SceneStatusHudAlarmList
+          id={listId}
+          conditions={conditions}
+          onCollapse={() => setExpanded(false)}
+          onViewRow={onViewRow}
         />
       ) : null}
-      {alarmSeverities ? (
-        <HudCell
-          icon={<Bell className="size-3.5" aria-hidden />}
-          label={t('monitoring:hud.alarmsShort')}
-          title={t('monitoring:hud.alarms')}
-          value={String(alarmSeverities.length)}
-          valueClassName={
-            topSeverity ? SEVERITY_VALUE_CLASS[topSeverity] : undefined
-          }
-        />
-      ) : null}
-      {sceneHasZones && zonesEnabled ? (
-        <HudCell
-          icon={<Radius className="size-3.5" aria-hidden />}
-          label={t('monitoring:hud.intrusionsShort')}
-          title={t('monitoring:hud.intrusions')}
-          value={
-            zoneHeld
-              ? t('monitoring:hud.intrusionsPaused', {
-                  count: intrusions.length,
-                })
-              : String(intrusions.length)
-          }
-          valueClassName={cn(
-            intrusions.length > 0 && 'text-amber-300',
-            (stopIntruded || zoneHeld) && 'text-red-400',
-          )}
-        />
-      ) : null}
-      {collisionMode !== null ? (
-        <HudCell
-          icon={<AlertTriangle className="size-3.5" aria-hidden />}
-          label={t('monitoring:hud.collisionShort')}
-          title={t('monitoring:hud.collision')}
-          value={t(
-            collisionMode === 'pinned'
-              ? 'monitoring:hud.collisionPaused'
-              : 'monitoring:hud.collisionDetected',
-          )}
-          valueClassName="text-red-400"
-        />
-      ) : null}
-      <HudCell
-        icon={<Radio className="size-3.5" aria-hidden />}
-        label={
-          showSimClock || simRunning
-            ? `${t('monitoring:hud.linkShort')} · ×${simSpeed} ${formatSimClock(virtualTagRuntime.elapsed)}`
-            : t('monitoring:hud.linkShort')
-        }
-        title={t('monitoring:hud.link')}
-        value={t(`monitoring:hud.linkState.${connection.state}`)}
-        valueClassName={cn(
-          connection.tone === 'good' && 'text-emerald-300',
-          connection.tone === 'warn' && 'text-amber-300',
-          connection.tone === 'bad' && 'text-red-400',
-          connection.tone === 'muted' && 'text-white/50',
-        )}
-      />
     </div>
   );
 }
 
-function HudCell({
-  icon,
-  label,
-  title,
-  value,
-  valueClassName,
+function Divider() {
+  return <span aria-hidden className="h-6 w-px shrink-0 bg-white/12" />;
+}
+
+function AlarmSummaryCell({
+  conditions,
+  expanded,
+  listId,
+  onToggle,
 }: {
-  icon: ReactNode;
-  label: string;
-  title?: string;
-  value: string;
-  valueClassName?: string;
+  conditions: HudConditionSummary;
+  expanded: boolean;
+  listId: string;
+  onToggle: () => void;
 }) {
+  const { t } = useTranslation();
+  const { danger, caution } = conditions;
+  if (danger === 0 && caution === 0) {
+    return (
+      <div className="flex h-8 min-w-42 items-center gap-2 pr-3 pl-2.5">
+        <CircleCheck className="size-4 shrink-0 text-green-400" aria-hidden />
+        <b className="text-box-cap text-sm font-bold text-green-400">
+          {t('monitoring:hud.allClear')}
+        </b>
+      </div>
+    );
+  }
   return (
-    <div
-      className="flex min-w-16 flex-col justify-center gap-0.5 px-3 py-1.5"
-      title={title ?? label}
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={listId}
+      title={t(
+        expanded
+          ? 'monitoring:hud.collapseAlarms'
+          : 'monitoring:hud.expandAlarms',
+      )}
+      onClick={onToggle}
+      className={cn(
+        'pointer-events-auto flex h-8 min-w-42 cursor-pointer items-center gap-2 rounded-sm pr-2 pl-2.5 hover:bg-white/6',
+        expanded && 'bg-white/6',
+      )}
     >
-      <span className="inline-flex items-center gap-1 text-[10px] leading-none font-medium tracking-wide text-white/60 uppercase">
-        {icon}
-        {label}
-      </span>
+      {danger > 0 ? (
+        <span className="flex items-center gap-1.5">
+          <Triangle
+            className="size-2.75 shrink-0 fill-red-400 text-red-400"
+            aria-hidden
+          />
+          <b className="text-box-cap text-sm font-bold text-red-400">
+            {t('monitoring:hud.danger', { count: danger })}
+          </b>
+        </span>
+      ) : null}
+      {danger > 0 && caution > 0 ? (
+        <span aria-hidden className="size-0.75 rounded-full bg-neutral-400" />
+      ) : null}
+      {caution > 0 ? (
+        <span className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="size-2 shrink-0 rounded-full bg-amber-400"
+          />
+          <b className="text-box-cap text-sm font-bold text-amber-400">
+            {t('monitoring:hud.caution', { count: caution })}
+          </b>
+        </span>
+      ) : null}
+      {expanded ? (
+        <ChevronUp className="ml-auto size-3.5 text-neutral-400" aria-hidden />
+      ) : (
+        <ChevronDown
+          className="ml-auto size-3.5 text-neutral-400"
+          aria-hidden
+        />
+      )}
+    </button>
+  );
+}
+
+/** 막대·수치에 올리는 운전 상태 — unknown 은 세지 않는다(title 에만). */
+const HUD_STATUSES = [
+  'running',
+  'standby',
+  'off',
+  'fault',
+  'offline',
+] as const satisfies readonly EquipmentRuntimeStatus[];
+
+type HudStatus = (typeof HUD_STATUSES)[number];
+
+/** 막대·점의 채움 — 라벨과 같은 색, 통신두절만 빗금(꺼짐과 같은 회색이라). */
+const HUD_STATUS_SWATCH: Record<HudStatus, string> = {
+  running: RUNTIME_STATUS_COLORS.running ?? '',
+  standby: RUNTIME_STATUS_COLORS.standby ?? '',
+  off: RUNTIME_STATUS_COLORS.off ?? '',
+  fault: RUNTIME_STATUS_COLORS.fault ?? '',
+  offline:
+    'repeating-linear-gradient(135deg, #a1a1aa 0 2px, rgba(161,161,170,0.25) 2px 4px)',
+};
+
+function CraneStatusCell({ counts }: { counts: RuntimeStatusCounts }) {
+  const { t } = useTranslation();
+  const total = counts.known;
+  const title = [
+    t('monitoring:hud.craneCountTitle', { count: total }),
+    counts.unknown > 0
+      ? t('monitoring:hud.craneUnknown', { count: counts.unknown })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div className="flex items-center gap-3.5 px-3.5" title={title}>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] leading-none text-neutral-400">
+          {t('monitoring:hud.craneCount', { count: total })}
+        </span>
+        <div className="flex h-1.5 w-26 gap-0.5" aria-hidden>
+          {total === 0 ? (
+            <span className="flex-1 rounded-xs bg-white/10" />
+          ) : (
+            HUD_STATUSES.map((status) =>
+              counts[status] > 0 ? (
+                <span
+                  key={status}
+                  className="rounded-xs"
+                  style={{
+                    flex: `${counts[status]} 1 0`,
+                    background: HUD_STATUS_SWATCH[status],
+                  }}
+                />
+              ) : null,
+            )
+          )}
+        </div>
+      </div>
+      {HUD_STATUSES.map((status) => (
+        <StatusCount key={status} status={status} count={counts[status]} />
+      ))}
+    </div>
+  );
+}
+
+function StatusCount({ status, count }: { status: HudStatus; count: number }) {
+  const { t } = useTranslation();
+  const alerting = status === 'fault' || status === 'offline';
+  const dim = alerting && count === 0;
+  const hot = alerting && count > 0;
+  const title =
+    status === 'standby'
+      ? `${t('monitoring:runtimeStatus.standby')} — ${t('monitoring:hud.standbyHint')}`
+      : t(`monitoring:runtimeStatus.${status}`);
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-1.25 text-xs text-neutral-400',
+        dim && 'text-neutral-500',
+        hot && status === 'fault' && 'font-semibold text-red-300',
+        hot && status === 'offline' && 'font-semibold text-amber-200',
+      )}
+      title={title}
+    >
       <span
+        aria-hidden
+        className={cn('size-1.75 shrink-0 rounded-xs', dim && 'opacity-45')}
+        style={{ background: HUD_STATUS_SWATCH[status] }}
+      />
+      {t(`monitoring:hud.status.${status}`)}
+      <b
         className={cn(
-          'text-base leading-5 font-bold whitespace-nowrap tabular-nums',
-          valueClassName,
+          'text-[15px] font-bold text-neutral-50',
+          dim && 'font-semibold text-neutral-500',
+          hot && status === 'fault' && 'font-extrabold text-red-400',
+          hot && status === 'offline' && 'font-extrabold text-amber-400',
         )}
       >
-        {value}
-      </span>
+        {count}
+      </b>
+    </span>
+  );
+}
+
+function WindCell({ weather }: { weather: WeatherSnapshot | null }) {
+  const { t } = useTranslation();
+  const speed = weather?.windSpeed ?? null;
+  const advisory = resolveWindAdvisory(speed);
+  const direction = compassPoint(weather?.windDirection);
+  const fraction = windGaugeFraction(speed);
+  const marks = windGaugeMarks();
+  const reading = fraction !== null && speed !== null ? speed.toFixed(1) : null;
+  const tone =
+    advisory === 'stop'
+      ? 'text-red-400'
+      : advisory === 'caution'
+        ? 'text-amber-400'
+        : null;
+  const title = [
+    t('monitoring:hud.windSource'),
+    advisory === 'stop'
+      ? t('monitoring:hud.windStopTitle', { limit: WIND_STOP_MS })
+      : advisory === 'caution'
+        ? t('monitoring:hud.windCautionTitle', { limit: WIND_CAUTION_MS })
+        : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div className="flex items-center gap-2.5 px-3.5" title={title}>
+      <Wind
+        className={cn('size-4 shrink-0 text-neutral-400', tone)}
+        aria-hidden
+      />
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-baseline gap-1">
+          {reading === null ? (
+            <span className="text-xs leading-none text-neutral-500">
+              {t('monitoring:hud.windUnavailable')}
+            </span>
+          ) : (
+            <>
+              <b className={cn('text-base leading-none font-bold', tone)}>
+                {reading}
+              </b>
+              <span className="text-[11px] leading-none text-neutral-400">
+                m/s{direction ? ` · ${direction}` : ''}
+              </span>
+              {advisory === 'stop' || advisory === 'caution' ? (
+                <span
+                  className={cn('text-[11px] leading-none font-semibold', tone)}
+                >
+                  {t(
+                    advisory === 'stop'
+                      ? 'monitoring:hud.windStop'
+                      : 'monitoring:hud.windCaution',
+                  )}
+                </span>
+              ) : null}
+            </>
+          )}
+        </div>
+        <div className="relative h-1 w-22 rounded-xs bg-white/16" aria-hidden>
+          {fraction !== null ? (
+            <span
+              className={cn(
+                'absolute top-0 left-0 h-1 rounded-xs bg-white/85',
+                advisory === 'caution' && 'bg-amber-400',
+                advisory === 'stop' && 'bg-red-400',
+              )}
+              style={{ width: `${fraction * 100}%` }}
+            />
+          ) : null}
+          <span
+            className="absolute -top-0.75 h-2.5 w-0.5 rounded-[1px] bg-amber-400"
+            style={{ left: `${marks.caution * 100}%` }}
+          />
+          <span
+            className="absolute -top-0.75 h-2.5 w-0.5 rounded-[1px] bg-red-400"
+            style={{ left: `${marks.stop * 100}%` }}
+          />
+        </div>
+      </div>
     </div>
+  );
+}
+
+const FEED_TONE_ICON_CLASS: Record<FeedFreshnessTone, string> = {
+  good: 'text-green-400',
+  warn: 'text-amber-400',
+  bad: 'text-red-400',
+  muted: 'text-neutral-500',
+};
+
+const FEED_TONE_TEXT_CLASS: Record<FeedFreshnessTone, string | undefined> = {
+  good: undefined,
+  warn: 'text-amber-300',
+  bad: 'text-red-300',
+  muted: undefined,
+};
+
+/** 수신 줄 — 1초 틱은 이 줄만 다시 그린다. */
+function FeedLine() {
+  const { t } = useTranslation();
+  const now = useNow(1_000);
+  const connection = useCraneFeedConnection();
+  const held = useRealtimeStore((s) => s.held);
+  const lastReceivedAt = useCraneSnapshotStore((s) => s.lastReceivedAt);
+  const feed = resolveFeedFreshness(connection, held, lastReceivedAt, now);
+  const age =
+    feed.ageMs !== null && (feed.state === 'live' || feed.state === 'stale')
+      ? resolveHudElapsed(now - feed.ageMs, now)
+      : null;
+  const label = age
+    ? t('monitoring:hud.feed.received', {
+        age: t(`monitoring:hud.age.${age.unit}`, { count: age.value }),
+      })
+    : t(`monitoring:hud.feed.${feed.state}`);
+  const Icon =
+    feed.state === 'closed'
+      ? WifiOff
+      : feed.state === 'connecting'
+        ? LoaderCircle
+        : Wifi;
+  return (
+    <span
+      className="flex items-center gap-1.25"
+      title={t('monitoring:hud.feedTitle')}
+    >
+      <Icon
+        className={cn(
+          'size-3.25 shrink-0',
+          FEED_TONE_ICON_CLASS[feed.tone],
+          feed.state === 'connecting' &&
+            'animate-spin motion-reduce:animate-none',
+        )}
+        role="img"
+        aria-label={label}
+      />
+      <span className={FEED_TONE_TEXT_CLASS[feed.tone]}>{label}</span>
+    </span>
   );
 }

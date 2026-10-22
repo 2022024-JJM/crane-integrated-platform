@@ -649,42 +649,67 @@
     "noGeo": "Haec scaena regionem non habet, ergo lumen horae subiectum non praesto est."
   },
   "hud": {
-    "siteTime": "Hora loci",
-    "wind": "Venti celeritas",
-    "windCaution": "Cautio venti — 10 m/s vel plus",
-    "windStop": "Ventus operis sistendi — 15 m/s vel plus",
-    "windUnavailable": "Ventus ignotus",
-    "running": "Machinae operantes / machinae statu noto",
-    "runningValue": "Operantes {{running}}/{{total}}",
-    "offline": "Machinae seiunctae",
-    "offlineValue": "Seiunctae {{count}}",
-    "alarms": "Machinae cum monitionibus",
-    "alarmsValue": "Monitiones {{count}}",
-    "windCautionShort": "Cautio venti",
-    "windStopShort": "Ventus sistendi",
-    "runningShort": "Operantes",
-    "offlineShort": "Seiunctae",
-    "alarmsShort": "Monitiones",
-    "intrusions": "Regiones nunc invasae",
-    "intrusionsShort": "Invasiones",
-    "intrusionsPaused": "{{count}} · sistitur",
-    "collision": "Status detectionis collisionis",
-    "collisionShort": "Collisio",
-    "collisionPaused": "Sistitur",
-    "collisionDetected": "Detecta",
-    "link": "Fons valorum / status nexus",
-    "linkShort": "Nexus",
-    "linkState": {
-      "simulationRunning": "Simulatio",
-      "simulationPaused": "Sim sistitur",
-      "open": "Coniunctum",
-      "connecting": "Coniungitur",
-      "closed": "Disiunctum",
-      "held": "Suspensum",
-      "play3dPlaying": "Ludens",
-      "play3dPaused": "Pausatum"
+    "summary": "Summa custodiae",
+    "allClear": "Nihil mali",
+    "danger": "Periculum {{count}}",
+    "caution": "Cautio {{count}}",
+    "expandAlarms": "Indicem monitionum pande",
+    "collapseAlarms": "Indicem monitionum claude",
+    "craneCount": "Grues {{count}}",
+    "craneCountTitle": "Grues statu noto {{count}}",
+    "craneUnknown": "Statu ignoto {{count}}",
+    "status": {
+      "running": "Operans",
+      "standby": "Parata",
+      "off": "Imperium exstinctum",
+      "fault": "Vitium",
+      "offline": "Seiuncta"
     },
-    "pausedValue": "Sistitur"
+    "standbyHint": "imperium accensum, nullum signum operis",
+    "windSource": "Valor praedictionis (loci coordinatae) — non anemometrum loci",
+    "windCaution": "Cautio",
+    "windStop": "Siste",
+    "windCautionTitle": "Cautio venti — {{limit}} m/s vel plus",
+    "windStopTitle": "Ventus operis sistendi — {{limit}} m/s vel plus",
+    "windUnavailable": "Ventus ignotus",
+    "siteTime": "Hora loci",
+    "feedTitle": "Status receptionis servi gruum",
+    "feed": {
+      "received": "receptum ante {{age}}",
+      "waiting": "data exspectantur",
+      "connecting": "conectitur",
+      "closed": "disiunctum",
+      "held": "renovatio retenta"
+    },
+    "age": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h"
+    },
+    "elapsed": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h"
+    },
+    "list": {
+      "title": "Monitiones {{count}}",
+      "scope": "per gruem",
+      "order": "gravitas · tempus",
+      "view": "{{name}} vide",
+      "viewZone": "Regionem vide"
+    },
+    "row": {
+      "collision": "Collisio",
+      "collisionDetail": "contactus cum {{other}}",
+      "zone": "Regio violata",
+      "zoneDetail": "{{owner}} {{zone}} intravit",
+      "held": "automatice sistitur",
+      "fault": "Vitium",
+      "offline": "Seiuncta",
+      "bypass": "Bypass anticollisionis",
+      "alarmDanger": "Monitiones periculi {{count}}",
+      "alarmCaution": "Monitiones cautionis {{count}}"
+    }
   },
   "runtimeStatus": {
     "fault": "Vitium",

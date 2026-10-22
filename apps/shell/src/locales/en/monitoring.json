@@ -649,42 +649,67 @@
     "noGeo": "This scene has no region set, so time-based lighting is unavailable."
   },
   "hud": {
-    "siteTime": "Site time",
-    "wind": "Wind speed",
-    "windCaution": "Wind caution — 10 m/s or more",
-    "windStop": "Stop-work wind — 15 m/s or more",
-    "windUnavailable": "Wind n/a",
-    "running": "Running equipment / equipment with known status",
-    "runningValue": "Running {{running}}/{{total}}",
-    "offline": "Equipment offline",
-    "offlineValue": "Offline {{count}}",
-    "alarms": "Equipment with alarms",
-    "alarmsValue": "Alarms {{count}}",
-    "windCautionShort": "Wind caution",
-    "windStopShort": "Stop-work wind",
-    "runningShort": "Running",
-    "offlineShort": "Offline",
-    "alarmsShort": "Alarms",
-    "intrusions": "Zones currently intruded",
-    "intrusionsShort": "Intrusions",
-    "intrusionsPaused": "{{count}} · paused",
-    "collision": "Collision detection state",
-    "collisionShort": "Collision",
-    "collisionPaused": "Paused",
-    "collisionDetected": "Detected",
-    "link": "Value source / link state",
-    "linkShort": "Link",
-    "linkState": {
-      "simulationRunning": "Simulation",
-      "simulationPaused": "Sim paused",
-      "open": "Connected",
-      "connecting": "Connecting",
-      "closed": "Disconnected",
-      "held": "On hold",
-      "play3dPlaying": "Playing",
-      "play3dPaused": "Paused"
+    "summary": "Control summary",
+    "allClear": "All clear",
+    "danger": "Danger {{count}}",
+    "caution": "Caution {{count}}",
+    "expandAlarms": "Expand alarm list",
+    "collapseAlarms": "Collapse alarm list",
+    "craneCount": "{{count}} cranes",
+    "craneCountTitle": "{{count}} cranes with known status",
+    "craneUnknown": "{{count}} with unknown status",
+    "status": {
+      "running": "Running",
+      "standby": "Standby",
+      "off": "Control off",
+      "fault": "Fault",
+      "offline": "Offline"
     },
-    "pausedValue": "Paused"
+    "standbyHint": "control on, no work signal",
+    "windSource": "Forecast value (site coordinates) — not the site anemometer",
+    "windCaution": "Caution",
+    "windStop": "Stop",
+    "windCautionTitle": "Wind caution — {{limit}} m/s or more",
+    "windStopTitle": "Stop-work wind — {{limit}} m/s or more",
+    "windUnavailable": "Wind n/a",
+    "siteTime": "Site time",
+    "feedTitle": "Crane snapshot server feed",
+    "feed": {
+      "received": "received {{age}} ago",
+      "waiting": "waiting for data",
+      "connecting": "connecting",
+      "closed": "disconnected",
+      "held": "updates held"
+    },
+    "age": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h"
+    },
+    "elapsed": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h"
+    },
+    "list": {
+      "title": "Alarms {{count}}",
+      "scope": "per crane",
+      "order": "severity · elapsed",
+      "view": "View {{name}}",
+      "viewZone": "View zone"
+    },
+    "row": {
+      "collision": "Collision",
+      "collisionDetail": "contact with {{other}}",
+      "zone": "Zone intrusion",
+      "zoneDetail": "entered {{owner}} {{zone}}",
+      "held": "auto-stopped",
+      "fault": "Fault",
+      "offline": "Offline",
+      "bypass": "Anti-collision bypass",
+      "alarmDanger": "{{count}} danger alarms",
+      "alarmCaution": "{{count}} warning alarms"
+    }
   },
   "runtimeStatus": {
     "fault": "Fault",

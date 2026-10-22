@@ -22,7 +22,7 @@ import {
   getSceneMetersPerUnit,
   type SceneViewport,
 } from '@crane/domain/3d';
-import type { AlarmSeverity } from '@crane/domain/alarm';
+import type { Alarm, AlarmSeverity } from '@crane/domain/alarm';
 import {
   ThreeSceneViewer,
   type SceneController,
@@ -37,7 +37,10 @@ import type { MonitoringViewMode } from '../model/types';
 import { Vector3 } from 'three';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
-import { computeCollisionViewPose } from '../lib/scene-collision-pairs';
+import {
+  computeCollisionViewPose,
+  computeObjectViewPose,
+} from '../lib/scene-collision-pairs';
 import { resolveActiveTagSlot } from '../lib/tag-slot';
 import { RigDriver } from './rig-driver';
 import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
@@ -68,6 +71,9 @@ import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
+import { SceneDangerVignette } from './scene-danger-vignette';
+import { useHudConditions } from '../model/use-hud-conditions';
+import type { HudConditionRow } from '../lib/hud-conditions';
 import { ScenePlanLookToggle } from './scene-plan-look-toggle';
 import { ScenePlanOverlapDetector } from './scene-plan-overlaps';
 import {
@@ -113,16 +119,25 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
 export interface Monitoring3dViewActions {
   /** 영역(`modelId#zoneId`) 중심을 타깃으로 카메라를 옮긴다. */
   viewZone: (zoneKey: string) => void;
+  /** 모델의 바운즈 중심을 타깃으로 카메라를 옮긴다. */
+  viewModel: (modelId: string) => void;
 }
 
 interface Monitoring3dViewProps {
   regionId: string;
   /**
-   * 크레인별 활성 알람. 넘기면 라벨 배경·미니맵 마커·HUD 알람 칸이 알람을
-   * 표시한다. 넘기지 않는 화면은 세 곳 모두 알람을 그리지 않는다(HUD 는 칸
-   * 자체를 숨긴다) — 라벨 색을 운전 상태에만 쓰는 화면이다.
+   * 크레인별 활성 알람 — 넘기면 라벨 배경·미니맵 마커가 알람 색을 띤다.
+   * 넘기지 않는 화면은 라벨 색을 운전 상태에만 쓴다. 관제 HUD 는 이 값이
+   * 아니라 `alarms` 를 본다.
    */
   alarmsByCraneId?: Record<string, AlarmSeverity>;
+  /**
+   * region 의 활성 알람 목록 — 관제 HUD 의 이상 조건(요약·펼침 목록·위험
+   * 비네트)에 고장·통신두절·영역 침범·충돌과 함께 합쳐진다. 실시간 페이지가
+   * features/alarm 의 `useRegionActiveAlarms` 로 넘긴다(같은 레이어라 이
+   * 뷰가 직접 읽지 않는다).
+   */
+  alarms?: readonly Alarm[];
   alarmHighlightMesh?: boolean;
   /**
    * 화면 종류(model/types MonitoringViewMode). 'realtime' 은 WebSocket 만,
@@ -177,6 +192,7 @@ const EMPTY_VIEWS: SavedSceneView[] = [];
 export function Monitoring3dView({
   regionId,
   alarmsByCraneId,
+  alarms,
   alarmHighlightMesh = false,
   mode = 'simulation',
   autoStartSimulation = true,
@@ -244,17 +260,20 @@ export function Monitoring3dView({
   // 번에서 함께 나온다. 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D
   // 플레이는 정지 중 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면
   // 일시정지 뒤 전 장비가 두절이 된다.
-  const {
-    runtime: runtimeStatuses,
-    labels: labelStates,
-    outlines: outlineStates,
-  } = useModelStatusRecords(
+  const statusRecords = useModelStatusRecords(
     sceneInfo,
     tagSlot,
     isPlay3d
       ? { paused: !transport.isPlaying, timeScale: transport.speed }
       : undefined,
   );
+  const {
+    runtime: runtimeStatuses,
+    labels: labelStates,
+    outlines: outlineStates,
+  } = statusRecords;
+  // 관제 HUD 의 이상 조건 — 요약·펼침 목록·위험 비네트가 같은 결과를 읽는다.
+  const hudConditions = useHudConditions(sceneInfo, statusRecords, alarms);
   // 통신두절 진입·복귀를 저널에 남긴다(그 밖의 전환은 제외) — 실시간 화면만.
   useStatusJournalSync(
     regionId,
@@ -335,13 +354,38 @@ export function Monitoring3dView({
     sceneControllerRef.current?.moveTo(pose.position, pose.target);
   }, []);
 
+  // "크레인 보기" — HUD 알람 목록 행의 [보기]. 모델 바운즈 중심을 타깃으로,
+  // 현재 시선을 유지한 채 바운즈가 들어오는 거리로 물러난다.
+  const handleViewModel = useCallback((modelId: string) => {
+    const object = modelObjectRegistry.get(modelId);
+    if (!object) return;
+    const pose = computeObjectViewPose(
+      object,
+      sceneControllerRef.current?.getPose() ?? null,
+    );
+    if (!pose) return;
+    useSceneSplitStore.getState().exit();
+    sceneControllerRef.current?.moveTo(pose.position, pose.target);
+  }, []);
+
+  const handleViewRow = useCallback(
+    (row: HudConditionRow) => {
+      if (row.primary.kind === 'zone') handleViewZone(row.primary.zoneKey);
+      else if (row.modelId) handleViewModel(row.modelId);
+    },
+    [handleViewModel, handleViewZone],
+  );
+
   useEffect(() => {
     if (!actionsRef) return;
-    actionsRef.current = { viewZone: handleViewZone };
+    actionsRef.current = {
+      viewZone: handleViewZone,
+      viewModel: handleViewModel,
+    };
     return () => {
       actionsRef.current = null;
     };
-  }, [actionsRef, handleViewZone]);
+  }, [actionsRef, handleViewModel, handleViewZone]);
 
   // 씬 뷰(에디터가 저작해 씬 파일에 저장한 카메라 구도) — 모니터링에는
   // 에디터에서 고정한 뷰만 우상단 고정 줄에 온다. 목록·북마크는 없다.
@@ -511,6 +555,11 @@ export function Monitoring3dView({
                 알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
               <SceneCollisionAlertOverlay runner={collisionRunner} />
               <SceneZoneAlertOverlay />
+              {/* 위험 비네트 — HUD 이상 조건에 위험 행이 있을 때, 충돌·영역
+                비네트가 없을 때만. 실시간 관제 화면에서만. */}
+              {showControlRoomWidgets ? (
+                <SceneDangerVignette active={hudConditions.danger > 0} />
+              ) : null}
               {/* 분할 타일(이름·방위·클릭) — 캔버스 위에 깔려 포인터를 전부
                 받는다. 비네트는 pointer-events-none 이라 위에 있어도 클릭이
                 통과한다. */}
@@ -552,10 +601,9 @@ export function Monitoring3dView({
                 <SceneStatusHud
                   regionId={regionId}
                   runtimeStatuses={runtimeStatuses}
-                  alarmsByCraneId={alarmsByCraneId}
+                  conditions={hudConditions}
                   sceneInfo={sceneInfo}
-                  mode={mode}
-                  timeSource={timeSource}
+                  onViewRow={handleViewRow}
                 />
               ) : null}
               {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'

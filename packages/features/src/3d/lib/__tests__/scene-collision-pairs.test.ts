@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Matrix4 } from 'three';
+import { BoxGeometry, Group, Matrix4, Mesh } from 'three';
 import {
   computeCollisionViewPose,
+  computeObjectViewPose,
   copyMatrix,
   matrixChanged,
   pairKey,
@@ -82,5 +83,28 @@ describe('computeCollisionViewPose', () => {
     const pose = computeCollisionViewPose(contact, 1, null);
     expect(pose.target).not.toBe(contact);
     expect(pose.target).toEqual(contact);
+  });
+});
+
+describe('computeObjectViewPose', () => {
+  it('바운즈 중심을 타깃으로 대각선 절반 반경 규칙으로 물러난다', () => {
+    const mesh = new Mesh(new BoxGeometry(2, 2, 2));
+    mesh.position.set(10, 0, 0);
+    mesh.updateMatrixWorld(true);
+    const pose = computeObjectViewPose(mesh, {
+      position: [0, 0, 20],
+      target: [0, 0, 0],
+    });
+    expect(pose).not.toBeNull();
+    expect(pose!.target.map((v) => Math.round(v * 1e6) / 1e6)).toEqual([
+      10, 0, 0,
+    ]);
+    // 반경 √3 × 2.5 ≈ 4.33 은 최소 거리 6 보다 작아 6 으로, 방향 +z 유지.
+    expect(pose!.position[0]).toBeCloseTo(10);
+    expect(pose!.position[2]).toBeCloseTo(6);
+  });
+
+  it('메쉬가 없어 바운즈가 비면 null', () => {
+    expect(computeObjectViewPose(new Group(), null)).toBeNull();
   });
 });

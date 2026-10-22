@@ -1,4 +1,4 @@
-import { Vector3, type Matrix4, type Object3D } from 'three';
+import { Box3, Vector3, type Matrix4, type Object3D } from 'three';
 import { makeMeshId, modelObjectRegistry } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
@@ -97,6 +97,9 @@ const VIEW_DISTANCE_RATIO = 2.5;
 
 const _dir = new Vector3();
 const _pos = new Vector3();
+const _box = new Box3();
+const _center = new Vector3();
+const _size = new Vector3();
 
 /**
  * "충돌 지점 보기" 카메라 포즈 — 접촉점을 타깃으로, 현재 카메라의 시선
@@ -128,4 +131,24 @@ export function computeCollisionViewPose(
     position: [_pos.x, _pos.y, _pos.z],
     target: [contact[0], contact[1], contact[2]],
   };
+}
+
+/**
+ * "크레인 보기" 카메라 포즈(관제 HUD 알람 목록의 [보기]) — 객체의 월드
+ * 바운즈 중심을 타깃으로, 충돌 지점 보기와 같은 규칙으로 물러난다(반경 =
+ * 바운즈 대각선의 절반). 바운즈가 비면(메쉬가 없음) null.
+ */
+export function computeObjectViewPose(
+  object: Object3D,
+  current: CollisionCameraPose | null,
+): CollisionCameraPose | null {
+  _box.setFromObject(object);
+  if (_box.isEmpty()) return null;
+  _box.getCenter(_center);
+  const radius = _box.getSize(_size).length() / 2;
+  return computeCollisionViewPose(
+    [_center.x, _center.y, _center.z],
+    radius,
+    current,
+  );
 }
