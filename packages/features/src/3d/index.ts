@@ -1,7 +1,4 @@
-export {
-  Monitoring3dView,
-  type Monitoring3dViewActions,
-} from './ui/monitoring-3d-view';
+export { Monitoring3dView } from './ui/monitoring-3d-view';
 export { CollisionGuard, COLLISION_GUARD_COLORS } from './ui/collision-guard';
 export {
   CollisionGuardCameraRig,

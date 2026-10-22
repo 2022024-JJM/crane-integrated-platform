@@ -13,7 +13,7 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * HUD·헤더 배지가 이미 같은 사건을 보여 주므로 toast 는 띄우지 않는다(겹쳐
  * 보여 2026-09-12 에 뺐다) — 이 채널은 소리와, 탭이 뒤에 있을 때의 브라우저
  * 알림이다.
- * critical 알람은 alarm 슬라이스(useCriticalAlarmBanner)가 같은 notifyAlert
+ * critical 알람은 alarm 슬라이스(useCriticalAlarmNotifier)가 같은 notifyAlert
  * 로 내보낸다.
  *
  * 실시간 화면의 사건만 울린다 — 3D 플레이(리플레이·시뮬레이션)의 충돌·침범은

@@ -63,11 +63,9 @@ interface ThreeSceneViewerProps {
   overlay?: ReactNode;
   // 전체화면일 때 우측 상단에 떠있는 플로팅 슬롯. 도메인 무관.
   fullscreenTopRightOverlay?: ReactNode;
-  // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
-  fullscreenTopCenterOverlay?: ReactNode;
   // 외부 버튼을 주입하는 슬롯. 도메인 무관. 'bottom-left' 배치에서는 툴바 맨 앞,
-  // 'top-right' 배치에서는 카메라 버튼 줄 아래(다음 줄)에 놓인다 — 전체화면
-  // 알람 토글처럼 상시 버튼이 아닌 것이 카메라 조작 줄을 밀지 않게 하려는 것.
+  // 'top-right' 배치에서는 카메라 버튼 줄 아래(다음 줄)에 놓인다 —
+  // 상시 버튼이 아닌 것이 카메라 조작 줄을 밀지 않게 하려는 것.
   toolbarExtras?: ReactNode;
   // 툴바 카메라 버튼들 앞(왼쪽)에 붙는 슬롯. 씬 뷰 북마크 바 등 —
   // 툴바 버튼과 같은 스타일(SCENE_TOOLBAR_BUTTON_CLASS)로 맞추면 한 줄로 이어진다.
@@ -303,7 +301,6 @@ export function ThreeSceneViewer({
   children,
   overlay,
   fullscreenTopRightOverlay,
-  fullscreenTopCenterOverlay,
   toolbarExtras,
   toolbarTrailing,
   toolbarPlacement = 'bottom-left',
@@ -463,7 +460,7 @@ export function ThreeSceneViewer({
   );
 
   // 독 배치의 기하. 미고정 독은 핸들만큼 캔버스 가장자리를 덮으므로 캔버스
-  // 영역의 오버레이(충돌 도움말·알람 패널 등)가 그만큼 안쪽으로 비켜야 한다
+  // 영역의 오버레이(충돌 도움말·고정 뷰 줄 등)가 그만큼 안쪽으로 비켜야 한다
   // — CSS 변수 --dock-right-inset 으로 알려 준다.
   // 고정 독은 캔버스 밖 placeholder 가 자리를 차지하므로 inset 0.
   const rightDockPinned = isDock && dockRight?.pinned === true;
@@ -545,11 +542,10 @@ export function ThreeSceneViewer({
                 </div>
               ) : null}
 
-              {/* 독 배치의 우측 상단 슬롯(알람 패널). 다른 배치와 달리 전체화면
-                  여부를 가리지 않는다 — 독 배치의 목표가 전체화면과 평소의 UI 를
-                  같게 하는 것이라, 이 슬롯을 여닫는 버튼(레일의 알람 토글)이
-                  평소에도 있다. 캔버스 영역 기준이라 레일이 고정되면 자동으로
-                  안쪽으로 온다. */}
+              {/* 독 배치의 우측 상단 슬롯(고정 뷰 줄·2D/3D 전환). 다른 배치와
+                  달리 전체화면 여부를 가리지 않는다 — 독 배치의 목표가 전체화면과
+                  평소의 UI 를 같게 하는 것이다. 캔버스 영역 기준이라 레일이
+                  고정되면 자동으로 안쪽으로 온다. */}
               {isDock && fullscreenTopRightOverlay ? (
                 <div
                   className="pointer-events-auto absolute top-1.5 z-50"
@@ -572,17 +568,11 @@ export function ThreeSceneViewer({
           </div>
         </div>
 
-        {isFullscreen && fullscreenTopCenterOverlay ? (
-          <div className="pointer-events-auto absolute top-1.5 left-1/2 z-50 -translate-x-1/2">
-            {fullscreenTopCenterOverlay}
-          </div>
-        ) : null}
-
         {/* 화면 조작 툴바.
             'dock': 우측 독 레일 안에 세로로 — 카메라 버튼(원래위치·탑뷰 →
             toolbarTrailing → 확대·축소·전체화면), 그 아래 toolbarExtras.
             'top-right': 우측 상단 세로 스택 — 1줄 카메라 조작, 2줄 toolbarExtras
-            (전체화면 알람 토글 등), 그 아래 전체화면 우측 상단 슬롯(알람 패널).
+            (페이지 버튼), 그 아래 전체화면 우측 상단 슬롯.
             좌우 여백을 함께 잡아 두어 북마크 칩이 많아도 왼쪽 화면 밖으로
             나가지 않고 toolbarTrailing 안쪽 스크롤이 흡수한다.
             'bottom-left': 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의

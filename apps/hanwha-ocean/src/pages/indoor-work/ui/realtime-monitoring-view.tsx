@@ -1,40 +1,23 @@
-import { useCallback, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AlarmCriticalBanner,
-  AlarmFullscreenOverlay,
-  AlarmFullscreenToggleButton,
-  useCriticalAlarmBanner,
-  useFullscreenAlarmOverlay,
+  useCriticalAlarmNotifier,
+  useRegionActiveAlarms,
   useRegionActiveAlarmsByCraneId,
 } from '@crane/features/alarm';
-import {
-  Monitoring3dView,
-  type Monitoring3dViewActions,
-} from '@crane/features/3d';
+import { Monitoring3dView } from '@crane/features/3d';
 import { Spinner } from '@crane/ui/atoms/spinner';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
+  // 라벨 배경·미니맵 마커의 알람 색.
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
+  // region 의 활성 알람 → 관제 HUD 의 이상 조건(요약·펼침 목록·위험 비네트).
+  // features/alarm 과 features/3d 는 같은 레이어라 페이지가 잇는다.
+  const alarms = useRegionActiveAlarms(regionId);
+  // 새 critical·high 알람의 소리·브라우저 알림. 화면 표시는 HUD 가 맡는다.
+  useCriticalAlarmNotifier(regionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
-  const {
-    visible: alarmOverlayVisible,
-    toggle: toggleAlarmOverlay,
-    setVisible: setAlarmOverlayVisible,
-    activeAlarmCount,
-  } = useFullscreenAlarmOverlay(regionId);
-  const handleAlarmOverlayClose = useCallback(() => {
-    setAlarmOverlayVisible(false);
-  }, [setAlarmOverlayVisible]);
-  // 알람 목록의 영역 침범 행 [영역 보기] → 3D 뷰 카메라(features/alarm 과
-  // features/3d 는 같은 레이어라 페이지가 잇는다).
-  const sceneActionsRef = useRef<Monitoring3dViewActions | null>(null);
-  const handleViewZone = useCallback((zoneKey: string) => {
-    sceneActionsRef.current?.viewZone(zoneKey);
-  }, []);
-  const { alarm: criticalBannerAlarm, dismiss: dismissCriticalBanner } =
-    useCriticalAlarmBanner(regionId);
 
   return (
     <div className="relative h-full min-h-0">
@@ -49,31 +32,10 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       <Monitoring3dView
         regionId={regionId}
         alarmsByCraneId={alarmsByCraneId}
+        alarms={alarms}
         alarmHighlightMesh
         mode="realtime"
         onLoadingChange={setIs3dViewLoading}
-        actionsRef={sceneActionsRef}
-        fullscreenTopRightOverlay={
-          <AlarmFullscreenOverlay
-            regionId={regionId}
-            visible={alarmOverlayVisible}
-            onClose={handleAlarmOverlayClose}
-            onViewZone={handleViewZone}
-          />
-        }
-        fullscreenTopCenterOverlay={
-          <AlarmCriticalBanner
-            alarm={criticalBannerAlarm}
-            onDismiss={dismissCriticalBanner}
-          />
-        }
-        toolbarExtras={
-          <AlarmFullscreenToggleButton
-            active={alarmOverlayVisible}
-            alarmCount={activeAlarmCount}
-            onToggle={toggleAlarmOverlay}
-          />
-        }
         toolbarLayout="dock"
       />
     </div>

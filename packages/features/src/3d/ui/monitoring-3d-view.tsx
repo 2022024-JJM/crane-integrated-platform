@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -109,20 +108,6 @@ import {
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
 
-/**
- * 페이지가 씬 카메라를 움직일 수 있게 내주는 동작. 우상단 알람 목록
- * (features/alarm `AlarmFullscreenOverlay`)의 영역 침범 행 [영역 보기]가
- * 이걸 부른다 — 알람 슬라이스는 같은 레이어라 이 뷰를 import 하지 못하므로
- * 페이지가 `actionsRef` 로 받아 콜백으로 넘긴다(2026-09-17, 독 영역 팝업의
- * 같은 버튼을 알람 목록으로 옮긴 것).
- */
-export interface Monitoring3dViewActions {
-  /** 영역(`modelId#zoneId`) 중심을 타깃으로 카메라를 옮긴다. */
-  viewZone: (zoneKey: string) => void;
-  /** 모델의 바운즈 중심을 타깃으로 카메라를 옮긴다. */
-  viewModel: (modelId: string) => void;
-}
-
 interface Monitoring3dViewProps {
   regionId: string;
   /**
@@ -152,8 +137,6 @@ interface Monitoring3dViewProps {
    */
   autoStartSimulation?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
-  fullscreenTopRightOverlay?: ReactNode;
-  fullscreenTopCenterOverlay?: ReactNode;
   toolbarExtras?: ReactNode;
   /**
    * Canvas 안에 추가로 마운트할 씬 콘텐츠(R3F 노드). 충돌 감지 레이어처럼
@@ -182,8 +165,6 @@ interface Monitoring3dViewProps {
    * 화면). 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
    */
   toolbarLayout?: 'top-right' | 'dock' | 'none';
-  /** 페이지가 씬 카메라 동작(영역 보기)을 받을 ref — `Monitoring3dViewActions`. */
-  actionsRef?: RefObject<Monitoring3dViewActions | null>;
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -197,14 +178,11 @@ export function Monitoring3dView({
   mode = 'simulation',
   autoStartSimulation = true,
   onLoadingChange,
-  fullscreenTopRightOverlay,
-  fullscreenTopCenterOverlay,
   toolbarExtras,
   sceneExtras,
   overlayExtras,
   canvasDpr,
   toolbarLayout = 'top-right',
-  actionsRef,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const sceneAlarms = alarmsByCraneId ?? EMPTY_ALARMS;
@@ -330,8 +308,8 @@ export function Monitoring3dView({
 
   // "영역 보기" — 영역 중심을 타깃으로, 현재 시선 방향을 유지한 채 반경만큼
   // 물러난다(수치 계산은 lib/scene-collision-pairs). 영역 중심은 소유 모델
-  // 루트 월드 위치 + 오프셋(zoneCenterWorld). 우상단 알람 목록의 영역 침범
-  // 행이 `actionsRef.viewZone` 으로 부른다.
+  // 루트 월드 위치 + 오프셋(zoneCenterWorld). 관제 HUD 알람 목록의 영역
+  // 행 [보기]가 부른다.
   const handleViewZone = useCallback((key: string) => {
     const info = useSceneInfoStoreRef.current;
     const [modelId, zoneId] = key.split('#');
@@ -375,17 +353,6 @@ export function Monitoring3dView({
     },
     [handleViewModel, handleViewZone],
   );
-
-  useEffect(() => {
-    if (!actionsRef) return;
-    actionsRef.current = {
-      viewZone: handleViewZone,
-      viewModel: handleViewModel,
-    };
-    return () => {
-      actionsRef.current = null;
-    };
-  }, [actionsRef, handleViewModel, handleViewZone]);
 
   // 씬 뷰(에디터가 저작해 씬 파일에 저장한 카메라 구도) — 모니터링에는
   // 에디터에서 고정한 뷰만 우상단 고정 줄에 온다. 목록·북마크는 없다.
@@ -551,8 +518,7 @@ export function Monitoring3dView({
               {simulationUiVisible && toolbarLayout !== 'none' ? (
                 <SceneSimulationFrame />
               ) : null}
-              {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
-                알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
+              {/* 충돌·영역 침범 경보 — 가장자리 비네트만. */}
               <SceneCollisionAlertOverlay runner={collisionRunner} />
               <SceneZoneAlertOverlay />
               {/* 위험 비네트 — HUD 이상 조건에 위험 행이 있을 때, 충돌·영역
@@ -616,8 +582,8 @@ export function Monitoring3dView({
           }
           fullscreenTopRightOverlay={
             isDock ? (
-              // 우상단 슬롯 — 고정한 뷰 줄, 탑뷰 중이면 2D/3D 전환, 페이지의
-              // 알람 패널 순. 고정 뷰 줄이 비면(null) 간격 없이 토글이 맨 위다.
+              // 우상단 슬롯 — 고정한 뷰 줄, 탑뷰 중이면 2D/3D 전환. 고정 뷰 줄이
+              // 비면(null) 간격 없이 토글이 맨 위다.
               <div className="flex flex-col items-end gap-2">
                 <SceneViewBar
                   views={pinnedViews}
@@ -625,13 +591,9 @@ export function Monitoring3dView({
                   split={splitBarProps}
                 />
                 {topViewActive ? <ScenePlanLookToggle /> : null}
-                {fullscreenTopRightOverlay}
               </div>
-            ) : (
-              fullscreenTopRightOverlay
-            )
+            ) : undefined
           }
-          fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
           toolbarExtras={
             isDock ? (
               // 독 레일에서 카메라 묶음 아래 구성(실시간·3D 플레이 공통) — 화면
