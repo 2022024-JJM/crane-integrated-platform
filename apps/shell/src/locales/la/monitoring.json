@@ -651,10 +651,12 @@
   "hud": {
     "summary": "Summa custodiae",
     "allClear": "Nihil mali",
-    "danger": "Periculum {{count}}",
+    "danger": "Monitum {{count}}",
     "caution": "Cautio {{count}}",
     "expandAlarms": "Indicem monitionum pande",
     "collapseAlarms": "Indicem monitionum claude",
+    "vignetteEnable": "Fulgorem marginis monstra",
+    "vignetteDisable": "Fulgorem marginis cela",
     "craneCount": "Grues {{count}}",
     "craneCountTitle": "Grues statu noto {{count}}",
     "craneUnknown": "Statu ignoto {{count}}",
@@ -675,16 +677,11 @@
     "siteTime": "Hora loci",
     "feedTitle": "Status receptionis servi gruum",
     "feed": {
-      "received": "receptum ante {{age}}",
+      "receivedAt": "receptum {{time}}",
       "waiting": "data exspectantur",
       "connecting": "conectitur",
       "closed": "disiunctum",
       "held": "renovatio retenta"
-    },
-    "age": {
-      "seconds": "{{count}}s",
-      "minutes": "{{count}}m",
-      "hours": "{{count}}h"
     },
     "elapsed": {
       "seconds": "{{count}}s",
@@ -693,7 +690,6 @@
     },
     "list": {
       "title": "Monitiones {{count}}",
-      "scope": "per gruem",
       "order": "gravitas · tempus",
       "view": "{{name}} vide",
       "viewZone": "Regionem vide"
@@ -707,7 +703,7 @@
       "fault": "Vitium",
       "offline": "Seiuncta",
       "bypass": "Bypass anticollisionis",
-      "alarmDanger": "Monitiones periculi {{count}}",
+      "alarmDanger": "Monitiones graves {{count}}",
       "alarmCaution": "Monitiones cautionis {{count}}"
     }
   },

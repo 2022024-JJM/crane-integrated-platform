@@ -78,7 +78,7 @@
 
 - `scene-zone-alert-overlay.tsx` 는 가장자리 비네트만(amber/red). 충돌 경보가 떠 있으면 아무것도 그리지 않는다.
 - [영역 보기]는 관제 HUD 펼침 목록의 영역 행 [보기]다(`docs/agents/monitoring-ui.md`). 영역 행은 영역 스토어에서 직접 만들어 **들어간 쪽** 크레인에 붙고 소유 모델·영역 이름과 정지 여부("자동정지됨")를 보인다 — stop 은 위험, warn 은 주의. 알람 스토어의 `zone_intrusion` 로컬 알람은 HUD 에서 거른다(알람 이력·헤더 배지·저널은 그대로 그 알람을 쓴다). 카메라 포즈는 충돌의 `computeCollisionViewPose` 재사용.
-- HUD 에 침범 칸은 없다 — 침범은 펼침 목록의 행과 "위험 n · 주의 m" 요약 수로 보인다. HUD 자체는 `docs/agents/monitoring-ui.md`.
+- HUD 에 침범 칸은 없다 — 침범은 펼침 목록의 행과 "경고 n · 주의 m" 요약 수로 보인다. HUD 자체는 `docs/agents/monitoring-ui.md`.
 - 미니맵은 영역 원을 그리지 않는다 — 3D 링과 HUD 가 담당하고 미니맵에선 마커를 가린다. 미니맵 자체는 `docs/agents/monitoring-ui.md`.
 - 마운트 범위: 모니터링은 전 모드(실시간·3D 플레이·미리보기), 에디터는 `scene-objects-edit-canvas.tsx`.
 

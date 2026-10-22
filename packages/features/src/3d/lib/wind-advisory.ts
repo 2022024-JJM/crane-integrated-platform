@@ -96,3 +96,14 @@ export function windGaugeMarks(max = WIND_GAUGE_MAX_MS): {
     stop: Math.min(1, WIND_STOP_MS / max),
   };
 }
+
+/** 현장 벽시계 HH:MM:SS. 시·분·초가 정수가 아니면 null. */
+export function formatClockHms(
+  hour: number,
+  minute: number,
+  second: number,
+): string | null {
+  const hm = formatClockHm(hour, minute);
+  if (hm === null || !Number.isInteger(second)) return null;
+  return `${hm}:${String(second).padStart(2, '0')}`;
+}

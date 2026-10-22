@@ -1,4 +1,4 @@
-import { ChevronUp, Crosshair, Triangle } from 'lucide-react';
+import { ChevronUp, Crosshair, Siren } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Alarm } from '@crane/domain/alarm';
 import { useNow } from '@crane/core/lib/use-now';
@@ -11,6 +11,8 @@ import {
   type HudConditionRow,
   type HudConditionSummary,
 } from '../lib/hud-conditions';
+import { useDangerVignetteStore } from '../model/use-danger-vignette-store';
+import { CautionGlyph, DangerGlyph } from './scene-status-hud-glyphs';
 
 /**
  * 관제 HUD 의 알람 목록 — HUD 알람 요약 버튼으로 펼치는 패널. 실시간 화면의
@@ -22,6 +24,9 @@ import {
  * 뒤 흐른 시간이고 1초 틱으로 다시 그린다. [보기]는 영역 행이면 그 영역,
  * 그 외는 그 크레인으로 카메라를 보낸다(뷰가 `onViewRow` 로 잇는다). 씬에
  * 없는 크레인의 알람 행은 보낼 곳이 없어 버튼이 없다.
+ *
+ * 헤더의 경광등 토글은 위험 비네트(화면 가장자리 붉은 테두리) 표시 여부다
+ * (model/use-danger-vignette-store.ts, 영속).
  */
 
 type Translate = ReturnType<typeof useTranslation>['t'];
@@ -41,9 +46,16 @@ export function SceneStatusHudAlarmList({
 }: SceneStatusHudAlarmListProps) {
   const { t } = useTranslation();
   const now = useNow(1_000);
+  const vignetteEnabled = useDangerVignetteStore((s) => s.enabled);
+  const toggleVignette = useDangerVignetteStore((s) => s.toggle);
   const title = t('monitoring:hud.list.title', {
     count: conditions.rows.length,
   });
+  const vignetteLabel = t(
+    vignetteEnabled
+      ? 'monitoring:hud.vignetteDisable'
+      : 'monitoring:hud.vignetteEnable',
+  );
   return (
     <section
       id={id}
@@ -52,12 +64,24 @@ export function SceneStatusHudAlarmList({
     >
       <div className="flex h-10 items-center gap-2 border-b border-white/9 pr-1.5 pl-3.5">
         <b className="text-sm font-bold">{title}</b>
-        <span className="text-[11px] text-neutral-500">
-          {t('monitoring:hud.list.scope')}
-        </span>
         <span className="ml-auto text-[11px] text-neutral-500">
           {t('monitoring:hud.list.order')}
         </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-pressed={vignetteEnabled}
+          aria-label={vignetteLabel}
+          title={vignetteLabel}
+          className={cn(
+            'text-neutral-400 hover:bg-white/10 hover:text-neutral-50',
+            vignetteEnabled && 'text-red-300 hover:text-red-200',
+          )}
+          onClick={toggleVignette}
+        >
+          <Siren />
+        </Button>
         <Button
           type="button"
           variant="ghost"
@@ -121,15 +145,9 @@ function AlarmRow({
       )}
     >
       {danger ? (
-        <Triangle
-          className="size-2.5 shrink-0 fill-red-400 text-red-400"
-          aria-hidden
-        />
+        <DangerGlyph className="size-3.5" />
       ) : (
-        <span
-          aria-hidden
-          className="mx-px size-2 shrink-0 rounded-full bg-amber-400"
-        />
+        <CautionGlyph className="size-3.5" />
       )}
       <b
         className="w-14 shrink-0 truncate text-[13px] font-bold"

@@ -3,7 +3,6 @@ import {
   ChevronUp,
   CircleCheck,
   LoaderCircle,
-  Triangle,
   Wifi,
   WifiOff,
   Wind,
@@ -16,13 +15,19 @@ import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import { useNow } from '@crane/core/lib/use-now';
 import { cn } from '@crane/core/lib/utils';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
+import {
+  formatFeedClock,
   resolveFeedFreshness,
   type FeedFreshnessTone,
 } from '../lib/feed-freshness';
-import {
-  resolveHudElapsed,
-  type HudConditionRow,
-  type HudConditionSummary,
+import type {
+  HudConditionRow,
+  HudConditionSummary,
 } from '../lib/hud-conditions';
 import {
   RUNTIME_STATUS_COLORS,
@@ -45,10 +50,11 @@ import { useRealtimeStore } from '../model/use-realtime-store';
 import { useSceneSunState } from '../model/use-scene-sun-state';
 import { useSceneWeather } from '../model/use-scene-weather';
 import { SceneStatusHudAlarmList } from './scene-status-hud-alarm-list';
+import { CautionGlyph, DangerGlyph } from './scene-status-hud-glyphs';
 
 /**
  * 관제 요약 HUD — 실시간 관제 화면의 3D 캔버스 상단 중앙 한 줄.
- * `[이상 없음 | 위험 n · 주의 m ▾] · 크레인 N대 막대·수치 · 풍속 게이지 · 현장 시각/수신`
+ * `[이상 없음 | 경고 n · 주의 m ▾] · 크레인 N대 막대·수치 · 풍속 게이지 · 현장 시각/수신`
  *
  * 값의 출처는 전부 이미 있는 것들이다. 이상 조건은 뷰가 합친 결과
  * (model/use-hud-conditions.ts — 알람 스토어의 알람 + 고장·통신두절·Bypass·
@@ -57,16 +63,19 @@ import { SceneStatusHudAlarmList } from './scene-status-hud-alarm-list';
  * 시계(useSceneSunState), 수신은 크레인 스냅샷 피드의 소켓·마지막 묶음 시각
  * (lib/feed-freshness.ts)이다.
  *
- * 알람 요약 칸만 버튼이다 — 누르면 HUD 아래로 크레인 기준 알람 목록이
- * 펼쳐진다(scene-status-hud-alarm-list.tsx). 위험이 0 에서 1 이 되는 순간
- * 자동으로 펼치고 조건이 전부 사라지면 접는다. 버튼·목록만 포인터를 받고
- * 나머지는 pointer-events-none 이라 아래 캔버스 조작을 막지 않는다. 목록은
- * 스크롤이라 휠을 캔버스로 넘기지 않는다(우상단 고정 뷰 줄과 같은 취급).
+ * 알람 요약 칸만 버튼이다 — 누르면 HUD 아래로 크레인별 알람 목록이
+ * 펼쳐진다(scene-status-hud-alarm-list.tsx). 저절로 펼치지 않고(사용자가
+ * 열기 전까지) 조건이 전부 사라지면 접는다. 행의 [보기]로 카메라를 보내면
+ * 목록을 닫는다. 버튼·풍속 툴팁 트리거·목록만
+ * 포인터를 받고 나머지는 pointer-events-none 이라 아래 캔버스 조작을 막지
+ * 않는다. 목록은 스크롤이라 휠을 캔버스로 넘기지 않는다(우상단 고정 뷰 줄과
+ * 같은 취급).
  *
- * 색 규칙: 위험 red·주의 amber. 크레인 막대·점은 운전 상태 색
- * (RUNTIME_STATUS_COLORS — 라벨과 같은 색, 통신두절만 빗금). 고장·통신두절
- * 수치는 0 이면 흐리고 1 이상이면 붉게·누렇게 굵어진다. 풍속은 작업 권고 단계
- * (lib/wind-advisory — 주의 amber·중지 red), 수신 줄의 아이콘은 신선도 색조다.
+ * 색 규칙: 경고 red·주의 amber(글리프는 scene-status-hud-glyphs.tsx). 크레인
+ * 막대·점은 운전 상태 색(RUNTIME_STATUS_COLORS — 라벨과 같은 색, 통신두절만
+ * 빗금)이고 막대 조각은 여백 없이 잇고 1px 겹쳐 경계의 안티에일리어싱 틈을 가린다. 고장·통신두절 수치는 0 이면 흐리고
+ * 1 이상이면 붉게·누렇게 굵어진다. 풍속은 작업 권고 단계(lib/wind-advisory —
+ * 주의 amber·중지 red), 수신 줄의 아이콘은 신선도 색조다.
  */
 
 interface SceneStatusHudProps {
@@ -92,15 +101,12 @@ export function SceneStatusHud({
   const listId = useId();
   const hasConditions = conditions.rows.length > 0;
   const [expanded, setExpanded] = useState(false);
-  // 렌더 중 파생 상태 — 위험이 0→1 이면 펼치고, 조건이 전부 사라지면 접는다.
-  const [seen, setSeen] = useState({
-    danger: conditions.danger,
-    any: hasConditions,
-  });
-  if (seen.danger !== conditions.danger || seen.any !== hasConditions) {
-    setSeen({ danger: conditions.danger, any: hasConditions });
-    if (seen.danger === 0 && conditions.danger > 0) setExpanded(true);
-    else if (seen.any && !hasConditions) setExpanded(false);
+  // 렌더 중 파생 상태 — 조건이 전부 사라지면 접는다. 새 조건이 생겨도 저절로
+  // 펼치지 않는다.
+  const [seenAny, setSeenAny] = useState(hasConditions);
+  if (seenAny !== hasConditions) {
+    setSeenAny(hasConditions);
+    if (!hasConditions) setExpanded(false);
   }
   const listOpen = expanded && hasConditions;
 
@@ -110,6 +116,7 @@ export function SceneStatusHud({
   const clock = sun?.parts
     ? formatClockHm(sun.parts.hour, sun.parts.minute)
     : null;
+  const timeZone = sun?.geo.timeZone ?? null;
 
   return (
     <div
@@ -136,13 +143,13 @@ export function SceneStatusHud({
         <WindCell weather={weather} />
         <Divider />
         <div className="flex flex-col gap-1.5 pr-3 pl-3.5 text-[11px] leading-none text-neutral-400">
-          <span>
-            {t('monitoring:hud.siteTime')}{' '}
+          <span className="flex items-center justify-between gap-3">
+            <span>{t('monitoring:hud.siteTime')}</span>
             <b className="text-xs font-bold text-neutral-50">
               {clock ?? '--:--'}
             </b>
           </span>
-          <FeedLine />
+          <FeedLine timeZone={timeZone} />
         </div>
       </div>
       {listOpen ? (
@@ -150,7 +157,15 @@ export function SceneStatusHud({
           id={listId}
           conditions={conditions}
           onCollapse={() => setExpanded(false)}
-          onViewRow={onViewRow}
+          onViewRow={
+            onViewRow
+              ? (row) => {
+                  // 카메라가 가는 곳을 목록이 가리지 않게 닫는다.
+                  setExpanded(false);
+                  onViewRow(row);
+                }
+              : undefined
+          }
         />
       ) : null}
     </div>
@@ -202,10 +217,7 @@ function AlarmSummaryCell({
     >
       {danger > 0 ? (
         <span className="flex items-center gap-1.5">
-          <Triangle
-            className="size-2.75 shrink-0 fill-red-400 text-red-400"
-            aria-hidden
-          />
+          <DangerGlyph className="size-3.5" />
           <b className="text-box-cap text-sm font-bold text-red-400">
             {t('monitoring:hud.danger', { count: danger })}
           </b>
@@ -216,10 +228,7 @@ function AlarmSummaryCell({
       ) : null}
       {caution > 0 ? (
         <span className="flex items-center gap-1.5">
-          <span
-            aria-hidden
-            className="size-2 shrink-0 rounded-full bg-amber-400"
-          />
+          <CautionGlyph className="size-3.5" />
           <b className="text-box-cap text-sm font-bold text-amber-400">
             {t('monitoring:hud.caution', { count: caution })}
           </b>
@@ -275,22 +284,20 @@ function CraneStatusCell({ counts }: { counts: RuntimeStatusCounts }) {
         <span className="text-[11px] leading-none text-neutral-400">
           {t('monitoring:hud.craneCount', { count: total })}
         </span>
-        <div className="flex h-1.5 w-26 gap-0.5" aria-hidden>
-          {total === 0 ? (
-            <span className="flex-1 rounded-xs bg-white/10" />
-          ) : (
-            HUD_STATUSES.map((status) =>
-              counts[status] > 0 ? (
-                <span
-                  key={status}
-                  className="rounded-xs"
-                  style={{
-                    flex: `${counts[status]} 1 0`,
-                    background: HUD_STATUS_SWATCH[status],
-                  }}
-                />
-              ) : null,
-            )
+        <div
+          className="flex h-1.5 w-26 overflow-hidden rounded-xs bg-white/10 [&>span+span]:-ml-px"
+          aria-hidden
+        >
+          {HUD_STATUSES.map((status) =>
+            counts[status] > 0 ? (
+              <span
+                key={status}
+                style={{
+                  flex: `${counts[status]} 1 0`,
+                  background: HUD_STATUS_SWATCH[status],
+                }}
+              />
+            ) : null,
           )}
         </div>
       </div>
@@ -354,72 +361,123 @@ function WindCell({ weather }: { weather: WeatherSnapshot | null }) {
       : advisory === 'caution'
         ? 'text-amber-400'
         : null;
-  const title = [
+  const cautionText = t('monitoring:hud.windCautionTitle', {
+    limit: WIND_CAUTION_MS,
+  });
+  const stopText = t('monitoring:hud.windStopTitle', { limit: WIND_STOP_MS });
+  const sourceText = [
     t('monitoring:hud.windSource'),
     advisory === 'stop'
-      ? t('monitoring:hud.windStopTitle', { limit: WIND_STOP_MS })
+      ? stopText
       : advisory === 'caution'
-        ? t('monitoring:hud.windCautionTitle', { limit: WIND_CAUTION_MS })
+        ? cautionText
         : null,
   ]
     .filter(Boolean)
     .join(' · ');
   return (
-    <div className="flex items-center gap-2.5 px-3.5" title={title}>
-      <Wind
-        className={cn('size-4 shrink-0 text-neutral-400', tone)}
-        aria-hidden
-      />
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline gap-1">
-          {reading === null ? (
-            <span className="text-xs leading-none text-neutral-500">
-              {t('monitoring:hud.windUnavailable')}
-            </span>
-          ) : (
-            <>
-              <b className={cn('text-base leading-none font-bold', tone)}>
-                {reading}
-              </b>
-              <span className="text-[11px] leading-none text-neutral-400">
-                m/s{direction ? ` · ${direction}` : ''}
-              </span>
-              {advisory === 'stop' || advisory === 'caution' ? (
-                <span
-                  className={cn('text-[11px] leading-none font-semibold', tone)}
-                >
-                  {t(
-                    advisory === 'stop'
-                      ? 'monitoring:hud.windStop'
-                      : 'monitoring:hud.windCaution',
-                  )}
-                </span>
-              ) : null}
-            </>
-          )}
-        </div>
-        <div className="relative h-1 w-22 rounded-xs bg-white/16" aria-hidden>
-          {fraction !== null ? (
-            <span
-              className={cn(
-                'absolute top-0 left-0 h-1 rounded-xs bg-white/85',
-                advisory === 'caution' && 'bg-amber-400',
-                advisory === 'stop' && 'bg-red-400',
-              )}
-              style={{ width: `${fraction * 100}%` }}
+    <TooltipProvider delay={150}>
+      <div className="flex items-center gap-2.5 px-3.5">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="pointer-events-auto inline-flex cursor-help" />
+            }
+          >
+            <Wind
+              className={cn('size-4 shrink-0 text-neutral-400', tone)}
+              aria-hidden
             />
-          ) : null}
-          <span
-            className="absolute -top-0.75 h-2.5 w-0.5 rounded-[1px] bg-amber-400"
-            style={{ left: `${marks.caution * 100}%` }}
-          />
-          <span
-            className="absolute -top-0.75 h-2.5 w-0.5 rounded-[1px] bg-red-400"
-            style={{ left: `${marks.stop * 100}%` }}
-          />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{sourceText}</TooltipContent>
+        </Tooltip>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-baseline gap-1">
+            {reading === null ? (
+              <span className="text-xs leading-none text-neutral-500">
+                {t('monitoring:hud.windUnavailable')}
+              </span>
+            ) : (
+              <>
+                <b className={cn('text-sm leading-none font-bold', tone)}>
+                  {reading}
+                </b>
+                <span className="text-[11px] leading-none text-neutral-400">
+                  m/s{direction ? ` · ${direction}` : ''}
+                </span>
+                {advisory === 'stop' || advisory === 'caution' ? (
+                  <span
+                    className={cn(
+                      'text-[11px] leading-none font-semibold',
+                      tone,
+                    )}
+                  >
+                    {t(
+                      advisory === 'stop'
+                        ? 'monitoring:hud.windStop'
+                        : 'monitoring:hud.windCaution',
+                    )}
+                  </span>
+                ) : null}
+              </>
+            )}
+          </div>
+          <div className="relative h-1 w-22 rounded-xs bg-white/16">
+            {fraction !== null ? (
+              <span
+                aria-hidden
+                className={cn(
+                  'absolute top-0 left-0 h-1 rounded-xs bg-white/85',
+                  advisory === 'caution' && 'bg-amber-400',
+                  advisory === 'stop' && 'bg-red-400',
+                )}
+                style={{ width: `${fraction * 100}%` }}
+              />
+            ) : null}
+            <GaugeMark
+              fraction={marks.caution}
+              className="bg-amber-400"
+              label={cautionText}
+            />
+            <GaugeMark
+              fraction={marks.stop}
+              className="bg-red-400"
+              label={stopText}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
+  );
+}
+
+/** 게이지 눈금 — 2px 선은 올리기 어려워 보이지 않는 넓은 영역이 툴팁 트리거다. */
+function GaugeMark({
+  fraction,
+  className,
+  label,
+}: {
+  fraction: number;
+  className: string;
+  label: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className="pointer-events-auto absolute -top-1.5 flex h-4 w-2.5 -translate-x-1/2 cursor-help justify-center"
+            style={{ left: `${fraction * 100}%` }}
+          />
+        }
+      >
+        <span
+          aria-hidden
+          className={cn('mt-0.75 h-2.5 w-0.5 rounded-[1px]', className)}
+        />
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -437,22 +495,23 @@ const FEED_TONE_TEXT_CLASS: Record<FeedFreshnessTone, string | undefined> = {
   muted: undefined,
 };
 
-/** 수신 줄 — 1초 틱은 이 줄만 다시 그린다. */
-function FeedLine() {
+/**
+ * 수신 줄 — 연결돼 있으면 마지막 묶음의 수신 시각(현장 시간대), 아니면 상태
+ * 문구. 1초 틱은 이 줄만 다시 그린다(stale 전환).
+ */
+function FeedLine({ timeZone }: { timeZone: string | null }) {
   const { t } = useTranslation();
   const now = useNow(1_000);
   const connection = useCraneFeedConnection();
   const held = useRealtimeStore((s) => s.held);
   const lastReceivedAt = useCraneSnapshotStore((s) => s.lastReceivedAt);
   const feed = resolveFeedFreshness(connection, held, lastReceivedAt, now);
-  const age =
-    feed.ageMs !== null && (feed.state === 'live' || feed.state === 'stale')
-      ? resolveHudElapsed(now - feed.ageMs, now)
+  const receivedClock =
+    (feed.state === 'live' || feed.state === 'stale') && lastReceivedAt !== null
+      ? formatFeedClock(lastReceivedAt, timeZone)
       : null;
-  const label = age
-    ? t('monitoring:hud.feed.received', {
-        age: t(`monitoring:hud.age.${age.unit}`, { count: age.value }),
-      })
+  const label = receivedClock
+    ? t('monitoring:hud.feed.receivedAt', { time: receivedClock })
     : t(`monitoring:hud.feed.${feed.state}`);
   const Icon =
     feed.state === 'closed'
@@ -462,7 +521,7 @@ function FeedLine() {
         : Wifi;
   return (
     <span
-      className="flex items-center gap-1.25"
+      className="flex items-center justify-between gap-3"
       title={t('monitoring:hud.feedTitle')}
     >
       <Icon

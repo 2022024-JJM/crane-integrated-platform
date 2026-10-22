@@ -57,24 +57,24 @@
 
 ### 관제 요약 HUD (상단 중앙)
 
-`scene-status-hud.tsx`, 독 배치의 실시간 화면에서만 마운트한다. 한 줄 막대 + 그 아래 펼침 목록(`scene-status-hud-alarm-list.tsx`). 막대는 pointer-events-none 이고 알람 요약 버튼과 펼침 목록만 포인터를 받는다 — 목록은 스크롤이라 휠을 캔버스로 넘기지 않는다(고정 뷰 줄과 같은 취급).
+`scene-status-hud.tsx`, 독 배치의 실시간 화면에서만 마운트한다. 한 줄 막대 + 그 아래 펼침 목록(`scene-status-hud-alarm-list.tsx`). 막대는 pointer-events-none 이고 알람 요약 버튼·풍속 툴팁 트리거·펼침 목록만 포인터를 받는다 — 목록은 스크롤이라 휠을 캔버스로 넘기지 않는다(고정 뷰 줄과 같은 취급).
 
 칸(왼쪽부터):
 
-- 알람 요약 — 이상 조건(아래)이 없으면 "이상 없음", 있으면 "위험 n · 주의 m" 버튼. 누르면 아래로 크레인 기준 알람 목록이 펼쳐진다. 위험이 0 에서 1 이 되면 자동으로 펼치고 조건이 전부 사라지면 접는다. 펼침 상태는 영속하지 않는다.
-- 크레인 N대 — 운전 상태(`docs/agents/3d-play.md`)의 적층 막대 + 가동·대기·전원 Off·고장·통신두절 수치. N 은 상태를 아는 장비 수이고 미확인은 title 에만. 색은 `RUNTIME_STATUS_COLORS`(라벨과 같은 색), 통신두절만 빗금. "대기" 는 standby(운전 전원 On, 멈춤)의 HUD 짧은 라벨이고 풀네임은 title 이다. 고장·통신두절 수치는 0 이면 흐리고 1 이상이면 강조.
-- 풍속 — `use-scene-weather.ts` 가 `scene-site-geo` 좌표로 open-meteo 를 주기 조회한다(기상 예보 값이지 현장 풍속계가 아니다 — title 에 적는다). 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. 값·16방위 아래 게이지(`windGaugeFraction`, 상한 `WIND_GAUGE_MAX_MS`)에 주의·중지 눈금(`windGaugeMarks`)이 있고 권고 단계(`wind-advisory.ts`, `WIND_CAUTION_MS`·`WIND_STOP_MS`)가 색·칩을 정한다.
-- 현장 시각 · 수신 — 현장 시각은 `useSceneSunState`(`docs/agents/rendering-perf.md`). 수신 줄은 `lib/feed-freshness.ts` 가 크레인 스냅샷 피드의 소켓 상태(`useCraneFeedConnection`)·화면 반영 보류(`useRealtimeStore.held`)·마지막 묶음 수신 시각(`useCraneSnapshotStore.lastReceivedAt`)을 한 상태로 합친 것이다. 보류가 소켓보다 앞서고, 연결됐는데 묶음이 `FEED_STALE_MS` 넘게 없으면 stale. 1초 틱은 이 줄만 다시 그린다.
+- 알람 요약 — 이상 조건(아래)이 없으면 "이상 없음", 있으면 "경고 n · 주의 m" 버튼. 경고는 붉은 원판 느낌표, 주의는 호박색 삼각형 느낌표(`scene-status-hud-glyphs.tsx`, 목록 행도 같은 글리프). 누르면 아래로 크레인별 알람 목록이 펼쳐진다. 저절로 펼치지 않고(사용자가 열기 전까지) 조건이 전부 사라지면 접는다. 펼침 상태는 영속하지 않는다.
+- 크레인 N대 — 운전 상태(`docs/agents/3d-play.md`)의 적층 막대 + 가동·대기·전원 Off·고장·통신두절 수치. N 은 상태를 아는 장비 수이고 미확인은 title 에만. 색은 `RUNTIME_STATUS_COLORS`(라벨과 같은 색), 통신두절만 빗금이고 조각 사이에 여백이 없다. "대기" 는 standby(운전 전원 On, 멈춤)의 HUD 짧은 라벨이고 풀네임은 title 이다. 고장·통신두절 수치는 0 이면 흐리고 1 이상이면 강조.
+- 풍속 — `use-scene-weather.ts` 가 `scene-site-geo` 좌표로 open-meteo 를 주기 조회한다(기상 예보 값이지 현장 풍속계가 아니다 — title 에 적는다). 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. 값·16방위 아래 게이지(`windGaugeFraction`, 상한 `WIND_GAUGE_MAX_MS`)에 주의·중지 눈금(`windGaugeMarks`)이 있고 권고 단계(`wind-advisory.ts`, `WIND_CAUTION_MS`·`WIND_STOP_MS`)가 색·칩을 정한다. 아이콘과 두 눈금은 툴팁(`@crane/ui/molecules/tooltip`)으로 출처·기준을 보인다.
+- 현장 시각 · 수신 — 현장 시각은 `useSceneSunState`(`docs/agents/rendering-perf.md`). 수신 줄은 `lib/feed-freshness.ts` 가 크레인 스냅샷 피드의 소켓 상태(`useCraneFeedConnection`)·화면 반영 보류(`useRealtimeStore.held`)·마지막 묶음 수신 시각(`useCraneSnapshotStore.lastReceivedAt`)을 한 상태로 합친 것이다. 보류가 소켓보다 앞서고, 연결됐는데 묶음이 `FEED_STALE_MS` 넘게 없으면 stale. 연결돼 있으면 마지막 묶음의 수신 시각을 현장 시간대로 보이고(`formatFeedClock`) 아니면 상태 문구다. 두 줄은 오른쪽 정렬. 1초 틱은 이 줄만 다시 그린다.
 
 **이상 조건** — `lib/hud-conditions.ts`(`buildHudConditions`), 훅 `model/use-hud-conditions.ts` 를 `Monitoring3dView` 가 한 번 부르고 HUD 와 위험 비네트가 같은 결과를 읽는다.
 
 - 입력: 페이지가 넘긴 region 활성 알람(`alarms` prop — features/alarm `useRegionActiveAlarms`, 같은 레이어라 뷰가 직접 읽지 않는다), 운전 상태·라벨의 Bypass·전이 시각(`useModelStatusRecords` 의 `since`, `lib/status-since.ts`), 영역 침범·정지(`useSceneZoneStore`), 활성 충돌 기록(`useSceneCollisionStore`).
-- 등급은 둘이다. 위험 = 충돌·stop 영역 침범·고장·critical/high 알람. 주의 = warn 영역 침범·통신두절·medium 알람·Bypass. info 알람은 넣지 않는다.
-- 행은 크레인마다 하나다. 가장 심각한 조건이 제목, 나머지가 상세 줄. 위험 → 주의, 같은 등급은 제목 조건이 최근인 행이 먼저. 요약 수는 조건이 아니라 행 수다. 씬에 없는 크레인의 알람은 `crane:<craneId>` 키로 따로 선다.
+- 등급은 둘이다. 경고(danger) = 충돌·stop 영역 침범·고장·critical/high 알람. 주의(caution) = warn 영역 침범·통신두절·medium 알람·Bypass. info 알람은 넣지 않는다.
+- 행은 크레인마다 하나다. 가장 심각한 조건이 제목, 나머지가 상세 줄. 경고 → 주의, 같은 등급은 제목 조건이 최근인 행이 먼저. 요약 수는 조건이 아니라 행 수다. 씬에 없는 크레인의 알람은 `crane:<craneId>` 키로 따로 선다.
 - 영역 침범은 알람 스토어의 `zone_intrusion` 로컬 알람이 아니라 영역 스토어에서 직접 읽고(정지 여부·침입자가 알람에 없다) 들어간 쪽 크레인에 붙는다. 알람 쪽 `zone_intrusion` 은 거른다.
-- [보기] — 영역 행은 영역 중심(`handleViewZone`), 그 외는 모델 바운즈 중심(`computeObjectViewPose`)으로 카메라를 보낸다. 씬에 없는 크레인의 행은 버튼이 없다. 분할 중이면 나가서 보여 준다.
+- [보기] — 영역 행은 영역 중심(`handleViewZone`), 그 외는 모델 바운즈 중심(`computeObjectViewPose`)으로 카메라를 보내고 목록을 닫는다. 씬에 없는 크레인의 행은 버튼이 없다. 분할 중이면 나가서 보여 준다.
 
-**위험 비네트** — `ui/scene-danger-vignette.tsx`. 위험 행이 하나라도 있으면 옅은 붉은 비네트(정적). 충돌·영역 침범 비네트가 떠 있으면 그리지 않는다.
+**위험 비네트** — `ui/scene-danger-vignette.tsx`. 경고 행이 하나라도 있으면 옅은 붉은 비네트(정적). 펼침 목록 헤더의 경광등 토글로 끈다(`model/use-danger-vignette-store.ts`, localStorage `DANGER_VIGNETTE_STORAGE_KEY`, 기본 켜짐). 충돌·영역 침범 비네트가 떠 있으면 그리지 않는다.
 
 ### 충돌 감지 표시 (LiDAR 근접 존, 필리 실외 화면만)
 
@@ -173,6 +173,7 @@
 - 우상단 알람 목록·독 레일의 알람 토글·상단 중앙 critical 배너 — HUD 요약·펼침 목록·비네트와 같은 사건이 세 군데에 떠 겹쳤다. 소리·브라우저 알림만 `use-critical-alarm-notifier.ts` 에 남겼다.
 - HUD 펼침 목록의 휠·pointerdown 캔버스 전달 — 스크롤 목록이라 휠을 넘기면 목록이 안 넘어간다.
 - HUD 에 info 알람 — 요약 수만 부풀리고 관제가 할 행동이 없다.
+- 경고가 생길 때 알람 목록 자동 펼침 — 관제 중 화면 한가운데를 가린다. 사용자가 연다.
 - 독의 하단 패널(크레인 실시간 상태 테이블)·감지 묶음.
 - 미니맵 마커·카메라 그리기를 React state 로 — 매 틱 리렌더.
 - 미니맵 시야 부채꼴을 카메라 fov·타깃 거리에 맞추기 — 탑뷰 근처에선 사라지고 멀리서 낮게 보면 지도를 덮어 방향을 읽기 어렵다. 리사이즈로 종횡비가 바뀔 때마다 각도 흔들린다.

@@ -1,4 +1,6 @@
+import { getZonedTimeParts } from '@crane/core/lib/time-zone';
 import type { CraneFeedConnection } from '../model/use-crane-snapshot-feed';
+import { formatClockHms } from './wind-advisory';
 
 /**
  * 관제 HUD 의 수신 줄("n초 전 수신") 판정 — 크레인 스냅샷 피드의 소켓 상태,
@@ -49,4 +51,23 @@ export function resolveFeedFreshness(
   return ageMs <= staleMs
     ? { state: 'live', tone: 'good', ageMs }
     : { state: 'stale', tone: 'warn', ageMs };
+}
+
+/**
+ * 마지막 수신 시각의 표시 — 현장 시간대(HUD 현장 시각과 같은 기준)로 HH:MM:SS.
+ * 시간대를 모르면 브라우저 로컬 시간. 못 읽는 값은 null.
+ */
+export function formatFeedClock(
+  ms: number,
+  timeZone: string | null,
+): string | null {
+  if (!Number.isFinite(ms)) return null;
+  if (timeZone) {
+    const parts = getZonedTimeParts(ms, timeZone);
+    return parts
+      ? formatClockHms(parts.hour, parts.minute, parts.second)
+      : null;
+  }
+  const date = new Date(ms);
+  return formatClockHms(date.getHours(), date.getMinutes(), date.getSeconds());
 }

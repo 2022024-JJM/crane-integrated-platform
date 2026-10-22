@@ -651,10 +651,12 @@
   "hud": {
     "summary": "Control summary",
     "allClear": "All clear",
-    "danger": "Danger {{count}}",
+    "danger": "Warning {{count}}",
     "caution": "Caution {{count}}",
     "expandAlarms": "Expand alarm list",
     "collapseAlarms": "Collapse alarm list",
+    "vignetteEnable": "Show edge alert glow",
+    "vignetteDisable": "Hide edge alert glow",
     "craneCount": "{{count}} cranes",
     "craneCountTitle": "{{count}} cranes with known status",
     "craneUnknown": "{{count}} with unknown status",
@@ -675,16 +677,11 @@
     "siteTime": "Site time",
     "feedTitle": "Crane snapshot server feed",
     "feed": {
-      "received": "received {{age}} ago",
+      "receivedAt": "received {{time}}",
       "waiting": "waiting for data",
       "connecting": "connecting",
       "closed": "disconnected",
       "held": "updates held"
-    },
-    "age": {
-      "seconds": "{{count}}s",
-      "minutes": "{{count}}m",
-      "hours": "{{count}}h"
     },
     "elapsed": {
       "seconds": "{{count}}s",
@@ -693,7 +690,6 @@
     },
     "list": {
       "title": "Alarms {{count}}",
-      "scope": "per crane",
       "order": "severity · elapsed",
       "view": "View {{name}}",
       "viewZone": "View zone"
@@ -707,8 +703,8 @@
       "fault": "Fault",
       "offline": "Offline",
       "bypass": "Anti-collision bypass",
-      "alarmDanger": "{{count}} danger alarms",
-      "alarmCaution": "{{count}} warning alarms"
+      "alarmDanger": "{{count}} warning alarms",
+      "alarmCaution": "{{count}} caution alarms"
     }
   },
   "runtimeStatus": {

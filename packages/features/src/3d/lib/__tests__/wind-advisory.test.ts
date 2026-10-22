@@ -5,6 +5,7 @@ import {
   WIND_STOP_MS,
   compassPoint,
   formatClockHm,
+  formatClockHms,
   resolveWindAdvisory,
   windGaugeFraction,
   windGaugeMarks,
@@ -82,5 +83,14 @@ describe('windGaugeMarks', () => {
       stop: WIND_STOP_MS / WIND_GAUGE_MAX_MS,
     });
     expect(windGaugeMarks(WIND_CAUTION_MS)).toEqual({ caution: 1, stop: 1 });
+  });
+});
+
+describe('formatClockHms', () => {
+  it('두 자리로 채운 HH:MM:SS, 정수가 아니면 null', () => {
+    expect(formatClockHms(9, 5, 3)).toBe('09:05:03');
+    expect(formatClockHms(23, 59, 59)).toBe('23:59:59');
+    expect(formatClockHms(9, 5, 3.5)).toBeNull();
+    expect(formatClockHms(NaN, 0, 0)).toBeNull();
   });
 });

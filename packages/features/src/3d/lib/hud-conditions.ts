@@ -9,11 +9,11 @@ import type { StatusSinceRecords } from './status-since';
 /**
  * 관제 HUD 의 이상 조건 — 알람 스토어의 알람과 3D 화면이 스스로 아는 장비
  * 이상(고장·통신두절·Bypass·영역 침범·충돌)을 **크레인 기준 한 목록**으로
- * 합친다. HUD 의 "위험 n · 주의 m" 요약, 펼침 목록의 행, 위험 비네트가 전부
+ * 합친다. HUD 의 "경고 n · 주의 m" 요약, 펼침 목록의 행, 위험 비네트가 전부
  * 이 결과 하나를 읽는다(model/use-hud-conditions.ts 가 스토어에서 모아 부른다).
  *
  * 등급은 둘뿐이다.
- * - 위험(danger): 충돌, stop 영역 침범, 고장, critical·high 알람
+ * - 경고(danger): 충돌, stop 영역 침범, 고장, critical·high 알람
  * - 주의(caution): warn 영역 침범, 통신두절, medium 알람, Bypass
  * info 알람은 목록·요약 어디에도 넣지 않는다.
  *
@@ -23,7 +23,7 @@ import type { StatusSinceRecords } from './status-since';
  * 쪽**(침입자) 크레인에 붙는다 — 소유 크레인은 가만히 있었다.
  *
  * 행은 크레인마다 하나다. 그 크레인의 조건 중 가장 심각한 것이 제목(primary),
- * 나머지가 상세(others)다. 정렬은 위험 → 주의, 같은 등급 안에서는 제목
+ * 나머지가 상세(others)다. 정렬은 경고 → 주의, 같은 등급 안에서는 제목
  * 조건이 **최근에 생긴 것**이 먼저다(새 이상이 위로 올라온다). 요약 수는
  * 조건이 아니라 행의 수다.
  *
