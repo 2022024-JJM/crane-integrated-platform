@@ -22,6 +22,9 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
+/* 한글 — Plex 에 없는 한글을 Noto Sans KR 이 받는다. 가변 서체 하나가 모든
+   굵기를 맡고, 글자 범위별 조각으로 나뉘어 화면에 나온 글자의 조각만 받는다. */
+@import '@fontsource-variable/noto-sans-kr/wght.css';
 
 /*
  * Tailwind 소스 범위.
@@ -146,14 +149,14 @@
 }
 
 @theme inline {
-  /* 한글은 Plex에 없으므로 Pretendard→시스템 고딕 순으로 폴백 */
-  --font-sans:
-    'IBM Plex Sans', 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo',
-    'Malgun Gothic', sans-serif;
+  /* 한글은 Plex에 없으므로 Noto Sans KR 로 폴백 */
+  --font-sans: 'IBM Plex Sans', 'Noto Sans KR Variable', sans-serif;
   --font-condensed:
-    'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Pretendard Variable',
-    Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Noto Sans KR Variable',
+    sans-serif;
+  --font-mono:
+    'IBM Plex Mono', 'Noto Sans KR Variable', ui-monospace, SFMono-Regular,
+    Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

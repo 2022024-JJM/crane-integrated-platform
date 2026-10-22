@@ -147,4 +147,4 @@ export function usePhillyTheme(): PhillyTheme {
 }
 
 export const PHILLY_FONT =
-  "'Segoe UI', 'Malgun Gothic', system-ui, -apple-system, sans-serif";
+  "'Segoe UI', 'Noto Sans KR Variable', system-ui, -apple-system, sans-serif";

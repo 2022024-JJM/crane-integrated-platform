@@ -98,8 +98,7 @@ export interface HmiTheme {
   };
 }
 
-const KOREAN_FONT =
-  "'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif";
+const KOREAN_FONT = "'Noto Sans KR Variable', sans-serif";
 
 const MONO_FONT =
   "'IBM Plex Mono', 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace";

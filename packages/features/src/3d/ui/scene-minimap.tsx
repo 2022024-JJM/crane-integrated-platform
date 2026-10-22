@@ -137,6 +137,12 @@ const VIEW_PIN_FILL = 'rgba(10, 12, 14, 0.82)';
 const VIEW_PIN_FILL_HOVER = 'rgba(40, 46, 52, 0.92)';
 const VIEW_PIN_NUMBER_CURRENT = '#0a0c0e';
 /**
+ * 핀 번호·호버 라벨 서체 — 셸의 `--font-sans` 와 같은 스택. 캔버스는 CSS
+ * 변수를 읽지 못해 여기 적는다.
+ */
+const LABEL_FONT_FAMILY =
+  "'IBM Plex Sans', 'Noto Sans KR Variable', sans-serif";
+/**
  * 지금 카메라가 그 뷰에 있다고 보는 카메라 위치 차이(씬 단위)·시선 각
  * 차이(rad). 뷰로 옮긴 직후의 포즈는 OrbitControls update() 의 부동소수
  * 오차만큼만 다르다. 타깃 거리는 비교하지 않는다(lib isSameViewPose).
@@ -759,7 +765,7 @@ function drawViewPin(
   strokeWithHalo(context, scale, state === 'hover' ? 1.8 : 1.3);
   context.fillStyle =
     state === 'current' ? VIEW_PIN_NUMBER_CURRENT : CAMERA_COLOR;
-  context.font = `600 ${8 * scale}px system-ui, sans-serif`;
+  context.font = `600 ${8 * scale}px ${LABEL_FONT_FAMILY}`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   context.fillText(String(pin.number), pin.px, pin.py + 0.4 * scale);
@@ -902,7 +908,7 @@ function drawHoverLabel(
   const { px, py } = label;
   const gap = label.gapPx * scale;
   const fontPx = 11 * scale;
-  context.font = `${fontPx}px system-ui, sans-serif`;
+  context.font = `${fontPx}px ${LABEL_FONT_FAMILY}`;
   context.textBaseline = 'middle';
   const paddingX = 4 * scale;
   const textWidth = context.measureText(text).width;

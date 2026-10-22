@@ -76,17 +76,17 @@ export const KC = {
   radius: 4,
 } as const;
 
-/** 본문 서체 — IBM Plex Sans (엔지니어링 톤) */
+/** 본문 서체 — IBM Plex Sans (엔지니어링 톤). 한글은 셸이 싣는 Noto Sans KR */
 export const KC_FONT =
-  '"IBM Plex Sans", "Apple SD Gothic Neo", "Helvetica Neue", sans-serif';
+  '"IBM Plex Sans", "Noto Sans KR Variable", "Helvetica Neue", sans-serif';
 
 /** 헤딩·대형 수치 서체 — Plex Sans Condensed */
 export const KC_FONT_DISPLAY =
-  '"IBM Plex Sans Condensed", "IBM Plex Sans", "Helvetica Neue", sans-serif';
+  '"IBM Plex Sans Condensed", "IBM Plex Sans", "Noto Sans KR Variable", "Helvetica Neue", sans-serif';
 
 /** WO 번호·코드·수치 테이블 — Plex Mono */
 export const KC_FONT_MONO =
-  '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
+  '"IBM Plex Mono", "Noto Sans KR Variable", ui-monospace, SFMono-Regular, monospace';
 
 export type ServiceTone =
   | 'completed'
