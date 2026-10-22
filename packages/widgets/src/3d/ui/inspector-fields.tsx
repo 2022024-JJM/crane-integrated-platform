@@ -103,7 +103,7 @@ export function AxisSegment({
           type="button"
           aria-pressed={value === axis}
           className={cn(
-            'h-6 w-6 cursor-pointer rounded-sm border font-mono text-[11px] uppercase',
+            'h-6 w-6 cursor-pointer rounded-sm border text-[11px] uppercase',
             value === axis
               ? 'border-primary/50 bg-primary/15 text-foreground'
               : 'border-border text-muted-foreground hover:bg-muted',
@@ -211,7 +211,7 @@ export function CollapsibleSection({
             {title}
           </span>
           {count !== undefined ? (
-            <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
+            <span className="text-muted-foreground text-[10px] tabular-nums">
               {count}
             </span>
           ) : null}

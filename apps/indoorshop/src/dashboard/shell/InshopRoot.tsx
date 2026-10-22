@@ -18,13 +18,6 @@ import { cn } from '../shared/lib/utils'
 import '../app/bootstrap'
 
 /*
- * 서체는 npm 패키지로 번들한다 — OT망에서는 외부 CDN(Google Fonts 등)에 나가지 못한다.
- * dynamic-subset 은 한글 글리프를 청크로 쪼개 실제로 쓰인 것만 받는다.
- * (IBM Plex Mono 는 셸 global.css 가 이미 싣고 있어 여기서 또 부르지 않는다.)
- */
-import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
-
-/*
  * 공통 화면 — 원본 app/router.tsx 의 children 과 같다. 공정 화면은 여기 적지 않는다:
  * 각 모듈이 module.ts 에서 선언한 것을 레지스트리가 모아 오므로 공정이 늘어도 이
  * 파일은 그대로다.

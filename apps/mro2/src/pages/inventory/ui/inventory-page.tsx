@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, FileText } from 'lucide-react';
 import { useInventoryList } from '@crane/features/inventory';
 import type { InventoryItem, InventoryStatus } from '@crane/domain/inventory';
-import { KC, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
+import { KC, usd } from '../../../shared/ui/kc';
 import {
   KcButton,
   KcEmpty,
@@ -193,7 +193,7 @@ export function Mro2InventoryPage() {
                       </span>
                     </span>
                   </td>
-                  <td className="max-w-[140px] truncate py-1.5 pr-2 text-[10.5px]" style={{ color: KC.text, fontFamily: KC_FONT_MONO }}>
+                  <td className="max-w-[140px] truncate py-1.5 pr-2 text-[10.5px]" style={{ color: KC.text }}>
                     {i.partNumber}
                   </td>
                   <td className="py-1.5 pr-2" style={{ color: KC.text }}>

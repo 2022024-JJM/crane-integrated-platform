@@ -208,7 +208,7 @@ export function AssetHistoryTab({ events }: { events: HistoryEvent[] }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <button type="button" onClick={() => setKindFilter('all')} className={chipClass(kindFilter === 'all')}>
             {t('detail.historyAll', { defaultValue: 'All' })}
-            <span className="font-mono tabular-nums opacity-70">{events.length}</span>
+            <span className="tabular-nums opacity-70">{events.length}</span>
           </button>
           {KIND_ORDER.map((kind) => {
             const count = kindCounts[kind];
@@ -218,7 +218,7 @@ export function AssetHistoryTab({ events }: { events: HistoryEvent[] }) {
               <button key={kind} type="button" onClick={() => setKindFilter(kind)} className={chipClass(active)}>
                 <span className={active ? 'text-primary' : 'text-muted-foreground'}>{KIND_ICON[kind]}</span>
                 {tHistory(`kind.${kind}`)}
-                <span className="font-mono tabular-nums opacity-70">{count}</span>
+                <span className="tabular-nums opacity-70">{count}</span>
               </button>
             );
           })}

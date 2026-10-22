@@ -691,7 +691,6 @@ export function KeyinPage() {
         overflow: 'hidden',
         background: '#EDEAE0',
         color: '#1E2733',
-        fontFamily: 'Pretendard, -apple-system, sans-serif',
         userSelect: 'none',
       }}
     >

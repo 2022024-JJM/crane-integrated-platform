@@ -64,7 +64,7 @@ export function SceneSimulationBadge({ className }: { className?: string }) {
               : 'monitoring:simulation.badgePaused',
           )}
           {detail ? (
-            <span className="ml-1.5 font-mono text-[11px] font-normal opacity-90">
+            <span className="ml-1.5 text-[11px] font-normal opacity-90">
               {detail}
             </span>
           ) : null}

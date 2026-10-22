@@ -89,9 +89,7 @@ function ColorField({
         className="border-border h-6 w-7 shrink-0 cursor-pointer rounded-sm border bg-transparent p-0"
         onChange={(event) => onChange(event.target.value)}
       />
-      <span className="text-muted-foreground font-mono text-[10px]">
-        {value}
-      </span>
+      <span className="text-muted-foreground text-[10px]">{value}</span>
       {size ? (
         <ChoiceSegment
           compact

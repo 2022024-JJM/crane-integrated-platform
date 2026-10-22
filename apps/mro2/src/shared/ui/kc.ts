@@ -8,7 +8,7 @@
  *
  * 분화 포인트:
  *  - 브랜드 액센트: 페트롤 틸(accent). 레드는 Safety 의미색으로만 쓴다.
- *  - 서체: IBM Plex Sans(본문) + Plex Sans Condensed(헤딩·수치) + Plex Mono(WO 번호)
+ *  - 서체: 따로 두지 않고 셸 전역 서체(Pretendard)를 받는다
  *  - 형태: 4px 라운드
  *
  * 2-레이어 색상 전략:
@@ -75,18 +75,6 @@ export const KC = {
   /* 형태 */
   radius: 4,
 } as const;
-
-/** 본문 서체 — IBM Plex Sans (엔지니어링 톤). 한글은 셸이 싣는 Noto Sans KR */
-export const KC_FONT =
-  '"IBM Plex Sans", "Noto Sans KR Variable", "Helvetica Neue", sans-serif';
-
-/** 헤딩·대형 수치 서체 — Plex Sans Condensed */
-export const KC_FONT_DISPLAY =
-  '"IBM Plex Sans Condensed", "IBM Plex Sans", "Noto Sans KR Variable", "Helvetica Neue", sans-serif';
-
-/** WO 번호·코드·수치 테이블 — Plex Mono */
-export const KC_FONT_MONO =
-  '"IBM Plex Mono", "Noto Sans KR Variable", ui-monospace, SFMono-Regular, monospace';
 
 export type ServiceTone =
   | 'completed'

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
-import { KC, KC_FONT_DISPLAY, SERVICE_TONE_COLOR, SERVICE_TONE_TEXT } from '../../../shared/ui/kc';
+import { KC, SERVICE_TONE_COLOR, SERVICE_TONE_TEXT } from '../../../shared/ui/kc';
 import { KcEmpty, KcFieldRow, KcSection, KcSectionHeading, KcStat } from '../../../shared/ui/kc-ui';
 import { useMro2Year } from '../../../shared/ui/layout';
 import { computeSpend } from '../../../shared/lib/spend';
@@ -43,7 +43,6 @@ function Cell({
         style={{
           background: SERVICE_TONE_COLOR[cell.tone],
           color: SERVICE_TONE_TEXT[cell.tone],
-          fontFamily: KC_FONT_DISPLAY,
         }}
       >
         {cell.count}
@@ -238,7 +237,7 @@ export function Mro2ServicePlanPage() {
                   type="button"
                   onClick={() => goMonth(i)}
                   className="kc-hover cursor-pointer rounded-[3px] py-1.5 text-center text-[13px] font-semibold"
-                  style={{ color: KC.text, fontFamily: KC_FONT_DISPLAY }}
+                  style={{ color: KC.text }}
                   title={t('mro2:plan.monthHint')}
                 >
                   {m}

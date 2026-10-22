@@ -170,7 +170,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
           )}{' '}
           · {windowLabel}
         </p>
-        <p className="text-muted-foreground font-mono text-[10px] tabular-nums">
+        <p className="text-muted-foreground text-[10px] tabular-nums">
           {t('monitoring:play3d.window')} {formatSimClock(0)}~
           {formatSimClock(stats.windowEndMs)} · {t('monitoring:play3d.scanned')}{' '}
           {formatSimClock(stats.scannedMs)}
@@ -394,7 +394,7 @@ function Disclosure({
         </span>
         {summary ? (
           <span
-            className="text-muted-foreground ml-auto min-w-0 truncate font-mono text-[10px] tabular-nums"
+            className="text-muted-foreground ml-auto min-w-0 truncate text-[10px] tabular-nums"
             title={summary}
           >
             {summary}

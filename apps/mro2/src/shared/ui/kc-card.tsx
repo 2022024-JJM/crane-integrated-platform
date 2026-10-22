@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { KC, KC_FONT_DISPLAY } from './kc';
+import { KC } from './kc';
 
 /** Overview 카드 (아이콘 + 제목 + → 드릴다운) */
 export function KcCard({
@@ -19,7 +19,7 @@ export function KcCard({
       <span style={{ color: KC.accent }}>{icon}</span>
       <span
         className="flex-1 text-[14px] font-semibold tracking-wide"
-        style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+        style={{ color: KC.ink }}
       >
         {title}
       </span>

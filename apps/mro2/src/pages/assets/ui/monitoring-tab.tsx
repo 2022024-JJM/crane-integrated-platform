@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Wifi } from 'lucide-react';
 import type { CraneComponent } from '@crane/domain/asset';
 import type { InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
-import { KC, KC_FONT_DISPLAY } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import { KcEmpty, KcRing } from '../../../shared/ui/kc-ui';
 import { COMPONENT_STATUS_COLOR, remainingPct } from '../../../shared/lib/component';
 import {
@@ -459,7 +459,7 @@ export function MonitoringTab({
           <div className="text-[10.5px]" style={{ color: KC.muted }}>
             {t('mro2:monitoring.operatingStatistics')}
           </div>
-          <div className="text-[26px] font-bold" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+          <div className="text-[26px] font-bold" style={{ color: KC.ink }}>
             {totalHours.toLocaleString('en-US')}
           </div>
           <div className="text-center text-[10px]" style={{ color: KC.text }}>

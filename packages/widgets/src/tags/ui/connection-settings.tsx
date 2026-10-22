@@ -49,7 +49,7 @@ export function ConnectionSettings({
       >
         <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-xs">
           <dt className="text-muted-foreground">{t('monitoring:tags.host')}</dt>
-          <dd className="font-mono break-all select-all">{host}</dd>
+          <dd className="break-all select-all">{host}</dd>
           <dt className="text-muted-foreground">
             {t('monitoring:tags.status')}
           </dt>

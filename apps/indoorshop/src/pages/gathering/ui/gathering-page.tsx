@@ -449,7 +449,6 @@ export function GatheringPage() {
         height: 'calc(100vh - 56px)',
         overflow: 'hidden',
         background: '#EDEAE0',
-        fontFamily: "Pretendard, '-apple-system', sans-serif",
         color: '#1E2733',
         fontVariantNumeric: 'tabular-nums',
       }}

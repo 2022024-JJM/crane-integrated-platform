@@ -114,7 +114,7 @@ export function AssetPlaybackBar({
         }}
         className="accent-primary h-1.5 min-w-32 flex-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
       />
-      <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+      <span className="text-muted-foreground text-[11px] tabular-nums">
         {resting ? (
           '—'
         ) : (
@@ -150,9 +150,7 @@ export function AssetPlaybackBar({
         }
         className="accent-primary h-1.5 w-28 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
       />
-      <span className="w-9 font-mono text-[11px] tabular-nums">
-        ×{speed.toFixed(1)}
-      </span>
+      <span className="w-9 text-[11px] tabular-nums">×{speed.toFixed(1)}</span>
     </div>
   );
 }

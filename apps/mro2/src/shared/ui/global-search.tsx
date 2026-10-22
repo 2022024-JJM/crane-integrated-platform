@@ -5,7 +5,7 @@ import { Grid3x3, Search, Wrench } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
-import { KC, KC_FONT_MONO } from './kc';
+import { KC } from './kc';
 
 interface SearchHit {
   key: string;
@@ -174,7 +174,7 @@ export function Mro2GlobalSearch() {
                         <span className="min-w-0 flex-1">
                           <span
                             className="block truncate text-[11.5px]"
-                            style={{ color: KC.ink, fontFamily: hit.kind === 'sr' ? KC_FONT_MONO : undefined }}
+                            style={{ color: KC.ink }}
                           >
                             {hit.title}
                           </span>

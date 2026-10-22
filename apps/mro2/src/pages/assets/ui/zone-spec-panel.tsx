@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronLeft, MousePointerClick, X } from 'lucide-react';
 import type { CraneComponent } from '@crane/domain/asset';
-import { KC, KC_FONT_MONO } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import {
   COMPONENT_STATUS_COLOR,
   lifeColor,
@@ -65,7 +65,7 @@ function PartSpecCard({ part, onBack }: { part: CraneComponent; onBack: () => vo
 
   const rows = [
     { label: t('detail.zonePanel.partName'), value: part.componentName },
-    { label: t('detail.zonePanel.partNumber'), value: part.partNumber ?? '—', mono: true },
+    { label: t('detail.zonePanel.partNumber'), value: part.partNumber ?? '—' },
     { label: t('detail.zonePanel.manufacturer'), value: part.manufacturer ?? '—' },
   ];
 
@@ -90,14 +90,14 @@ function PartSpecCard({ part, onBack }: { part: CraneComponent; onBack: () => vo
         </div>
 
         <dl className="flex flex-col gap-2.5">
-          {rows.map(({ label, value, mono }) => (
+          {rows.map(({ label, value }) => (
             <div key={label}>
               <dt className="text-[10px] tracking-wider uppercase" style={{ color: KC.muted }}>
                 {label}
               </dt>
               <dd
                 className="mt-0.5 text-[13px] font-medium break-all"
-                style={{ color: KC.ink, fontFamily: mono ? KC_FONT_MONO : undefined }}
+                style={{ color: KC.ink }}
               >
                 {value}
               </dd>
@@ -185,7 +185,7 @@ function ClusterGroup({
                   {part.componentName}
                 </p>
                 {part.partNumber && (
-                  <p className="truncate text-[10px]" style={{ color: KC.muted, fontFamily: KC_FONT_MONO }}>
+                  <p className="truncate text-[10px]" style={{ color: KC.muted }}>
                     {part.partNumber}
                   </p>
                 )}

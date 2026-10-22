@@ -4,7 +4,7 @@ import { ChevronLeft, MapPin, Plus, Wrench } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
-import { KC, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
+import { KC, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
 import {
   KcButton,
   KcEmpty,
@@ -214,7 +214,7 @@ export function Mro2ServiceRequestsPage() {
                     <br />📅 {fmtDate(r.date)}
                   </span>
                 </div>
-                <div className="mt-0.5 text-[11px] font-bold" style={{ color: KC.text, fontFamily: KC_FONT_MONO }}>
+                <div className="mt-0.5 text-[11px] font-bold" style={{ color: KC.text }}>
                   {r.woNumber} · {r.product}
                 </div>
                 <div className="mt-0.5 flex items-center justify-between text-[10.5px]" style={{ color: KC.muted }}>

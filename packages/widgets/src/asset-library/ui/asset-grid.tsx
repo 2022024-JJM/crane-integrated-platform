@@ -138,7 +138,7 @@ const AssetCard = memo(function AssetCard({
               kind={asset.kind}
               className="text-muted-foreground size-4"
             />
-            <h3 className="text-foreground font-condensed min-w-0 flex-1 truncate text-[15px] leading-tight font-semibold">
+            <h3 className="text-foreground min-w-0 flex-1 truncate text-[15px] leading-tight font-semibold">
               {/* 이름은 상세로 가는 진짜 링크다(새 탭으로도 열린다). 덮개 버튼
                   보다 위에 있어, 이름을 누르면 미리보기가 아니라 상세다. */}
               <AppLink

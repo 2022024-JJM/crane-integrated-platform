@@ -6,7 +6,7 @@ import { useAssetDetail } from '@crane/features/asset';
 import { useOpenRisks } from '@crane/features/risk';
 import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
+import { KC, SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
 import { KcButton, KcEmpty, KcStat } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import {
@@ -86,7 +86,7 @@ export function Mro2AssetDetailPage() {
         <div className="flex items-center gap-2.5 pb-2">
           <CraneThumb craneType={asset.craneType} size={42} />
           <div>
-            <div className="text-[16px] font-bold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+            <div className="text-[16px] font-bold tracking-wide" style={{ color: KC.ink }}>
               {asset.name}
             </div>
             <div className="text-[10.5px]" style={{ color: KC.muted }}>
@@ -283,7 +283,7 @@ function WoTimeline({
             style={{ borderColor: KC.hairline, borderLeft: `4px solid ${row.tone}` }}
           >
             <div className="px-3 py-2">
-              <div className="text-[10px]" style={{ color: KC.faint, fontFamily: KC_FONT_MONO }}>
+              <div className="text-[10px]" style={{ color: KC.faint }}>
                 🔧 {row.woNumber}
               </div>
               <div className="text-[12px] font-bold" style={{ color: KC.ink }}>

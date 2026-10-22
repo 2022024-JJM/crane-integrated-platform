@@ -110,7 +110,7 @@ export function AssetUsageTab({ asset }: AssetUsageTabProps) {
                   </div>
                   {/* 코드는 "몇 번" 이 뜻이 없다 — 쓰인다는 사실만 보인다. */}
                   {item.kind === 'scene' ? (
-                    <span className="text-foreground font-condensed shrink-0 text-base font-semibold tabular-nums">
+                    <span className="text-foreground shrink-0 text-base font-semibold tabular-nums">
                       {t('asset-library:usage.count', { count: item.count })}
                     </span>
                   ) : null}

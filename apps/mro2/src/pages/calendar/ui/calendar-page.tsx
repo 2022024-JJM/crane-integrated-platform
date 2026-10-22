@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
 import { useServiceCalendar } from '@crane/features/calendar';
 import type { CalendarEvent } from '@crane/features/calendar';
 import { useAssetList } from '@crane/features/asset';
-import { KC, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
+import { KC, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
 import { KcEmpty, KcFilterChip, KcFilterGroup, KcFilterRail, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useTranslation } from 'react-i18next';
 import {
@@ -367,7 +367,7 @@ export function Mro2CalendarPage() {
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center justify-between text-[10.5px]" style={{ color: KC.muted }}>
-                    <span style={{ fontFamily: KC_FONT_MONO }}>{e.title}</span>
+                    <span>{e.title}</span>
                     <span>{e.craneName}</span>
                   </div>
                 </div>

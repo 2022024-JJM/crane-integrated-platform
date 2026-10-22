@@ -130,7 +130,7 @@ function TagPickDialogBody({
                 </span>
                 <span
                   className={cn(
-                    'truncate font-mono',
+                    'truncate',
                     key ? 'text-orange-400' : 'text-muted-foreground',
                   )}
                 >

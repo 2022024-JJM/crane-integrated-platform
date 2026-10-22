@@ -6,7 +6,7 @@ import { useOpenRisks } from '@crane/features/risk';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import type { CraneAsset } from '@crane/domain/asset';
-import { KC, KC_FONT_MONO } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useTranslation } from 'react-i18next';
 import {
@@ -456,7 +456,7 @@ export function Mro2AssetsPage() {
                           📅 {fmtDate(line.date)}
                         </span>
                       </div>
-                      <div className="text-[10px]" style={{ color: KC.muted, fontFamily: KC_FONT_MONO }}>
+                      <div className="text-[10px]" style={{ color: KC.muted }}>
                         {line.subtitle}
                       </div>
                     </div>

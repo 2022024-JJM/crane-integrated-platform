@@ -115,7 +115,6 @@ export function TagPickRealtimeTab({
               key={option.bay}
               label={option.bay}
               count={option.count}
-              mono
               pressed={bay === option.bay}
               onClick={() => setBay(option.bay)}
             />
@@ -155,10 +154,8 @@ export function TagPickRealtimeTab({
                         connected={connected}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-mono font-semibold">
-                          {id}
-                        </span>
-                        <span className="text-muted-foreground block truncate font-mono text-[10px]">
+                        <span className="block font-semibold">{id}</span>
+                        <span className="text-muted-foreground block truncate text-[10px]">
                           {crane.snapshot.bay ?? ''}
                         </span>
                       </span>
@@ -245,12 +242,12 @@ export function TagPickRealtimeTab({
             <>
               <div>
                 <p className="text-base font-semibold">{selectedRow.name}</p>
-                <p className="text-muted-foreground font-mono text-[11px]">
+                <p className="text-muted-foreground text-[11px]">
                   {buildCraneTagKey(selectedCrane, selectedRow.code)}
                 </p>
               </div>
               <div className="border-border bg-background rounded-lg border p-3">
-                <p className="font-mono text-2xl font-semibold tabular-nums">
+                <p className="text-2xl font-semibold tabular-nums">
                   {formatRowValue(selectedRow, t)}{' '}
                   <span className="text-muted-foreground text-sm">
                     {selectedRow.unit ?? ''}
@@ -265,7 +262,7 @@ export function TagPickRealtimeTab({
                 <dt className="text-muted-foreground">
                   {t('monitoring:inspector.tagPick.dataType')}
                 </dt>
-                <dd className="font-mono">
+                <dd>
                   {getMonitoringTagMetadata(selectedRow.code).dataType ?? '—'}
                 </dd>
                 <dt className="text-muted-foreground">
@@ -277,7 +274,7 @@ export function TagPickRealtimeTab({
                 <dt className="text-muted-foreground">
                   {t('monitoring:inspector.tagPick.bay')}
                 </dt>
-                <dd className="font-mono">{entry?.snapshot.bay ?? '—'}</dd>
+                <dd>{entry?.snapshot.bay ?? '—'}</dd>
               </dl>
             </>
           ) : (
@@ -323,11 +320,11 @@ function TagPickRow({
       >
         <span className="min-w-0 flex-1 truncate">
           <span className="font-medium">{row.name}</span>
-          <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">
+          <span className="text-muted-foreground ml-1.5 text-[10px]">
             {row.code}
           </span>
         </span>
-        <span className="shrink-0 font-mono tabular-nums">
+        <span className="shrink-0 tabular-nums">
           {formatRowValue(row, t)}{' '}
           <span className="text-muted-foreground">{row.unit ?? ''}</span>
         </span>

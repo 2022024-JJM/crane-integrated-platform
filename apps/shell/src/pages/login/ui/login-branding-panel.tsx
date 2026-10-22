@@ -2,13 +2,13 @@ import { HanwhaIcon } from '@crane/ui/atoms/hanwha-icon';
 
 /**
  * 로그인 좌측 히어로 — 조선소 항공사진 위에 얹히는 계측기 톤 타이포그래피.
- * 아이브로우(모노)·헤드라인(콘덴스드)·서브(산스)로 서체를 분리해 위계를 만든다.
+ * 아이브로우·헤드라인·서브를 크기·굵기·자간으로 나눠 위계를 만든다.
  * 모바일에서는 폼에 집중하도록 숨긴다.
  */
 export function LoginBrandingPanel() {
   return (
     <section className="hidden flex-col lg:flex">
-      {/* 아이브로우 — 한글은 모노에 글리프가 없어 산스로. 굵기·크기로 가독성 확보 */}
+      {/* 아이브로우 — 굵기·크기로 가독성 확보 */}
       <div
         className="login-rise flex items-center gap-3"
         style={{ animationDelay: '0.15s' }}
@@ -23,11 +23,10 @@ export function LoginBrandingPanel() {
         </p>
       </div>
 
-      {/* 헤드라인 — 콘덴스드, 타이트한 행간으로 밀도를 준다 */}
+      {/* 헤드라인 — 타이트한 행간으로 밀도를 준다 */}
       <h1
         className="login-rise mt-9 text-[clamp(2.75rem,4.6vw,4.25rem)] leading-[1.08] font-bold tracking-[-0.02em] break-keep text-white"
         style={{
-          fontFamily: 'var(--font-condensed)',
           animationDelay: '0.28s',
           textShadow: '0 2px 24px rgba(0,0,0,0.5)',
         }}

@@ -47,7 +47,7 @@ function BudgetRow({ item }: { item: BudgetItem }) {
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-foreground text-[13px]">{label}</span>
         <span className="flex items-baseline gap-1.5 tabular-nums">
-          <span className="text-foreground font-condensed text-base leading-none font-semibold">
+          <span className="text-foreground text-base leading-none font-semibold">
             {formatMetric(item.metric, item.value)}
           </span>
           <span className="text-muted-foreground text-xs">
@@ -170,7 +170,7 @@ export function AssetStatsTab({ asset, stats, live }: AssetStatsTabProps) {
                 <dt className="text-muted-foreground mt-1 text-xs">
                   {t(`asset-library:stats.axis.${axis}`)}
                 </dt>
-                <dd className="text-foreground font-condensed text-xl leading-none font-semibold">
+                <dd className="text-foreground text-xl leading-none font-semibold proportional-nums">
                   {formatMeters(value)}
                 </dd>
               </div>
@@ -208,7 +208,7 @@ export function AssetStatsTab({ asset, stats, live }: AssetStatsTabProps) {
               <dt className="text-muted-foreground mt-1 text-xs">
                 {t(`asset-library:stats.metric.${item.key}`)}
               </dt>
-              <dd className="text-foreground font-condensed text-lg leading-none font-semibold tabular-nums">
+              <dd className="text-foreground text-lg leading-none font-semibold tabular-nums">
                 {item.value}
               </dd>
             </div>

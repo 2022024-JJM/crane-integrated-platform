@@ -36,7 +36,7 @@ export function CraneCard({
     >
       <span className="flex min-w-0 items-center gap-2">
         <CraneLiveDot entry={entry} now={now} connected={connected} />
-        <span className="font-mono text-[15px] font-semibold tracking-wide">
+        <span className="text-[15px] font-semibold tracking-wide">
           {craneId}
         </span>
         <span className="text-muted-foreground ml-auto text-[11px] whitespace-nowrap">

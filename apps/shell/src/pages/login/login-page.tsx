@@ -89,13 +89,11 @@ function TopBar() {
         />
         <span
           className="text-[12px] font-semibold tracking-[0.26em] text-white/90 uppercase"
-          style={{ fontFamily: 'var(--font-mono)' }}
         >
           CraneSP
         </span>
         <span
           className="hidden text-[12px] tracking-[0.26em] text-orange-400/80 uppercase sm:inline"
-          style={{ fontFamily: 'var(--font-mono)' }}
         >
           / Integrated Platform
         </span>
@@ -112,13 +110,11 @@ function FooterBar() {
     >
       <p
         className="text-[11px] tracking-[0.14em] text-white/50"
-        style={{ fontFamily: 'var(--font-mono)' }}
       >
         © Hanwha Energy · Convergence Division
       </p>
       <p
         className="hidden text-[11px] tracking-[0.18em] text-white/40 uppercase sm:block"
-        style={{ fontFamily: 'var(--font-mono)' }}
       >
         Authorized personnel only
       </p>

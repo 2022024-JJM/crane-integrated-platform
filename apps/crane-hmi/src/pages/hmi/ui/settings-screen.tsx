@@ -27,7 +27,6 @@ const outputBox = (theme: HmiTheme): CSSProperties => ({
   padding: '6px 10px',
   border: theme.settings.outputBorder,
   borderRadius: theme.button.radius,
-  fontFamily: theme.valueFont,
   fontVariantNumeric: 'tabular-nums',
 });
 
@@ -54,7 +53,6 @@ const inputBox = (theme: HmiTheme): CSSProperties => ({
   padding: '6px 10px',
   border: theme.settings.inputBorder,
   borderRadius: theme.button.radius,
-  fontFamily: theme.valueFont,
   outline: 'none',
 });
 

@@ -1,15 +1,8 @@
 import '../kc-theme.css';
-import '@fontsource/ibm-plex-sans/400.css';
-import '@fontsource/ibm-plex-sans/500.css';
-import '@fontsource/ibm-plex-sans/600.css';
-import '@fontsource/ibm-plex-sans/700.css';
-import '@fontsource/ibm-plex-sans-condensed/600.css';
-import '@fontsource/ibm-plex-sans-condensed/700.css';
-import '@fontsource/ibm-plex-mono/500.css';
 import { useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { KC, KC_FONT } from '../kc';
+import { KC } from '../kc';
 import { NewTicketModal } from '../new-ticket-modal';
 import { Mro2GlobalSearch } from '../global-search';
 import { Mro2FilterContext, MRO2_YEARS } from './mro2-year-context';
@@ -26,7 +19,7 @@ export function Mro2Layout() {
     <Mro2FilterContext value={filter}>
       <div
         className="mro2-root min-h-full"
-        style={{ background: KC.bg, color: KC.text, fontFamily: KC_FONT }}
+        style={{ background: KC.bg, color: KC.text }}
       >
         {/* 콘텐츠 툴바: 전역 검색 + 기간(연도) 셀렉터 */}
         <div className="flex items-center justify-end gap-4 px-3 pt-2.5 md:px-5">

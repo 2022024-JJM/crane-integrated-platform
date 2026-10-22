@@ -389,7 +389,7 @@ export interface YardMapProps {
  * 시스템 sans 폴백으로 두면 지도 글씨만 다른 앱처럼 보인다.
  */
 const CANVAS_SANS = "'Pretendard Variable', Pretendard, system-ui, sans-serif"
-const CANVAS_MONO = "'IBM Plex Mono', ui-monospace, monospace"
+const CANVAS_MONO = CANVAS_SANS // 셸은 고정폭 서체를 싣지 않는다 — 코드·수치도 Pretendard
 
 /** 블록 점 반지름(px) — 배율과 무관하게 일정해야 멀리서도 "여기 있다"가 보인다 */
 const BLOCK_RADIUS = 3.5

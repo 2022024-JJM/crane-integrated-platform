@@ -11,7 +11,7 @@ import {
 import { getAllCraneAssets, getComponentsByCraneId } from '@crane/domain/asset';
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getTechnicians } from '@crane/domain/shared';
-import { KC, KC_FONT_DISPLAY } from './kc';
+import { KC } from './kc';
 import { KcButton } from './kc-ui';
 import { consumeTicketPrefill, useNewTicket, type TicketKind } from '../lib/use-new-ticket';
 
@@ -197,7 +197,7 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
     <>
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+        <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink }}>
           {t('mro2:ticket.title')}
         </h2>
         <button type="button" aria-label="Close" onClick={onClose} className="cursor-pointer">

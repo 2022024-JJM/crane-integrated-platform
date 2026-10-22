@@ -57,7 +57,7 @@ function HelpRow({
         {label}
       </span>
       {value ? (
-        <span className="shrink-0 font-mono text-[11px] font-semibold text-white tabular-nums">
+        <span className="shrink-0 text-[11px] font-semibold text-white tabular-nums">
           {value}
         </span>
       ) : null}
@@ -143,7 +143,7 @@ export function CollisionGuardHelp({ regionId }: { regionId: string }) {
           swatch={
             <span
               aria-hidden
-              className="shrink-0 rounded border border-sky-400/50 bg-sky-950/70 px-1 py-px font-mono text-[9px] leading-none font-bold text-sky-300"
+              className="shrink-0 rounded border border-sky-400/50 bg-sky-950/70 px-1 py-px text-[9px] leading-none font-bold text-sky-300"
             >
               {sensorBadge}
             </span>

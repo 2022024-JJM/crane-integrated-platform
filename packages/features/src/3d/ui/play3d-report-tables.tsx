@@ -115,13 +115,13 @@ export function EquipmentTable({
                   />
                 ))}
               </span>
-              <span className="w-9 shrink-0 text-right font-mono tabular-nums">
+              <span className="w-9 shrink-0 text-right tabular-nums">
                 {formatPercent(share ? share.running : null)}
               </span>
               {showOffline ? (
                 <span
                   className={cn(
-                    'w-6 shrink-0 text-right font-mono tabular-nums',
+                    'w-6 shrink-0 text-right tabular-nums',
                     eq.offlineEpisodes > 0
                       ? 'text-amber-600 dark:text-amber-300'
                       : 'text-muted-foreground',
@@ -132,7 +132,7 @@ export function EquipmentTable({
               ) : null}
               <span
                 className={cn(
-                  'w-11 shrink-0 text-right font-mono tabular-nums',
+                  'w-11 shrink-0 text-right tabular-nums',
                   eq.zoneDwellMs <= 0 && 'text-muted-foreground',
                 )}
               >
@@ -140,7 +140,7 @@ export function EquipmentTable({
               </span>
               <span
                 className={cn(
-                  'w-6 shrink-0 text-right font-mono tabular-nums',
+                  'w-6 shrink-0 text-right tabular-nums',
                   eq.collisions > 0
                     ? 'text-red-600 dark:text-red-400'
                     : 'text-muted-foreground',
@@ -208,11 +208,11 @@ export function ZoneTable({
                     style={{ width: `${percentOf(z.dwellMs, maxDwellMs)}%` }}
                   />
                 </span>
-                <span className="w-10 shrink-0 text-right font-mono tabular-nums">
+                <span className="w-10 shrink-0 text-right tabular-nums">
                   {formatSimClock(z.dwellMs)}
                 </span>
               </span>
-              <span className="text-muted-foreground w-6 shrink-0 text-right font-mono tabular-nums">
+              <span className="text-muted-foreground w-6 shrink-0 text-right tabular-nums">
                 {z.enters}
               </span>
               <span
@@ -295,7 +295,7 @@ export function TagTable({
                   </>
                 ) : null}
               </span>
-              <span className="w-12 shrink-0 text-right font-mono tabular-nums">
+              <span className="w-12 shrink-0 text-right tabular-nums">
                 {formatTagNumber(stat.travel)}
               </span>
               {showSaturation ? (
@@ -382,7 +382,7 @@ export function EventList({
                     PLAY3D_EVENT_COLORS[e.kind],
                   )}
                 />
-                <span className="text-muted-foreground w-16 shrink-0 font-mono text-[10px] tabular-nums">
+                <span className="text-muted-foreground w-16 shrink-0 text-[10px] tabular-nums">
                   {timeLabel(e)}
                 </span>
                 <span className="w-14 shrink-0 text-[10px]">

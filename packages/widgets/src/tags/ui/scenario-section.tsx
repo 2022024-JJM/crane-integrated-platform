@@ -211,7 +211,7 @@ export function ScenarioSection() {
                   }
                 />
               </label>
-              <span className="text-muted-foreground font-mono tabular-nums">
+              <span className="text-muted-foreground tabular-nums">
                 {t('monitoring:virtualTags.scenarios.duration', {
                   seconds: (scenarioDurationMs(selected) / 1000).toFixed(1),
                 })}
@@ -223,7 +223,7 @@ export function ScenarioSection() {
                 >
                   <SelectTrigger
                     aria-label={t('monitoring:virtualTags.scenarios.selectTag')}
-                    className="bg-muted h-7 w-56 rounded-sm px-2 font-mono text-xs font-normal"
+                    className="bg-muted h-7 w-56 rounded-sm px-2 text-xs font-normal"
                   >
                     <span className="truncate">
                       {trackKeyToAdd === NONE
@@ -239,7 +239,7 @@ export function ScenarioSection() {
                     ) : (
                       availableKeys.map((key) => (
                         <SelectItem key={key} value={key}>
-                          <span className="font-mono">{key}</span>
+                          <span>{key}</span>
                         </SelectItem>
                       ))
                     )}
@@ -335,7 +335,7 @@ function TrackCard({
       )}
     >
       <div className="flex items-center gap-2 text-[11px]">
-        <span className="min-w-0 flex-1 truncate font-mono" title={track.key}>
+        <span className="min-w-0 flex-1 truncate" title={track.key}>
           {track.key}
         </span>
         {tag ? (

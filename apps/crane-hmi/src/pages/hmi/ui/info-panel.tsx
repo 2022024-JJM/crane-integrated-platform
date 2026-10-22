@@ -111,7 +111,6 @@ function StatusRow({
               textAlign: 'right',
               fontSize: 28,
               fontWeight: 700,
-              fontFamily: theme.valueFont,
               color: moving ? theme.text.valueMoving : theme.text.value,
               fontVariantNumeric: 'tabular-nums',
               transition: 'color 0.25s',
@@ -220,7 +219,6 @@ function CollisionRow({
                 color: alarm ? color : theme.text.value,
                 fontSize: 26,
                 fontWeight: 700,
-                fontFamily: theme.valueFont,
                 fontVariantNumeric: 'tabular-nums',
                 transition: 'color 0.25s',
               }}

@@ -9,7 +9,7 @@ export function NotFoundPage() {
     >
       <h2 className="text-lg font-semibold">페이지를 찾을 수 없습니다</h2>
       <p className="text-muted-foreground max-w-md text-sm break-all">
-        요청하신 경로 <code className="font-mono">{pathname}</code>는 존재하지
+        요청하신 경로 <code className="font-sans">{pathname}</code>는 존재하지
         않거나 접근할 수 없습니다.
       </p>
       <Link

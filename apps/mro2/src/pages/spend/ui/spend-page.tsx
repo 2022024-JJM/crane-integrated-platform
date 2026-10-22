@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
-import { KC, KC_FONT_DISPLAY, usd } from '../../../shared/ui/kc';
+import { KC, usd } from '../../../shared/ui/kc';
 import { KcDonut, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useMro2Year } from '../../../shared/ui/layout';
 import {
@@ -212,7 +212,7 @@ export function Mro2SpendPage() {
           <span className="text-[10px]" style={{ color: KC.faint }}>
             {year}
           </span>
-          <span className="mt-1 text-[30px] font-bold" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+          <span className="mt-1 text-[30px] font-bold" style={{ color: KC.ink }}>
             {spend.visits}
           </span>
         </div>
@@ -223,7 +223,7 @@ export function Mro2SpendPage() {
           <span className="text-[10px]" style={{ color: KC.faint }}>
             {year}
           </span>
-          <span className="mt-1 text-[30px] font-bold" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+          <span className="mt-1 text-[30px] font-bold" style={{ color: KC.ink }}>
             {usd(spend.total)}
           </span>
         </div>
@@ -234,7 +234,7 @@ export function Mro2SpendPage() {
         <div className="rounded-[4px] border p-4" style={{ borderColor: KC.hairline }}>
           <div
             className="mb-1 text-center text-[14px] font-semibold tracking-wide"
-            style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+            style={{ color: KC.ink }}
           >
             {t('spend.byType')}
           </div>
@@ -270,7 +270,7 @@ export function Mro2SpendPage() {
         <div className="rounded-[4px] border p-4" style={{ borderColor: KC.hairline }}>
           <div
             className="mb-1 text-center text-[14px] font-semibold tracking-wide"
-            style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+            style={{ color: KC.ink }}
           >
             {t('spend.trendByType')}
           </div>
@@ -295,7 +295,7 @@ export function Mro2SpendPage() {
       {/* 위치/자산별 */}
       <div
         className="mt-8 mb-1 text-center text-[14px] font-semibold tracking-wide"
-        style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+        style={{ color: KC.ink }}
       >
         {t('spend.byLocation')}
       </div>

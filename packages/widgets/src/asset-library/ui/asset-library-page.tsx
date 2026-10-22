@@ -732,7 +732,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
             current ? (
               <span
                 aria-current="page"
-                className="text-foreground font-condensed truncate text-lg leading-tight font-semibold"
+                className="text-foreground truncate text-lg leading-tight font-semibold"
               >
                 {label}
               </span>
@@ -740,7 +740,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
               <button
                 type="button"
                 onClick={() => setQuery(withAssetScope(query, target))}
-                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 font-condensed shrink-0 cursor-pointer rounded text-lg leading-tight outline-none focus-visible:ring-2"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 shrink-0 cursor-pointer rounded text-lg leading-tight outline-none focus-visible:ring-2"
               >
                 {label}
               </button>

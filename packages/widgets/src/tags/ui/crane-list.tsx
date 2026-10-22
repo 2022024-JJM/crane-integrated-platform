@@ -70,7 +70,6 @@ export function CraneList({
               key={option.bay}
               label={option.bay}
               count={option.count}
-              mono
               pressed={bay === option.bay}
               onClick={() => setBay(option.bay)}
             />
@@ -82,7 +81,7 @@ export function CraneList({
           <span className="text-muted-foreground">
             {t('monitoring:tags.online')}
           </span>
-          <span className="font-mono font-semibold">
+          <span className="font-semibold">
             {countOnline(order, cranes)} / {order.length}
           </span>
         </span>

@@ -567,7 +567,7 @@ function DimensionLabel({
     <Html position={position} center zIndexRange={[5, 0]}>
       <span
         className={cn(
-          'font-condensed pointer-events-none flex items-baseline gap-1 rounded-sm px-1.5 py-0.5 text-[11px] leading-none font-semibold whitespace-nowrap tabular-nums shadow-sm',
+          'pointer-events-none flex items-baseline gap-1 rounded-sm px-1.5 py-0.5 text-[11px] leading-none font-semibold whitespace-nowrap tabular-nums shadow-sm',
           className,
         )}
       >

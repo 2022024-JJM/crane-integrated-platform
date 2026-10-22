@@ -94,12 +94,12 @@ export function TagPickVirtualTab({
             <>
               <div>
                 <p className="text-base font-semibold">{selected.name}</p>
-                <p className="text-muted-foreground font-mono text-[11px]">
+                <p className="text-muted-foreground text-[11px]">
                   {selected.key}
                 </p>
               </div>
               <div className="border-border bg-background rounded-lg border p-3">
-                <p className="font-mono text-2xl font-semibold tabular-nums">
+                <p className="text-2xl font-semibold tabular-nums">
                   {formatMappingValue(readTagLiveValue(selected.key))}{' '}
                   <span className="text-muted-foreground text-sm">
                     {selected.unit ?? ''}
@@ -113,11 +113,11 @@ export function TagPickVirtualTab({
                 <dt className="text-muted-foreground">
                   {t('monitoring:inspector.tagPick.unit')}
                 </dt>
-                <dd className="font-mono">{selected.unit ?? '—'}</dd>
+                <dd>{selected.unit ?? '—'}</dd>
                 <dt className="text-muted-foreground">
                   {t('monitoring:inspector.tagPick.range')}
                 </dt>
-                <dd className="font-mono">{describeRange(selected) || '—'}</dd>
+                <dd>{describeRange(selected) || '—'}</dd>
               </dl>
             </>
           ) : (
@@ -171,14 +171,14 @@ function VirtualRow({
         )}
       >
         <span className="min-w-0 flex-1 truncate">
-          <span className="font-mono font-medium">{tagKey}</span>
+          <span className="font-medium">{tagKey}</span>
           {name ? (
             <span className="text-muted-foreground ml-1.5 text-[10px]">
               {name}
             </span>
           ) : null}
         </span>
-        <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+        <span className="text-muted-foreground shrink-0 text-[10px]">
           {description}
         </span>
         <Check

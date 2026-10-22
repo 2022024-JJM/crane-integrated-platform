@@ -181,7 +181,7 @@ function CraneSvg() {
       {/* ── 메인 빔 ── */}
       <rect x="60" y={BEAM_Y} width="780" height="28" rx="6" fill="#f59e0b"/>
       <rect x="60" y={BEAM_Y} width="780" height="8"  rx="6" fill="#fbbf24"/>
-      <text x="450" y="120" textAnchor="middle" fill="white" fontSize="26" fontWeight="bold" fontFamily="sans-serif" opacity="0.85">Hanwha</text>
+      <text x="450" y="120" textAnchor="middle" fill="white" fontSize="26" fontWeight="bold" opacity="0.85">Hanwha</text>
 
       {/* ── 트롤리 (이동) ── */}
       <rect x={TX - 28} y={BEAM_Y - 18} width="56" height="20" rx="4" fill="#f59e0b"/>
@@ -217,14 +217,12 @@ function CraneSvg() {
               fill="#fbbf24"
               fontSize="11"
               fontWeight="bold"
-              fontFamily="sans-serif"
             >{label}</text>
             {/* 위치 값 */}
             <text
               x={hx + 22} y={hookY + 5}
               fill="#94a3b8"
               fontSize="10"
-              fontFamily="monospace"
             >{(hoists[i].pos * 30).toFixed(1)}m</text>
           </g>
         );
@@ -454,7 +452,7 @@ function BridgeCraneTopView({ trolleys }: { trolleys: ReturnType<typeof useBridg
 
       {/* HANWHA OCEAN 텍스트 (두 거더 사이 중앙) */}
       <text x={VW / 2} y={TY + 5} textAnchor="middle"
-        fill="#fbbf24" fontSize="13" fontWeight="bold" fontFamily="sans-serif"
+        fill="#fbbf24" fontSize="13" fontWeight="bold"
         opacity="0.5" letterSpacing="4">
         HANWHA OCEAN
       </text>
@@ -497,13 +495,13 @@ function BridgeCraneTopView({ trolleys }: { trolleys: ReturnType<typeof useBridg
             <rect x={tx - 14} y={GDR_Y1 - 22} width="28" height="16" rx="4"
               fill="#0f172a" stroke={col} strokeWidth="1.5"/>
             <text x={tx} y={GDR_Y1 - 10} textAnchor="middle"
-              fill={col} fontSize="10" fontWeight="bold" fontFamily="sans-serif">
+              fill={col} fontSize="10" fontWeight="bold">
               {label}
             </text>
 
             {/* 위치 수치 */}
             <text x={tx} y={GDR_Y2 + GDR_H + 16} textAnchor="middle"
-              fill={col} fontSize="10" fontFamily="monospace">
+              fill={col} fontSize="10">
               {`${(t.x * 100).toFixed(0)}%  ↓${(t.hoistPos * 20).toFixed(1)}m`}
             </text>
           </g>
@@ -512,12 +510,15 @@ function BridgeCraneTopView({ trolleys }: { trolleys: ReturnType<typeof useBridg
 
       {/* ── 범례 ── */}
       <rect x={VW - 152} y={10} width="140" height="54" rx="6" fill="#0f172a" opacity="0.9"/>
-      <text x={VW - 82} y={26} textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="sans-serif" letterSpacing="1">TOP VIEW</text>
+      <text x={VW - 82} y={26} textAnchor="middle" fill="#94a3b8" fontSize="9" letterSpacing="1">TOP VIEW</text>
       {trolleys.map((t, i) => (
         <g key={i}>
           <circle cx={VW - 138} cy={36 + i * 20} r="5" fill={C[i]}/>
-          <text x={VW - 128} y={40 + i * 20} fill="#e2e8f0" fontSize="10" fontFamily="monospace">
-            {`T${i + 1}  ${(t.x * 100).toFixed(0).padStart(3)}%  ↓${(t.hoistPos * 20).toFixed(1)}m`}
+          {/* 칸마다 x 를 따로 준다 — 비례폭 서체라 공백으로는 열이 맞지 않는다 */}
+          <text y={40 + i * 20} fill="#e2e8f0" fontSize="10">
+            <tspan x={VW - 128}>{`T${i + 1}`}</tspan>
+            <tspan x={VW - 80} textAnchor="end">{`${(t.x * 100).toFixed(0)}%`}</tspan>
+            <tspan x={VW - 68}>{`↓${(t.hoistPos * 20).toFixed(1)}m`}</tspan>
           </text>
         </g>
       ))}
@@ -529,10 +530,10 @@ function BridgeCraneTopView({ trolleys }: { trolleys: ReturnType<typeof useBridg
 function MachineTable({ machines, t }: { machines: CmmsOverviewMachineRow[]; t: (k: string) => string }) {
   const rows: { label: string; render: (m: CmmsOverviewMachineRow) => ReactNode }[] = [
     { label: t('overview.table.runFault'),  render: m => <RunFaultBadge value={m.runFault} /> },
-    { label: t('overview.table.joystick'),  render: m => <MonoCell>{m.joystickStep}</MonoCell> },
-    { label: t('overview.table.speed'),     render: m => <MonoCell>{m.speed.toFixed(2)}</MonoCell> },
-    { label: t('overview.table.position'),  render: m => <MonoCell>{m.position.toFixed(1)}</MonoCell> },
-    { label: t('overview.table.load'),      render: m => <MonoCell>{m.load != null ? m.load.toFixed(1) : '—'}</MonoCell> },
+    { label: t('overview.table.joystick'),  render: m => <ValueCell>{m.joystickStep}</ValueCell> },
+    { label: t('overview.table.speed'),     render: m => <ValueCell>{m.speed.toFixed(2)}</ValueCell> },
+    { label: t('overview.table.position'),  render: m => <ValueCell>{m.position.toFixed(1)}</ValueCell> },
+    { label: t('overview.table.load'),      render: m => <ValueCell>{m.load != null ? m.load.toFixed(1) : '—'}</ValueCell> },
   ];
 
   return (
@@ -580,10 +581,10 @@ function BadgeGroupRow({ label, badges, headers }: { label: string; badges: read
   );
 }
 
-/* ── 모노 셀 ── */
-function MonoCell({ children }: { children: ReactNode }) {
+/* ── 값 셀 ── */
+function ValueCell({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-block font-mono bg-muted border border-border px-2 py-0.5 rounded text-foreground text-xs min-w-12 text-center">
+    <span className="inline-block bg-muted border border-border px-2 py-0.5 rounded text-foreground text-xs min-w-12 text-center">
       {children}
     </span>
   );

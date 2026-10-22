@@ -181,7 +181,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-foreground font-mono text-lg leading-none font-semibold tabular-nums">
+            <span className="text-foreground text-lg leading-none font-semibold tabular-nums">
               {timeFormatter.format(timeMs)}
             </span>
             <span className="text-foreground text-[11px] font-medium">
@@ -384,7 +384,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
               />
               <div
                 aria-hidden
-                className="text-muted-foreground flex justify-between font-mono text-[9px] tabular-nums"
+                className="text-muted-foreground flex justify-between text-[9px] tabular-nums"
               >
                 {TIME_AXIS_LABELS.map((axisLabel) => (
                   <span key={axisLabel}>{axisLabel}</span>

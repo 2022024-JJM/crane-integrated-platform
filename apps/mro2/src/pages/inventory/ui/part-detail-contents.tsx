@@ -15,7 +15,7 @@ import type {
   InventoryTransaction,
   OpenPoLine,
 } from '@crane/domain/inventory';
-import { KC, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
+import { KC, usd } from '../../../shared/ui/kc';
 import { KcButton, KcEmpty } from '../../../shared/ui/kc-ui';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
@@ -90,7 +90,7 @@ export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
           >
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px]">
               <ShoppingCart size={11} style={{ color: KC.link }} />
-              <span className="font-medium" style={{ color: KC.link, fontFamily: KC_FONT_MONO }}>
+              <span className="font-medium" style={{ color: KC.link }}>
                 {line.poNumber}
               </span>
               <span className="font-bold tabular-nums" style={{ color: KC.ink }}>
@@ -131,8 +131,8 @@ export function InfoContent({
   openPoLines: OpenPoLine[];
 }) {
   const { t } = useTranslation('mro2');
-  const rows: { label: string; value: string; mono?: boolean }[] = [
-    { label: t('inventory.partNumber'), value: item.partNumber, mono: true },
+  const rows: { label: string; value: string }[] = [
+    { label: t('inventory.partNumber'), value: item.partNumber },
     { label: t('inventory.category'), value: item.category },
     { label: t('inventory.colManufacturer'), value: item.manufacturer },
     { label: t('inventory.criticality'), value: item.criticality },
@@ -150,12 +150,12 @@ export function InfoContent({
   return (
     <div className="flex flex-col gap-3">
       <div>
-        {rows.map(({ label, value, mono }) => (
+        {rows.map(({ label, value }) => (
           <div key={label} className="flex border-b py-1 text-[10.5px]" style={{ borderColor: KC.hairline }}>
             <span className="w-[110px] shrink-0 font-bold" style={{ color: KC.ink }}>
               {label}
             </span>
-            <span style={{ color: KC.text, fontFamily: mono ? KC_FONT_MONO : undefined }}>{value}</span>
+            <span style={{ color: KC.text }}>{value}</span>
           </div>
         ))}
       </div>
@@ -200,7 +200,7 @@ export function HistoryContent({ transactions }: { transactions: InventoryTransa
                 {tx.qty}
               </span>
               {tx.ref && (
-                <span className="text-[9.5px]" style={{ color: KC.muted, fontFamily: KC_FONT_MONO }}>
+                <span className="text-[9.5px]" style={{ color: KC.muted }}>
                   {tx.ref}
                 </span>
               )}
@@ -240,7 +240,7 @@ export function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[]
           style={{ borderColor: KC.hairline }}
         >
           <div className="flex items-center gap-2 text-[10.5px]">
-            <span className="font-medium" style={{ color: KC.link, fontFamily: KC_FONT_MONO }}>
+            <span className="font-medium" style={{ color: KC.link }}>
               {repair.woNumber}
             </span>
             <span className="text-[9.5px]" style={{ color: KC.muted }}>

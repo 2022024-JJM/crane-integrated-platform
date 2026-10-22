@@ -59,7 +59,7 @@ function ComparePane({
   const label = (
     <span
       className={cn(
-        'font-condensed rounded-md px-2 py-1 text-sm leading-none font-semibold tabular-nums shadow-sm',
+        'rounded-md px-2 py-1 text-sm leading-none font-semibold tabular-nums shadow-sm',
         base
           ? 'bg-black/55 text-white backdrop-blur-md'
           : 'bg-(--hanwha-orange-100) text-white',

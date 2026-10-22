@@ -8,7 +8,7 @@ import {
   MyCranePanel,
 } from './info-panels';
 import { PhillyMap } from './philly-map';
-import { PHILLY_FONT, PHILLY_THEMES, PhillyThemeContext } from './theme';
+import { PHILLY_THEMES, PhillyThemeContext } from './theme';
 import { useFitScale } from './use-fit-scale';
 
 /** 원본 HMI_main_Philly.mmc 설계 해상도 */
@@ -59,7 +59,6 @@ export function HmiPhillyPage() {
             top: '50%',
             transform: `translate(-50%, -50%) scale(${scale})`,
             background: t.pageBg,
-            fontFamily: PHILLY_FONT,
             userSelect: 'none',
             display: 'flex',
             flexDirection: 'column',

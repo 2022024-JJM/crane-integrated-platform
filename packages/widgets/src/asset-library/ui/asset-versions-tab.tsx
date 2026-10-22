@@ -410,7 +410,7 @@ export function AssetVersionsTab({
                 )}
               />
               <div className="flex items-center gap-2">
-                <span className="text-foreground font-condensed text-lg leading-none font-semibold tabular-nums">
+                <span className="text-foreground text-lg leading-none font-semibold tabular-nums">
                   v{version.version}
                 </span>
                 {version.revision ? (

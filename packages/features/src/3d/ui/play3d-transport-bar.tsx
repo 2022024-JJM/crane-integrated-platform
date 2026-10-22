@@ -165,7 +165,7 @@ export function Play3dTransportBar({
                   className="h-7 gap-1.5 px-2"
                 >
                   <CalendarRange className="size-3.5" />
-                  <span className="font-mono text-[11px]">
+                  <span className="text-[11px]">
                     {formatRangeLabel(search.viewingFrom, search.viewingTo)}
                   </span>
                   <ChevronDown className="size-3 opacity-60" />
@@ -319,7 +319,7 @@ export function Play3dTransportBar({
             <ToggleGroupItem
               key={option}
               value={String(option)}
-              className="h-6 px-1.5 font-mono text-[10px]"
+              className="h-6 px-1.5 text-[10px]"
             >
               ×{option}
             </ToggleGroupItem>
@@ -327,7 +327,7 @@ export function Play3dTransportBar({
         </ToggleGroup>
 
         {/* 위치 */}
-        <div className="text-muted-foreground ml-auto flex items-center gap-2 font-mono text-[11px] tabular-nums">
+        <div className="text-muted-foreground ml-auto flex items-center gap-2 text-[11px] tabular-nums">
           {hasContent ? (
             <>
               <span className="text-foreground">

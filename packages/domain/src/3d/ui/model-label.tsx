@@ -263,7 +263,7 @@ export function ModelLabel({
           <div
             ref={wheelRef}
             title={titles?.tone[tone]}
-            className={`inline-flex items-center gap-1 rounded font-mono leading-tight font-semibold whitespace-nowrap drop-shadow ${leader ? 'px-1.5 py-0.5 text-[12px]' : 'px-1.5 py-0.5 text-[11px]'} ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-auto'} ${tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
+            className={`inline-flex items-center gap-1 rounded leading-tight font-semibold whitespace-nowrap drop-shadow ${leader ? 'px-1.5 py-0.5 text-[12px]' : 'px-1.5 py-0.5 text-[11px]'} ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-auto'} ${tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
             onPointerDown={inert ? undefined : forwardPointerDown}
             onPointerEnter={
               inert

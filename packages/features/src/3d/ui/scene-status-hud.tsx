@@ -282,7 +282,7 @@ function HudCell({
       </span>
       <span
         className={cn(
-          'font-mono text-base leading-5 font-bold whitespace-nowrap tabular-nums',
+          'text-base leading-5 font-bold whitespace-nowrap tabular-nums',
           valueClassName,
         )}
       >

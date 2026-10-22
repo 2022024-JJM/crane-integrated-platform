@@ -147,7 +147,7 @@ export const ReplaySearchForm = memo(function ReplaySearchForm({
         {queryTimeLabel ? (
           <p className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
             <span>{t('common:replay.queryTime')}</span>
-            <span className="text-foreground ml-auto text-right font-mono text-[11px] tabular-nums">
+            <span className="text-foreground ml-auto text-right text-[11px] tabular-nums">
               {queryTimeLabel}
             </span>
           </p>

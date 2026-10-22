@@ -130,7 +130,7 @@ export function RegionCmmsPage() {
                 />
                 {cfg.label}
                 <span
-                  className={`font-mono tabular-nums ${isActive ? 'opacity-80' : 'opacity-60'}`}
+                  className={`tabular-nums ${isActive ? 'opacity-80' : 'opacity-60'}`}
                 >
                   {counts[f]}
                 </span>

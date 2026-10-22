@@ -163,7 +163,6 @@ export function TitleBar({
             fontWeight: 900,
             fontSize: 28,
             letterSpacing: 1,
-            fontFamily: "'Arial Black', 'Pretendard', sans-serif",
           }}
         >
           Hanwha
@@ -195,7 +194,6 @@ export function TitleBar({
           color: theme.titleBar.clock,
           fontSize: 16,
           fontWeight: 600,
-          fontFamily: theme.valueFont,
           fontVariantNumeric: 'tabular-nums',
         }}
       >

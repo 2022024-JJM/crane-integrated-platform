@@ -141,7 +141,7 @@ const VIEW_PIN_NUMBER_CURRENT = '#0a0c0e';
  * 변수를 읽지 못해 여기 적는다.
  */
 const LABEL_FONT_FAMILY =
-  "'IBM Plex Sans', 'Noto Sans KR Variable', sans-serif";
+  "'Pretendard Variable', Pretendard, system-ui, sans-serif";
 /**
  * 지금 카메라가 그 뷰에 있다고 보는 카메라 위치 차이(씬 단위)·시선 각
  * 차이(rad). 뷰로 옮긴 직후의 포즈는 OrbitControls update() 의 부동소수

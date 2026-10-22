@@ -49,7 +49,7 @@ function PartSpecCard({
 
   const rows = [
     { label: t('detail.zonePanel.partName', { defaultValue: 'Part Name' }), value: part.componentName },
-    { label: t('detail.zonePanel.partNumber', { defaultValue: 'P/N' }), value: part.partNumber ?? '—', mono: true },
+    { label: t('detail.zonePanel.partNumber', { defaultValue: 'P/N' }), value: part.partNumber ?? '—', code: true },
     { label: t('detail.zonePanel.manufacturer', { defaultValue: 'Manufacturer' }), value: part.manufacturer ?? '—' },
   ];
 
@@ -75,12 +75,12 @@ function PartSpecCard({
         </div>
 
         <dl className="space-y-2.5">
-          {rows.map(({ label, value, mono }) => (
+          {rows.map(({ label, value, code }) => (
             <div key={label}>
               <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 {label}
               </dt>
-              <dd className={cn('mt-0.5 text-sm font-medium break-all', mono && 'font-mono text-xs')}>
+              <dd className={cn('mt-0.5 text-sm font-medium break-all', code && 'text-xs')}>
                 {value}
               </dd>
             </div>
@@ -175,7 +175,7 @@ function ClusterGroup({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{part.componentName}</p>
                   {part.partNumber && (
-                    <p className="truncate font-mono text-[10px] text-muted-foreground">
+                    <p className="truncate text-[10px] text-muted-foreground">
                       {part.partNumber}
                     </p>
                   )}

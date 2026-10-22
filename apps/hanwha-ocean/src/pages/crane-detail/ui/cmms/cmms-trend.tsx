@@ -172,10 +172,10 @@ function TrendPanel({
                   <td className="px-2 py-0.5">
                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: pen.color }} />
                   </td>
-                  <td className="px-2 py-0.5 font-mono text-foreground">#{pen.index}</td>
+                  <td className="px-2 py-0.5 text-foreground">#{pen.index}</td>
                   <td className="px-2 py-0.5 truncate max-w-0" style={{ color: pen.color }}>{pen.label}</td>
-                  <td className="px-2 py-0.5 text-right font-mono text-foreground">{pen.value1}</td>
-                  <td className="px-2 py-0.5 text-right font-mono text-foreground">{pen.value2}</td>
+                  <td className="px-2 py-0.5 text-right text-foreground">{pen.value1}</td>
+                  <td className="px-2 py-0.5 text-right text-foreground">{pen.value2}</td>
                 </tr>
               );
             })}

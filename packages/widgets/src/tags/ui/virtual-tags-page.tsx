@@ -175,7 +175,6 @@ function TagRow({
                 aria-invalid={keyError !== null}
                 className={cn(
                   CELL_INPUT,
-                  'font-mono',
                   keyError !== null && 'border-amber-500 text-amber-500',
                 )}
                 onChange={() => setKeyError(null)}
@@ -337,7 +336,7 @@ function TagRow({
               <div className="bg-primary h-full" style={{ width: `${pct}%` }} />
             </div>
           )}
-          <span className="w-16 shrink-0 text-right font-mono text-xs">
+          <span className="w-16 shrink-0 text-right text-xs">
             {formatValue(value)}
           </span>
         </div>

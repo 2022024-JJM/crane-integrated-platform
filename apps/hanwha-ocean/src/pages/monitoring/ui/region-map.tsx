@@ -76,7 +76,7 @@ export function RegionMap() {
           <p className="text-muted-foreground text-sm">
             {t('monitoring-overview:map.missingApiKey.description')}
           </p>
-          <code className="text-muted-foreground bg-muted/60 border-border mt-2 inline-block rounded-md border px-2 py-1 text-xs">
+          <code className="text-muted-foreground bg-muted/60 border-border mt-2 inline-block rounded-md border px-2 py-1 font-sans text-xs">
             VITE_GOOGLE_MAPS_API_KEY
           </code>
         </div>

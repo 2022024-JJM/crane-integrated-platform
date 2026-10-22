@@ -86,7 +86,7 @@ export function TrackLabel({ height, worldScale, register }: TrackLabelProps) {
         // translateY(-50%): drei center는 칩 "중앙"을 앵커에 놓아 칩
         // 하단이 객체 상단을 덮는다 — 반 칸 올려 객체를 가리지 않게.
         style={{ opacity: 0, transform: 'translateY(-50%)' }}
-        className="relative rounded-md border px-2 py-1 font-mono text-xs leading-tight font-bold whitespace-nowrap text-white shadow-md"
+        className="relative rounded-md border px-2 py-1 text-xs leading-tight font-bold whitespace-nowrap text-white shadow-md"
       >
         {/* 세버리티 글리프 — 위험 ▲ / 주의 ● . 칩 배경색만으로 레벨을
             전달하면 적록색맹에게 amber/red가 같은 색으로 보인다.

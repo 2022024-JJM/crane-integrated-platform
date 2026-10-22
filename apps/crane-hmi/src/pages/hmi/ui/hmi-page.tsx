@@ -119,7 +119,6 @@ export function HmiPage() {
             top: '50%',
             transform: `translate(-50%, -50%) scale(${scale})`,
             background: theme.pageBg,
-            fontFamily: theme.font,
             userSelect: 'none',
           }}
         >

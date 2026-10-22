@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Download, FileText, Upload, X } from 'lucide-react';
 import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
-import { KC, KC_FONT_MONO } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import {
   KcButton,
   KcEmpty,
@@ -255,7 +255,7 @@ function DocumentInfoPanel({ row, onClose }: { row: DocumentRow; onClose: () => 
         </button>
       </div>
       <div className="px-4 pb-4">
-        <div className="mt-1 text-[10.5px]" style={{ color: KC.muted, fontFamily: KC_FONT_MONO }}>
+        <div className="mt-1 text-[10.5px]" style={{ color: KC.muted }}>
           {t(`documents.origin.${row.origin}`)}
         </div>
 

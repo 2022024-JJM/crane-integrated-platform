@@ -10,10 +10,6 @@ export type HmiThemeName = 'classic' | 'modern';
  */
 export interface HmiTheme {
   name: HmiThemeName;
-  /** 기본(한글 라벨) 폰트 */
-  font: string;
-  /** 수치 전용 폰트 — modern은 계기판 느낌의 모노스페이스 */
-  valueFont: string;
   pageBg: string;
   panel: {
     bg: string;
@@ -98,16 +94,9 @@ export interface HmiTheme {
   };
 }
 
-const KOREAN_FONT = "'Noto Sans KR Variable', sans-serif";
-
-const MONO_FONT =
-  "'IBM Plex Mono', 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace";
-
 /** GSI 원본 HMI 재현 (비교 데모·매뉴얼 검증용) */
 export const CLASSIC_THEME: HmiTheme = {
   name: 'classic',
-  font: KOREAN_FONT,
-  valueFont: KOREAN_FONT,
   pageBg: '#000',
   panel: {
     bg: '#000',
@@ -190,11 +179,9 @@ export const CLASSIC_THEME: HmiTheme = {
   },
 };
 
-/** 모던 산업 SCADA — 블루-차콜 베이스, 헤어라인 보더, 모노 수치, 시안 악센트 */
+/** 모던 산업 SCADA — 블루-차콜 베이스, 헤어라인 보더, 시안 악센트 */
 export const MODERN_THEME: HmiTheme = {
   name: 'modern',
-  font: KOREAN_FONT,
-  valueFont: MONO_FONT,
   pageBg: 'radial-gradient(1100px 760px at 50% 28%, #0d1622 0%, #070b11 62%)',
   panel: {
     bg: '#0d141d',

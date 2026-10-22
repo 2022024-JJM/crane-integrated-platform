@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { usePartDetail } from '@crane/features/inventory';
 import type { InventoryStatus } from '@crane/domain/inventory';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import { StockActionModal, type ActionMode } from './stock-action-modal';
 import {
   ActionButtons,
@@ -133,10 +133,10 @@ export function PartDetailPanel({
         {/* 헤더 */}
         <div className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-3.5" style={{ borderColor: KC.border }}>
           <div className="min-w-0">
-            <div className="text-[10.5px]" style={{ color: KC.muted, fontFamily: KC_FONT_MONO }}>
+            <div className="text-[10.5px]" style={{ color: KC.muted }}>
               {item.partNumber}
             </div>
-            <h2 className="truncate text-[17px] font-bold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+            <h2 className="truncate text-[17px] font-bold tracking-wide" style={{ color: KC.ink }}>
               {item.partName}
             </h2>
             <div className="mt-1">{statusRow}</div>
@@ -220,7 +220,7 @@ export function PartDetailPanel({
       <div className="flex flex-col gap-1.5 border-b px-4 pt-4 pb-3" style={{ borderColor: KC.border }}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px]" style={{ color: KC.muted, fontFamily: KC_FONT_MONO }}>
+            <div className="text-[10px]" style={{ color: KC.muted }}>
               {item.partNumber}
             </div>
             <h3 className="truncate text-[13px] font-bold" style={{ color: KC.ink }}>

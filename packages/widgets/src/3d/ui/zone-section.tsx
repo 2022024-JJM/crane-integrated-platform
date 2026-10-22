@@ -77,7 +77,7 @@ function AxisNumber({
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1">
-      <span className="text-muted-foreground shrink-0 font-mono text-[10px] uppercase">
+      <span className="text-muted-foreground shrink-0 text-[10px] uppercase">
         {axis}
       </span>
       <NumberField

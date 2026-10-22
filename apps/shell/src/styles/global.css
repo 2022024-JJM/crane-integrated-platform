@@ -12,19 +12,12 @@
  */
 @import '../../../indoorshop/src/dashboard/shared/styles/globals.css';
 
-/* 서체 — IBM Plex 계열. 산업 계측 톤을 셸 전역에 통일 (mro2와 동일 패밀리) */
-@import '@fontsource/ibm-plex-sans/400.css';
-@import '@fontsource/ibm-plex-sans/500.css';
-@import '@fontsource/ibm-plex-sans/600.css';
-@import '@fontsource/ibm-plex-sans/700.css';
-@import '@fontsource/ibm-plex-sans-condensed/600.css';
-@import '@fontsource/ibm-plex-sans-condensed/700.css';
-@import '@fontsource/ibm-plex-mono/400.css';
-@import '@fontsource/ibm-plex-mono/500.css';
-@import '@fontsource/ibm-plex-mono/600.css';
-/* 한글 — Plex 에 없는 한글을 Noto Sans KR 이 받는다. 가변 서체 하나가 모든
-   굵기를 맡고, 글자 범위별 조각으로 나뉘어 화면에 나온 글자의 조각만 받는다. */
-@import '@fontsource-variable/noto-sans-kr/wght.css';
+/*
+ * 서체 — 영문·한글·숫자 모두 Pretendard 하나. 내업 대시보드·mro2·HMI 도 이것을
+ * 쓴다. OT망이라 CDN 대신 npm 패키지로 번들한다. 가변 서체 하나가 모든 굵기를
+ * 맡고, 글자 범위별 조각으로 나뉘어 화면에 나온 글자의 조각만 받는다.
+ */
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 
 /*
  * Tailwind 소스 범위.
@@ -149,14 +142,11 @@
 }
 
 @theme inline {
-  /* 한글은 Plex에 없으므로 Noto Sans KR 로 폴백 */
-  --font-sans: 'IBM Plex Sans', 'Noto Sans KR Variable', sans-serif;
-  --font-condensed:
-    'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Noto Sans KR Variable',
-    sans-serif;
-  --font-mono:
-    'IBM Plex Mono', 'Noto Sans KR Variable', ui-monospace, SFMono-Regular,
-    Menlo, monospace;
+  /* 캔버스 글꼴(scene-minimap 의 LABEL_FONT_FAMILY)도 같은 스택이다 */
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  /* 고정폭 서체는 두지 않는다. 내업 대시보드(동기화 코드)의 font-mono 와
+     code·kbd 기본 서체가 이 토큰을 읽어서 남겨 두고 같은 스택을 준다. */
+  --font-mono: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -340,8 +330,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Pretendard 숫자는 글자마다 폭이 달라 시계·실시간 값이 흔들리고 열이
+     어긋난다. 전역으로 고른 폭 숫자를 쓰고, 크게 적는 숫자만
+     proportional-nums 로 푼다. */
   html {
-    @apply font-sans;
+    @apply font-sans tabular-nums;
   }
   input[type='datetime-local']::-webkit-calendar-picker-indicator {
     cursor: pointer;

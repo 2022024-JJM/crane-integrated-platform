@@ -22,7 +22,7 @@ interface LoginFormProps {
 const UNDERLINE_INPUT =
   'w-full border-0 border-b bg-transparent px-0.5 pb-2.5 pt-1.5 text-[15px] text-white outline-none transition-colors duration-200 placeholder:text-white/35';
 
-/** 인풋 위 모노 캡션 라벨 — 계기 패널 톤 */
+/** 인풋 위 캡션 라벨(대문자·넓은 자간) — 계기 패널 톤 */
 const FIELD_LABEL =
   'mb-1.5 block text-[10px] leading-none tracking-[0.2em] uppercase transition-colors duration-200';
 
@@ -71,17 +71,15 @@ export function LoginForm({
           }}
         />
 
-        {/* 폼 헤더 — 모노 라벨 + 콘덴스드 제목 */}
+        {/* 폼 헤더 — 캡션 라벨 + 제목 */}
         <div className="mb-9">
           <p
             className="text-[10px] leading-none tracking-[0.28em] text-orange-400/90 uppercase"
-            style={{ fontFamily: 'var(--font-mono)' }}
           >
             Secure Access
           </p>
           <h2
             className="mt-3 text-[26px] leading-none font-bold tracking-[-0.01em] text-white"
-            style={{ fontFamily: 'var(--font-condensed)' }}
           >
             로그인
           </h2>
@@ -96,7 +94,6 @@ export function LoginForm({
                 FIELD_LABEL,
                 focusedField === 'id' ? 'text-orange-400' : 'text-white/45',
               )}
-              style={{ fontFamily: 'var(--font-mono)' }}
             >
               ID
             </label>
@@ -142,7 +139,6 @@ export function LoginForm({
                 FIELD_LABEL,
                 focusedField === 'password' ? 'text-orange-400' : 'text-white/45',
               )}
-              style={{ fontFamily: 'var(--font-mono)' }}
             >
               Password
             </label>
@@ -259,7 +255,6 @@ export function LoginForm({
           {/* 하단 시스템 라벨 — 계기 패널 마감 */}
           <p
             className="mt-6 text-center text-[10px] tracking-[0.18em] text-white/25 uppercase"
-            style={{ fontFamily: 'var(--font-mono)' }}
           >
             Crane Integrated Platform · v1.0
           </p>

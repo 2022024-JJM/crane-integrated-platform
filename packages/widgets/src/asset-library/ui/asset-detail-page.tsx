@@ -501,7 +501,7 @@ function AssetDetailView({
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="text-foreground font-condensed min-w-0 truncate text-xl leading-tight font-semibold">
+            <h1 className="text-foreground min-w-0 truncate text-xl leading-tight font-semibold">
               {asset.name}
             </h1>
             <span className="border-border text-muted-foreground shrink-0 rounded-md border px-1.5 py-0.5 text-xs leading-none font-medium tabular-nums">
@@ -798,7 +798,7 @@ function TitleCell({
       <dt className="text-muted-foreground text-[11px] leading-tight">
         {label}
       </dt>
-      <dd className="text-foreground font-condensed mt-0.5 text-[15px] leading-tight font-semibold whitespace-nowrap tabular-nums">
+      <dd className="text-foreground mt-0.5 text-[15px] leading-tight font-semibold whitespace-nowrap tabular-nums">
         {children}
       </dd>
     </div>

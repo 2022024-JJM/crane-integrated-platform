@@ -15,7 +15,7 @@ import { useInspectionList } from '@crane/features/inspection';
 import { useInventoryList } from '@crane/features/inventory';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import { useOpenRisks } from '@crane/features/risk';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR, usd } from '../../../shared/ui/kc';
+import { KC, SERVICE_TONE_COLOR, usd } from '../../../shared/ui/kc';
 import { KcCard, KcDonut, KcInfo, KcRing, KcStat } from '../../../shared/ui/kc-ui';
 import { useMro2Year } from '../../../shared/ui/layout';
 import { computeSpend, SPEND_TYPES, type SpendTypeKey } from '../../../shared/lib/spend';
@@ -107,7 +107,7 @@ export function Mro2OverviewPage() {
         <div className="flex items-center justify-center gap-2">
           <h2
             className="text-[16px] font-semibold tracking-wider"
-            style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+            style={{ color: KC.ink }}
           >
             {t('overview.serviceOpenItems')}
           </h2>
@@ -143,7 +143,7 @@ export function Mro2OverviewPage() {
         <div className="mb-2 flex items-center justify-between">
           <div
             className="flex items-center gap-2 text-[15px] font-bold tracking-wider"
-            style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+            style={{ color: KC.ink }}
           >
             <Wrench size={15} />
             {t('overview.service')}
@@ -289,7 +289,7 @@ export function Mro2OverviewPage() {
         <div className="mt-8 mb-2 flex items-center justify-between border-b pb-1.5" style={{ borderColor: KC.borderStrong }}>
           <h2
             className="flex items-center gap-2 text-[15px] font-semibold tracking-wide"
-            style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
+            style={{ color: KC.ink }}
           >
             <LayoutList size={15} style={{ color: KC.accent }} />
             {t('overview.recentActivity')}
@@ -317,7 +317,7 @@ export function Mro2OverviewPage() {
                   <span className="text-[11.5px] font-bold" style={{ color: KC.ink }}>
                     {serviceToneLabel(r.tone)}
                   </span>
-                  <span className="truncate text-[10px]" style={{ color: KC.faint, fontFamily: KC_FONT_MONO }}>
+                  <span className="truncate text-[10px]" style={{ color: KC.faint }}>
                     {r.woNumber}
                   </span>
                 </div>

@@ -77,7 +77,7 @@ function AppErrorFallback({
 
         {error?.message ? (
           <div className="border-border/60 bg-muted/30 rounded-xl border px-4 py-3 text-left">
-            <p className="text-muted-foreground font-mono text-xs break-all">
+            <p className="text-muted-foreground text-xs break-all">
               {error.message}
             </p>
           </div>

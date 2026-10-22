@@ -3,8 +3,7 @@ import { Button } from '@crane/ui/atoms/button';
 
 /**
  * 구역(bay) 선택 칩 — 이름과 그 구역의 크레인 수. 태그 페이지 크레인 목록과
- * 태그 연결 다이얼로그가 같은 모양을 쓴다. `mono` 는 서버 구역 코드처럼
- * 고정폭으로 보일 라벨.
+ * 태그 연결 다이얼로그가 같은 모양을 쓴다.
  *
  * 고른 칩은 primary 테두리·틴트로 밝히고 나머지는 글자를 흐리게 둔다 —
  * secondary 채움과 outline 은 다크 테마에서 둘 다 회색이라 구분되지 않는다.
@@ -14,13 +13,11 @@ export function BayChip({
   label,
   count,
   pressed,
-  mono,
   onClick,
 }: {
   label: string;
   count: number;
   pressed: boolean;
-  mono?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -37,7 +34,7 @@ export function BayChip({
       )}
       onClick={onClick}
     >
-      <span className={mono ? 'font-mono' : undefined}>{label}</span>
+      <span>{label}</span>
       <span
         className={pressed ? 'text-foreground/70' : 'text-muted-foreground'}
       >

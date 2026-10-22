@@ -97,7 +97,7 @@ export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
           >
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <ShoppingCart className={cn('h-3 w-3 shrink-0', TONE_TEXT.info)} />
-              <span className={cn('font-mono text-xs font-medium', TONE_TEXT.info)}>{line.poNumber}</span>
+              <span className={cn('text-xs font-medium', TONE_TEXT.info)}>{line.poNumber}</span>
               <span className="text-xs font-semibold tabular-nums">×{line.qty}</span>
               {line.requester === 'System' && (
                 <span className={cn('rounded-full px-1.5 py-px text-[10px] font-semibold', TONE_CHIP.info)}>
@@ -213,7 +213,7 @@ export function HistoryContent({ transactions }: { transactions: InventoryTransa
                   {tx.qty}
                 </span>
                 {tx.ref && (
-                  <span className="font-mono text-[10px] text-muted-foreground">{tx.ref}</span>
+                  <span className="text-[10px] text-muted-foreground">{tx.ref}</span>
                 )}
                 <span className="ml-auto text-[10px] text-muted-foreground">
                   {formatDateLabel(tx.date, i18n.language)}
@@ -251,7 +251,7 @@ export function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[]
           className="group flex cursor-pointer flex-col gap-1 rounded border border-border/70 bg-muted/30 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/50"
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-medium text-foreground">
+            <span className="text-xs font-medium text-foreground">
               {repair.woNumber}
             </span>
             <span className="text-[10px] text-muted-foreground">{repair.craneName}</span>

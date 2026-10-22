@@ -233,7 +233,7 @@ export function AssetPreviewPanel({
       <header className="border-border flex items-center gap-1 border-b py-2 pr-2 pl-4">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <h2 className="text-foreground font-condensed truncate text-lg leading-tight font-semibold">
+            <h2 className="text-foreground truncate text-lg leading-tight font-semibold">
               {asset.name}
             </h2>
             <span className="border-border text-muted-foreground shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium tabular-nums">

@@ -21,7 +21,7 @@ export function Play3dTickRow({
     <div
       aria-hidden
       className={cn(
-        'text-muted-foreground relative overflow-hidden font-mono text-[9px] tabular-nums',
+        'text-muted-foreground relative overflow-hidden text-[9px] tabular-nums',
         className,
       )}
     >

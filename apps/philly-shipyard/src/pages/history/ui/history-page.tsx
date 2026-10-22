@@ -315,7 +315,7 @@ export function HistoryPage() {
             >
               {k !== 'all' && KIND_ICON[k]}
               {k === 'all' ? t('filters.kindAll') : t(`kind.${k}`)}
-              <span className="font-mono tabular-nums opacity-60">
+              <span className="tabular-nums opacity-60">
                 {k === 'all' ? events.length : kindCounts[k]}
               </span>
             </button>

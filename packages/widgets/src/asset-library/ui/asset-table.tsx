@@ -187,7 +187,7 @@ export function AssetTable({
                     <AppLink
                       to={hrefFor(asset.id)}
                       onClick={(event) => event.stopPropagation()}
-                      className="text-foreground font-condensed focus-visible:ring-ring/60 block truncate rounded-sm text-sm leading-tight font-semibold outline-none hover:underline focus-visible:ring-2"
+                      className="text-foreground focus-visible:ring-ring/60 block truncate rounded-sm text-sm leading-tight font-semibold outline-none hover:underline focus-visible:ring-2"
                     >
                       {asset.name}
                     </AppLink>

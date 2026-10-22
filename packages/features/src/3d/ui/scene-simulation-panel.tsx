@@ -144,7 +144,7 @@ export function SceneSimulationPanel({
             <ToggleGroupItem
               key={option}
               value={String(option)}
-              className="h-6 px-1.5 font-mono text-[10px]"
+              className="h-6 px-1.5 text-[10px]"
             >
               ×{option}
             </ToggleGroupItem>
@@ -201,7 +201,7 @@ export function SceneSimulationPanel({
             <span className="font-medium">
               {t('monitoring:simulation.time')}
             </span>
-            <span className="font-mono text-[10px] tabular-nums">
+            <span className="text-[10px] tabular-nums">
               {formatSimClock(timeMs)} / {formatSimClock(durationMs)}
             </span>
           </div>
@@ -217,7 +217,7 @@ export function SceneSimulationPanel({
       ) : (
         <div className="text-muted-foreground flex items-center justify-between text-[11px]">
           <span className="font-medium">{t('monitoring:simulation.time')}</span>
-          <span className="font-mono text-[10px] tabular-nums">
+          <span className="text-[10px] tabular-nums">
             {formatSimClock(elapsed)}
           </span>
         </div>

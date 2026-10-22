@@ -86,7 +86,7 @@ export function TicketPreview({
                   defaultValue: type === 'parts' ? 'PARTS REQUEST' : type.toUpperCase(),
                 })}
               </p>
-              <p className="mt-0.5 flex items-center gap-1 font-mono text-xs text-muted-foreground">
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                 <Hash className="size-3" />
                 {draftNum}
               </p>
@@ -149,7 +149,7 @@ export function TicketPreview({
 
           {type !== 'parts' && (
             <Row icon={Calendar} label={type === 'repair' ? t('fields.scheduledStart') : t('fields.scheduledDate')}>
-              <span className={cn('font-mono', displayDate === '—' ? 'italic text-muted-foreground/60' : 'text-foreground')}>
+              <span className={cn(displayDate === '—' ? 'italic text-muted-foreground/60' : 'text-foreground')}>
                 {displayDate}
               </span>
             </Row>

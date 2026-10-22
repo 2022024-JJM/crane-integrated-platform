@@ -431,7 +431,7 @@ export function InventoryPage() {
                 >
                   <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                   {t(`status.${s}`)}
-                  <span className={cn('tabular-nums font-mono', isActive ? 'opacity-80' : 'opacity-60')}>
+                  <span className={cn('tabular-nums', isActive ? 'opacity-80' : 'opacity-60')}>
                     {count}
                   </span>
                 </button>
@@ -461,7 +461,7 @@ export function InventoryPage() {
                 >
                   <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                   {t(`criticality.${c}`)}
-                  <span className={cn('tabular-nums font-mono', isActive ? 'opacity-80' : 'opacity-60')}>
+                  <span className={cn('tabular-nums', isActive ? 'opacity-80' : 'opacity-60')}>
                     {count}
                   </span>
                 </button>

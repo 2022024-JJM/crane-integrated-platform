@@ -94,7 +94,7 @@ export function CraneDetailListPage() {
                   style={{ backgroundColor: 'currentColor' }}
                 />
                 {cfg.label}
-                <span className={`tabular-nums font-mono ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                <span className={`tabular-nums ${isActive ? 'opacity-80' : 'opacity-60'}`}>
                   {counts[f]}
                 </span>
               </button>

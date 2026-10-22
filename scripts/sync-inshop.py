@@ -503,8 +503,8 @@ def patch_globals_css() -> None:
     # 를 내놓는데, --surface 는 .inshop-root 에만 있으므로 :root 에서 무효가 되어 그대로
     # 상속된다 — bg-surface·bg-status-* 가 전부 투명으로 그려진다. inline 은 유틸리티가
     # var(--surface) 를 직접 참조하게 해 요소 위치에서 해석된다.
-    # 원본 서체도 이름을 바꿔 다시 넣는다 — `font-sans` 그대로 두면 셸 토큰(IBM Plex)을 받는다.
-    s = s.replace("@theme {", "@theme inline {\n  --font-inshop-sans: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;\n", 1)
+    # 원본 서체도 이름을 바꿔 다시 넣는다 — `font-sans` 그대로 두면 셸 토큰을 받는다(지금은 둘 다 Pretendard).
+    s = s.replace("@theme {", "@theme inline {\n  --font-inshop-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;\n", 1)
     s = ":root {\n  /* @theme 의 text-* 계산식이 참조한다 — 셸 전역에서 항상 1 이어야 한다 */\n  --app-font-scale: 1;\n}\n\n" + s
     old_base = """@layer base {
   button:not(:disabled),
@@ -522,10 +522,10 @@ def patch_globals_css() -> None:
  *
  * 원본은 `body` 에 바탕·서체를 걸었지만, 셸에서는 body 가 모든 모듈의 공유
  * 자산이라 여기서 칠하면 다른 모듈 화면까지 이 팔레트로 바뀐다. 대신 이 앱이
- * 차지하는 영역에만 칠한다 — 서체도 마찬가지로 (셸 전역은 IBM Plex 다).
+ * 차지하는 영역에만 칠한다 — 서체도 마찬가지다.
  */
 .inshop-root {
-  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   background-color: var(--background);
   color: var(--foreground);
 }
@@ -694,6 +694,16 @@ def patch_block_list_scroller() -> None:
     )
 
 
+def patch_canvas_fonts() -> None:
+    step("야드 지도 캔버스: 고정폭 글꼴(IBM Plex Mono)을 Pretendard 로 — 셸이 고정폭 서체를 싣지 않는다")
+    p = DASH / "shared/features/yard-map/ui/YardMap.tsx"
+    replace_once(
+        p,
+        "const CANVAS_MONO = \"'IBM Plex Mono', ui-monospace, monospace\"",
+        "const CANVAS_MONO = CANVAS_SANS // 셸은 고정폭 서체를 싣지 않는다 — 코드·수치도 Pretendard",
+    )
+
+
 # ── 7. overlay · public · 검사 ───────────────────────────────────────────────
 def apply_overlay() -> None:
     step("손으로 쓴 어댑터 파일 overlay")
@@ -752,6 +762,7 @@ def main() -> None:
     patch_globals_css()
     patch_fixed_viewport()
     patch_block_list_scroller()
+    patch_canvas_fonts()
     check_orphans()
     sync_public()
     print("✓ sync 완료 — 이어서: pnpm --filter @crane/shell typecheck && pnpm lint && pnpm --filter @crane/shell build")

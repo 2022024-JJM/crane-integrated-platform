@@ -112,7 +112,7 @@ function AlarmPanel({ title, rows, page, totalPages, onPrev, onNext, accentColor
             ) : (
               rows.map((row, i) => (
                 <tr key={i} className="border-b border-border hover:bg-muted/50">
-                  <td className="px-3 py-1.5 font-mono text-muted-foreground text-[11px]">{row.time}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-[11px]">{row.time}</td>
                   <td className="px-2 py-1.5 text-center">
                     <span className={`font-bold text-[10px] ${row.value === 'ON' ? accentColor : 'text-muted-foreground'}`}>
                       {row.value}

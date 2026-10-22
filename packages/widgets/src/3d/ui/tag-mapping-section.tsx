@@ -184,7 +184,7 @@ function MappingCard({
       <div className="flex items-center gap-1.5">
         <span
           className={cn(
-            'text-foreground shrink-0 font-mono text-[11px] font-medium',
+            'text-foreground shrink-0 text-[11px] font-medium',
             !rig && 'flex-1',
           )}
         >
@@ -354,7 +354,7 @@ function MappingCard({
             <p
               className={cn(
                 FIELD_INDENT_COMPACT,
-                'text-muted-foreground font-mono text-[10px]',
+                'text-muted-foreground text-[10px]',
               )}
             >
               {t('monitoring:inspector.mapping.readout', {

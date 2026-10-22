@@ -41,7 +41,7 @@ function PartLeafRow({ component }: { component: CraneComponent }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium">{component.componentName}</p>
         {component.partNumber && (
-          <p className="truncate font-mono text-[10px] text-muted-foreground">
+          <p className="truncate text-[10px] text-muted-foreground">
             {component.partNumber}
           </p>
         )}
@@ -250,7 +250,7 @@ export function AssetBomTab({
           <span className={cn('size-1.5 rounded-full', TONE_DOT.warning)} />
           {t('detail.bomOnlyIssues', { defaultValue: 'Issues only' })}
           {stats.issues > 0 && (
-            <span className={cn('font-mono tabular-nums', onlyIssues ? 'opacity-80' : 'opacity-60')}>
+            <span className={cn('tabular-nums', onlyIssues ? 'opacity-80' : 'opacity-60')}>
               {stats.issues}
             </span>
           )}

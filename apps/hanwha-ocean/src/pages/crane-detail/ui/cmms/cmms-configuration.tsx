@@ -75,7 +75,6 @@ export function CmmsConfiguration() {
                   textAnchor="middle"
                   fill={isNormal ? normalText : faultText}
                   fontSize={10}
-                  fontFamily="monospace"
                   fontWeight="600"
                 >
                   {device.label}

@@ -4,7 +4,7 @@
 }
 
 @theme inline {
-  --font-inshop-sans: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  --font-inshop-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
 
 
   /*
@@ -517,10 +517,10 @@ body.camera-moving [class*='backdrop-blur'] {
  *
  * 원본은 `body` 에 바탕·서체를 걸었지만, 셸에서는 body 가 모든 모듈의 공유
  * 자산이라 여기서 칠하면 다른 모듈 화면까지 이 팔레트로 바뀐다. 대신 이 앱이
- * 차지하는 영역에만 칠한다 — 서체도 마찬가지로 (셸 전역은 IBM Plex 다).
+ * 차지하는 영역에만 칠한다 — 서체도 마찬가지다.
  */
 .inshop-root {
-  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   background-color: var(--background);
   color: var(--foreground);
 }

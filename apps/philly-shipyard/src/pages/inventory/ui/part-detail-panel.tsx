@@ -103,7 +103,7 @@ export function PartDetailPanel({
         {/* 헤더 */}
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-4">
           <div className="min-w-0">
-            <p className="font-mono text-xs text-muted-foreground">{item.partNumber}</p>
+            <p className="text-xs text-muted-foreground">{item.partNumber}</p>
             <h2 className="mt-0.5 truncate text-lg font-bold">{item.partName}</h2>
             <div className="mt-1.5">{badges}</div>
           </div>
@@ -193,7 +193,7 @@ export function PartDetailPanel({
       <div className="flex flex-col gap-1.5 border-b border-border p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-mono text-xs text-muted-foreground">{item.partNumber}</p>
+            <p className="text-xs text-muted-foreground">{item.partNumber}</p>
             <h2 className="mt-0.5 truncate text-sm font-bold">{item.partName}</h2>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">

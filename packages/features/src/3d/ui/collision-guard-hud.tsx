@@ -85,7 +85,7 @@ function TrackRow({ track }: { track: HudTrack }) {
       {/* 라벨이 없어도 셀은 유지 — 뒤 컬럼 정렬이 흔들리지 않는다 */}
       <span className="text-center">
         {track.zoneLabel ? (
-          <span className="rounded bg-slate-700/70 px-1 py-px font-mono text-[9px] font-semibold text-slate-300">
+          <span className="rounded bg-slate-700/70 px-1 py-px text-[9px] font-semibold text-slate-300">
             {track.zoneLabel}
           </span>
         ) : null}
@@ -95,7 +95,7 @@ function TrackRow({ track }: { track: HudTrack }) {
           단위는 한 단계 작고 어둡게 — 매 행 반복되므로 눈이 걸러낸다 */}
       <span
         className={cn(
-          'text-right font-mono text-[15px] leading-none font-bold tabular-nums',
+          'text-right text-[15px] leading-none font-bold tabular-nums',
           // 이탈 행은 상속색(slate-400)을 따르고, 활성 행만 흰색으로 튄다
           track.phase === 'leaving' ? 'text-current' : 'text-white',
         )}
@@ -105,7 +105,7 @@ function TrackRow({ track }: { track: HudTrack }) {
       </span>
       <span
         className={cn(
-          'text-right font-mono text-[10px] tabular-nums',
+          'text-right text-[10px] tabular-nums',
           track.phase === 'leaving' ? 'text-current' : 'text-slate-300',
         )}
       >

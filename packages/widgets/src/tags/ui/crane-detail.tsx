@@ -116,11 +116,9 @@ export function CraneDetail({
         {entry ? (
           <CraneLiveDot entry={entry} now={now} connected={connected} />
         ) : null}
-        <span className="font-mono text-lg font-semibold tracking-wide">
-          {craneId}
-        </span>
+        <span className="text-lg font-semibold tracking-wide">{craneId}</span>
         {entry?.snapshot.bay ? (
-          <span className="text-muted-foreground font-mono text-xs">
+          <span className="text-muted-foreground text-xs">
             {entry.snapshot.bay}
           </span>
         ) : null}
@@ -129,7 +127,7 @@ export function CraneDetail({
           <span className="text-muted-foreground">
             {t('monitoring:tags.lastReceived')}
           </span>
-          <span className="font-mono font-semibold">
+          <span className="font-semibold">
             {entry ? formatClock(entry.receivedAt) : '—'}
           </span>
         </span>
@@ -294,13 +292,13 @@ function TagTableRow({
   const recent = changedAgo !== null && changedAgo < RECENT_CHANGE_MS;
   return (
     <TableRow>
-      <TableCell className="font-mono text-[11.5px] whitespace-nowrap">
+      <TableCell className="text-[11.5px] whitespace-nowrap">
         {row.code}
       </TableCell>
       <TableCell className="whitespace-nowrap">{row.name}</TableCell>
       <TableCell
         className={cn(
-          'text-right font-mono font-medium whitespace-nowrap tabular-nums',
+          'text-right font-medium whitespace-nowrap tabular-nums',
           flash ? 'bg-cyan-500/30' : 'transition-colors duration-700',
         )}
       >
@@ -311,10 +309,10 @@ function TagTableRow({
         )}
       </TableCell>
       <TableCell className="text-muted-foreground">{row.unit ?? ''}</TableCell>
-      <TableCell className="text-muted-foreground text-right font-mono text-[11px] whitespace-nowrap">
+      <TableCell className="text-muted-foreground text-right text-[11px] whitespace-nowrap">
         {formatRange(row)}
       </TableCell>
-      <TableCell className="text-muted-foreground text-right font-mono">
+      <TableCell className="text-muted-foreground text-right">
         {row.stat.changeCount}
       </TableCell>
       <TableCell
@@ -325,7 +323,7 @@ function TagTableRow({
       >
         {changedAgo === null ? '—' : <AgeText ageMs={changedAgo} />}
       </TableCell>
-      <TableCell className="text-muted-foreground font-mono whitespace-nowrap">
+      <TableCell className="text-muted-foreground whitespace-nowrap">
         {formatClock(parseIsoMs(row.timestamp))}
       </TableCell>
     </TableRow>
@@ -346,7 +344,7 @@ function BoolBadge({
     <Badge
       variant={BOOL_VARIANT[display.tone]}
       className={cn(
-        'min-w-9 justify-center font-mono text-[10px] tracking-wide',
+        'min-w-9 justify-center text-[10px] tracking-wide',
         display.tone === 'none' && 'text-muted-foreground',
       )}
     >

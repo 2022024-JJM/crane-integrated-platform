@@ -690,7 +690,7 @@ function DetectionZoneRing({
             zIndexRange={[4, 0]}
             style={{ pointerEvents: 'none' }}
           >
-            <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
+            <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
               {label}
             </div>
           </Html>
@@ -724,7 +724,7 @@ function DetectionZoneRing({
         style={{ pointerEvents: 'none' }}
       >
         <span
-          className="rounded-sm border-l-2 bg-slate-950/55 py-px pr-1 pl-1.5 font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80"
+          className="rounded-sm border-l-2 bg-slate-950/55 py-px pr-1 pl-1.5 text-[10px] leading-none font-semibold whitespace-nowrap text-white/80"
           style={{ borderLeftColor: COLLISION_GUARD_COLORS.danger }}
         >
           {Math.round(zoneDisplayDistanceM(zone.dangerRadius, zone))}m
@@ -741,7 +741,7 @@ function DetectionZoneRing({
         style={{ pointerEvents: 'none' }}
       >
         <span
-          className="rounded-sm border-l-2 bg-slate-950/55 py-px pr-1 pl-1.5 font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80"
+          className="rounded-sm border-l-2 bg-slate-950/55 py-px pr-1 pl-1.5 text-[10px] leading-none font-semibold whitespace-nowrap text-white/80"
           style={{ borderLeftColor: COLLISION_GUARD_COLORS.detection }}
         >
           {Math.round(zoneDisplayDistanceM(zone.radius, zone))}m

@@ -85,7 +85,7 @@ export function CraneSummaryCard({ crane }: CraneSummaryCardProps) {
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-baseline gap-1">
             <span className="text-[10px] text-muted-foreground">Load</span>
-            <span className="text-[12px] font-bold font-mono tabular-nums" style={{ color: cfg.accent }}>
+            <span className="text-[12px] font-bold tabular-nums" style={{ color: cfg.accent }}>
               {hoist1.load != null ? `${hoist1.load.toFixed(1)}t` : '—'}
             </span>
           </div>
@@ -130,7 +130,7 @@ export function CraneSummaryCard({ crane }: CraneSummaryCardProps) {
               return (
                 <div key={m.name} className="flex items-center justify-between py-0.5">
                   <span className="text-[10px] text-muted-foreground font-medium truncate">{m.name}</span>
-                  <span className="text-[10px] font-bold font-mono shrink-0 ml-2" style={{ color: mc.accent }}>
+                  <span className="text-[10px] font-bold shrink-0 ml-2" style={{ color: mc.accent }}>
                     {s}
                   </span>
                 </div>
@@ -162,7 +162,7 @@ function MetricPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-1">
       <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</span>
-      <span className="text-[11px] font-mono font-semibold text-foreground tabular-nums">{value}</span>
+      <span className="text-[11px] font-semibold text-foreground tabular-nums">{value}</span>
     </div>
   );
 }
@@ -198,7 +198,7 @@ function StatusItem({
     <div className="flex items-center gap-1.5">
       <Icon className={`size-3 shrink-0 ${iconColor}`} />
       <span className="text-[10px] text-muted-foreground truncate">{label}</span>
-      <span className={`text-[10px] font-mono font-semibold ml-auto shrink-0 ${allOk ? 'text-emerald-400' : hasFault ? 'text-red-400' : 'text-amber-400'}`}>
+      <span className={`text-[10px] font-semibold ml-auto shrink-0 ${allOk ? 'text-emerald-400' : hasFault ? 'text-red-400' : 'text-amber-400'}`}>
         {isCounter ? total : `${ok}/${total}`}
       </span>
     </div>

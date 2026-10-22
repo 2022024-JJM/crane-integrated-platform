@@ -8,7 +8,7 @@ import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
 import type { ChecklistItem, InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
-import { FINDING_TONE_COLOR, KC, KC_FONT_MONO, usd, type FindingTone } from '../../../shared/ui/kc';
+import { FINDING_TONE_COLOR, KC, usd, type FindingTone } from '../../../shared/ui/kc';
 import { KcButton, KcEmpty, KcFieldRow, KcSection, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import { fmtDate } from '../../../shared/lib/service-status';
@@ -598,7 +598,7 @@ export function Mro2ServiceRequestDetailPage() {
           </span>
         }
       >
-        {t('common.serviceRequest')} <span style={{ fontFamily: KC_FONT_MONO }}>{woNumber ?? ''}</span>
+        {t('common.serviceRequest')} <span>{woNumber ?? ''}</span>
       </KcSectionHeading>
       {kind === 'inspection' && inspection ? <InspectionDetail wo={inspection} /> : null}
       {kind === 'repair' && repair ? <RepairDetail wo={repair} /> : null}

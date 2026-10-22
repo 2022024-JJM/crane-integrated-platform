@@ -5,7 +5,7 @@ import { Plus, X } from 'lucide-react';
 import { useAssetForm, useCreateAsset } from '@crane/features/asset';
 import { getAllCraneAssets } from '@crane/domain/asset';
 import type { AssetStatus, CraneType } from '@crane/domain/asset';
-import { KC, KC_FONT_DISPLAY } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import { KcButton, KcModal } from '../../../shared/ui/kc-ui';
 
 const CRANE_TYPES: CraneType[] = ['goliath', 'overhead', 'gantry', 'jib', 'ttc', 'llc', 'luffing'];
@@ -92,7 +92,7 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
     <KcModal onClose={requestClose} maxWidth={640}>
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+        <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink }}>
           {t('asset-management:modal.title')}
         </h2>
         <button type="button" aria-label={t('asset-management:modal.close')} onClick={requestClose} className="cursor-pointer">

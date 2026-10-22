@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KC, KC_FONT_DISPLAY } from './kc';
+import { KC } from './kc';
 
 /** 큰 숫자 + 라벨 + 색 언더라인 (3-스탯 트리오의 벽돌) */
 export function KcStat({
@@ -18,7 +18,7 @@ export function KcStat({
     <div className="flex flex-col items-center gap-0.5 px-1">
       <span
         className={size === 'lg' ? 'text-[26px] leading-8' : 'text-[20px] leading-7'}
-        style={{ color: KC.ink, fontWeight: 700, fontFamily: KC_FONT_DISPLAY }}
+        style={{ color: KC.ink, fontWeight: 700 }}
       >
         {value}
       </span>

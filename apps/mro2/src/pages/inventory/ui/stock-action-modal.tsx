@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useIssuePart, useReceivePart } from '@crane/features/inventory';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import type { OpenPoLine } from '@crane/domain/inventory';
-import { KC, KC_FONT_DISPLAY } from '../../../shared/ui/kc';
+import { KC } from '../../../shared/ui/kc';
 import { KcButton, KcModal } from '../../../shared/ui/kc-ui';
 
 export type ActionMode = 'issue' | 'receipt';
@@ -126,7 +126,7 @@ export function StockActionModal({
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: KC.hairline }}>
         <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
+          <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink }}>
             {t(mode === 'issue' ? 'inventory.actions.issueTitle' : 'inventory.actions.receiptTitle')}
           </h2>
           <div className="truncate text-[11px]" style={{ color: KC.muted }}>

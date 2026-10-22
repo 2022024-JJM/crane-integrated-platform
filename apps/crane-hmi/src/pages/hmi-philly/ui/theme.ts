@@ -145,6 +145,3 @@ export const PhillyThemeContext = createContext<PhillyTheme>(LIGHT);
 export function usePhillyTheme(): PhillyTheme {
   return use(PhillyThemeContext);
 }
-
-export const PHILLY_FONT =
-  "'Segoe UI', 'Noto Sans KR Variable', system-ui, -apple-system, sans-serif";

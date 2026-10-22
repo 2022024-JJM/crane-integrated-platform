@@ -13,7 +13,7 @@ function Kbd({ className, ...props }: ComponentProps<'kbd'>) {
     <kbd
       data-slot="kbd"
       className={cn(
-        'bg-muted border-border text-foreground pointer-events-none inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5 font-mono text-[11px] leading-none select-none',
+        'bg-muted border-border text-foreground pointer-events-none inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5 font-sans text-[11px] leading-none select-none',
         'in-data-[slot=tooltip-content]:bg-background/20 in-data-[slot=tooltip-content]:border-background/30 in-data-[slot=tooltip-content]:text-background',
         className,
       )}

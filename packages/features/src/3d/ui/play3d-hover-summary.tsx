@@ -114,15 +114,13 @@ function Title({ label, time }: { label: string; time?: string }) {
   return (
     <span className="flex w-full items-baseline justify-between gap-3 font-medium">
       <span>{label}</span>
-      {time ? (
-        <span className="font-mono tabular-nums opacity-70">{time}</span>
-      ) : null}
+      {time ? <span className="tabular-nums opacity-70">{time}</span> : null}
     </span>
   );
 }
 
 function Detail({ children }: { children: React.ReactNode }) {
-  return <span className="font-mono tabular-nums opacity-70">{children}</span>;
+  return <span className="tabular-nums opacity-70">{children}</span>;
 }
 
 /** 충돌 양쪽을 배지로 — 긴 이름은 배지 단위로 줄바꿈하고 한 배지 안에서는 말줄임. */

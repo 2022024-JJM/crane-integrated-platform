@@ -14,7 +14,7 @@ export function CmmsValueRow({ label, value, highlight = false, bordered = false
       <span className="text-xs text-foreground shrink-0">{label}</span>
       <span
         className={[
-          'text-xs font-mono px-2 py-0.5 rounded min-w-14',
+          'text-xs px-2 py-0.5 rounded min-w-14',
           align === 'right' ? 'text-right' : 'text-center',
           bordered ? 'border border-border' : '',
           highlight
