@@ -269,7 +269,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
                     'h-6 shrink-0 justify-between px-1.5 text-[10px] font-normal',
                   )}
                 >
-                  <span className="truncate">
+                  <span className="text-box-cap truncate">
                     {formatSceneSiteLocation(location)}
                   </span>
                 </SelectTrigger>

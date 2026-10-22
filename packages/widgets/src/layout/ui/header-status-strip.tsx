@@ -79,11 +79,11 @@ function HeaderInfoPill({
           strokeWidth={2.2}
         />
       ) : null}
-      <span className="text-[11px] tracking-wide whitespace-nowrap">
+      <span className="text-box-cap text-[11px] tracking-wide whitespace-nowrap">
         {value}
       </span>
       {accentValue ? (
-        <span className="shrink-0 text-[12px] font-semibold whitespace-nowrap tabular-nums">
+        <span className="text-box-cap shrink-0 text-[12px] font-semibold whitespace-nowrap tabular-nums">
           {accentValue}
         </span>
       ) : null}

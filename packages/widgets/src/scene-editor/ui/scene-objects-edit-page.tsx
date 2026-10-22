@@ -1257,13 +1257,16 @@ function ProjectPalettePanel({
               aria-pressed={isActive}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                'flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-b-2 px-2 text-[11px] font-medium transition-colors',
+                // 위에도 같은 두께의 투명 테두리 — 밑줄만 있으면 글자가 탭 전체로는 1px 뜬다.
+                'flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-y-2 border-t-transparent px-2 text-[11px] font-medium transition-colors',
                 isActive
-                  ? 'border-primary text-foreground'
-                  : 'text-muted-foreground hover:text-foreground border-transparent',
+                  ? 'border-b-primary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-b-transparent',
               )}
             >
-              <span className="truncate">{t(PANEL_TAB_LABEL_KEY[tab])}</span>
+              <span className="text-box-cap truncate">
+                {t(PANEL_TAB_LABEL_KEY[tab])}
+              </span>
             </button>
           );
         })}

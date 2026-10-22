@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 
 import { cn } from '@crane/core/lib/utils';
+import { CapText } from './cap-text';
 
 /**
  * 키 표기 아톰. `data-slot="kbd"` 는 TooltipContent 가 인식하는 훅이라
@@ -8,7 +9,7 @@ import { cn } from '@crane/core/lib/utils';
  * 툴팁은 전경색 배경(`bg-foreground text-background`)이라 그 안에서는
  * 배경·테두리·글자색을 반전한다.
  */
-function Kbd({ className, ...props }: ComponentProps<'kbd'>) {
+function Kbd({ className, children, ...props }: ComponentProps<'kbd'>) {
   return (
     <kbd
       data-slot="kbd"
@@ -18,7 +19,9 @@ function Kbd({ className, ...props }: ComponentProps<'kbd'>) {
         className,
       )}
       {...props}
-    />
+    >
+      <CapText>{children}</CapText>
+    </kbd>
   );
 }
 

@@ -385,7 +385,7 @@ export function PageSettings() {
                           className="text-muted-foreground hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground h-8 justify-center gap-2 rounded-md px-4 py-3 text-sm aria-pressed:shadow-sm"
                         >
                           <Icon className="size-4" />
-                          <span>{option.label}</span>
+                          <span className="text-box-cap">{option.label}</span>
                         </ToggleGroupItem>
                       );
                     })}

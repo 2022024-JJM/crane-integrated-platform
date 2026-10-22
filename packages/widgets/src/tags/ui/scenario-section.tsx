@@ -107,7 +107,7 @@ export function ScenarioSection() {
               aria-label={t('monitoring:virtualTags.scenarios.title')}
               className="bg-muted h-7 w-48 rounded-sm px-2 text-xs font-normal"
             >
-              <span className="truncate">
+              <span className="text-box-cap truncate">
                 {selected
                   ? selected.name || t('monitoring:simulation.unnamed')
                   : t('monitoring:virtualTags.scenarios.empty')}
@@ -225,7 +225,7 @@ export function ScenarioSection() {
                     aria-label={t('monitoring:virtualTags.scenarios.selectTag')}
                     className="bg-muted h-7 w-56 rounded-sm px-2 text-xs font-normal"
                   >
-                    <span className="truncate">
+                    <span className="text-box-cap truncate">
                       {trackKeyToAdd === NONE
                         ? t('monitoring:virtualTags.scenarios.selectTag')
                         : trackKeyToAdd}
@@ -422,7 +422,7 @@ function TrackCard({
                     aria-label={t('monitoring:virtualTags.scenarios.ease')}
                     className="bg-muted h-7 w-full min-w-0 rounded-sm px-2 text-xs font-normal"
                   >
-                    <span className="truncate">
+                    <span className="text-box-cap truncate">
                       {t(
                         `monitoring:virtualTags.scenarios.eases.${frame.ease ?? 'linear'}`,
                       )}

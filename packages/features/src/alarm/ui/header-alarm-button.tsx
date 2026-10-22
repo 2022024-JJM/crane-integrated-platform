@@ -397,7 +397,7 @@ export function HeaderAlarmButton() {
                     isActive && visual.surfaceClassName,
                   )}
                 >
-                  <span className={visual.emphasisClassName}>
+                  <span className={cn('text-box-cap', visual.emphasisClassName)}>
                     {getAlarmSeverityLabel(sev, i18n.language)} ({count})
                   </span>
                 </Button>

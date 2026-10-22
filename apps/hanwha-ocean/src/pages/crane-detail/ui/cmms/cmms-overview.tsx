@@ -26,10 +26,10 @@ export function CmmsOverview() {
           <StatusIndicator color="bg-emerald-400" label={t('overview.systemStatus')} />
           <StatusIndicator color="bg-emerald-400" label={t('overview.plcCommStatus')} />
           <div className="w-px h-4 bg-border" />
-          <span className="text-muted-foreground">
+          <span className="text-box-cap text-muted-foreground">
             {t('overview.hoistMode')} <span className="text-foreground font-semibold ml-2">H1</span>
           </span>
-          <span className="text-muted-foreground">
+          <span className="text-box-cap text-muted-foreground">
             {t('overview.trolleyMode')} <span className="text-foreground font-semibold ml-2">UT</span>
           </span>
         </div>
@@ -595,7 +595,7 @@ function StatusIndicator({ color, label }: { color: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <span className={`size-2 rounded-full shrink-0 ${color}`} />
-      <span className="text-muted-foreground whitespace-nowrap">{label}</span>
+      <span className="text-box-cap text-muted-foreground whitespace-nowrap">{label}</span>
     </span>
   );
 }

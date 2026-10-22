@@ -84,7 +84,7 @@ export function SceneViewBar({
                   }
                   onClick={() => onSelectView(view)}
                 >
-                  <span className="truncate">{view.name}</span>
+                  <span className="text-box-cap truncate">{view.name}</span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   {t('monitoring:sceneViews.flyTo', { name: view.name })}

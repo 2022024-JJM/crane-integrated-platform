@@ -2,6 +2,7 @@ import { Select as SelectPrimitive } from '@base-ui/react';
 import { Check, ChevronDown } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
+import { CapText } from '../atoms/cap-text';
 import { usePortalContainer } from './portal-container';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,11 +50,11 @@ function SelectTrigger({
       {...props}
     >
       {children !== undefined ? (
-        children
+        <CapText>{children}</CapText>
       ) : label !== undefined ? (
-        <span>{label}</span>
+        <span className="text-box-cap">{label}</span>
       ) : (
-        <SelectPrimitive.Value />
+        <SelectPrimitive.Value className="text-box-cap" />
       )}
       {/* ghost 는 부모 글자색을 따라 hover 시 라벨과 함께 진해진다. */}
       <ChevronDown

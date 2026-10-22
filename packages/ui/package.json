@@ -12,6 +12,7 @@
     "./atoms/button": "./src/atoms/button.tsx",
     "./atoms/checkbox": "./src/atoms/checkbox.tsx",
     "./atoms/calendar": "./src/atoms/calendar.tsx",
+    "./atoms/cap-text": "./src/atoms/cap-text.tsx",
     "./atoms/hanwha-icon": "./src/atoms/hanwha-icon.tsx",
     "./atoms/input-number": "./src/atoms/input-number.tsx",
     "./atoms/input": "./src/atoms/input.tsx",

@@ -34,14 +34,15 @@ function TabsTab({ className, children, ...props }: TabsPrimitive.Tab.Props) {
   return (
     <TabsPrimitive.Tab
       className={cn(
-        'text-muted-foreground hover:text-foreground flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-b-2 border-transparent px-2 text-[11px] font-medium transition-colors outline-none',
+        // 위에도 같은 두께의 투명 테두리 — 밑줄만 있으면 글자가 밑줄 위 영역의 가운데에 놓여 탭 전체로는 1px 뜬다.
+        'text-muted-foreground hover:text-foreground flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-y-2 border-transparent px-2 text-[11px] font-medium transition-colors outline-none',
         'focus-visible:ring-ring/50 focus-visible:ring-2',
-        'data-[active]:border-primary data-[active]:text-foreground',
+        'data-[active]:border-b-primary data-[active]:text-foreground',
         className,
       )}
       {...props}
     >
-      <span className="truncate">{children as ReactNode}</span>
+      <span className="text-box-cap truncate">{children as ReactNode}</span>
     </TabsPrimitive.Tab>
   );
 }

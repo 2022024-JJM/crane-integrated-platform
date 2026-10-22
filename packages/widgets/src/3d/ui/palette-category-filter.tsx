@@ -61,10 +61,12 @@ export function PaletteCategoryFilter({
         onClick={onClear}
         className={cn(CHIP_CLASS, allActive ? CHIP_ACTIVE_CLASS : CHIP_IDLE_CLASS)}
       >
-        {t('monitoring:editor.categoryFilter.all')}
+        <span className="text-box-cap">
+          {t('monitoring:editor.categoryFilter.all')}
+        </span>
         <span
           className={cn(
-            'text-[10px] tabular-nums',
+            'text-box-cap text-[10px] tabular-nums',
             allActive ? 'text-primary' : 'text-muted-foreground/70',
           )}
         >
@@ -81,7 +83,7 @@ export function PaletteCategoryFilter({
           onClick={() => onToggle(category)}
           className={cn(CHIP_CLASS, CHIP_ACTIVE_CLASS, 'min-w-0')}
         >
-          <span className="truncate">{category}</span>
+          <span className="text-box-cap truncate">{category}</span>
           <X className="text-muted-foreground size-3 shrink-0" />
         </button>
       ))}
@@ -106,7 +108,9 @@ export function PaletteCategoryFilter({
           }
         >
           <Blocks className="size-3 shrink-0" />
-          {t('monitoring:editor.categoryFilter.open')}
+          <span className="text-box-cap">
+            {t('monitoring:editor.categoryFilter.open')}
+          </span>
           <ChevronRight
             className={cn(
               'size-3 shrink-0 transition-transform',

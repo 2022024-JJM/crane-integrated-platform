@@ -166,7 +166,7 @@ export function SceneSimulationPanel({
             aria-label={t('monitoring:simulation.scenario')}
             className="bg-muted h-7 min-w-0 flex-1 rounded-sm px-2 text-xs font-normal"
           >
-            <span className="truncate">
+            <span className="text-box-cap truncate">
               {scenario
                 ? scenario.name || t('monitoring:simulation.unnamed')
                 : t('monitoring:simulation.none')}

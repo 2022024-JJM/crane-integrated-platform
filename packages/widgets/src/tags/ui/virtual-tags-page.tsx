@@ -243,7 +243,7 @@ function TagRow({
             className="bg-muted h-7 w-full min-w-0 rounded-sm px-2 text-xs font-normal"
           >
             <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-              <span className="truncate">
+              <span className="text-box-cap truncate">
                 {t(`monitoring:virtualTags.patterns.${tag.pattern.kind}`)}
               </span>
               <WaveformIcon kind={tag.pattern.kind} />

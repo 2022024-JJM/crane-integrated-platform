@@ -88,10 +88,10 @@ function TreeRow({
         )}
       >
         {leading}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="text-box-cap min-w-0 flex-1 truncate">{label}</span>
         <span
           className={cn(
-            'shrink-0 text-xs tabular-nums',
+            'text-box-cap shrink-0 text-xs tabular-nums',
             active
               ? 'text-foreground/70'
               : empty
@@ -139,10 +139,10 @@ function CategoryRow({
         onCheckedChange={onToggle}
         className="size-3.5 after:hidden"
       />
-      <span className="min-w-0 flex-1 truncate">{category}</span>
+      <span className="text-box-cap min-w-0 flex-1 truncate">{category}</span>
       <span
         className={cn(
-          'shrink-0 text-xs tabular-nums',
+          'text-box-cap shrink-0 text-xs tabular-nums',
           disabled ? 'text-muted-foreground/50' : 'text-muted-foreground',
         )}
       >

@@ -21,7 +21,7 @@ export function OnOffBadge({ value, label, className }: OnOffBadgeProps) {
         className,
       )}
     >
-      {label ?? value}
+      <span className="text-box-cap">{label ?? value}</span>
     </span>
   );
 }
@@ -40,7 +40,7 @@ export function OkNgBadge({ value, className }: OkNgBadgeProps) {
         className,
       )}
     >
-      {value}
+      <span className="text-box-cap">{value}</span>
     </span>
   );
 }
@@ -54,12 +54,12 @@ export function RunFaultBadge({ value, className }: RunFaultBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded border px-2 py-0.5 text-[11px] font-bold',
+        'inline-flex h-[22px] items-center justify-center rounded border px-2 text-[11px] font-bold',
         className,
       )}
       style={runFaultBadgeStyle[value]}
     >
-      {value}
+      <span className="text-box-cap">{value}</span>
     </span>
   );
 }
@@ -74,14 +74,14 @@ export function OpenCloseBadge({ value, className }: OpenCloseBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-bold tracking-wide',
+        'inline-flex h-[21px] items-center justify-center rounded border px-1.5 text-[10px] font-bold tracking-wide',
         isOpen
           ? 'border-emerald-500 bg-emerald-500 text-white'
           : 'border-zinc-600 bg-zinc-600 text-zinc-300',
         className,
       )}
     >
-      {value}
+      <span className="text-box-cap">{value}</span>
     </span>
   );
 }

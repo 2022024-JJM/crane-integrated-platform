@@ -96,7 +96,7 @@ function RailRow({
           )}
         />
         {leading}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="text-box-cap min-w-0 flex-1 truncate">{label}</span>
         {count !== undefined ? (
           <span
             className={cn(
@@ -104,7 +104,7 @@ function RailRow({
               emphasizeCount
                 ? 'bg-foreground/10 text-foreground min-w-5 rounded-full px-1.5 py-1 text-center text-[11px] leading-none font-semibold'
                 : cn(
-                    'text-xs',
+                    'text-box-cap text-xs',
                     active ? 'text-foreground/70' : 'text-muted-foreground',
                   ),
             )}

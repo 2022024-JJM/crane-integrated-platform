@@ -6,6 +6,7 @@ import { ToggleGroup as ToggleGroupPrimitive } from '@base-ui/react/toggle-group
 import { type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@crane/core/lib/utils';
+import { CapText } from '../atoms/cap-text';
 import { toggleVariants } from '../atoms/toggle';
 
 const ToggleGroupContext = React.createContext<
@@ -82,7 +83,7 @@ function ToggleGroupItem({
       )}
       {...props}
     >
-      {children}
+      <CapText>{children}</CapText>
     </TogglePrimitive>
   );
 }

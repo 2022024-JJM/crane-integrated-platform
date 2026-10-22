@@ -42,6 +42,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * 한 줄 글자의 세로 중앙 — 글자 상자를 대문자 높이~기준선으로 잘라 그 상자를
+ * 가운데에 놓는다. Chrome 은 서체의 위·아래 높이를 정수 px 로 반올림하고 줄
+ * 간격 위쪽 절반을 내림해서, 줄 상자로 가운데 맞추면 Pretendard 가 0.5~1.5px
+ * 위로 뜬다. 글자를 직접 감싼 요소에만 걸린다(플렉스 컨테이너에 걸면 무효) —
+ * 공용 컴포넌트는 CapText 로 글자를 감싼다. 높이가 내용으로 정해지는 요소에
+ * 걸면 그만큼 줄어드니 고정 높이 컨트롤에 쓴다. 잘린 상자 밖으로 나오는 획이
+ * 잘리지 않게 truncate 와 함께면 overflow 를 clip 으로 바꾸고 여유를 둔다.
+ */
+@utility text-box-cap {
+  text-box: trim-both cap alphabetic;
+  overflow-clip-margin: 0.3em;
+  &.truncate {
+    overflow: clip;
+  }
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

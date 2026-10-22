@@ -165,7 +165,7 @@ export function Play3dTransportBar({
                   className="h-7 gap-1.5 px-2"
                 >
                   <CalendarRange className="size-3.5" />
-                  <span className="text-[11px]">
+                  <span className="text-box-cap text-[11px]">
                     {formatRangeLabel(search.viewingFrom, search.viewingTo)}
                   </span>
                   <ChevronDown className="size-3 opacity-60" />
@@ -203,7 +203,7 @@ export function Play3dTransportBar({
                   className="h-7 gap-1.5 px-2"
                 >
                   <Gauge className="size-3.5" />
-                  <span className="text-[11px]">
+                  <span className="text-box-cap text-[11px]">
                     {t('monitoring:simulation.title')}
                   </span>
                   <ChevronDown className="size-3 opacity-60" />

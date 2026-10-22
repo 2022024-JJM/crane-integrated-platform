@@ -34,9 +34,12 @@ export function BayChip({
       )}
       onClick={onClick}
     >
-      <span>{label}</span>
+      <span className="text-box-cap">{label}</span>
       <span
-        className={pressed ? 'text-foreground/70' : 'text-muted-foreground'}
+        className={cn(
+          'text-box-cap',
+          pressed ? 'text-foreground/70' : 'text-muted-foreground',
+        )}
       >
         {count}
       </span>
