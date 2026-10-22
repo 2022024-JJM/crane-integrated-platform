@@ -253,10 +253,15 @@ describe('seek 신호', () => {
   });
 });
 
-describe('seek 의 화면 적용', () => {
-  it('seekTo 는 즉시 대입(smoothTime 0)으로, loadFrames·tick 은 기본 스무딩으로 내보낸다', () => {
+describe('화면 적용 스무딩', () => {
+  function captureOptions() {
     const options: Array<TagPublishOptions | undefined> = [];
     setTagIngest((_key, _value, o) => options.push(o));
+    return options;
+  }
+
+  it('seekTo 는 즉시 대입(smoothTime 0), loadFrames 는 기본, tick 은 들어가는 프레임 길이 ÷ 배속', () => {
+    const options = captureOptions();
     store().loadFrames([frame(0), frame(10), frame(20)], [1000, 1000, 1000]);
     expect(options).toEqual([undefined]);
     store().seekTo(2);
@@ -265,6 +270,38 @@ describe('seek 의 화면 적용', () => {
     store().play();
     store().tick();
     expect(options.length).toBe(4);
-    expect(options.at(-1)).toBeUndefined();
+    expect(options.at(-1)).toEqual({ smoothTime: 1 });
+  });
+
+  it('배속을 올리면 스무딩도 그만큼 짧아진다 — 다음 프레임이 올 때 정확히 닿는다', () => {
+    const options = captureOptions();
+    store().loadFrames([frame(0), frame(10), frame(20)], [1000, 2000, 1000]);
+    store().setSpeed(4);
+    store().play();
+    store().tick();
+    // 1번 프레임(2000ms)에 들어간다 — 2000 / 4 = 500ms.
+    expect(options.at(-1)).toEqual({ smoothTime: 0.5 });
+    store().setSpeed(0.5);
+    store().tick();
+    expect(options.at(-1)).toEqual({ smoothTime: 2 });
+  });
+
+  it('마지막 프레임(길이 0)에 닿는 tick 은 직전 프레임 길이로 스무딩한다 — 끝에서 점프하지 않는다', () => {
+    const options = captureOptions();
+    store().loadFrames([frame(0), frame(10), frame(20)], [1000, 1000, 0]);
+    store().seekTo(1);
+    store().play();
+    store().tick();
+    expect(store().frameIndex).toBe(2);
+    expect(options.at(-1)).toEqual({ smoothTime: 1 });
+  });
+
+  it('길이 표가 기본값으로 채워졌으면 기본 길이 ÷ 배속', () => {
+    const options = captureOptions();
+    store().loadFrames([frame(0), frame(10)], [1000]); // 길이 불일치 → 전부 5000
+    store().setSpeed(2);
+    store().play();
+    store().tick();
+    expect(options.at(-1)).toEqual({ smoothTime: 2.5 });
   });
 });

@@ -297,7 +297,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
 - 시뮬레이션 값은 씬 시간의 함수다 — 가상 태그 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
-- 실시간 러너의 publish 스무딩 시간은 키별 **값 변화 간격**이다(`lib/realtime-smoothing.ts`). publish 간격으로 재지 않고(브리지가 스냅샷의 태그 전부를 재발행한다), 바뀌지 않은 재발행은 마지막 스무딩 시간을 이어받는다 — 기본값으로 넘기면 진행 중 스무딩이 잘린다 (tag-mapping-rig).
+- 값 생산자의 정상 전진 스무딩 시간은 **다음 값이 올 때까지의 벽시계 시간**이다 — 가상 태그 `tickMs / speed`, 리플레이 프레임 길이 ÷ 배속(`lib/replay-smoothing.ts`), 실시간은 키별 값 변화 간격(`lib/realtime-smoothing.ts`, publish 간격이 아니다 — 브리지가 스냅샷의 태그 전부를 재발행한다). 바뀌지 않은 재발행은 마지막 스무딩 시간을 이어받는다 — 기본값으로 넘기면 진행 중 스무딩이 잘린다 (tag-mapping-rig, 3d-play).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
 - 모델·지도·배경의 목록은 자산 라이브러리(`library.json`)가 유일한 원천이다. 코드에 자산 목록을 두지 않는다 (asset-library).

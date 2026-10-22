@@ -4,6 +4,7 @@ import {
   toTagNumber,
   type ReplayLiteFrame,
 } from '@crane/domain/monitoring';
+import { resolveReplaySmoothTime } from '../lib/replay-smoothing';
 import { rigValueStore } from './rig-value-store';
 import { notifySceneSeek } from './scene-seek-signal';
 import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
@@ -12,6 +13,25 @@ const DEFAULT_REPLAY_FRAME_DURATION_MS = 5_000;
 
 /** seek — 위치 불연속. 화면에 즉시 대입해 rest 를 거쳐 미끄러지지 않는다. */
 const PUBLISH_IMMEDIATE: TagPublishOptions = { smoothTime: 0 };
+
+/**
+ * 정상 전진(tick) — 들어가는 프레임이 화면에 머무는 벽시계 시간만큼 스무딩해
+ * 다음 프레임 값이 올 때 정확히 닿는다(lib/replay-smoothing.ts). 못 정하면
+ * 옵션 없음 = 소비자 기본.
+ */
+function advanceOptions(
+  frameDurationsMs: readonly number[],
+  frameIndex: number,
+  speedMultiplier: number,
+): TagPublishOptions | undefined {
+  const smoothTime = resolveReplaySmoothTime(
+    frameDurationsMs,
+    frameIndex,
+    speedMultiplier,
+    DEFAULT_REPLAY_FRAME_DURATION_MS,
+  );
+  return smoothTime === undefined ? undefined : { smoothTime };
+}
 
 function applyReplayFrame(
   frame: ReplayLiteFrame | undefined,
@@ -142,7 +162,7 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
   setSpeed: (speed) => set({ speedMultiplier: speed }),
 
   tick: () => {
-    const { frames, frameIndex } = get();
+    const { frames, frameIndex, frameDurationsMs, speedMultiplier } = get();
     const nextFrameIndex = frameIndex + 1;
 
     if (nextFrameIndex >= frames.length) {
@@ -151,7 +171,10 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
     }
 
     set({ frameIndex: nextFrameIndex });
-    applyReplayFrame(frames[nextFrameIndex]);
+    applyReplayFrame(
+      frames[nextFrameIndex],
+      advanceOptions(frameDurationsMs, nextFrameIndex, speedMultiplier),
+    );
   },
 
   reset: () => {

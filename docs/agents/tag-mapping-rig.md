@@ -86,7 +86,7 @@
 - 바인딩은 모니터링 뷰·에디터 모두 화면이 떠 있는 동안 항상 켜 두고 언마운트 시 값 저장소를 비운다.
 - 재생 토글(가상 태그 탭·3D 플레이 트랜스포트 바)은 러너 틱만 켜고 끈다. 일시정지하면 노드가 마지막 값에 머물고, 초기값 복귀는 리셋 버튼이 한다.
 - 기즈모 드래그 중엔 루트 맵핑을 건너뛴다. 드래그 종료 프레임의 루트 rest handoff 는 `docs/agents/3d-editor.md`.
-- publish 옵션 `smoothTime`(`TagPublishOptions`): 생략은 기본 스무딩, 0 은 즉시 대입. 가상 태그 러너의 정상 전진은 publish 벽시계 간격(`tickMs / speed`)을 넣어 스텝 계단을 숨기고(화면 지연은 씬 시간 한 스텝), 실시간 러너는 키별 값 변화 간격을 넣고(아래 "실시간 태그 피드"), 러너 seek·리셋과 리플레이 seek 는 0 으로 내보낸다. 소비자 `createTagBindingSource` 가 `tagSetOptions` 로 값 저장소 set 옵션으로 바꾼다. 관찰자에게는 전달하지 않는다. 값 저장소 set 은 같은 target 이 와도 `smoothTime` 을 덮어쓴다 — 재발행하는 생산자는 같은 값을 넘길 것.
+- publish 옵션 `smoothTime`(`TagPublishOptions`): 생략은 기본 스무딩, 0 은 즉시 대입. 가상 태그 러너의 정상 전진은 publish 벽시계 간격(`tickMs / speed`)을 넣어 스텝 계단을 숨기고(화면 지연은 씬 시간 한 스텝), 리플레이 `tick` 은 들어가는 프레임 길이 ÷ 배속을(`lib/replay-smoothing.ts`, `docs/agents/3d-play.md`), 실시간 러너는 키별 값 변화 간격을 넣고(아래 "실시간 태그 피드"), 러너 seek·리셋과 리플레이 seek 는 0 으로 내보낸다. 소비자 `createTagBindingSource` 가 `tagSetOptions` 로 값 저장소 set 옵션으로 바꾼다. 관찰자에게는 전달하지 않는다. 값 저장소 set 은 같은 target 이 와도 `smoothTime` 을 덮어쓴다 — 재발행하는 생산자는 같은 값을 넘길 것.
 - 버스 관찰자 `subscribeTagValues` 는 소비자 슬롯과 별개의 다중 구독이다(3D 플레이 통계 등이 쓴다 — `docs/agents/3d-play.md`).
 - 값 저장소의 set/reset/restore 와 스무딩 잔여는 프레임 요청·그림자 무효화가 배선돼 있다 — `docs/agents/rendering-perf.md`.
 
