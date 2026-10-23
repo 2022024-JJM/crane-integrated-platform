@@ -255,9 +255,17 @@ export function SceneMinimap({
       context.drawImage(image, 0, 0);
       const pose = getPose();
       const hover = hoverRef.current;
-      // 고정 뷰 핀 → 장비 마커 → 카메라(부채꼴·픽토그램). 알람 색 마커가
-      // 핀에 가려지지 않고, 카메라가 마커에 가려지지 않는다 — 부채꼴은
-      // 반투명 그라데이션이라 안의 마커가 비쳐 보인다.
+      // 장비 마커 → 고정 뷰 핀 → 카메라(부채꼴·픽토그램). 겹치면 누를 때
+      // 먼저 잡히는 핀이 위에 보이고, 카메라는 둘 다 덮는다 — 부채꼴은
+      // 반투명 그라데이션이라 안의 마커·핀이 비쳐 보인다.
+      markersRef.current = drawMarkers(
+        context,
+        drawFrame,
+        scale,
+        sceneInfo,
+        alarmsByCraneId,
+        cacheRef.current,
+      );
       const pins = resolveViewPins(drawFrame, scale, views);
       pinsRef.current = pins;
       const hoveredPin = pickViewPin(pins, hover, scale);
@@ -272,14 +280,6 @@ export function SceneMinimap({
           ) ?? null)
         : null;
       drawViewPins(context, drawFrame, scale, pins, hoveredPin, currentPin);
-      markersRef.current = drawMarkers(
-        context,
-        drawFrame,
-        scale,
-        sceneInfo,
-        alarmsByCraneId,
-        cacheRef.current,
-      );
       const camera = resolveCameraDraw(drawFrame, scale, pose);
       if (camera) {
         drawCameraFootprint(context, scale, camera);
