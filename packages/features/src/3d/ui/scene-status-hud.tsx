@@ -142,7 +142,7 @@ export function SceneStatusHud({
         <Divider />
         <WindCell weather={weather} />
         <Divider />
-        <div className="flex flex-col gap-1.5 pr-3 pl-3.5 text-[11px] leading-none text-neutral-400">
+        <div className="flex flex-col gap-1 pr-3 pl-3.5 text-[11px] leading-none text-neutral-400">
           <span className="flex items-center justify-between gap-3">
             <span>{t('monitoring:hud.siteTime')}</span>
             <b className="text-xs font-bold text-neutral-50">
