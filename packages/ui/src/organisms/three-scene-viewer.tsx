@@ -542,13 +542,15 @@ export function ThreeSceneViewer({
                 </div>
               ) : null}
 
-              {/* 독 배치의 우측 상단 슬롯(고정 뷰 줄·2D/3D 전환). 다른 배치와
-                  달리 전체화면 여부를 가리지 않는다 — 독 배치의 목표가 전체화면과
-                  평소의 UI 를 같게 하는 것이다. 캔버스 영역 기준이라 레일이
-                  고정되면 자동으로 안쪽으로 온다. */}
+              {/* 독 배치의 우측 상단 슬롯(고정 뷰 줄·방위 표시·2D/3D 전환).
+                  다른 배치와 달리 전체화면 여부를 가리지 않는다 — 독 배치의
+                  목표가 전체화면과 평소의 UI 를 같게 하는 것이다. 캔버스 영역
+                  기준이라 레일이 고정되면 자동으로 안쪽으로 온다. 슬롯 자체는
+                  포인터를 받지 않는다 — 폭이 다른 줄 사이 빈 곳이 캔버스
+                  조작을 먹지 않게, 누를 것은 각자 pointer-events-auto 다. */}
               {isDock && fullscreenTopRightOverlay ? (
                 <div
-                  className="pointer-events-auto absolute top-1.5 z-50"
+                  className="pointer-events-none absolute top-1.5 z-50"
                   style={{
                     right: 'calc(0.375rem + var(--dock-right-inset))',
                   }}

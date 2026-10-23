@@ -153,7 +153,7 @@
       "clear": "연결 해제",
       "search": "크레인 번호나 태그 이름으로 검색 (예: C_171, tl_distance)",
       "currentValue": "현재 값",
-      "craneList": "장비 목록",
+      "craneList": "크레인 목록",
       "preview": "미리보기",
       "recent": "최근 60초 · 1초마다 갱신",
       "dataType": "데이터 형식",

@@ -77,3 +77,24 @@ export function resolveSplitLayout(
     }),
   };
 }
+
+/**
+ * 캔버스 우상단 모서리의 타일(첫 행·마지막 열). 그 칸이 비면 undefined.
+ * 우상단 고정 줄이 이 타일 위에 떠 있어, 이 타일의 방위 표시는 분할 밖과
+ * 같은 자리(고정 줄 아래)에 그린다.
+ */
+export function findSplitCornerTile(
+  layout: SplitLayout,
+): SplitTile | undefined {
+  return layout.tiles.find(
+    (tile) => tile.row === 0 && tile.col === layout.cols - 1,
+  );
+}
+
+/** 캔버스 오른쪽 가장자리에 닿는 타일(마지막 열)인지 — 독 핸들만큼 비킨다. */
+export function isSplitTileAtRightEdge(
+  layout: SplitLayout,
+  tile: SplitTile,
+): boolean {
+  return tile.col === layout.cols - 1;
+}

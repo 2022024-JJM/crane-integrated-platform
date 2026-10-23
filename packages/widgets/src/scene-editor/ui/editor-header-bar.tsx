@@ -48,6 +48,7 @@ import {
 } from '../lib/format-snap-step';
 import { SHORTCUT_MOD } from '../lib/shortcut-modifier';
 import { EditorToolbarButton } from './editor-toolbar-button';
+import { SceneShortcutsHelp } from './scene-shortcuts-help';
 
 /** 이동/회전/크기 단축키 — Unity·Unreal 계열. 바인딩은 페이지의 keydown. */
 const MODE_SHORTCUTS = {
@@ -335,9 +336,11 @@ export function EditorHeaderBar({
           </EditorToolbarButton>
         </div>
 
-        {/* 우측 — 전체화면 · 우측 패널 토글. 전체화면은 페이지 루트 전체를
-            올리므로 이 버튼이 전체화면 안에서도 남아 복원 경로가 된다. */}
+        {/* 우측 — 단축키 도움말 · 전체화면 · 우측 패널 토글. 전체화면은 페이지
+            루트 전체를 올리므로 이 버튼이 전체화면 안에서도 남아 복원 경로가
+            된다. */}
         <div className="flex items-center gap-2">
+          <SceneShortcutsHelp />
           {fullscreenSupported ? (
             <EditorToolbarButton
               label={t(

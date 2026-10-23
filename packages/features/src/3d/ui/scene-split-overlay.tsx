@@ -7,10 +7,12 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PerspectiveCamera } from 'three';
-import type {
-  SavedSceneView,
-  SceneViewport,
-  SplitLayout,
+import {
+  findSplitCornerTile,
+  isSplitTileAtRightEdge,
+  type SavedSceneView,
+  type SceneViewport,
+  type SplitLayout,
 } from '@crane/domain/3d';
 import { ensureTopViewTilt } from '@crane/core/lib/top-view-pose';
 import { resolveCompassViewForPose } from '../lib/compass';
@@ -31,6 +33,14 @@ interface SceneSplitOverlayProps {
    */
   onViewportsChange: (viewports: SceneViewport[] | null) => void;
 }
+
+/**
+ * 오른쪽 가장자리 타일의 방위 표시 위치 — 미고정 독 핸들만큼 안쪽으로
+ * 비킨다(우상단 슬롯과 같은 식).
+ */
+const RIGHT_EDGE_COMPASS_STYLE = {
+  right: 'calc(0.375rem + var(--dock-right-inset, 0px))',
+} as const;
 
 /**
  * 타일 이름의 글자 그림자 — 상자 없이 흰 글자만 두고 뒤를 진하게 어둡게
@@ -69,7 +79,10 @@ function createTileCamera(view: SavedSceneView): PerspectiveCamera {
  *   넘어간 라벨이 이웃 타일을 덮지 않는다. 컨테이너 참조는 뷰포트 객체가
  *   들고 있고 타일 DOM 의 콜백 ref 가 채운다 — 뷰포트는 커밋 뒤 effect 에서
  *   알리므로 소비자(라벨 포털)가 마운트될 땐 채워져 있다.
- * - 방위 표시는 카메라가 고정이라 마운트 때 한 번 쓴다(드라이버 없음).
+ * - 방위 표시는 타일 우상단이고, 카메라가 고정이라 마운트 때 한 번 쓴다
+ *   (드라이버 없음). 캔버스 우상단 모서리 타일(findSplitCornerTile)의 것은
+ *   그리지 않는다 — 그 자리엔 우상단 고정 줄이 떠 있어 Monitoring3dView 가
+ *   우상단 슬롯의 고정 줄 아래(분할 밖 방위 표시 자리)에 그린다.
  */
 export function SceneSplitOverlay({
   layout,
@@ -125,6 +138,8 @@ export function SceneSplitOverlay({
   }, [onViewportsChange, viewports]);
   useEffect(() => () => onViewportsChange(null), [onViewportsChange]);
 
+  const cornerTile = findSplitCornerTile(layout);
+
   const handleKeyDown = (event: KeyboardEvent, view: SavedSceneView) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -143,11 +158,14 @@ export function SceneSplitOverlay({
             const viewport = viewports[index];
             const rect = viewport.size;
             const view = tile.view;
-            const compassView = resolveCompassViewForPose(
-              view.position,
-              view.target,
-              trueNorth,
-            );
+            const compassView =
+              tile === cornerTile
+                ? null
+                : resolveCompassViewForPose(
+                    view.position,
+                    view.target,
+                    trueNorth,
+                  );
             const openLabel = t('monitoring:sceneSplit.openTile', {
               name: view.name,
             });
@@ -175,9 +193,16 @@ export function SceneSplitOverlay({
                   }}
                   className="pointer-events-none absolute inset-0 overflow-hidden"
                 />
-                {/* 방위 표시 — 고정 카메라라 한 번만 쓴다. */}
+                {/* 방위 표시(우상단) — 고정 카메라라 한 번만 쓴다. */}
                 {compassView ? (
-                  <div className="pointer-events-none absolute top-1.5 left-1.5">
+                  <div
+                    className="pointer-events-none absolute top-1.5 right-1.5"
+                    style={
+                      isSplitTileAtRightEdge(layout, tile)
+                        ? RIGHT_EDGE_COMPASS_STYLE
+                        : undefined
+                    }
+                  >
                     <SceneCompass
                       ref={(handle: SceneCompassHandle | null) => {
                         handle?.update(compassView);

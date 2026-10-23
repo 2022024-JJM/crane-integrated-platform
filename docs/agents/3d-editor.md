@@ -76,7 +76,7 @@
 - 미러 필드 `seaMirror` 는 바다에 씬(크레인·야드·지도)을 비출지다. 필드 없음이 비춘다이고 `false` 만 저장한다. 유효값은 `resolveSeaMirror(sceneInfo)` 하나가 정하고, `setSeaMirror` 가 끌 때 `false` 를 쓰고 켤 때 필드를 지운다. 스위치는 바다 스위치 아래 한 단 들여 있고 바다가 꺼진 씬에서는 잠기되 값은 남는다. 끈 씬이 무엇을 그리는지는 `docs/agents/rendering-perf.md`.
 - 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environment`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.
 - 지역 `siteLocation` 은 현장 시각의 시간 기준(시간대 + 대표 좌표)이다. `undefined` 는 region 기본 지역, 값은 명시이고 유효값은 `resolveSceneSiteLocation(regionId, sceneInfo)` 하나가 정한다. 드롭다운은 현장 시각 연동일 때 배경 탭 시각 패널의 날짜 위에 있고(수동 태양 씬은 region 기본 지역 그대로), 유효값을 보여 주다가 고르면 `setSiteLocation` 이 명시값으로 쓴다(바다와 같은 규칙 — 같은 값은 참조 유지). 모니터링 시계 팝업은 지역 이름만 보이고 바꾸지 않는다(`docs/agents/rendering-perf.md`).
-- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돌고, 누르면 모니터링과 같이 북쪽 위로 돈다. 수동 태양 패드의 방위도 지리 방위(패드 위 = 진북)라 진북을 바꾸면 수동 태양이 같이 돈다.
+- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 우상단 열(고정 뷰 줄 아래)에도 나침반이 있어 입력하면 바로 돌고, 누르면 모니터링과 같이 북쪽 위로 돈다. 수동 태양 패드의 방위도 지리 방위(패드 위 = 진북)라 진북을 바꾸면 수동 태양이 같이 돈다.
 
 ### 씬 뷰와 분할 지정 (뷰 탭)
 
@@ -87,7 +87,7 @@
 - **분할 칸은 목록의 행을 끌어다 놓는다**(HTML5 DnD, `SCENE_VIEW_DRAG_TYPE` — `text/plain` 을 싣지 않아 캔버스 드롭이 모델 배치로 오해하지 않는다). 찬 칸에 놓으면 교체, 다른 칸에 있던 뷰면 이동이라 한 뷰는 한 칸에만 있다. 뷰를 지우면 그 칸도 빈다. 칸 순서는 좌상·우상·좌하·우하이고, 화면 배치(빈 행·열 접기)는 `resolveSplitLayout` 이 정한다.
 - **메인 뷰**는 탭 맨 위 슬롯이다 — 목록의 행을 끌어다 놓고 ✕ 로 비운다. region 별 슬롯(`SavedSceneInfo.mainViewByRegion[regionId]`, `cameraByRegion` 과 같은 이유 — 파일을 공유하는 region 의 초기 시점이 다르다)이고 에디터는 자기 region 슬롯만 쓴다. 뷰를 지우면 슬롯도 빈다. 놓아도 에디터 카메라는 움직이지 않는다.
 - **홈 카메라**(`resolveSceneHomeCamera(scene, regionId)`) = 메인 뷰의 구도, 없으면 `camera`(저장 시점 카메라). 세 캔버스의 초기 시점과 "메인 뷰" 버튼(구 원래 위치, `common:viewer3d.resetView`)이 이 값 하나를 본다. 에디터는 로드 때 홈 카메라에서 시작하고 저장 뒤에는 현재 카메라를 그대로 둔다. `camera`·`cameraByRegion` 은 여전히 저장 시점마다 기록되는 폴백이다.
-- **고정**은 뷰마다 하나, 분할에 하나다(`pinned`, true 만 저장). 고정한 것만 에디터·모니터링 캔버스 우상단 고정 줄(`SceneViewBar`)에 상시 버튼으로 온다. 에디터 우상단은 고정 줄 → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`) 순이고, 보이는 줄 수만큼 축 기즈모를 내린다(`SceneObjectsEditCanvas` 의 `axisGizmoTopOffset`, 줄당 `TOP_RIGHT_ROW_GIZMO_OFFSET_PX`).
+- **고정**은 뷰마다 하나, 분할에 하나다(`pinned`, true 만 저장). 고정한 것만 에디터·모니터링 캔버스 우상단 고정 줄(`SceneViewBar`)에 상시 버튼으로 온다. 에디터 우상단은 모니터링과 같이 고정 줄 → 방위 표시 → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`) 순이다. 축 기즈모(방향 표시 전용, 클릭 반응 없음)는 캔버스 좌하단이다.
 - **에디터의 분할 버튼은 비활성**이다(`aria-disabled` + 툴팁 "모니터링 화면에서만") — 분할 화면은 모니터링에서 확인한다. 에디터 캔버스와 모니터링 타일은 가로세로 비율이 달라 세로 범위는 같고 가로 범위만 달라진다.
 - 편집 의미는 `view-editor.ts` 의 순수 함수(`withSceneView*`, `withSplit*`)가 정하고 결과가 같으면 같은 참조를 돌려준다. 세터(`scene-manipulation-actions.ts`)는 그 함수를 `updateScene` 에 넘길 뿐이다. undo·dirty 는 다른 씬 설정과 같다.
 - 뷰 id 는 씬 객체(모델·텍스트·눈금) id 집합과 별개다 — 뷰는 선택·기즈모·레지스트리 대상이 아니다.

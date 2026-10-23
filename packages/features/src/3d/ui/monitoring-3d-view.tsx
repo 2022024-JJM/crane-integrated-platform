@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import {
   SceneViewportsProvider,
   SilhouetteOutlineWarmup,
+  findSplitCornerTile,
   modelObjectRegistry,
   zoneCenterWorld,
   resolveSceneHomeCamera,
@@ -81,6 +82,7 @@ import {
   type ScenePlanScaleBarHandle,
 } from './scene-plan-scale-bar';
 import { northUpPose } from '../lib/north-up';
+import { resolveCompassViewForPose } from '../lib/compass';
 import { useModelStatusRecords } from '../model/use-model-runtime-statuses';
 import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
@@ -200,8 +202,8 @@ export function Monitoring3dView({
   // 관제 HUD·미니맵은 실시간 관제 화면에서만 — 3D 플레이는 분석 화면이라
   // 트랜스포트 바·리포트가 그 자리를 대신한다(2026-09-16).
   const showControlRoomWidgets = isDock && !isPlay3d;
-  // 방위 표시는 독 배치 전부(실시간·3D 플레이) — ACMS 는 실시간과 Play Back
-  // 화면 모두 좌상단에 방위를 둔다. 자세는 Canvas 안 드라이버가 직접 쓴다.
+  // 방위 표시는 독 배치 전부(실시간·3D 플레이)의 우상단 열 — 고정 뷰 줄
+  // 아래, 2D/3D 전환 위. 자세는 Canvas 안 드라이버가 직접 쓴다.
   const compassRef = useRef<SceneCompassHandle | null>(null);
   const scaleBarRef = useRef<ScenePlanScaleBarHandle | null>(null);
   // 탑뷰 중에만 우상단에 2D/3D 전환 토글을 띄운다 — 상태는 뷰어가 알린다.
@@ -392,6 +394,20 @@ export function Monitoring3dView({
     }
     enterSplit(regionId);
   }, [enterSplit, exitSplit, regionId]);
+  // 분할 중 우상단 모서리 타일의 방위 표시 — 그 타일 위엔 우상단 고정 줄이
+  // 떠 있어 타일 오버레이 대신 우상단 슬롯의 고정 줄 아래(분할 밖 방위 표시
+  // 자리)에 그린다. 고정 카메라라 정적이다.
+  const splitCornerCompassView = useMemo(() => {
+    if (!splitActive || !splitLayout) return null;
+    const tile = findSplitCornerTile(splitLayout);
+    return tile
+      ? resolveCompassViewForPose(
+          tile.view.position,
+          tile.view.target,
+          trueNorth,
+        )
+      : null;
+  }, [splitActive, splitLayout, trueNorth]);
   // shadow frustum 초점 — 분할 중엔 타일 구도들의 합집합으로 고정한다.
   const splitShadowFocus = useMemo(
     () =>
@@ -439,28 +455,15 @@ export function Monitoring3dView({
     [cameraPosition, cameraTarget],
   );
 
-  // 좌측 상단 열 — 첫 줄은 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드
-  // 등), 그 아래 시뮬레이션 배지. 방위 표시는 자리가
-  // 고정이어야 해서 일시 표시들보다 먼저 둔다. 방위 표시가 없는 배치(독이
-  // 아닌 작은 뷰)는 후처리 상태가 열 맨 아래다.
+  // 좌측 상단 열 — 시뮬레이션 배지, 그 아래 후처리 상태(BVH 빌드 등).
   const topLeftOverlay = (
     <div className="pointer-events-none absolute top-1.5 left-1.5 flex flex-col items-start gap-2">
-      {isDock ? (
-        <div className="flex items-start gap-2">
-          {/* 분할 중엔 타일마다 방위 표시가 있어 전역 것은 숨긴다. 누르면
-              북쪽 위로(탑뷰·원근 모두 타깃 축으로 돌린다). */}
-          {splitActive ? null : (
-            <SceneCompass ref={compassRef} onNorthUp={handleNorthUp} />
-          )}
-          <SceneWarmupIndicator />
-        </div>
-      ) : null}
       {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 시뮬레이션 값이 화면을
           움직이는 배치에서만. */}
       {simulationUiVisible && toolbarLayout !== 'none' ? (
         <SceneSimulationBadge />
       ) : null}
-      {isDock ? null : <SceneWarmupIndicator />}
+      <SceneWarmupIndicator />
     </div>
   );
 
@@ -582,14 +585,34 @@ export function Monitoring3dView({
           }
           fullscreenTopRightOverlay={
             isDock ? (
-              // 우상단 슬롯 — 고정한 뷰 줄, 탑뷰 중이면 2D/3D 전환. 고정 뷰 줄이
-              // 비면(null) 간격 없이 토글이 맨 위다.
+              // 우상단 슬롯 — 고정한 뷰 줄 → 방위 표시 → 탑뷰 중이면 2D/3D
+              // 전환. 고정 뷰 줄이 비면(null) 간격 없이 방위 표시가 맨 위다.
+              // 토글이 방위 아래라 탑뷰를 켜고 꺼도 방위 자리는 그대로다.
               <div className="flex flex-col items-end gap-2">
                 <SceneViewBar
                   views={pinnedViews}
                   onSelectView={handleSelectView}
                   split={splitBarProps}
                 />
+                {/* 누르면 북쪽 위로(탑뷰·원근 모두 타깃 축으로 돌린다). 분할
+                    중엔 우상단 모서리 타일의 정적 방위 표시가 이 자리에 온다
+                    — 조작이 없어 클릭이 타일로 간다. */}
+                {splitActive ? (
+                  splitCornerCompassView ? (
+                    <SceneCompass
+                      key="split-corner"
+                      ref={(handle: SceneCompassHandle | null) => {
+                        handle?.update(splitCornerCompassView);
+                      }}
+                    />
+                  ) : null
+                ) : (
+                  <SceneCompass
+                    key="live"
+                    ref={compassRef}
+                    onNorthUp={handleNorthUp}
+                  />
+                )}
                 {topViewActive ? <ScenePlanLookToggle /> : null}
               </div>
             ) : undefined

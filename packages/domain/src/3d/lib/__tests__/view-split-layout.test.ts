@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSceneView } from '../../model/view-types';
-import { resolveSplitLayout, splitSlotPosition } from '../view-split-layout';
+import {
+  findSplitCornerTile,
+  isSplitTileAtRightEdge,
+  resolveSplitLayout,
+  splitSlotPosition,
+} from '../view-split-layout';
 
 function view(id: string): SavedSceneView {
   return { id, name: id, position: [0, 10, 0], target: [0, 0, 0] };
@@ -123,5 +128,61 @@ describe('resolveSplitLayout — 빈 행·열 접기', () => {
   it('타일의 view 는 목록의 객체 참조 그대로다', () => {
     const layout = resolveSplitLayout({ slots: ['a', 'b'] }, views)!;
     expect(layout.tiles[0].view).toBe(views[0]);
+  });
+});
+
+function layoutOf(slots: (string | null)[]) {
+  return resolveSplitLayout({ slots }, views)!;
+}
+
+function rightEdgeIds(slots: (string | null)[]) {
+  const layout = layoutOf(slots);
+  return layout.tiles
+    .filter((tile) => isSplitTileAtRightEdge(layout, tile))
+    .map((tile) => tile.view.id);
+}
+
+describe('findSplitCornerTile', () => {
+  it('2×2 전부 채움 → 우상(첫 행·마지막 열) 칸', () => {
+    expect(findSplitCornerTile(layoutOf(['a', 'b', 'c', 'd']))?.view.id).toBe(
+      'b',
+    );
+  });
+
+  it('좌우 2분할 → 오른쪽 타일', () => {
+    expect(findSplitCornerTile(layoutOf(['a', 'b', null, null]))?.view.id).toBe(
+      'b',
+    );
+  });
+
+  it('상하 2분할(1열) → 위 타일이 왼쪽이자 오른쪽 가장자리다', () => {
+    expect(findSplitCornerTile(layoutOf(['a', null, 'b', null]))?.view.id).toBe(
+      'a',
+    );
+  });
+
+  it('좌하·우하만 → 접힌 1행의 오른쪽 타일', () => {
+    expect(findSplitCornerTile(layoutOf([null, null, 'c', 'd']))?.view.id).toBe(
+      'd',
+    );
+  });
+
+  it('우상 칸이 빈 2×2(대각선·3칸) → undefined', () => {
+    expect(findSplitCornerTile(layoutOf(['a', null, null, 'd']))).toBeUndefined();
+    expect(findSplitCornerTile(layoutOf(['a', null, 'c', 'd']))).toBeUndefined();
+  });
+});
+
+describe('isSplitTileAtRightEdge', () => {
+  it('2×2 → 오른쪽 열 두 칸만', () => {
+    expect(rightEdgeIds(['a', 'b', 'c', 'd'])).toEqual(['b', 'd']);
+  });
+
+  it('상하 2분할(1열) → 두 타일 모두', () => {
+    expect(rightEdgeIds(['a', null, 'b', null])).toEqual(['a', 'b']);
+  });
+
+  it('우상 칸이 빈 3칸 → 우하만', () => {
+    expect(rightEdgeIds(['a', null, 'c', 'd'])).toEqual(['d']);
   });
 });

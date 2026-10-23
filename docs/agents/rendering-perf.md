@@ -85,7 +85,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 ### 평면도(직교 탑뷰) 룩
 
-탑뷰는 둘이다 — **2D 탑뷰**(직교 + 평면도 룩)와 **3D 탑뷰**(직교 카메라만, 모델·조명은 원근 그대로). 평면도 룩은 정보가 아닌 것(그림자·바닥 텍스처 대비)을 빼고 빛 웅덩이를 줄이는 처리이고, 판정은 전부 `isPlanLookCamera(camera, enabled)`(`lib/plan-look.ts` — 직교 + 스위치 `model/use-plan-look-store.ts`, localStorage 영속) 하나다. 탑뷰 자체는 직교 카메라 교체 토글(`docs/agents/3d-editor.md`)이고 어느 것도 셰이더를 재컴파일하지 않는다. 탑뷰 버튼은 하나(뷰어 기본 버튼·에디터 헤더)이고, 탑뷰 중에만 우상단 고정 뷰 줄 아래(줄이 없으면 맨 위)에 뜨는 2D/3D 전환 `ui/scene-plan-look-toggle.tsx` 가 스위치만 바꾼다 — 카메라는 그대로다. 모니터링·3D 플레이·에디터가 같은 토글과 같은 전역 스위치를 쓴다.
+탑뷰는 둘이다 — **2D 탑뷰**(직교 + 평면도 룩)와 **3D 탑뷰**(직교 카메라만, 모델·조명은 원근 그대로). 평면도 룩은 정보가 아닌 것(그림자·바닥 텍스처 대비)을 빼고 빛 웅덩이를 줄이는 처리이고, 판정은 전부 `isPlanLookCamera(camera, enabled)`(`lib/plan-look.ts` — 직교 + 스위치 `model/use-plan-look-store.ts`, localStorage 영속) 하나다. 탑뷰 자체는 직교 카메라 교체 토글(`docs/agents/3d-editor.md`)이고 어느 것도 셰이더를 재컴파일하지 않는다. 탑뷰 버튼은 하나(뷰어 기본 버튼·에디터 헤더)이고, 탑뷰 중에만 우상단 열의 방위 표시 아래에 뜨는 2D/3D 전환 `ui/scene-plan-look-toggle.tsx` 가 스위치만 바꾼다 — 카메라는 그대로다. 모니터링·3D 플레이·에디터가 같은 토글과 같은 전역 스위치를 쓴다.
 배선(지도 'ground'·모델 윤곽선·라벨 앵커·숨은선 인덱스·`ScenePlanOverlapDetector`·축척 바)은 모니터링(`outdoor-work-model-simulation.tsx`)과 에디터(`scene-objects-edit-canvas.tsx`)가 같다. 에디터는 모델·지도가 Canvas 밖 JSX 라 카메라 대신 브리지가 알리는 탑뷰 상태 && 스위치로 판정한다.
 
 - **그림자 끄기** — 위 단락.

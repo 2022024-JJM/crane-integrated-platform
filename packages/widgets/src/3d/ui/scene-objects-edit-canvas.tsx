@@ -380,7 +380,7 @@ interface SceneObjectsEditCanvasProps {
   floodlightAimingId?: string | null;
   onFloodlightAim?: (id: string, point: Vector3Tuple) => void;
   /**
-   * 방위 표시(캔버스 밖 DOM, 페이지가 좌상단에 둔다) 핸들. 넘기면 Canvas 안
+   * 방위 표시(캔버스 밖 DOM, 페이지가 우상단 열에 둔다) 핸들. 넘기면 Canvas 안
    * 드라이버가 카메라 자세·씬 진북으로 자세를 쓴다 — 모니터링과 같은 짝.
    */
   compassRef?: RefObject<SceneCompassHandle | null>;
@@ -389,12 +389,6 @@ interface SceneObjectsEditCanvasProps {
    * 같은 짝. 직교 탑뷰에서만 Canvas 안 드라이버가 보이게 한다.
    */
   scaleBarRef?: RefObject<ScenePlanScaleBarHandle | null>;
-  /**
-   * 우상단 축 기즈모를 아래로 내릴 여백(px). 페이지가 캔버스 우상단에 고정 뷰
-   * 줄·2D/3D 전환을 띄우면 그 높이만큼 넘겨 기즈모가 그 아래로 밀린다. 0 이면
-   * 기본 자리.
-   */
-  axisGizmoTopOffset?: number;
 }
 
 export function SceneObjectsEditCanvas({
@@ -429,7 +423,6 @@ export function SceneObjectsEditCanvas({
   onFloodlightAim,
   compassRef,
   scaleBarRef,
-  axisGizmoTopOffset = 0,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -1353,13 +1346,10 @@ export function SceneObjectsEditCanvas({
           onActiveChange={handleTopViewActiveChange}
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
-            27px) + 6px(오버레이들의 top-1.5/right-1.5 와 같은 여백) + 여유로
-            46px. 우상단은 도구 모음이 헤더 바로 올라가 비어 있다(Blender 의
-            내비게이션 기즈모 위치). */}
-        <GizmoHelper
-          alignment="top-right"
-          margin={[46, 46 + axisGizmoTopOffset]}
-        >
+            27px) + 6px(오버레이들의 bottom-1.5/left-1.5 와 같은 여백) + 여유로
+            46px. 좌하단 — 우상단은 페이지의 고정 뷰 줄·방위 표시·2D/3D 전환
+            열, 하단 중앙은 선택 컨텍스트 바·안내, 우하단은 축척 바다. */}
+        <GizmoHelper alignment="bottom-left" margin={[46, 46]}>
           <GizmoViewport
             // 기본 40의 2/3 크기.
             scale={40 * (2 / 3)}
@@ -1588,8 +1578,8 @@ export function SceneObjectsEditCanvas({
         <ScenePerfProbe />
       </Canvas>
 
-      {/* dev 전용 성능 HUD — 모니터링 뷰와 같은 좌하단(bottom-1.5 left-1.5). */}
-      <ScenePerfHud />
+      {/* dev 전용 성능 HUD — 좌하단 축 기즈모(중심 46px + 반경) 오른쪽. */}
+      <ScenePerfHud className="left-24" />
 
       {/* 눈금 그리기 안내 — 하단 중앙. 그리는 동안은 선택이 없어 선택 컨텍스트
           바와 겹치지 않는다(뷰포트 중앙 상단은 비워 둔다). 취소 키는 단축키

@@ -117,6 +117,8 @@ export {
   resolveSceneHomeCamera,
 } from './lib/scene-home-camera';
 export {
+  findSplitCornerTile,
+  isSplitTileAtRightEdge,
   resolveSplitLayout,
   splitSlotPosition,
   type SplitLayout,

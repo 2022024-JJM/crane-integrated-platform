@@ -65,7 +65,6 @@ import { hasDuplicableSelection } from '../lib/duplicable-selection';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import { EditorHeaderBar } from './editor-header-bar';
 import { EditorSelectionBar } from './editor-selection-bar';
-import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
   PaletteAssetGrid,
@@ -93,11 +92,6 @@ interface SceneObjectsEditPageProps {
 /** 씬 미로드 시 팔레트에 넘기는 빈 지도 목록 — memo 컴포넌트 참조 안정용. */
 const EMPTY_MAPS: SavedMapInfo[] = [];
 const EMPTY_VIEWS: SavedSceneView[] = [];
-/**
- * 우상단 줄(고정 뷰 줄·2D/3D 전환) 하나당 축 기즈모를 내리는 양(px) — 줄
- * 높이에 오버레이 간격(gap-2)과 여유를 더한 값.
- */
-const TOP_RIGHT_ROW_GIZMO_OFFSET_PX = 40;
 
 /** 뷰 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 객체로 묶어 넘긴다. */
 interface SceneViewHandlers {
@@ -167,7 +161,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
-  // 방위 표시 핸들 — DOM 은 좌상단 슬롯, 자세는 캔버스 안 드라이버가 쓴다.
+  // 방위 표시 핸들 — DOM 은 우상단 열, 자세는 캔버스 안 드라이버가 쓴다.
   const compassRef = useRef<SceneCompassHandle | null>(null);
   // 평면도 축척 핸들 — DOM 은 우하단, 값은 캔버스 안 드라이버가 쓴다.
   const scaleBarRef = useRef<ScenePlanScaleBarHandle | null>(null);
@@ -329,7 +323,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     [sceneViews],
   );
   const splitPinned = sceneInfo?.viewSplit?.pinned === true;
-  const viewBarVisible = pinnedViews.length > 0 || splitPinned;
   const viewHandlers: SceneViewHandlers = {
     getPose: () => cameraStateRef.current,
     onFlyTo: (view) =>
@@ -753,9 +746,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         ) : null}
 
         {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조.
-            뷰포트 위 헤더 바는 캔버스 바깥의 크롬이고, 뷰포트 안에는 선택
-            컨텍스트 바(하단 중앙)·도움말(우하단)·축 기즈모(우상단)만 띄운다. 뷰포트 중앙 상단은 가장 중요한 시야라
-            어떤 UI 도 두지 않는다. */}
+            뷰포트 위 헤더 바는 캔버스 바깥의 크롬이고(단축키 도움말도 거기),
+            뷰포트 안에는 선택 컨텍스트 바(하단 중앙)·축 기즈모(좌하단)·
+            우상단 열(고정 뷰 줄·방위 표시·2D/3D 전환)만 띄운다. 뷰포트 중앙
+            상단은 가장 중요한 시야라 어떤 UI 도 두지 않는다. */}
         <ResizablePanel id="edit-canvas">
           <div className="flex h-full min-h-0 flex-col">
             <EditorHeaderBar
@@ -849,10 +843,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 onFloodlightAim={handleFloodlightAim}
                 compassRef={compassRef}
                 scaleBarRef={scaleBarRef}
-                axisGizmoTopOffset={
-                  ((viewBarVisible ? 1 : 0) + (topViewActive ? 1 : 0)) *
-                  TOP_RIGHT_ROW_GIZMO_OFFSET_PX
-                }
               />
 
               <EditorSelectionBar
@@ -861,49 +851,41 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 onDuplicate={duplicateSelectedObject}
                 onDelete={removeSelectedModel}
               />
-              {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
-                  겹치지 않는다. */}
-              <SceneShortcutsHelp />
-              {/* 평면도 축척(우하단, 단축키 버튼 왼쪽) — 직교 탑뷰에서만
-                  드라이버가 보이게 한다(모니터링과 같은 짝). */}
-              <div className="pointer-events-none absolute right-12 bottom-2 z-10">
+              {/* 평면도 축척(우하단) — 직교 탑뷰에서만 드라이버가 보이게
+                  한다(모니터링과 같은 짝). */}
+              <div className="pointer-events-none absolute right-2 bottom-2 z-10">
                 <ScenePlanScaleBar ref={scaleBarRef} className="items-end" />
               </div>
-              {/* 좌측 상단 — 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드·
-                  충돌 기준선·팔레트 모델 로드). 우상단 축 기즈모·하단 바와
-                  겹치지 않는다. 방위 표시를 누르면 북쪽 위로(모니터링과
-                  같다), 나머지는 비차단이다. */}
-              <div className="pointer-events-none absolute top-1.5 left-1.5 z-10 flex items-start gap-2">
+              {/* 좌측 상단 — 후처리 상태(BVH 빌드·충돌 기준선·팔레트 모델
+                  로드). 비차단이다. */}
+              <div className="pointer-events-none absolute top-1.5 left-1.5 z-10">
+                <SceneWarmupIndicator />
+              </div>
+              {/* 우상단 — 고정한 뷰·분할 버튼 줄 → 방위 표시 → 탑뷰 중이면
+                  2D/3D 전환. 줄이 없으면 방위 표시가 맨 위다. 모니터링의 같은
+                  자리와 같은 모양. 방위 표시를 누르면 북쪽 위로(모니터링과
+                  같다). */}
+              <div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex flex-col items-end gap-2">
+                <SceneViewBar
+                  views={pinnedViews}
+                  onSelectView={viewHandlers.onFlyTo}
+                  split={
+                    splitPinned
+                      ? {
+                          state: 'disabled',
+                          active: false,
+                          onToggle: () => {},
+                          disabledLabel: t('monitoring:sceneSplit.editorOnly'),
+                        }
+                      : null
+                  }
+                />
                 <SceneCompass
                   ref={compassRef}
                   onNorthUp={() => cameraActionsRef.current?.northUp()}
                 />
-                <SceneWarmupIndicator />
+                {topViewActive ? <ScenePlanLookToggle /> : null}
               </div>
-              {/* 우상단 — 고정한 뷰·분할 버튼 줄, 탑뷰 중이면 그 아래 2D/3D
-                  전환(줄이 없으면 맨 위). 축 기즈모가 보이는 줄 수만큼 내려간다
-                  (axisGizmoTopOffset). 모니터링의 같은 자리와 같은 모양. */}
-              {viewBarVisible || topViewActive ? (
-                <div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex flex-col items-end gap-2">
-                  <SceneViewBar
-                    views={pinnedViews}
-                    onSelectView={viewHandlers.onFlyTo}
-                    split={
-                      splitPinned
-                        ? {
-                            state: 'disabled',
-                            active: false,
-                            onToggle: () => {},
-                            disabledLabel: t(
-                              'monitoring:sceneSplit.editorOnly',
-                            ),
-                          }
-                        : null
-                    }
-                  />
-                  {topViewActive ? <ScenePlanLookToggle /> : null}
-                </div>
-              ) : null}
 
               {/* 진입 로딩 — 모니터링과 같은 불투명 커버. 씬 파일 로드가 끝난
                   (실패 포함) 뒤 에셋 로더가 쉬면 한 번 걷힌다. 위 오버레이들

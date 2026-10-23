@@ -1,11 +1,17 @@
 import { Keyboard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@crane/ui/atoms/button';
 import { Kbd } from '@crane/ui/atoms/kbd';
 import {
   Popover,
   PopoverPopup,
   PopoverTrigger,
 } from '@crane/ui/molecules/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
 import { SHORTCUT_MOD as MOD } from '../lib/shortcut-modifier';
 
 interface ShortcutRow {
@@ -91,29 +97,37 @@ const SHORTCUT_COLUMNS: string[][] = [
   ['groupSelect', 'groupCamera'],
 ];
 
-const OVERLAY_BUTTON_CLASS =
-  'border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground data-popup-open:text-foreground absolute right-1.5 bottom-1.5 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition';
-
-/** 캔버스 우측 하단의 단축키 도움말 버튼 + 팝업. */
+/**
+ * 편집기 헤더 바(전체화면 버튼 왼쪽)의 단축키 도움말 버튼 + 팝업. 버튼
+ * 모양은 이웃 EditorToolbarButton 과 같고, 툴팁은 헤더 바의 TooltipProvider
+ * 를 쓴다.
+ */
 export function SceneShortcutsHelp() {
   const { t } = useTranslation();
   const title = t('monitoring:editor.shortcuts.title');
 
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            aria-label={title}
-            title={title}
-            className={OVERLAY_BUTTON_CLASS}
-          />
-        }
-      >
-        <Keyboard className="size-4" />
-      </PopoverTrigger>
-      <PopoverPopup side="top" align="end" className="w-fit p-3">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={title}
+                  className="text-muted-foreground hover:text-foreground data-popup-open:bg-muted data-popup-open:text-foreground rounded-md"
+                />
+              }
+            />
+          }
+        >
+          <Keyboard className="size-4" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{title}</TooltipContent>
+      </Tooltip>
+      <PopoverPopup side="bottom" align="end" className="w-fit p-3">
         <p className="text-foreground mb-2 text-sm font-semibold">{title}</p>
         <div className="flex items-stretch gap-4">
           {SHORTCUT_COLUMNS.map((titles, columnIndex) => (

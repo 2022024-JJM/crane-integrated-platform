@@ -153,7 +153,7 @@
       "clear": "Unlink",
       "search": "Search by crane ID or tag name (e.g. C_171, tl_distance)",
       "currentValue": "Current value",
-      "craneList": "Equipment",
+      "craneList": "Cranes",
       "preview": "Preview",
       "recent": "Last 60 s · updated every second",
       "dataType": "Data type",
