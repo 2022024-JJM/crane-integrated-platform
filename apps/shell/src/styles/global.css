@@ -50,6 +50,9 @@
  * 공용 컴포넌트는 CapText 로 글자를 감싼다. 높이가 내용으로 정해지는 요소에
  * 걸면 그만큼 줄어드니 고정 높이 컨트롤에 쓴다. 잘린 상자 밖으로 나오는 획이
  * 잘리지 않게 truncate 와 함께면 overflow 를 clip 으로 바꾸고 여유를 둔다.
+ * 컨트롤 자체가 0.5px 위치에 놓이면(부모의 가운데 맞춤 높이가 홀수) 테두리만
+ * 픽셀에 맞춰 그려져 이것을 걸어도 떠 보인다 — 앱 헤더가 그래서 아래 선을
+ * border 대신 inset 그림자로 긋는다.
  */
 @utility text-box-cap {
   text-box: trim-both cap alphabetic;

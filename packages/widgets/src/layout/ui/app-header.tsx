@@ -20,7 +20,10 @@ export function AppHeader() {
   const brand = getHeaderBrandKeys(user?.role);
 
   return (
-    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-1.5 border-b pr-4 pl-0">
+    // 아래 선은 border-b 대신 inset 그림자다. border 가 가운데 맞춤 높이를
+    // 55px 로 줄이면 32px pill 이 0.5px 위치에 놓이는데, 테두리는 픽셀에 맞춰
+    // 그려지고 글자는 그렇지 않아 pill 안에서 1px 가까이 떠 보인다.
+    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-1.5 pr-4 pl-0 shadow-[inset_0_-1px_0_var(--color-border)]">
       {/* 햄버거는 접힌 사이드바 레일(독 레일과 같은 40px 열·28px 버튼)과 같은
           열에 놓여 아래 레일 아이콘과 세로로 정렬된다 */}
       <div

@@ -64,7 +64,7 @@ export function SceneStatusHudAlarmList({
     >
       <div className="flex h-10 items-center gap-2 border-b border-white/9 pr-1.5 pl-3.5">
         <b className="text-sm font-bold">{title}</b>
-        <span className="ml-auto text-[11px] text-neutral-500">
+        <span className="text-box-cap ml-auto text-[11px] text-neutral-500">
           {t('monitoring:hud.list.order')}
         </span>
         <Button
