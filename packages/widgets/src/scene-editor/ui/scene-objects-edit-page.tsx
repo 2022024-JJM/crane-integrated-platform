@@ -28,7 +28,9 @@ import {
   SceneWarmupIndicator,
   type SceneCompassHandle,
   type ScenePlanScaleBarHandle,
+  useActiveTransformStore,
   useSceneEditorViewStore,
+  useSceneObjectSelectionStore,
   useTagBindingSource,
   stopSimulation,
   EDITOR_TAG_SLOT,
@@ -496,7 +498,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     [setFloodlightAimingId, setFloodlightPlacing],
   );
 
-  const hasSelection = selectedIds.size > 0;
   const canDuplicate = useMemo(
     () => hasDuplicableSelection(selectedIds, sceneInfo),
     [selectedIds, sceneInfo],
@@ -522,6 +523,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       // Esc = 눈금 그리기·조명 배치·조준 취소. 아래 입력 대상 검사보다 먼저
       // 본다 — 헤더 버튼으로 켠 직후에는 포커스가 그 버튼에 있어
       // (isEditableTarget 이 button 을 거른다) 뒤에 두면 Esc 가 먹지 않는다.
+      // 끌 모드가 없으면 아래 맨 키 구역에서 선택 해제로 쓴다.
       if (event.code === 'Escape') {
         const view = useSceneEditorViewStore.getState();
         if (view.rulerDrawing) {
@@ -642,6 +644,21 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       if (event.code === 'KeyF' && currentSelectedIds.size > 0) {
         event.preventDefault();
         focusSelectedRef.current?.();
+        return;
+      }
+
+      // Esc = 선택 해제. 위 모드 취소에 걸리지 않은 Esc 만 온다. Delete 와
+      // 같은 포커스 범위라 다이얼로그·드롭다운을 Esc 로 닫을 때는 선택이
+      // 남는다. 기즈모를 끄는 중에는 무시한다 — 드래그 도중 선택이 풀리면
+      // 손을 뗄 때 commit 할 대상이 없어 끈 결과가 저장되지 않는다.
+      if (event.code === 'Escape') {
+        if (
+          currentSelectedIds.size > 0 &&
+          !useActiveTransformStore.getState().active
+        ) {
+          event.preventDefault();
+          useSceneObjectSelectionStore.getState().clearSelectedModel();
+        }
         return;
       }
 
@@ -846,7 +863,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               />
 
               <EditorSelectionBar
-                hasSelection={hasSelection}
+                selectedCount={selectedIds.size}
                 canDuplicate={canDuplicate}
                 onDuplicate={duplicateSelectedObject}
                 onDelete={removeSelectedModel}

@@ -305,6 +305,7 @@
     "headerBar": "Instrumentorum series",
     "toolDock": "Instrumenta",
     "selectionActions": "Selecta",
+    "selectionCount": "{{count}} selecta",
     "unsavedDialog": {
       "title": "Mutationes non servatae",
       "description": "Haec scaena mutationes non servatas habet. Quid vis facere?",
@@ -327,6 +328,7 @@
       "redo": "Iterum fac",
       "duplicate": "Selecta duplica",
       "selectAll": "Omnia selige",
+      "clearSelection": "Selectionem tolle",
       "delete": "Selecta dele",
       "click": "Clic",
       "select": "Obiectum selige",

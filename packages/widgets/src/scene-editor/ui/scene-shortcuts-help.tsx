@@ -54,6 +54,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: [MOD, 'Y'], label: 'redo' },
       { keys: [MOD, 'D'], label: 'duplicate' },
       { keys: [MOD, 'A'], label: 'selectAll' },
+      { keys: ['Esc'], label: 'clearSelection' },
       { keys: ['Delete'], label: 'delete' },
     ],
   },

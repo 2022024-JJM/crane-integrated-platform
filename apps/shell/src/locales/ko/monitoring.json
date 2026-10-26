@@ -305,6 +305,7 @@
     "headerBar": "도구 모음",
     "toolDock": "도구",
     "selectionActions": "선택 객체",
+    "selectionCount": "{{count}}개 선택됨",
     "unsavedDialog": {
       "title": "저장되지 않은 변경사항",
       "description": "씬에 저장되지 않은 변경사항이 있습니다. 어떻게 할까요?",
@@ -327,6 +328,7 @@
       "redo": "다시 실행",
       "duplicate": "선택 객체 복제",
       "selectAll": "전체 선택",
+      "clearSelection": "선택 해제",
       "delete": "선택 객체 삭제",
       "click": "클릭",
       "select": "객체 선택",

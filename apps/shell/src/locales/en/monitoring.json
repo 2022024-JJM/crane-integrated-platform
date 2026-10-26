@@ -305,6 +305,7 @@
     "headerBar": "Toolbar",
     "toolDock": "Tools",
     "selectionActions": "Selection",
+    "selectionCount": "{{count}} selected",
     "unsavedDialog": {
       "title": "Unsaved changes",
       "description": "This scene has unsaved changes. What would you like to do?",
@@ -327,6 +328,7 @@
       "redo": "Redo",
       "duplicate": "Duplicate selection",
       "selectAll": "Select all",
+      "clearSelection": "Clear selection",
       "delete": "Delete selection",
       "click": "Click",
       "select": "Select object",
