@@ -636,81 +636,6 @@
       "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
-      "id": "c58d8d19-ecd4-44b6-afc3-66f342f756b9",
-      "equipName": "TC-39",
-      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-tc",
-        "version": 3
-      },
-      "opacity": 1,
-      "position": [
-        128,
-        5.241,
-        37
-      ],
-      "rotation": [
-        0,
-        180,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ]
-    },
-    {
-      "id": "4158fb43-24ff-42c3-a6ec-8cea66907c23",
-      "equipName": "TC-64",
-      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-tc",
-        "version": 3
-      },
-      "opacity": 1,
-      "position": [
-        282,
-        5.241,
-        37
-      ],
-      "rotation": [
-        0,
-        180,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ]
-    },
-    {
-      "id": "8f15a6ad-4b33-48c1-a9c0-b1554484fa9f",
-      "equipName": "TC-96",
-      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-tc",
-        "version": 3
-      },
-      "opacity": 1,
-      "position": [
-        369,
-        5.241,
-        37
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ]
-    },
-    {
       "id": "d96086c3-4f7b-4678-88de-0411b37bdee8",
       "equipName": "TC-94",
       "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
@@ -1841,14 +1766,14 @@
   "texts": [],
   "camera": {
     "position": [
-      880.3124928812509,
-      352.3244460891614,
-      219.1131627109334
+      487.301368970356,
+      187.24188773539342,
+      87.12094723263385
     ],
     "target": [
-      706.6537213820397,
-      27.95375900105159,
-      92.8561870152503
+      851.6375168545841,
+      5.209937895000319,
+      323.65097303548856
     ]
   },
   "rigs": [
@@ -2322,14 +2247,14 @@
     },
     "dock-2": {
       "position": [
-        1052.0663900228492,
-        280.260839,
-        98.02883978647242
+        487.301368970356,
+        187.24188773539342,
+        87.12094723263385
       ],
       "target": [
-        852.4808990608668,
-        24.103776,
-        281.9772764206473
+        851.6375168545841,
+        5.209937895000319,
+        323.65097303548856
       ]
     }
   },
@@ -2396,7 +2321,7 @@
     },
     {
       "id": "79e89fa3-0d13-41c2-8d71-ac0d46e276a2",
-      "name": "2도크",
+      "name": "1도크",
       "position": [
         340.5567848242317,
         248.298488,
@@ -2437,6 +2362,20 @@
         552.2806972486009
       ],
       "pinned": true
+    },
+    {
+      "id": "eaaab03f-9268-44e5-ac45-a571869176cf",
+      "name": "2도크",
+      "position": [
+        487.3008625582634,
+        187.23995481895105,
+        87.12023971860367
+      ],
+      "target": [
+        851.632970439793,
+        5.210023470347546,
+        323.64764271862003
+      ]
     }
   ],
   "viewSplit": {
@@ -2449,7 +2388,8 @@
     "pinned": true
   },
   "mainViewByRegion": {
-    "dock-1": "79e89fa3-0d13-41c2-8d71-ac0d46e276a2"
+    "dock-1": "79e89fa3-0d13-41c2-8d71-ac0d46e276a2",
+    "dock-2": "eaaab03f-9268-44e5-ac45-a571869176cf"
   },
   "environment": {
     "path": "/scenes/sky-blue-open-water-web.exr",
