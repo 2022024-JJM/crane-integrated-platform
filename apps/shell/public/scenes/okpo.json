@@ -83,7 +83,7 @@
   "models": [
     {
       "id": "85d60f80-146b-4870-8786-3839398931cd",
-      "equipName": "GC-02",
+      "equipName": "GC-04",
       "path": "/asset-library/files/okpo-goliath/v3/Okpo_Goliath.glb",
       "asset": {
         "id": "okpo-goliath",
@@ -107,8 +107,8 @@
       ]
     },
     {
-      "id": "0d0818cb-3eeb-4832-98fd-2944e778c940",
-      "equipName": "OC",
+      "id": "f1ffd800-3265-462a-ad61-91ba60e25876",
+      "equipName": "OC-05",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -116,9 +116,9 @@
       },
       "opacity": 1,
       "position": [
-        808,
+        1121.2,
         4.975,
-        248.553
+        70.2
       ],
       "rotation": [
         0,
@@ -133,34 +133,8 @@
       "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
-      "id": "f1ffd800-3265-462a-ad61-91ba60e25876",
-      "equipName": "OC",
-      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-oc",
-        "version": 2
-      },
-      "opacity": 1,
-      "position": [
-        981,
-        4.975,
-        141.833
-      ],
-      "rotation": [
-        0,
-        270,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
-    },
-    {
       "id": "54aba53a-2c2b-47fd-905b-75a5bdca01ee",
-      "equipName": "TC",
+      "equipName": "TC-106",
       "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
@@ -168,9 +142,9 @@
       },
       "opacity": 1,
       "position": [
-        477,
+        554.9,
         5.241,
-        208.447
+        186.1
       ],
       "rotation": [
         0,
@@ -185,7 +159,7 @@
     },
     {
       "id": "181492b6-122e-4afe-a680-809928707c06",
-      "equipName": "TTC",
+      "equipName": "TTC-05",
       "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
@@ -193,7 +167,7 @@
       },
       "opacity": 1,
       "position": [
-        994,
+        903.1,
         5.524,
         248.658
       ],
@@ -234,34 +208,8 @@
       ]
     },
     {
-      "id": "a777d569-a381-43c4-b556-a039907b5141",
-      "equipName": "OC-03",
-      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-oc",
-        "version": 2
-      },
-      "opacity": 1,
-      "position": [
-        -150,
-        4.975,
-        -155
-      ],
-      "rotation": [
-        0,
-        270,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
-    },
-    {
       "id": "0f7d5737-9896-41f6-9fc9-89212e132630",
-      "equipName": "TTC-7",
+      "equipName": "TTC-07",
       "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
@@ -269,9 +217,9 @@
       },
       "opacity": 1,
       "position": [
-        153,
+        100.1,
         5.524,
-        -200
+        -150.2
       ],
       "rotation": [
         0,
@@ -286,7 +234,7 @@
     },
     {
       "id": "5e97b639-9840-48da-b1a6-90920cad44e5",
-      "equipName": "TTC-06",
+      "equipName": "TTC-25",
       "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
@@ -361,7 +309,7 @@
     },
     {
       "id": "d67b651c-cb64-4c9a-b7ee-87e23ac66c57",
-      "equipName": "OC-12",
+      "equipName": "OC-13",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -369,9 +317,9 @@
       },
       "opacity": 1,
       "position": [
-        772,
+        1051.974,
         4.975,
-        -235
+        -225.773
       ],
       "rotation": [
         0,
@@ -394,9 +342,9 @@
       },
       "opacity": 1,
       "position": [
-        579,
-        5.524,
-        -235
+        1251.24,
+        4.874,
+        -226.445
       ],
       "rotation": [
         0,
@@ -411,7 +359,7 @@
     },
     {
       "id": "36e16a8d-cd53-456d-b00e-9e346a144e82",
-      "equipName": "OC-13",
+      "equipName": "OC-51",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -419,7 +367,7 @@
       },
       "opacity": 1,
       "position": [
-        754,
+        813.1,
         4.975,
         525
       ],
@@ -444,7 +392,7 @@
       },
       "opacity": 1,
       "position": [
-        948,
+        1098.1,
         5.524,
         525
       ],
@@ -461,7 +409,7 @@
     },
     {
       "id": "2f7cd750-c352-419c-934e-183b5224cd97",
-      "equipName": "TTC-14",
+      "equipName": "TTC-10",
       "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
@@ -469,9 +417,9 @@
       },
       "opacity": 1,
       "position": [
-        706,
+        1349,
         5.524,
-        1133
+        1131.1
       ],
       "rotation": [
         0,
@@ -486,7 +434,7 @@
     },
     {
       "id": "536b842e-7905-4704-a983-c55fc649b77f",
-      "equipName": "TTC-10",
+      "equipName": "TTC-27",
       "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-ttc",
@@ -494,9 +442,9 @@
       },
       "opacity": 1,
       "position": [
-        1140,
+        1704.4,
         5.524,
-        1132
+        1130.1
       ],
       "rotation": [
         0,
@@ -519,38 +467,13 @@
       },
       "opacity": 1,
       "position": [
-        893,
+        1050,
         5.524,
         1134
       ],
       "rotation": [
         0,
         0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ]
-    },
-    {
-      "id": "725fc603-c8c9-446a-9a9b-3df80284e94a",
-      "equipName": "Okpo OC",
-      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-oc",
-        "version": 2
-      },
-      "opacity": 1,
-      "position": [
-        1589,
-        4.975,
-        1132
-      ],
-      "rotation": [
-        0,
-        90,
         0
       ],
       "scale": [
@@ -571,7 +494,7 @@
       "position": [
         -240,
         5.241,
-        -78
+        -34.3
       ],
       "rotation": [
         0,
@@ -586,7 +509,7 @@
     },
     {
       "id": "3fc01bfc-7b61-4a45-9a49-c6039bb30882",
-      "equipName": "TC-35",
+      "equipName": "TC-86",
       "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
@@ -594,9 +517,9 @@
       },
       "opacity": 1,
       "position": [
-        -46,
+        17.6,
         5.241,
-        37
+        90.9
       ],
       "rotation": [
         0,
@@ -611,7 +534,7 @@
     },
     {
       "id": "84998952-60c5-43c3-980b-a64a1e39a512",
-      "equipName": "TC-77",
+      "equipName": "TC-107",
       "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-tc",
@@ -619,38 +542,13 @@
       },
       "opacity": 1,
       "position": [
-        -140,
+        -148.7,
         5.241,
-        37
+        92.5
       ],
       "rotation": [
         0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ]
-    },
-    {
-      "id": "67cd54a4-0879-4f9a-95eb-1106c3fd2add",
-      "equipName": "TC-48",
-      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
-      "asset": {
-        "id": "okpo-tc",
-        "version": 3
-      },
-      "opacity": 1,
-      "position": [
-        -230,
-        5.241,
-        37
-      ],
-      "rotation": [
-        0,
-        0,
+        180,
         0
       ],
       "scale": [
@@ -661,7 +559,7 @@
     },
     {
       "id": "588ffba6-a399-45b6-a997-48e4c1554c4e",
-      "equipName": "OC-02",
+      "equipName": "OC-19",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -669,13 +567,13 @@
       },
       "opacity": 1,
       "position": [
-        70,
+        -290.5,
         4.975,
-        -6.746
+        -62.1
       ],
       "rotation": [
         0,
-        90,
+        0,
         0
       ],
       "scale": [
@@ -687,7 +585,7 @@
     },
     {
       "id": "949b3f39-08db-4f4d-b5c7-c20794ea018a",
-      "equipName": "OC-01",
+      "equipName": "OC-16",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -695,7 +593,7 @@
       },
       "opacity": 1,
       "position": [
-        337,
+        381,
         4.975,
         -4.466
       ],
@@ -721,7 +619,7 @@
       },
       "opacity": 1,
       "position": [
-        201,
+        119.3,
         4.975,
         -6.159
       ],
@@ -753,7 +651,7 @@
       ],
       "rotation": [
         0,
-        0,
+        180,
         0
       ],
       "scale": [
@@ -778,7 +676,7 @@
       ],
       "rotation": [
         0,
-        0,
+        180,
         0
       ],
       "scale": [
@@ -822,9 +720,9 @@
       },
       "opacity": 1,
       "position": [
-        209,
+        232.2,
         -9.273,
-        -66
+        -36.8
       ],
       "rotation": [
         0,
@@ -864,7 +762,7 @@
     },
     {
       "id": "790f7bb4-0f93-4bf9-87cb-bb1c3f9bfb44",
-      "equipName": "OC-03",
+      "equipName": "OC-17",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -1173,9 +1071,9 @@
       },
       "opacity": 1,
       "position": [
-        2539,
+        2529.1,
         5.36,
-        988
+        1139.7
       ],
       "rotation": [
         0,
@@ -1190,7 +1088,7 @@
     },
     {
       "id": "b755ad32-bee6-486b-87ed-f44888d74dde",
-      "equipName": "OC-22",
+      "equipName": "OC-14",
       "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
       "asset": {
         "id": "okpo-oc",
@@ -1212,19 +1110,745 @@
         1,
         1
       ]
+    },
+    {
+      "id": "c3616ee1-eea9-4d80-8c59-dde834e52a73",
+      "equipName": "TC-108",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1006.698,
+        5.241,
+        -491.318
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "4960b629-90c3-4cf3-b666-945b40b8579e",
+      "equipName": "TC-111",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1087.496,
+        5.241,
+        -491.799
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "d708e126-689d-4693-8321-a443773a0ff8",
+      "equipName": "TTC-04",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        933.592,
+        5.524,
+        -476.168
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "c12aae79-25d0-4b5e-a527-c686c043cdf9",
+      "equipName": "TC-67",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        870.333,
+        5.241,
+        -369.077
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "216dcc74-c10f-4448-87de-241cfec9218c",
+      "equipName": "TTC-02",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        765.115,
+        4.874,
+        -343.569
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "022b691a-4d6f-4854-bb76-f981acffa02e",
+      "equipName": "TC-104",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        388.703,
+        5.241,
+        -380.551
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "a9de1d63-cdb4-46c5-a9f4-c0a34d71fd16",
+      "equipName": "TC-84",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        309.4,
+        5.241,
+        -243.3
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "aa2216d1-048f-49eb-8df0-06e148e0df91",
+      "equipName": "TC-110",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        378.9,
+        5.241,
+        -241.321
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "d612df74-8fe4-4167-81bb-7574bbf6b839",
+      "equipName": "OC-18",
+      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-oc",
+        "version": 2
+      },
+      "opacity": 1,
+      "position": [
+        -288.2,
+        4.975,
+        15.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
+    },
+    {
+      "id": "2432bf12-2187-4db3-865c-357033bdfb4f",
+      "equipName": "OC-02",
+      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-oc",
+        "version": 2
+      },
+      "opacity": 1,
+      "position": [
+        -178.1,
+        4.976,
+        23.4
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "0fc66502-aa91-42ca-b8d6-1e3b6e666b4f",
+      "equipName": "CC-01",
+      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-oc",
+        "version": 2
+      },
+      "opacity": 1,
+      "position": [
+        671.5,
+        4.976,
+        -346.9
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "f22e2ed8-8904-4c91-b119-09560e7d277e",
+      "equipName": "TC-102",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        229.2,
+        5.241,
+        85.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "e2f5931e-d483-41ea-b6e8-98cea4c60c4f",
+      "equipName": "TC-96",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        352.9,
+        5.241,
+        87.8
+      ],
+      "rotation": [
+        180,
+        0,
+        180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "2e50b62d-ba89-4dde-a85c-a45ac8df4012",
+      "equipName": "TC-100",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        479.1,
+        5.241,
+        85.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "de99e4ce-fc41-407e-89e8-90dbd1642224",
+      "equipName": "OC-04",
+      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-oc",
+        "version": 2
+      },
+      "opacity": 1,
+      "position": [
+        606.2,
+        4.976,
+        51
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "3344250f-9e93-449a-8154-1f66db97a5f0",
+      "equipName": "TTC-26",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        545,
+        5.525,
+        262.4
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "aac8e713-1027-44c9-80f4-73c1b97cda96",
+      "equipName": "TC-57",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1221,
+        5.241,
+        385.638
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "0df8eb69-7861-479e-aa39-252655d0eea0",
+      "equipName": "TC-87",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1121.5,
+        5.241,
+        304.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "8abb5720-b587-4af7-9bb3-ac7820008ad7",
+      "equipName": "TC-103",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        967.4,
+        5.241,
+        305.1
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "fdb93e28-3a69-4410-8a8a-9ca3c68dbde3",
+      "equipName": "TTC-21",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1224,
+        5.525,
+        71.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "24f6b505-7b60-4382-9a07-01eeaa70147d",
+      "equipName": "TTC-12",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1191.2,
+        5.525,
+        137
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "b7ef14ea-a7a3-48a0-8d9b-ddf298e1b77e",
+      "equipName": "TTC-06",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        962.8,
+        5.524,
+        142.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "3c644854-9586-4c20-8c48-807baf135a81",
+      "equipName": "TTC-28",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        724.9,
+        5.524,
+        248.658
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "6b9f5869-b3d4-49c0-b534-d79e6c1fd7ea",
+      "equipName": "TTC-20",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        796.1,
+        5.524,
+        142.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "7539fbcf-be1b-4321-a6a4-cddb1f6e9b92",
+      "equipName": "TC-88",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        1002.3,
+        5.241,
+        93
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "4eaa61d6-5e8e-44ce-9c8e-a7ff81dcf927",
+      "equipName": "TC-105",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        826,
+        5.241,
+        1351.6
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "76a10286-8395-46d0-bc04-2c69e7a476fb",
+      "equipName": "OC-15",
+      "path": "/asset-library/files/okpo-oc/v2/OC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-oc",
+        "version": 2
+      },
+      "opacity": 1,
+      "position": [
+        3004.3,
+        4.976,
+        662.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "4eb48b4f-b44f-4cfc-9cda-7db0aa330773",
+      "equipName": "TTC-19",
+      "path": "/asset-library/files/okpo-ttc/v3/TTC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-ttc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        3002.8,
+        5.525,
+        409.3
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "aee27544-302f-4ea8-9363-34aae84d9455",
+      "equipName": "TC-81",
+      "path": "/asset-library/files/okpo-tc/v3/TC-Crane_Okpo.glb",
+      "asset": {
+        "id": "okpo-tc",
+        "version": 3
+      },
+      "opacity": 1,
+      "position": [
+        2628.9,
+        5.241,
+        1064.8
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     }
   ],
   "texts": [],
   "camera": {
     "position": [
-      340.55678482423167,
-      248.298488,
-      176.7059936204084
+      880.3124928812509,
+      352.3244460891614,
+      219.1131627109334
     ],
     "target": [
-      203.08471320261026,
-      59.951113,
-      -15.050049250199274
+      706.6537213820397,
+      27.95375900105159,
+      92.8561870152503
     ]
   },
   "rigs": [
@@ -1336,7 +1960,8 @@
       "textColor": "#ffffff",
       "dotColor": "#ffffff",
       "textSize": "s",
-      "dotSize": "s"
+      "dotSize": "s",
+      "locked": true
     },
     {
       "id": "a72a06f9-c569-47c7-b07a-e8b3a93d7bc3",
@@ -1356,7 +1981,8 @@
       "textColor": "#ffffff",
       "dotColor": "#ffffff",
       "textSize": "s",
-      "dotSize": "s"
+      "dotSize": "s",
+      "locked": true
     }
   ],
   "floodlights": [
@@ -1373,7 +1999,8 @@
         -44.514,
         10
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "e91b0a16-6bb4-4885-b447-05351b6af153",
@@ -1388,22 +2015,24 @@
         -44.514,
         -10
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "7b4ac0df-7741-4132-9989-b02834a4ab02",
       "name": "2도크 조명 3",
       "position": [
-        -20,
+        -125.6,
         34.977,
-        84
+        87.8
       ],
       "aim": [
         0,
         -44.514,
         -144
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "a997977d-ba55-417a-8c77-8cd9d05722dd",
@@ -1418,7 +2047,8 @@
         -44.514,
         -142
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "9eae7098-f6b4-4c50-a446-605cb29fd885",
@@ -1433,7 +2063,8 @@
         -44.514,
         -140
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "0ba6f1e8-7d0c-40ed-b329-9854458ae0a6",
@@ -1448,7 +2079,8 @@
         -44.514,
         -138
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "b40e8b59-1bf5-4003-98d3-83290b3ae7a2",
@@ -1463,7 +2095,8 @@
         -44.514,
         138
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "226946ef-182f-47cd-bbaf-e48b4d5c5b8b",
@@ -1478,7 +2111,8 @@
         -44.514,
         140
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "bbdb5001-9bbb-4842-8dd2-602b90127843",
@@ -1493,7 +2127,8 @@
         -44.514,
         142
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "77419cab-0c5a-47ba-9847-880d6b66c43f",
@@ -1508,7 +2143,8 @@
         -44.514,
         144
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "e4ed0f3f-f342-4041-84f5-a8b34d579748",
@@ -1523,7 +2159,8 @@
         -44.514,
         12
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "8749e10f-c97d-4330-8205-8fffe9c55527",
@@ -1538,7 +2175,8 @@
         -44.514,
         -14
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "252c7a6a-f3ec-42aa-b6f2-e616e5c41b93",
@@ -1553,7 +2191,8 @@
         -44.514,
         -100
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "0db8ab1d-df4d-4f66-be2f-299d4cee7440",
@@ -1568,7 +2207,8 @@
         -44.514,
         -100
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "a54c1c80-cab8-43d1-a57b-7040e2bee85d",
@@ -1583,7 +2223,8 @@
         -44.514,
         -100
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "e105e711-9958-4de4-a402-7abdf0f7dac4",
@@ -1598,7 +2239,8 @@
         -44.514,
         -100
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "c151e73a-964f-4c0a-8d02-057cd7a22fbf",
@@ -1613,7 +2255,8 @@
         -44.514,
         92
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "bbadeba7-258d-4dac-b9e4-c6a650e45764",
@@ -1628,7 +2271,8 @@
         -44.514,
         92
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "9f17cfff-18ac-4b70-8fad-eee9fbd643e4",
@@ -1643,7 +2287,8 @@
         -44.514,
         116
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     },
     {
       "id": "5e86afe0-854c-40fb-a619-f158782c7c38",
@@ -1658,20 +2303,21 @@
         -44.514,
         -105
       ],
-      "angle": 25
+      "angle": 25,
+      "locked": true
     }
   ],
   "cameraByRegion": {
     "dock-1": {
       "position": [
-        340.55678482423167,
-        248.298488,
-        176.7059936204084
+        880.3124928812509,
+        352.3244460891614,
+        219.1131627109334
       ],
       "target": [
-        203.08471320261026,
-        59.951113,
-        -15.050049250199274
+        706.6537213820397,
+        27.95375900105159,
+        92.8561870152503
       ]
     },
     "dock-2": {
