@@ -5,14 +5,39 @@ import {
   describeSlotChip,
   describeTagKey,
   filterPickCranes,
+  filterPickEquipments,
   filterPickTags,
+  filterPickVirtualTags,
   filterTagCatalog,
+  groupPickEntries,
   pickInitialCrane,
+  pickInitialEquipment,
   pickInitialSlot,
   resolveSelectedCrane,
+  resolveSelectedEquipment,
   splitChipTail,
   selectedCodeForCrane,
 } from '../tag-pick';
+
+function entry(
+  craneId: string,
+  code: string,
+  patch: Partial<TagCatalogEntry> = {},
+): TagCatalogEntry {
+  return {
+    key: `${craneId.replace(/-/g, '_')}:${code}`,
+    name: code,
+    code,
+    equipmentId: `e-${craneId}`,
+    craneId,
+    dataType: 'number',
+    min: 0,
+    max: 100,
+    enabled: true,
+    source: 'virtual',
+    ...patch,
+  };
+}
 
 const cranes = {
   C_171: { snapshot: { bay: 'F1_3_Bay' } },
@@ -101,11 +126,11 @@ describe('filterPickTags', () => {
 
 describe('filterTagCatalog', () => {
   const catalog: TagCatalogEntry[] = [
-    { key: 'GC_04:gantry_position', name: 'GC-04 주행', source: 'virtual' },
-    { key: 'LLC_002:luff_angle', name: 'LLC-002 러핑 각도', source: 'virtual' },
+    entry('GC-04', 'gantry_position', { name: '주행' }),
+    entry('LLC_002', 'luff_angle', { name: '러핑 각도' }),
   ];
 
-  it('키·이름 부분 일치, 빈 검색어는 전부(새 배열)', () => {
+  it('키·코드·이름 부분 일치, 빈 검색어는 전부(새 배열)', () => {
     expect(filterTagCatalog(catalog, ' ').map((e) => e.key)).toEqual([
       'GC_04:gantry_position',
       'LLC_002:luff_angle',
@@ -117,7 +142,106 @@ describe('filterTagCatalog', () => {
     expect(filterTagCatalog(catalog, '주행').map((e) => e.key)).toEqual([
       'GC_04:gantry_position',
     ]);
+    expect(filterTagCatalog(catalog, 'gc_04').map((e) => e.key)).toEqual([
+      'GC_04:gantry_position',
+    ]);
     expect(filterTagCatalog(catalog, 'zzz')).toEqual([]);
+  });
+});
+
+describe('가상 탭 — 장비 목록·태그 묶음·처음 고를 장비', () => {
+  const groups = [
+    { id: 'g-m', name: '계측값' },
+    { id: 'g-s', name: '상태' },
+  ];
+  const equipments = [
+    {
+      id: 'e-GC-04',
+      craneId: 'GC-04',
+      name: 'Goliath',
+      bay: 'B1',
+      enabled: true,
+      groups,
+      entries: [
+        entry('GC-04', 'gantry', { groupId: 'g-m', groupName: '계측값' }),
+        entry('GC-04', 'power', { groupId: 'g-s', groupName: '상태' }),
+        entry('GC-04', 'loose'),
+        entry('GC-04', 'orphan', { groupId: 'gone' }),
+      ],
+    },
+    {
+      id: 'e-LLC_002',
+      craneId: 'LLC_002',
+      enabled: false,
+      groups: [],
+      entries: [entry('LLC_002', 'luff')],
+    },
+  ];
+
+  it('filterPickEquipments — ID·이름·구역에 맞으면 거르고, 안 맞으면 전부(태그 검색어)', () => {
+    expect(filterPickEquipments(equipments, '')).toEqual({
+      equipments,
+      equipmentMatched: false,
+    });
+    expect(filterPickEquipments(equipments, '')).not.toBe(equipments);
+    expect(
+      filterPickEquipments(equipments, ' gol ').equipments.map((e) => e.id),
+    ).toEqual(['e-GC-04']);
+    expect(filterPickEquipments(equipments, 'b1').equipmentMatched).toBe(true);
+    expect(filterPickEquipments(equipments, 'luff')).toEqual({
+      equipments,
+      equipmentMatched: false,
+    });
+  });
+
+  it('filterPickVirtualTags — 장비에 맞은 검색어면 전부, 아니면 코드·이름으로', () => {
+    const entries = equipments[0].entries;
+    expect(filterPickVirtualTags(entries, 'GC', true)).toEqual(entries);
+    expect(
+      filterPickVirtualTags(entries, 'pow', false).map((e) => e.code),
+    ).toEqual(['power']);
+  });
+
+  it('groupPickEntries — 그룹 순 › 미분류(없는 그룹 포함), 빈 묶음은 뺀다', () => {
+    const sections = groupPickEntries(groups, equipments[0].entries);
+    expect(
+      sections.map((s) => [s.group?.id ?? null, s.entries.map((e) => e.code)]),
+    ).toEqual([
+      ['g-m', ['gantry']],
+      ['g-s', ['power']],
+      [null, ['loose', 'orphan']],
+    ]);
+    expect(groupPickEntries(groups, [])).toEqual([]);
+    expect(
+      groupPickEntries(groups, [equipments[0].entries[0]]).map(
+        (s) => s.group?.id,
+      ),
+    ).toEqual(['g-m']);
+  });
+
+  it('pickInitialEquipment — 연결된 키의 장비 › 모델 craneId › 첫 장비, -/_ 표기를 맞춘다', () => {
+    expect(pickInitialEquipment(equipments, 'GC-04', 'LLC_002:luff')?.id).toBe(
+      'e-LLC_002',
+    );
+    expect(pickInitialEquipment(equipments, 'GC_04', undefined)?.id).toBe(
+      'e-GC-04',
+    );
+    expect(
+      pickInitialEquipment(equipments, 'zz', 'C_171.tl_distance')?.id,
+    ).toBe('e-GC-04');
+    expect(pickInitialEquipment([], 'GC-04', undefined)).toBeNull();
+  });
+
+  it('resolveSelectedEquipment — 고른 장비가 목록에 있으면 유지, 없으면 처음 규칙', () => {
+    expect(
+      resolveSelectedEquipment('e-LLC_002', equipments, 'GC-04', undefined)?.id,
+    ).toBe('e-LLC_002');
+    expect(
+      resolveSelectedEquipment('gone', equipments, 'GC-04', undefined)?.id,
+    ).toBe('e-GC-04');
+    expect(
+      resolveSelectedEquipment(null, equipments, undefined, undefined)?.id,
+    ).toBe('e-GC-04');
   });
 });
 
@@ -193,15 +317,15 @@ describe('selectedCodeForCrane / describeTagKey / describeSlotChip / describePic
     expect(describeTagKey('gantry')).toBeNull();
   });
 
-  it('슬롯 칩 — 실시간은 크레인 · 코드, 가상은 키 + 카탈로그 이름, 못 찾으면 unknown', () => {
+  it('슬롯 칩 — 실시간은 크레인 · 코드, 가상은 장비 · 코드 + 이름·단위·그룹 툴팁, 못 찾으면 unknown', () => {
     const catalog: TagCatalogEntry[] = [
-      {
-        key: 'GC_04:gantry_position',
-        name: 'GC-04 주행',
+      entry('GC-04', 'gantry_position', {
+        name: '주행',
         unit: 'm',
-        source: 'virtual',
-      },
-      { key: 'V:same', name: 'V:same', source: 'virtual' },
+        groupId: 'g',
+        groupName: '계측값',
+      }),
+      entry('V', 'same'),
     ];
     const realtime = describeSlotChip('C_171.tl_distance', 'realtime', catalog);
     expect(realtime.text).toBe('C_171 · tl_distance');
@@ -219,17 +343,24 @@ describe('selectedCodeForCrane / describeTagKey / describeSlotChip / describePic
     expect(
       describeSlotChip('GC_04:gantry_position', 'virtual', catalog),
     ).toEqual({
-      text: 'GC_04:gantry_position',
-      lead: 'GC_04:',
+      text: 'GC-04 · gantry_position',
+      lead: 'GC-04 · ',
       tail: 'gantry_position',
-      title: 'GC-04 주행 · m',
+      title: '주행 · m · 계측값',
       unknown: false,
     });
-    // 이름이 키와 같고 단위가 없으면 툴팁 없음.
+    // 이름이 코드와 같고 단위·그룹이 없으면 툴팁 없음.
     expect(
       describeSlotChip('V:same', 'virtual', catalog).title,
     ).toBeUndefined();
-    expect(describeSlotChip('V:gone', 'virtual', catalog).unknown).toBe(true);
+    // 카탈로그에 없는 가상 키는 키 그대로 + unknown.
+    expect(describeSlotChip('V:gone', 'virtual', catalog)).toEqual({
+      text: 'V:gone',
+      lead: 'V:',
+      tail: 'gone',
+      title: undefined,
+      unknown: true,
+    });
   });
 
   it('칩의 앞부분·코드는 마지막 : 또는 . 에서 나누고, 이어 붙이면 늘 text 다', () => {

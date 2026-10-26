@@ -79,7 +79,7 @@ export function OutdoorWorkPage() {
       )}
       {tagsRoute && (
         <TagsPage
-          craneId={tagsRoute.craneId}
+          route={tagsRoute}
           basePath={`/outdoor-work/${regionId}/tags`}
         />
       )}

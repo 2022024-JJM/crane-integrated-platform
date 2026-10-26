@@ -412,14 +412,31 @@ export {
   serializeVirtualTagSet,
   SIMULATION_SPEED_MAX,
   SIMULATION_SPEED_MIN,
+  type VirtualEquipmentAddResult,
+  type VirtualEquipmentDraft,
   type VirtualTagAddResult,
   type VirtualTagDraft,
+  type VirtualTagGroupAddResult,
+  type VirtualTagImportResult,
 } from './model/use-virtual-tag-store';
 export {
+  isVirtualTagEntryEnabled,
   virtualTagRuntime,
   virtualTagSource,
 } from './model/virtual-tag-runner';
-export { useTagCatalog, type TagCatalogEntry } from './model/use-tag-catalog';
+export {
+  useTagCatalog,
+  useTagCatalogEquipments,
+  type TagCatalogEntry,
+  type TagCatalogEquipment,
+} from './model/use-tag-catalog';
+export {
+  cloneRange,
+  cloneTagsFromSnapshot,
+  fallbackRange,
+  type CloneTagsOptions,
+  type CloneTagsResult,
+} from './lib/virtual-tag-clone';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export {
   useSceneDock,

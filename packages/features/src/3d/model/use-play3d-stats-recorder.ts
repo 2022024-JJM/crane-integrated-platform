@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { scenarioDurationMs } from '@crane/domain/virtual-tag';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
@@ -65,9 +64,6 @@ const SEEK_SETTLE_MS = 300;
 
 function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
   const replay = useReplayPlayerStore.getState();
-  const sim = useVirtualTagStore.getState();
-  const scenario =
-    sim.scenarios.find((s) => s.id === sim.activeScenarioId) ?? null;
   return {
     source,
     regionId,
@@ -77,18 +73,8 @@ function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
       source === 'replay'
         ? (replay.frames[replay.frames.length - 1]?.timestamp ?? null)
         : null,
-    scenarioName:
-      source === 'simulation' && scenario ? scenario.name || scenario.id : null,
-    scenarioLoop: source === 'simulation' ? (scenario?.loop ?? false) : false,
     startedAt: Date.now(),
   };
-}
-
-function activeScenarioDurationMs(source: Play3dSource): number | null {
-  if (source !== 'simulation') return null;
-  const sim = useVirtualTagStore.getState();
-  const scenario = sim.scenarios.find((s) => s.id === sim.activeScenarioId);
-  return scenario ? scenarioDurationMs(scenario) : null;
 }
 
 function pushEvent(
@@ -332,9 +318,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   // 있던 쌍의 진입을 심는다.
   useEffect(() => {
     const restart = () => {
-      usePlay3dStatsStore
-        .getState()
-        .reset(buildMeta(source, regionId), activeScenarioDurationMs(source));
+      usePlay3dStatsStore.getState().reset(buildMeta(source, regionId));
       const { data } = usePlay3dStatsStore.getState();
       const atMs = readPlay3dPositionMs();
       for (const [modelId, to] of Object.entries(statusesRef.current)) {
@@ -349,8 +333,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     });
     const unsubSim = useVirtualTagStore.subscribe((state, prev) => {
       if (source !== 'simulation') return;
-      if (state.activeScenarioId !== prev.activeScenarioId) restart();
-      else if (!state.hasSession && prev.hasSession) restart();
+      if (!state.hasSession && prev.hasSession) restart();
     });
     return () => {
       unsubReplay();
@@ -550,10 +533,10 @@ export function usePlay3dStatsRecorder(regionId: string): void {
       let agg = data.tags[key];
       let maxSpeed: number | null = null;
       if (sourceRef.current === 'simulation') {
-        const def = useVirtualTagStore
+        const entry = useVirtualTagStore
           .getState()
-          .tags.find((t) => t.key === key);
-        maxSpeed = def?.limits?.maxSpeed ?? null;
+          .entries.find((e) => e.key === key);
+        maxSpeed = entry?.tag.limits?.maxSpeed ?? null;
       }
       if (!agg) {
         agg = createTagAggregate(key, maxSpeed !== null);

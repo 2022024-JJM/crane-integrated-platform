@@ -1,32 +1,27 @@
 export type {
-  ScenarioEase,
-  ScenarioKeyframe,
-  ScenarioTrack,
-  VirtualScenario,
+  VirtualEquipment,
+  VirtualTagDataType,
   VirtualTagDefinition,
+  VirtualTagGroup,
+  VirtualTagGroupPreset,
   VirtualTagLimits,
   VirtualTagPattern,
   VirtualTagPatternKind,
   VirtualTagSet,
 } from './model/types';
 export {
-  SCENARIO_EASES,
-  SCENARIO_KEYFRAMES_MAX,
-  SCENARIO_NAME_MAX,
-  SCENARIO_TIME_MAX_MS,
-  SCENARIO_TRACKS_MAX,
-  SCENARIOS_MAX,
   SIMULATION_SPEED_OPTIONS,
-} from './model/types';
-export {
-  evaluateScenarioTrack,
-  isScenarioFinished,
-  normalizeKeyframes,
-  scenarioDurationMs,
-  scenarioTimeMs,
-} from './lib/scenario';
-export {
-  VIRTUAL_TAG_KEY_MAX,
+  VIRTUAL_EQUIPMENT_BAY_MAX,
+  VIRTUAL_EQUIPMENT_GROUPS_MAX,
+  VIRTUAL_EQUIPMENT_ID_MAX,
+  VIRTUAL_EQUIPMENT_NAME_MAX,
+  VIRTUAL_EQUIPMENT_TAGS_MAX,
+  VIRTUAL_EQUIPMENTS_MAX,
+  VIRTUAL_TAG_BOOL_PATTERN_KINDS,
+  VIRTUAL_TAG_CODE_MAX,
+  VIRTUAL_TAG_DATA_TYPES,
+  VIRTUAL_TAG_GROUP_NAME_MAX,
+  VIRTUAL_TAG_GROUP_PRESETS,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
@@ -36,8 +31,26 @@ export {
   VIRTUAL_TAG_TICK_MAX,
   VIRTUAL_TAG_TICK_MIN,
   VIRTUAL_TAG_UNIT_MAX,
-  VIRTUAL_TAGS_MAX,
 } from './model/types';
+export {
+  buildVirtualTagKey,
+  normalizeVirtualEquipmentId,
+  normalizeVirtualEquipmentKey,
+  normalizeVirtualTagCode,
+  parseVirtualTagKey,
+  VIRTUAL_TAG_KEY_SEPARATOR,
+  type VirtualTagKeyParts,
+} from './lib/virtual-tag-key';
+export {
+  collectVirtualTagEntries,
+  findVirtualTagEntry,
+  type VirtualTagEntry,
+} from './lib/virtual-tag-entries';
+export {
+  createDefaultGroups,
+  findPresetGroup,
+  toGroupPreset,
+} from './lib/default-groups';
 export {
   clampToTag,
   initVirtualTagState,
@@ -49,16 +62,17 @@ export {
   clampVirtualTagPeriod,
   clampVirtualTagTick,
   createEmptyVirtualTagSet,
-  normalizeVirtualTagKey,
+  migrateVirtualTagSetV1,
+  sanitizeVirtualEquipment,
+  sanitizeVirtualEquipmentList,
   sanitizeVirtualTag,
+  sanitizeVirtualTagGroup,
+  sanitizeVirtualTagGroupList,
   sanitizeVirtualTagLimits,
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
-  sanitizeScenario,
-  sanitizeScenarioKeyframe,
-  sanitizeScenarioList,
-  sanitizeScenarioTrack,
+  VIRTUAL_UNASSIGNED_EQUIPMENT_ID,
 } from './lib/sanitize-virtual-tags';
 export {
   isVirtualTagSetStoredLocallyOnly,

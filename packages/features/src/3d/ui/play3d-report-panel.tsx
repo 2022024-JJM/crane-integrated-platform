@@ -14,6 +14,7 @@ import {
   tagRowLabel,
   timelineAxisMs,
   timelineRows,
+  toPlay3dTagDefs,
 } from '../lib/play3d-format';
 import {
   lastEventAtMs,
@@ -57,7 +58,8 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   const transport = usePlay3dTransport();
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
-  const tagDefs = useVirtualTagStore((s) => s.tags);
+  const tagEntries = useVirtualTagStore((s) => s.entries);
+  const tagDefs = useMemo(() => toPlay3dTagDefs(tagEntries), [tagEntries]);
   const sceneInfo = useSceneInfoStore(
     (s) => s.sceneInfoByRegion[meta.regionId] ?? null,
   );
@@ -128,7 +130,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
       ]
         .filter(Boolean)
         .join(' ~ ') || t('common:replay.noData')
-    : (meta.scenarioName ?? t('monitoring:simulation.none'));
+    : t('monitoring:play3d.openEnded');
 
   const coverage = coverageRatio(stats.scannedMs, stats.windowEndMs);
   const topPair = stats.collisions.byPair[0];
@@ -175,9 +177,6 @@ export function Play3dReportPanel({ className }: { className?: string }) {
           {formatSimClock(stats.windowEndMs)} · {t('monitoring:play3d.scanned')}{' '}
           {formatSimClock(stats.scannedMs)}
           {coverage !== null ? ` (${formatRatio(coverage)})` : null}
-          {stats.loopIteration !== null && meta.scenarioLoop
-            ? ` · ${t('monitoring:play3d.iteration', { n: stats.loopIteration + 1 })}`
-            : null}
           {stats.holds.count > 0
             ? ` · ${t('monitoring:play3d.holdsSummary', {
                 count: stats.holds.count,

@@ -16,8 +16,9 @@ function tag(
 ): VirtualTagDefinition {
   return {
     id: 't1',
-    key: 'C_1:x',
+    code: 'x',
     name: 'x',
+    dataType: 'number',
     min: 0,
     max: 100,
     initial: 0,

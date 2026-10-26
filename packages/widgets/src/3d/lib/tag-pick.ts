@@ -10,8 +10,14 @@ import {
   parseCraneTagKey,
 } from '@crane/domain/monitoring';
 import {
+  normalizeVirtualEquipmentKey,
+  parseVirtualTagKey,
+  type VirtualTagGroup,
+} from '@crane/domain/virtual-tag';
+import {
   filterTagRows,
   type TagCatalogEntry,
+  type TagCatalogEquipment,
   type TagRow,
 } from '@crane/features/3d';
 
@@ -76,7 +82,7 @@ export function filterPickTags(
   return craneMatched ? [...rows] : filterTagRows(rows, 'all', query);
 }
 
-/** 가상 태그 목록 — 키·이름 부분 일치(대소문자·앞뒤 공백 무시). */
+/** 가상 태그 목록 — 키·코드·이름 부분 일치(대소문자·앞뒤 공백 무시). */
 export function filterTagCatalog(
   entries: readonly TagCatalogEntry[],
   query: string,
@@ -86,8 +92,117 @@ export function filterTagCatalog(
   return entries.filter(
     (entry) =>
       entry.key.toLowerCase().includes(needle) ||
+      entry.code.toLowerCase().includes(needle) ||
       entry.name.toLowerCase().includes(needle),
   );
+}
+
+/** 가상 탭의 장비 목록 필터에 필요한 조각 — 카탈로그 장비에서 ID·이름·구역만 본다. */
+export type PickEquipment = Pick<
+  TagCatalogEquipment,
+  'id' | 'craneId' | 'name' | 'bay'
+>;
+
+export interface PickEquipmentFilter {
+  /** 왼쪽 목록에 보일 장비(스토어 순서 유지). */
+  equipments: PickEquipment[];
+  /** 검색어가 장비에 맞았는가 — 맞으면 태그 목록은 거르지 않는다. */
+  equipmentMatched: boolean;
+}
+
+/**
+ * 가상 탭의 장비 목록 — 검색어가 장비 ID·이름·구역에 부분 일치(대소문자·앞뒤
+ * 공백 무시)하면 거르고, 아무 장비에도 안 맞으면 태그 검색어로 보아 장비는
+ * 전부 둔다(`filterPickVirtualTags`). 실시간 탭의 `filterPickCranes` 와 같은 규칙.
+ */
+export function filterPickEquipments<E extends PickEquipment>(
+  equipments: readonly E[],
+  query: string,
+): { equipments: E[]; equipmentMatched: boolean } {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return { equipments: [...equipments], equipmentMatched: false };
+  const matched = equipments.filter(
+    (e) =>
+      e.craneId.toLowerCase().includes(needle) ||
+      (e.name ?? '').toLowerCase().includes(needle) ||
+      (e.bay ?? '').toLowerCase().includes(needle),
+  );
+  return matched.length > 0
+    ? { equipments: matched, equipmentMatched: true }
+    : { equipments: [...equipments], equipmentMatched: false };
+}
+
+/** 가상 탭의 태그 목록 — 검색어가 장비에 맞았으면 전부, 아니면 코드·이름으로. */
+export function filterPickVirtualTags(
+  entries: readonly TagCatalogEntry[],
+  query: string,
+  equipmentMatched: boolean,
+): TagCatalogEntry[] {
+  return equipmentMatched ? [...entries] : filterTagCatalog(entries, query);
+}
+
+export interface PickEntrySection {
+  /** null 은 미분류. */
+  group: VirtualTagGroup | null;
+  entries: TagCatalogEntry[];
+}
+
+/**
+ * 장비의 태그를 그룹 순으로 묶는다 — 상세 화면과 같은 순서(그룹 순 › 미분류).
+ * 비어 있는 묶음은 넣지 않는다(고르는 화면이라 머리글만 남을 이유가 없다).
+ */
+export function groupPickEntries(
+  groups: readonly VirtualTagGroup[],
+  entries: readonly TagCatalogEntry[],
+): PickEntrySection[] {
+  const groupIds = new Set(groups.map((g) => g.id));
+  const sections: PickEntrySection[] = [];
+  for (const group of groups) {
+    const list = entries.filter((e) => e.groupId === group.id);
+    if (list.length > 0) sections.push({ group, entries: list });
+  }
+  const ungrouped = entries.filter(
+    (e) => !e.groupId || !groupIds.has(e.groupId),
+  );
+  if (ungrouped.length > 0) sections.push({ group: null, entries: ungrouped });
+  return sections;
+}
+
+/**
+ * 처음 고를 장비 — 지금 연결된 가상 키의 장비 › 모델의 craneId 와 같은 장비 ›
+ * 목록 첫 장비. 키의 장비키·모델 craneId 는 정규화(`-`→`_`)해 비교한다.
+ */
+export function pickInitialEquipment<E extends PickEquipment>(
+  equipments: readonly E[],
+  modelCraneId: string | undefined,
+  currentKey: string | undefined,
+): E | null {
+  const candidates = [
+    currentKey ? parseVirtualTagKey(currentKey)?.equipmentKey : undefined,
+    modelCraneId ? normalizeVirtualEquipmentKey(modelCraneId) : undefined,
+  ];
+  for (const wanted of candidates) {
+    if (!wanted) continue;
+    const found = equipments.find(
+      (e) => normalizeVirtualEquipmentKey(e.craneId) === wanted,
+    );
+    if (found) return found;
+  }
+  return equipments[0] ?? null;
+}
+
+/** 사용자가 고른 장비가 목록에 남아 있으면 그것, 아니면 처음 규칙으로. */
+export function resolveSelectedEquipment<E extends PickEquipment>(
+  pickedId: string | null,
+  equipments: readonly E[],
+  modelCraneId: string | undefined,
+  currentKey: string | undefined,
+): E | null {
+  if (pickedId) {
+    const picked = equipments.find((e) => e.id === pickedId);
+    if (picked) return picked;
+  }
+  return pickInitialEquipment(equipments, modelCraneId, currentKey);
 }
 
 /**
@@ -186,8 +301,9 @@ function splitKeyText(key: string): Pick<SlotChip, 'lead' | 'tail'> {
 }
 
 /**
- * 카드의 슬롯 칩 — 실시간 키는 `크레인 · 코드` 로 나눠 보이고, 가상 키는
- * 카탈로그의 이름을 툴팁에 붙인다. 어느 쪽도 못 풀면 키 그대로 + unknown.
+ * 카드의 슬롯 칩 — 실시간 키는 `크레인 · 코드`, 가상 키도 카탈로그에 있으면
+ * `장비 · 코드` 로 나눠 보이고 이름·단위·그룹을 툴팁에 붙인다. 카탈로그에
+ * 없는 가상 키는 키 그대로 + unknown. 실시간 키를 못 풀면 키 그대로 + unknown.
  */
 export function describeSlotChip(
   key: string,
@@ -196,15 +312,28 @@ export function describeSlotChip(
 ): SlotChip {
   if (slot === 'virtual') {
     const entry = catalog.find((e) => e.key === key);
+    if (!entry) {
+      return {
+        text: key,
+        ...splitKeyText(key),
+        title: undefined,
+        unknown: true,
+      };
+    }
+    const lead = `${entry.craneId} · `;
     return {
-      text: key,
-      ...splitKeyText(key),
-      title: entry
-        ? [entry.name !== key ? entry.name : '', entry.unit ?? '']
-            .filter(Boolean)
-            .join(' · ') || undefined
-        : undefined,
-      unknown: !entry,
+      text: `${lead}${entry.code}`,
+      lead,
+      tail: entry.code,
+      title:
+        [
+          entry.name !== entry.code ? entry.name : '',
+          entry.unit ?? '',
+          entry.groupName ?? '',
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined,
+      unknown: false,
     };
   }
   const desc = describeTagKey(key);

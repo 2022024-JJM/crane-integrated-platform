@@ -1,13 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
-
-export type TagsTab = 'realtime' | 'virtual';
+import type { TagsTab } from '../lib/tags-route';
 
 const TABS: readonly TagsTab[] = ['realtime', 'virtual'];
 
 /**
  * 태그 페이지 탭 — 실시간 태그 | 가상 태그. 3D 플레이의 소스 탭과 같은
- * 규칙(role=tablist 버튼, 공용 Tabs 컴포넌트 없음).
+ * 규칙(role=tablist 버튼, 공용 Tabs 컴포넌트 없음). 선택은 URL 이 든다.
  */
 export function TagsTabs({
   value,

@@ -13,7 +13,6 @@ import {
   emptyStatusMs,
   hasEventNear,
   lastEventAtMs,
-  loopIterationOf,
   openZoneSubjectsAt,
   statusBands,
   sumScanned,
@@ -50,7 +49,6 @@ function input(patch: Partial<Play3dStatsInput> = {}): Play3dStatsInput {
     tags: {},
     scanned: [],
     windowEndMs: 60_000,
-    scenarioDurationMs: null,
     holdWallMs: 0,
     detectionOffSeen: false,
     ...patch,
@@ -82,19 +80,6 @@ describe('addScannedInterval / sumScanned', () => {
     expect(addScannedInterval(base, 9, 4)).toEqual(base);
     expect(addScannedInterval(base, Number.NaN, 4)).toEqual(base);
     expect(addScannedInterval(base, 5, 5)).not.toBe(base);
-  });
-});
-
-describe('loopIterationOf', () => {
-  it('경계: 길이 정확값에서 다음 회차', () => {
-    expect(loopIterationOf(0, 90_000)).toBe(0);
-    expect(loopIterationOf(89_999, 90_000)).toBe(0);
-    expect(loopIterationOf(90_000, 90_000)).toBe(1);
-    expect(loopIterationOf(-5, 90_000)).toBe(0);
-  });
-  it('열린 구간(null·0)은 null', () => {
-    expect(loopIterationOf(1000, null)).toBeNull();
-    expect(loopIterationOf(1000, 0)).toBeNull();
   });
 });
 
@@ -146,7 +131,6 @@ describe('computePlay3dStats', () => {
     expect(stats.holds).toEqual({ count: 0, wallMs: 0 });
     expect(stats.equipment).toEqual([]);
     expect(stats.tags).toEqual([]);
-    expect(stats.loopIteration).toBeNull();
     expect(stats.summary).toEqual({
       equipmentCount: 0,
       runningRatio: null,
@@ -475,16 +459,10 @@ describe('computePlay3dStats', () => {
     expect(stats.tags[1].saturationRatio).toBeNull();
   });
 
-  it('회차·검사 시간·NaN 창 방어', () => {
-    const stats = computePlay3dStats(
-      input({ windowEndMs: Number.NaN, scenarioDurationMs: 1000 }),
-    );
+  it('NaN 창 방어 — 창 끝은 0 으로', () => {
+    const stats = computePlay3dStats(input({ windowEndMs: Number.NaN }));
     expect(stats.windowEndMs).toBe(0);
-    expect(stats.loopIteration).toBe(0);
-    expect(
-      computePlay3dStats(input({ windowEndMs: 2500, scenarioDurationMs: 1000 }))
-        .loopIteration,
-    ).toBe(2);
+    expect(stats.reachedMs).toBe(0);
   });
 });
 

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  VirtualScenario,
-  VirtualTagDefinition,
+import {
+  collectVirtualTagEntries,
+  type VirtualEquipment,
+  type VirtualTagDefinition,
 } from '@crane/domain/virtual-tag';
 import { subscribeSceneSeek } from '../scene-seek-signal';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
@@ -13,13 +14,14 @@ import {
 } from '../tag-value-bus';
 
 /**
- * 시뮬레이션 시계·시나리오 — 배속, seek, 시나리오 우선, 끝에서 정지, 트랙
- * 없는 태그는 파형 유지. 저장소는 건드리지 않고 스토어 상태를 직접 세운다.
+ * 시뮬레이션 시계·러너 — 배속, seek 재시뮬레이션, 속도·가속 한계, 종료,
+ * 장비·태그 켜짐 판정. 저장소는 건드리지 않고 스토어 상태를 직접 세운다.
  */
 const TAG_A: VirtualTagDefinition = {
   id: 'a',
-  key: 'A:x',
+  code: 'x',
   name: '',
+  dataType: 'number',
   min: 0,
   max: 100,
   initial: 0,
@@ -28,44 +30,42 @@ const TAG_A: VirtualTagDefinition = {
 };
 const TAG_B: VirtualTagDefinition = {
   id: 'b',
-  key: 'B:y',
+  code: 'y',
   name: '',
+  dataType: 'number',
   min: -10,
   max: 10,
   initial: 0,
   pattern: { kind: 'manual' },
   enabled: true,
 };
-const SCENARIO: VirtualScenario = {
-  id: 's1',
-  name: 'demo',
-  loop: false,
-  tracks: [
-    {
-      key: 'B:y',
-      keyframes: [
-        { atMs: 0, value: -10 },
-        { atMs: 2000, value: 10 },
-      ],
-    },
-  ],
-};
+
+function equipmentsWith(
+  a: VirtualTagDefinition = TAG_A,
+  b: VirtualTagDefinition = TAG_B,
+  enabledA = true,
+): VirtualEquipment[] {
+  return [
+    { id: 'eA', craneId: 'A', enabled: enabledA, groups: [], tags: [a] },
+    { id: 'eB', craneId: 'B', enabled: true, groups: [], tags: [b] },
+  ];
+}
 
 const last = new Map<string, number>();
 
-function reset() {
+function reset(equipments: VirtualEquipment[] = equipmentsWith()) {
   useVirtualTagStore.getState().pause();
+  const entries = collectVirtualTagEntries(equipments);
   useVirtualTagStore.setState({
-    tags: [TAG_A, TAG_B],
+    equipments,
+    entries,
     tickMs: 100,
-    scenarios: [SCENARIO],
     speed: 1,
-    activeScenarioId: null,
     hasSession: false,
     hydrated: true,
     isRunning: false,
   });
-  virtualTagRuntime.syncDefinitions([TAG_A, TAG_B]);
+  virtualTagRuntime.syncDefinitions(entries);
   virtualTagRuntime.resetValues();
   last.clear();
   tagLiveValues.clear();
@@ -116,121 +116,53 @@ describe('seek', () => {
   });
 });
 
-describe('시나리오', () => {
-  it('활성 시나리오의 트랙은 키프레임 값, 트랙 없는 태그는 파형 그대로', () => {
-    useVirtualTagStore.getState().setActiveScenario('s1');
-    // 선택 즉시 0초로 seek — B 는 첫 키프레임 -10.
-    expect(last.get('B:y')).toBe(-10);
+describe('장비·태그 켜짐', () => {
+  it('꺼진 장비의 태그는 태그가 켜져 있어도 내보내지 않고, 슬라이더도 조용하다', () => {
+    const [a, b] = equipmentsWith();
+    reset([a, { ...b, enabled: false }]);
     useVirtualTagStore.getState().start();
-    vi.advanceTimersByTime(1000);
-    expect(last.get('B:y')).toBeCloseTo(0, 5);
-    expect(last.get('A:x')).toBeCloseTo(10, 5);
+    vi.advanceTimersByTime(500);
+    expect(last.has('B:y')).toBe(false);
+    expect(last.get('A:x')).toBeCloseTo(5, 5);
+    virtualTagRuntime.setManualValue('B:y', 7);
+    expect(last.has('B:y')).toBe(false);
+    // 값은 들고 있다가 다시 켜면 그 값이 나간다.
+    expect(virtualTagRuntime.getValue('B:y')).toBe(7);
+    useVirtualTagStore.getState().updateEquipment('eB', { enabled: true });
+    vi.advanceTimersByTime(100);
+    expect(last.get('B:y')).toBe(7);
   });
 
-  it('loop 아닌 시나리오는 끝에 닿으면 일시정지한다', () => {
-    useVirtualTagStore.getState().setActiveScenario('s1');
+  it('꺼진 태그는 내보내지 않는다', () => {
+    reset(equipmentsWith({ ...TAG_A, enabled: false }));
     useVirtualTagStore.getState().start();
-    vi.advanceTimersByTime(2500);
-    expect(useVirtualTagStore.getState().isRunning).toBe(false);
-    expect(last.get('B:y')).toBe(10);
+    vi.advanceTimersByTime(300);
+    expect(last.has('A:x')).toBe(false);
+    expect(last.has('B:y')).toBe(true);
   });
 
-  it('loop 시나리오는 계속 돌며 시각이 감긴다', () => {
-    useVirtualTagStore.setState({
-      scenarios: [{ ...SCENARIO, loop: true }],
-    });
-    useVirtualTagStore.getState().setActiveScenario('s1');
-    useVirtualTagStore.getState().start();
-    vi.advanceTimersByTime(3000);
-    expect(useVirtualTagStore.getState().isRunning).toBe(true);
-    // 3000 % 2000 = 1000 → 0
-    expect(last.get('B:y')).toBeCloseTo(0, 5);
-  });
-
-  it('없는 id 를 활성으로 두면 null, 삭제하면 활성 해제', () => {
-    const store = useVirtualTagStore.getState();
-    store.setActiveScenario('nope');
-    expect(useVirtualTagStore.getState().activeScenarioId).toBeNull();
-    store.setActiveScenario('s1');
-    store.removeScenario('s1');
-    expect(useVirtualTagStore.getState().activeScenarioId).toBeNull();
-  });
-});
-
-describe('시나리오 편집', () => {
-  it('추가·트랙 추가(첫 키프레임 = initial)·키프레임 교체·빈 키프레임은 트랙 삭제·중복 트랙 거부', () => {
-    const store = useVirtualTagStore.getState();
-    const id = store.addScenario('테스트')!;
-    expect(id).toBeTruthy();
-    expect(store.addScenarioTrack(id, 'A:x')).toBe(true);
-    expect(store.addScenarioTrack(id, 'A:x')).toBe(false);
-    let scenario = useVirtualTagStore
-      .getState()
-      .scenarios.find((s) => s.id === id)!;
-    expect(scenario.tracks[0].keyframes).toEqual([{ atMs: 0, value: 0 }]);
+  it('코드를 바꾸면 새 키로 상태가 다시 잡히고 옛 키는 사라진다', () => {
+    virtualTagRuntime.setManualValue('B:y', 7);
     expect(
-      store.setScenarioTrackKeyframes(id, 'A:x', [
-        { atMs: 900, value: 5 },
-        { atMs: 100, value: 1 },
-      ]),
+      useVirtualTagStore.getState().updateTag('eB', 'b', { code: 'z' }),
     ).toBe(true);
-    scenario = useVirtualTagStore
-      .getState()
-      .scenarios.find((s) => s.id === id)!;
-    expect(scenario.tracks[0].keyframes.map((k) => k.atMs)).toEqual([100, 900]);
-    store.setScenarioTrackKeyframes(id, 'A:x', []);
-    scenario = useVirtualTagStore
-      .getState()
-      .scenarios.find((s) => s.id === id)!;
-    expect(scenario.tracks).toEqual([]);
-    expect(store.setScenarioTrackKeyframes(id, 'zz', [])).toBe(false);
+    expect(virtualTagRuntime.getValue('B:y')).toBeUndefined();
+    expect(virtualTagRuntime.getValue('B:z')).toBe(0);
   });
 
-  it('복제는 새 id·유일한 이름, 이름·반복 갱신, 상한', () => {
-    const store = useVirtualTagStore.getState();
-    const copyId = store.duplicateScenario('s1')!;
-    const copy = useVirtualTagStore
-      .getState()
-      .scenarios.find((s) => s.id === copyId)!;
-    expect(copy.name).toBe('demo 2');
-    expect(copy.tracks).toEqual(SCENARIO.tracks);
-    expect(store.updateScenario(copyId, { name: '  x  ', loop: true })).toBe(
-      true,
-    );
-    const updated = useVirtualTagStore
-      .getState()
-      .scenarios.find((s) => s.id === copyId)!;
-    expect(updated.name).toBe('x');
-    expect(updated.loop).toBe(true);
-    expect(store.updateScenario('nope', { loop: true })).toBe(false);
-  });
-
-  it('dirty 는 시나리오 변경도 잡는다', () => {
-    const store = useVirtualTagStore.getState();
-    useVirtualTagStore.setState({
-      savedSnapshot: JSON.stringify({
-        version: 1,
-        tickMs: 100,
-        tags: [TAG_A, TAG_B],
-        scenarios: [SCENARIO],
-      }),
-    });
-    expect(store.isDirty()).toBe(false);
-    store.updateScenario('s1', { loop: true });
-    expect(useVirtualTagStore.getState().isDirty()).toBe(true);
+  it('범위·패턴이 그대로면 상태를 유지하고, 바뀌면 initial 로 다시 잡는다', () => {
+    virtualTagRuntime.setManualValue('B:y', 7);
+    useVirtualTagStore.getState().updateTag('eB', 'b', { name: 'renamed' });
+    expect(virtualTagRuntime.getValue('B:y')).toBe(7);
+    useVirtualTagStore.getState().updateTag('eB', 'b', { max: 5 });
+    expect(virtualTagRuntime.getValue('B:y')).toBe(0);
   });
 });
 
 describe('속도·가속 한계', () => {
   it('한계가 있는 태그는 파형 목표를 maxSpeed 이하로 따라간다(배속 곱한 시뮬레이션 초 기준)', () => {
-    const limited: VirtualTagDefinition = {
-      ...TAG_A,
-      // sawtooth 10s 0→100 은 10 unit/s — 한계 2 unit/s 로 잘린다.
-      limits: { maxSpeed: 2 },
-    };
-    useVirtualTagStore.setState({ tags: [limited, TAG_B] });
-    virtualTagRuntime.syncDefinitions([limited, TAG_B]);
-    virtualTagRuntime.resetValues();
+    // sawtooth 10s 0→100 은 10 unit/s — 한계 2 unit/s 로 잘린다.
+    reset(equipmentsWith({ ...TAG_A, limits: { maxSpeed: 2 } }));
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(1000);
     // 벽시계 1s ×1 → 최대 2 (파형 목표는 10).
@@ -242,12 +174,7 @@ describe('속도·가속 한계', () => {
   });
 
   it('seek 도 한계를 지킨다 — 0 부터 다시 적분한 값이지 그 시각의 목표값이 아니다', () => {
-    const limited: VirtualTagDefinition = {
-      ...TAG_A,
-      limits: { maxSpeed: 0.1 },
-    };
-    useVirtualTagStore.setState({ tags: [limited, TAG_B] });
-    virtualTagRuntime.syncDefinitions([limited, TAG_B]);
+    reset(equipmentsWith({ ...TAG_A, limits: { maxSpeed: 0.1 } }));
     useVirtualTagStore.getState().seek(5000);
     // 목표는 50 이지만 0.1 unit/s × 5s = 0.5.
     expect(last.get('A:x')).toBeCloseTo(0.5, 5);
@@ -263,14 +190,9 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
     ...TAG_A,
     limits: { maxSpeed: 2, maxAccel: 1 },
   };
-  function useLimited() {
-    useVirtualTagStore.setState({ tags: [LIMITED, TAG_B] });
-    virtualTagRuntime.syncDefinitions([LIMITED, TAG_B]);
-    virtualTagRuntime.resetValues();
-  }
 
   it('재생으로 t 에 닿은 값과 정지 상태에서 seek(t) 한 값이 같다', () => {
-    useLimited();
+    reset(equipmentsWith(LIMITED));
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(3000);
     const played = last.get('A:x')!;
@@ -284,7 +206,7 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
   });
 
   it('seek 뒤 재개하면 원래 재생과 같은 궤적을 잇는다(속도 상태 복원)', () => {
-    useLimited();
+    reset(equipmentsWith(LIMITED));
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(2000);
     const at2s = last.get('A:x')!;
@@ -300,7 +222,7 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
   });
 
   it('벽시계 틱이 밀려도 같은 씬 시각의 값은 같다(고정 스텝, 나머지는 이월)', () => {
-    useLimited();
+    reset(equipmentsWith(LIMITED));
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(1000);
     // 타이머는 울리지 않고 시계만 250ms 감 → 한 콜백에 스텝 2개 + 50ms 이월.
@@ -319,23 +241,12 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
     expect(last.get('A:x')).toBeCloseTo(25, 5);
   });
 
-  it('seek 는 트랙 없는 manual 태그의 슬라이더 값을 유지하고, 리셋은 initial 로', () => {
-    virtualTagRuntime.setManualValue('b', 7);
+  it('seek 는 manual 태그의 슬라이더 값을 유지하고, 리셋은 initial 로', () => {
+    virtualTagRuntime.setManualValue('B:y', 7);
     useVirtualTagStore.getState().seek(2500);
     expect(last.get('B:y')).toBe(7);
     virtualTagRuntime.resetValues();
     expect(last.get('B:y')).toBe(0);
-  });
-
-  it('시나리오 끝 너머는 마지막 값, 반복은 감긴 시각의 값', () => {
-    useVirtualTagStore.getState().setActiveScenario('s1');
-    useVirtualTagStore.getState().seek(5000);
-    expect(virtualTagRuntime.elapsed).toBe(5000);
-    expect(last.get('B:y')).toBe(10);
-    useVirtualTagStore.setState({ scenarios: [{ ...SCENARIO, loop: true }] });
-    useVirtualTagStore.getState().seek(3000);
-    // 3000 % 2000 = 1000 → 0
-    expect(last.get('B:y')).toBeCloseTo(0, 5);
   });
 
   it('seek·리셋은 즉시(smoothTime 0), 정상 전진은 publish 간격 스무딩으로 내보낸다', () => {
@@ -368,14 +279,13 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
     // 16ms 간격 → 100ms 안에 6번, 경과 = 6 × 16 × 8 = 768 → 700ms 스텝 값 7.
     expect(publishes).toBe(6);
     expect(virtualTagRuntime.elapsed).toBe(768);
-    expect(virtualTagRuntime.getValueByKey('A:x')).toBeCloseTo(7, 5);
+    expect(virtualTagRuntime.getValue('A:x')).toBeCloseTo(7, 5);
   });
 });
 
 describe('종료(관제 복귀)', () => {
-  it('러너 정지·시간 0·시나리오 해제, 값을 내보내지 않고 live 캐시·값 저장소를 비운다', () => {
+  it('러너 정지·시간 0, 값을 내보내지 않고 live 캐시·값 저장소를 비운다', () => {
     const store = useVirtualTagStore.getState();
-    store.setActiveScenario('s1');
     store.start();
     vi.advanceTimersByTime(1000);
     expect(tagLiveValues.size).toBeGreaterThan(0);
@@ -383,7 +293,6 @@ describe('종료(관제 복귀)', () => {
     useVirtualTagStore.getState().stop();
     const state = useVirtualTagStore.getState();
     expect(state.isRunning).toBe(false);
-    expect(state.activeScenarioId).toBeNull();
     expect(virtualTagRuntime.elapsed).toBe(0);
     expect(last.size).toBe(0);
     expect(tagLiveValues.size).toBe(0);
@@ -401,10 +310,7 @@ describe('종료(관제 복귀)', () => {
 
 describe('일시정지 → 재개', () => {
   it('한계로 뒤처진 값이 재개 순간 목표로 점프하지 않고 이어서 간다', () => {
-    const limited: VirtualTagDefinition = { ...TAG_A, limits: { maxSpeed: 2 } };
-    useVirtualTagStore.setState({ tags: [limited, TAG_B] });
-    virtualTagRuntime.syncDefinitions([limited, TAG_B]);
-    virtualTagRuntime.resetValues();
+    reset(equipmentsWith({ ...TAG_A, limits: { maxSpeed: 2 } }));
     const store = useVirtualTagStore.getState();
     store.start();
     vi.advanceTimersByTime(1000); // 값 2 (목표 10)
@@ -465,25 +371,23 @@ describe('stopSimulation — 충돌 기록도 지운다', () => {
 });
 
 describe('seek 신호', () => {
-  it('러너 seek·resetValues(스토어 seek·시나리오 선택·패널 리셋·종료 경로)는 알리고, 틱은 알리지 않는다. 언서브 뒤엔 오지 않는다', () => {
+  it('러너 seek·resetValues(스토어 seek·패널 리셋·종료 경로)는 알리고, 틱은 알리지 않는다. 언서브 뒤엔 오지 않는다', () => {
     let count = 0;
     const unsubscribe = subscribeSceneSeek(() => {
       count += 1;
     });
     useVirtualTagStore.getState().seek(2500);
     expect(count).toBe(1);
-    useVirtualTagStore.getState().setActiveScenario('s1');
-    expect(count).toBe(2);
     virtualTagRuntime.resetValues();
-    expect(count).toBe(3);
+    expect(count).toBe(2);
     virtualTagRuntime.resetValues(false);
-    expect(count).toBe(4);
+    expect(count).toBe(3);
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(500);
     expect(virtualTagRuntime.elapsed).toBeGreaterThan(0);
-    expect(count).toBe(4);
+    expect(count).toBe(3);
     unsubscribe();
     useVirtualTagStore.getState().seek(0);
-    expect(count).toBe(4);
+    expect(count).toBe(3);
   });
 });

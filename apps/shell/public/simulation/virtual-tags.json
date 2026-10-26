@@ -1,327 +1,194 @@
 {
-  "version": 1,
+  "version": 2,
   "tickMs": 100,
-  "tags": [
+  "equipments": [
     {
-      "id": "gc04-gantry-travel",
-      "key": "GC_04:gantry_position",
-      "name": "GC-04 주행(직선 이동)",
-      "min": 0,
-      "max": 300,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 40000
-      },
+      "id": "legacy-GC_04",
+      "craneId": "GC_04",
+      "name": "GC-04",
       "enabled": true,
-      "unit": "m",
-      "limits": {
-        "maxSpeed": 2.5,
-        "maxAccel": 0.5
-      }
-    },
-    {
-      "id": "gc04-trolley-traverse",
-      "key": "GC_04:trolley_position",
-      "name": "GC-04 상부 트롤리 횡행",
-      "min": -30,
-      "max": 0,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 40000
-      },
-      "enabled": true,
-      "unit": "m",
-      "limits": {
-        "maxSpeed": 1.5,
-        "maxAccel": 0.5
-      }
-    },
-    {
-      "id": "llc002-luffing",
-      "key": "LLC_002:luff_angle",
-      "name": "LLC-002 러핑 각도",
-      "min": -32,
-      "max": 11.75,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 30000
-      },
-      "enabled": true,
-      "unit": "deg",
-      "limits": {
-        "maxSpeed": 3,
-        "maxAccel": 1.5
-      }
-    },
-    {
-      "id": "llc002-slew",
-      "key": "LLC_002:slew_angle",
-      "name": "LLC-002 상체 선회",
-      "min": 0,
-      "max": 360,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 40000
-      },
-      "enabled": true,
-      "unit": "deg",
-      "limits": {
-        "maxSpeed": 6,
-        "maxAccel": 2
-      }
-    },
-    {
-      "id": "llc002-gantry-travel",
-      "key": "LLC_002:gantry_position",
-      "name": "LLC-002 주행(직선 이동)",
-      "min": 0,
-      "max": 50,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 20000
-      },
-      "enabled": true,
-      "unit": "m",
-      "limits": {
-        "maxSpeed": 2,
-        "maxAccel": 0.5
-      }
-    },
-    {
-      "id": "12ce2409-e0e5-4db8-92b9-111a85aef267",
-      "key": "LLC_002:gantry_position_2",
-      "name": "LLC-002 주행(직선 이동)",
-      "min": -20,
-      "max": 0,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 20000
-      },
-      "enabled": true,
-      "unit": "m",
-      "limits": {
-        "maxSpeed": 2,
-        "maxAccel": 0.5
-      }
-    },
-    {
-      "id": "907a7df8-4232-4c25-8dae-476beca71e95",
-      "key": "GC_04:trolley_position_2",
-      "name": "GC-04 하부 트롤리 횡행",
-      "min": -20,
-      "max": 5,
-      "initial": 0,
-      "pattern": {
-        "kind": "sine",
-        "periodMs": 40000
-      },
-      "enabled": true,
-      "unit": "m",
-      "limits": {
-        "maxSpeed": 1.5,
-        "maxAccel": 0.5
-      }
-    }
-  ],
-  "scenarios": [
-    {
-      "id": "scenario-philly-block-demo",
-      "name": "필리 블록 운반 데모",
-      "loop": false,
-      "tracks": [
+      "groups": [
         {
-          "key": "GC_04:gantry_position",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 5000,
-              "value": 0,
-              "ease": "hold"
-            },
-            {
-              "atMs": 45000,
-              "value": 80,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 60000,
-              "value": 80,
-              "ease": "hold"
-            },
-            {
-              "atMs": 90000,
-              "value": 20,
-              "ease": "smooth"
-            }
-          ]
+          "id": "gc04-datetime",
+          "name": "시각",
+          "preset": "datetime"
         },
         {
-          "key": "GC_04:trolley_position",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 10000,
-              "value": 0,
-              "ease": "hold"
-            },
-            {
-              "atMs": 30000,
-              "value": -25,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 65000,
-              "value": -25,
-              "ease": "hold"
-            },
-            {
-              "atMs": 85000,
-              "value": -5,
-              "ease": "smooth"
-            }
-          ]
+          "id": "gc04-measurement",
+          "name": "계측값",
+          "preset": "measurement"
         },
         {
-          "key": "GC_04:trolley_position_2",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 20000,
-              "value": 0,
-              "ease": "hold"
-            },
-            {
-              "atMs": 40000,
-              "value": -15,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 70000,
-              "value": -15,
-              "ease": "hold"
-            },
-            {
-              "atMs": 90000,
-              "value": 0,
-              "ease": "smooth"
-            }
-          ]
+          "id": "gc04-status",
+          "name": "상태·알람",
+          "preset": "status"
+        }
+      ],
+      "tags": [
+        {
+          "id": "gc04-gantry-travel",
+          "code": "gantry_position",
+          "name": "주행(직선 이동)",
+          "groupId": "gc04-measurement",
+          "dataType": "number",
+          "unit": "m",
+          "min": 0,
+          "max": 300,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 40000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 2.5,
+            "maxAccel": 0.5
+          }
         },
         {
-          "key": "LLC_002:slew_angle",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 8000,
-              "value": 0,
-              "ease": "hold"
-            },
-            {
-              "atMs": 28000,
-              "value": 90,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 48000,
-              "value": 90,
-              "ease": "hold"
-            },
-            {
-              "atMs": 70000,
-              "value": 0,
-              "ease": "smooth"
-            }
-          ]
+          "id": "gc04-trolley-traverse",
+          "code": "trolley_position",
+          "name": "상부 트롤리 횡행",
+          "groupId": "gc04-measurement",
+          "dataType": "number",
+          "unit": "m",
+          "min": -30,
+          "max": 0,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 40000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 1.5,
+            "maxAccel": 0.5
+          }
         },
         {
-          "key": "LLC_002:luff_angle",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 15000,
-              "value": -20,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 30000,
-              "value": -20,
-              "ease": "hold"
-            },
-            {
-              "atMs": 50000,
-              "value": 10,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 75000,
-              "value": 0,
-              "ease": "smooth"
-            }
-          ]
+          "id": "907a7df8-4232-4c25-8dae-476beca71e95",
+          "code": "trolley_position_2",
+          "name": "하부 트롤리 횡행",
+          "groupId": "gc04-measurement",
+          "dataType": "number",
+          "unit": "m",
+          "min": -20,
+          "max": 5,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 40000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 1.5,
+            "maxAccel": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "legacy-LLC_002",
+      "craneId": "LLC_002",
+      "name": "LLC-002",
+      "enabled": true,
+      "groups": [
+        {
+          "id": "llc002-datetime",
+          "name": "시각",
+          "preset": "datetime"
         },
         {
-          "key": "LLC_002:gantry_position",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 50000,
-              "value": 40,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 90000,
-              "value": 40,
-              "ease": "hold"
-            }
-          ]
+          "id": "llc002-measurement",
+          "name": "계측값",
+          "preset": "measurement"
         },
         {
-          "key": "LLC_002:gantry_position_2",
-          "keyframes": [
-            {
-              "atMs": 0,
-              "value": 0
-            },
-            {
-              "atMs": 30000,
-              "value": 0,
-              "ease": "hold"
-            },
-            {
-              "atMs": 70000,
-              "value": -15,
-              "ease": "smooth"
-            },
-            {
-              "atMs": 90000,
-              "value": -15,
-              "ease": "hold"
-            }
-          ]
+          "id": "llc002-status",
+          "name": "상태·알람",
+          "preset": "status"
+        }
+      ],
+      "tags": [
+        {
+          "id": "llc002-luffing",
+          "code": "luff_angle",
+          "name": "러핑 각도",
+          "groupId": "llc002-measurement",
+          "dataType": "number",
+          "unit": "deg",
+          "min": -32,
+          "max": 11.75,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 30000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 3,
+            "maxAccel": 1.5
+          }
+        },
+        {
+          "id": "llc002-slew",
+          "code": "slew_angle",
+          "name": "상체 선회",
+          "groupId": "llc002-measurement",
+          "dataType": "number",
+          "unit": "deg",
+          "min": 0,
+          "max": 360,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 40000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 6,
+            "maxAccel": 2
+          }
+        },
+        {
+          "id": "llc002-gantry-travel",
+          "code": "gantry_position",
+          "name": "주행(직선 이동)",
+          "groupId": "llc002-measurement",
+          "dataType": "number",
+          "unit": "m",
+          "min": 0,
+          "max": 50,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 20000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 2,
+            "maxAccel": 0.5
+          }
+        },
+        {
+          "id": "12ce2409-e0e5-4db8-92b9-111a85aef267",
+          "code": "gantry_position_2",
+          "name": "주행(직선 이동) 2",
+          "groupId": "llc002-measurement",
+          "dataType": "number",
+          "unit": "m",
+          "min": -20,
+          "max": 0,
+          "initial": 0,
+          "pattern": {
+            "kind": "sine",
+            "periodMs": 20000
+          },
+          "enabled": true,
+          "limits": {
+            "maxSpeed": 2,
+            "maxAccel": 0.5
+          }
         }
       ]
     }

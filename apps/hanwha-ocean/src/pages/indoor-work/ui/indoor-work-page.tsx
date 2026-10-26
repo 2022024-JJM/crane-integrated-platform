@@ -79,7 +79,7 @@ export function IndoorWorkPage() {
       )}
       {tagsRoute && (
         <TagsPage
-          craneId={tagsRoute.craneId}
+          route={tagsRoute}
           basePath={`/indoor-work/${regionId}/tags`}
         />
       )}

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSceneInfo } from '@crane/domain/3d';
-import type { VirtualTagDefinition } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from '../model-runtime-status';
 import {
   PLAY3D_DRAWN_STATUSES,
@@ -218,9 +217,9 @@ describe('timelineAxisMs / markerSeekLeadMs', () => {
 
 describe('tagRowLabel', () => {
   const defs = [
-    { key: 'v1', name: '주권 높이', unit: 'm' },
-    { key: 'v2', name: '', unit: undefined },
-  ] as VirtualTagDefinition[];
+    { key: 'v1', name: '주권 높이', unit: 'm', min: 0, max: 1 },
+    { key: 'v2', name: '', unit: undefined, min: 0, max: 1 },
+  ];
   const scene = {
     models: [
       { id: 'm1', equipName: 'GC#1', craneId: 'gc-01' },
@@ -670,7 +669,6 @@ describe('timelineRows / transportMarks', () => {
       tags: {},
       scanned: [{ fromMs: 0, toMs: 5000 }],
       windowEndMs: 5000,
-      scenarioDurationMs: null,
       holdWallMs: 0,
       detectionOffSeen: false,
     });
@@ -733,7 +731,6 @@ describe('timelineRows / transportMarks', () => {
         scanned: [{ fromMs: 0, toMs: 6000 }],
         reachedMs: 6000,
         windowEndMs,
-        scenarioDurationMs: null,
         holdWallMs: 0,
         detectionOffSeen: false,
       });
@@ -781,7 +778,6 @@ describe('timelineRows / transportMarks', () => {
       tags: {},
       scanned: [],
       windowEndMs: 1000,
-      scenarioDurationMs: null,
       holdWallMs: 0,
       detectionOffSeen: false,
     });

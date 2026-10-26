@@ -12,7 +12,7 @@ import { useVirtualTagStore } from '../model/use-virtual-tag-store';
  *   (캔버스 영역 inset-0)에 직접 마운트해야 한다 — 좌측 상단 열 안에 두면
  *   그 열 크기만 두른다.
  * - 좌측 상단 배지: 재생 중엔 맥동 점 + "시뮬레이션 중", 일시정지면 흐린
- *   "시뮬레이션 일시정지". 시나리오 이름·배속을 잇는다. 표시 전용이고 조작
+ *   "시뮬레이션 일시정지". 배속이 1 이 아니면 잇는다. 표시 전용이고 조작
  *   버튼은 없다 — 종료는 트랜스포트 바의 시뮬레이션 패널 ■ 에서 한다.
  *
  * 실시간 화면에서 독 ▶ 로 켠 시뮬레이션이 실제 값을 덮어쓰는 것을 사용자가
@@ -23,17 +23,9 @@ export function SceneSimulationBadge({ className }: { className?: string }) {
   const hasSession = useVirtualTagStore((s) => s.hasSession);
   const isRunning = useVirtualTagStore((s) => s.isRunning);
   const speed = useVirtualTagStore((s) => s.speed);
-  const scenarios = useVirtualTagStore((s) => s.scenarios);
-  const activeScenarioId = useVirtualTagStore((s) => s.activeScenarioId);
   if (!hasSession) return null;
 
-  const scenario = scenarios.find((s) => s.id === activeScenarioId) ?? null;
-  const detail = [
-    scenario ? scenario.name || t('monitoring:simulation.unnamed') : null,
-    speed !== 1 ? `×${speed}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const detail = speed !== 1 ? `×${speed}` : '';
 
   return (
     <>

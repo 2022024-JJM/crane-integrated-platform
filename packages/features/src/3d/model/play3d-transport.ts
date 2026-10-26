@@ -1,8 +1,5 @@
 import { useMemo } from 'react';
-import {
-  SIMULATION_SPEED_OPTIONS,
-  scenarioDurationMs,
-} from '@crane/domain/virtual-tag';
+import { SIMULATION_SPEED_OPTIONS } from '@crane/domain/virtual-tag';
 import { cumulativeMs, frameIndexAtMs, totalMs } from '../lib/replay-position';
 import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
@@ -27,7 +24,7 @@ export const REPLAY_SPEED_OPTIONS: readonly number[] = [0.5, 1, 2, 4, 8];
 export interface Play3dTransport {
   source: Play3dSource;
   isPlaying: boolean;
-  /** 전체 길이(ms). 시뮬레이션에 활성 시나리오가 없으면 null(열린 구간). */
+  /** 전체 길이(ms). 시뮬레이션은 끝이 없어 항상 null(열린 구간). */
   durationMs: number | null;
   /** 재생할 것이 있는지 — 리플레이는 프레임 존재, 시뮬레이션은 항상 true. */
   hasContent: boolean;
@@ -95,11 +92,10 @@ export function readPlay3dTransport(): Play3dTransport {
     };
   }
   const sim = useVirtualTagStore.getState();
-  const scenario = sim.scenarios.find((s) => s.id === sim.activeScenarioId);
   return {
     source,
     isPlaying: sim.isRunning,
-    durationMs: scenario ? scenarioDurationMs(scenario) : null,
+    durationMs: null,
     hasContent: true,
     speed: sim.speed,
     speedOptions: SIMULATION_SPEED_OPTIONS,
@@ -125,21 +121,10 @@ export function usePlay3dTransport(): Play3dTransport {
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
   const simRunning = useVirtualTagStore((s) => s.isRunning);
   const simSpeed = useVirtualTagStore((s) => s.speed);
-  const scenarios = useVirtualTagStore((s) => s.scenarios);
-  const activeScenarioId = useVirtualTagStore((s) => s.activeScenarioId);
   return useMemo(
     () => readPlay3dTransport(),
     // 스냅샷은 스토어에서 직접 읽는다 — 아래 값들은 "언제 다시 읽을지" 의 키다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      source,
-      replayPlaying,
-      replaySpeed,
-      replayDurations,
-      simRunning,
-      simSpeed,
-      scenarios,
-      activeScenarioId,
-    ],
+    [source, replayPlaying, replaySpeed, replayDurations, simRunning, simSpeed],
   );
 }

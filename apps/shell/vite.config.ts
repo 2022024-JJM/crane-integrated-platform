@@ -160,7 +160,7 @@ function isVirtualTagSetShaped(value: unknown): boolean {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
-  return Array.isArray((value as Record<string, unknown>).tags);
+  return Array.isArray((value as Record<string, unknown>).equipments);
 }
 
 function devVirtualTagsSavePlugin(): Plugin {

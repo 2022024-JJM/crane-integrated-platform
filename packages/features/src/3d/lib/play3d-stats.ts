@@ -97,8 +97,6 @@ export interface Play3dStatsInput {
   reachedMs?: number;
   /** 현재 재생 위치(씬 ms) — 창의 끝. */
   windowEndMs: number;
-  /** 활성 시나리오 길이(ms). 없으면 null(열린 구간). */
-  scenarioDurationMs: number | null;
   /** 정지(hold) 누적 — 벽시계 ms. */
   holdWallMs: number;
   /** 재생 중 충돌 감지가 꺼져 있던 순간이 있었는지. */
@@ -162,8 +160,6 @@ export interface Play3dStats {
   scannedMs: number;
   /** 입력 그대로 — 비정상·음수는 0. 창보다 커도 줄이지 않는다(뒤로 seek 한 상태). */
   reachedMs: number;
-  /** 시나리오 회차(0부터). 열린 구간이면 null. */
-  loopIteration: number | null;
   detectionOffSeen: boolean;
   /** 실행 전체의 원시 사건(입력 그대로, 기록 순) — 타임라인 고스트·축용. */
   allEvents: readonly Play3dEvent[];
@@ -244,16 +240,6 @@ export function lastEventAtMs(events: readonly Play3dEvent[]): number {
     if (Number.isFinite(e.atMs) && e.atMs > last) last = e.atMs;
   }
   return last;
-}
-
-/** 시나리오 회차 — 경과 ÷ 길이. 길이가 0·없음이면 null. */
-export function loopIterationOf(
-  elapsedMs: number,
-  durationMs: number | null,
-): number | null {
-  if (durationMs === null || !(durationMs > 0)) return null;
-  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return 0;
-  return Math.floor(elapsedMs / durationMs);
 }
 
 /** 태그 집계에 값 하나를 더한다(제자리 갱신). NaN·무한은 무시. */
@@ -488,7 +474,6 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     scanned: input.scanned,
     scannedMs,
     reachedMs,
-    loopIteration: loopIterationOf(windowEndMs, input.scenarioDurationMs),
     detectionOffSeen: input.detectionOffSeen,
     allEvents: input.events,
     events,

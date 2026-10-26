@@ -1,3 +1,9 @@
 export { TagsPage } from './ui/tags-page';
-export { VirtualTagsPage } from './ui/virtual-tags-page';
-export { matchTagsSubRoute, type TagsRouteMatch } from './lib/tags-route';
+export { VirtualTagsView } from './ui/virtual-tags-view';
+export {
+  matchTagsSubRoute,
+  realtimeTagsPath,
+  virtualTagsPath,
+  type TagsRouteMatch,
+  type TagsTab,
+} from './lib/tags-route';

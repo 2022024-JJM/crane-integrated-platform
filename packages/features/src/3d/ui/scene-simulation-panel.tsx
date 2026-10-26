@@ -1,20 +1,9 @@
 import { Pause, Play, RotateCcw, Square } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  SIMULATION_SPEED_OPTIONS,
-  scenarioDurationMs,
-  scenarioTimeMs,
-} from '@crane/domain/virtual-tag';
+import { SIMULATION_SPEED_OPTIONS } from '@crane/domain/virtual-tag';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
-import { Switch } from '@crane/ui/atoms/switch';
-import {
-  Select,
-  SelectItem,
-  SelectPopup,
-  SelectTrigger,
-} from '@crane/ui/molecules/select';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import { formatSimClock } from '../lib/sim-clock';
 import { useRigLivePoll } from '../model/rig-live-readouts';
@@ -23,17 +12,13 @@ import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { virtualTagRuntime } from '../model/virtual-tag-runner';
 
 /**
- * 시뮬레이션 시계 패널 — 재생/정지·리셋, 배속, 시나리오 선택·반복, 경과 시간.
- * 3D 플레이 트랜스포트 바의 시뮬레이션 팝오버가 쓴다(독 팝업·에디터 팔레트 탭은
- * 2026-09-17 에 뺐다).
+ * 시뮬레이션 시계 패널 — 재생/정지·리셋·종료, 배속, 경과 시간. 3D 플레이
+ * 트랜스포트 바의 시뮬레이션 팝오버가 쓴다.
  *
  * 경과 시간은 러너(mutable)에서 200ms 폴링으로 읽는다 — 프레임 속도 값을
  * React 상태로 올리지 않는 규칙. 재생 위치 이동은 트랜스포트 바의 스크럽
- * 하나다 — 여기에도 두면 회차를 접은 시나리오 시각과 경과 시각 두 기준이 생겨
- * 반복 시나리오에서 커서가 튄다.
+ * 하나다.
  */
-const NONE = '__none__';
-
 export function SceneSimulationPanel({
   className,
   onStop,
@@ -49,23 +34,14 @@ export function SceneSimulationPanel({
   const pause = useVirtualTagStore((s) => s.pause);
   const speed = useVirtualTagStore((s) => s.speed);
   const setSpeed = useVirtualTagStore((s) => s.setSpeed);
-  const scenarios = useVirtualTagStore((s) => s.scenarios);
-  const activeScenarioId = useVirtualTagStore((s) => s.activeScenarioId);
-  const setActiveScenario = useVirtualTagStore((s) => s.setActiveScenario);
-  const updateScenario = useVirtualTagStore((s) => s.updateScenario);
   const load = useVirtualTagStore((s) => s.load);
-  // 실시간 모드는 useSceneData 가 정의를 읽지 않는다 — 시나리오 목록을 보이려면
-  // 여기서 읽는다(load 는 한 번만 실제로 읽고 이후 no-op).
+  // 실시간 모드는 useSceneData 가 정의를 읽지 않는다 — 재생하려면 여기서
+  // 읽는다(load 는 한 번만 실제로 읽고 이후 no-op).
   useEffect(() => {
     void load();
   }, [load]);
 
-  const scenario = scenarios.find((s) => s.id === activeScenarioId) ?? null;
-  const durationMs = scenario ? scenarioDurationMs(scenario) : 0;
   const elapsed = virtualTagRuntime.elapsed;
-  const timeMs = scenario
-    ? scenarioTimeMs(elapsed, durationMs, scenario.loop)
-    : elapsed;
 
   const handlePlay = () => {
     if (isRunning) {
@@ -152,76 +128,12 @@ export function SceneSimulationPanel({
         </ToggleGroup>
       </div>
 
-      <div className="flex items-center gap-2 text-[11px]">
-        <span className="text-muted-foreground shrink-0 font-medium">
-          {t('monitoring:simulation.scenario')}
+      <div className="text-muted-foreground flex items-center justify-between text-[11px]">
+        <span className="font-medium">{t('monitoring:simulation.time')}</span>
+        <span className="text-[10px] tabular-nums">
+          {formatSimClock(elapsed)}
         </span>
-        <Select
-          value={activeScenarioId ?? NONE}
-          onValueChange={(value: string) =>
-            setActiveScenario(value === NONE ? null : value)
-          }
-        >
-          <SelectTrigger
-            aria-label={t('monitoring:simulation.scenario')}
-            className="bg-muted h-7 min-w-0 flex-1 rounded-sm px-2 text-xs font-normal"
-          >
-            <span className="text-box-cap truncate">
-              {scenario
-                ? scenario.name || t('monitoring:simulation.unnamed')
-                : t('monitoring:simulation.none')}
-            </span>
-          </SelectTrigger>
-          <SelectPopup align="start" className="min-w-44">
-            <SelectItem value={NONE}>
-              {t('monitoring:simulation.none')}
-            </SelectItem>
-            {scenarios.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name || t('monitoring:simulation.unnamed')}
-              </SelectItem>
-            ))}
-          </SelectPopup>
-        </Select>
       </div>
-
-      {scenario ? (
-        <>
-          <label className="flex items-center justify-between gap-2 text-[11px]">
-            <span className="text-muted-foreground font-medium">
-              {t('monitoring:simulation.loop')}
-            </span>
-            <Switch
-              checked={scenario.loop}
-              onCheckedChange={(loop) => updateScenario(scenario.id, { loop })}
-              aria-label={t('monitoring:simulation.loop')}
-            />
-          </label>
-          <div className="text-muted-foreground flex items-center justify-between text-[11px]">
-            <span className="font-medium">
-              {t('monitoring:simulation.time')}
-            </span>
-            <span className="text-[10px] tabular-nums">
-              {formatSimClock(timeMs)} / {formatSimClock(durationMs)}
-            </span>
-          </div>
-          {!isRunning &&
-          !scenario.loop &&
-          durationMs > 0 &&
-          elapsed >= durationMs ? (
-            <p className="text-muted-foreground text-[10px]">
-              {t('monitoring:simulation.finished')}
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <div className="text-muted-foreground flex items-center justify-between text-[11px]">
-          <span className="font-medium">{t('monitoring:simulation.time')}</span>
-          <span className="text-[10px] tabular-nums">
-            {formatSimClock(elapsed)}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

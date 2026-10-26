@@ -10,26 +10,39 @@ import {
 import { registerAssetHashManifest } from '@crane/core/lib/asset-url';
 import type { VirtualTagSet } from '../../model/types';
 
-function set(key = 'C_1:x'): VirtualTagSet {
+function set(code = 'x'): VirtualTagSet {
   return {
-    version: 1,
+    version: 2,
     tickMs: 100,
-    tags: [
+    equipments: [
       {
-        id: 'a',
-        key,
-        name: '',
-        min: 0,
-        max: 10,
-        initial: 0,
-        pattern: { kind: 'manual' },
+        id: 'e',
+        craneId: 'C_1',
         enabled: true,
+        groups: [],
+        tags: [
+          {
+            id: 'a',
+            code,
+            name: '',
+            dataType: 'number',
+            min: 0,
+            max: 10,
+            initial: 0,
+            pattern: { kind: 'manual' },
+            enabled: true,
+          },
+        ],
       },
     ],
   };
 }
 
-const empty: VirtualTagSet = { version: 1, tickMs: 100, tags: [] };
+function firstCode(out: VirtualTagSet): string {
+  return out.equipments[0].tags[0].code;
+}
+
+const empty: VirtualTagSet = { version: 2, tickMs: 100, equipments: [] };
 const fetchMock = vi.fn<typeof fetch>();
 
 function fetchOk(body: unknown) {
@@ -86,7 +99,7 @@ describe('dev (파일)', () => {
     );
     fetchOk(set('file'));
     const out = await loadVirtualTagSet();
-    expect(out.tags[0].key).toBe('file');
+    expect(firstCode(out)).toBe('file');
     expect(String(fetchMock.mock.calls[0][0])).toContain(
       '/simulation/virtual-tags.json',
     );
@@ -106,7 +119,7 @@ describe('운영 (localStorage 봉투)', () => {
   it('도장이 현재 배포와 같으면 로컬을 쓰고 fetch 하지 않는다', async () => {
     await saveVirtualTagSet(set('local'));
     const out = await loadVirtualTagSet();
-    expect(out.tags[0].key).toBe('local');
+    expect(firstCode(out)).toBe('local');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -115,7 +128,7 @@ describe('운영 (localStorage 봉투)', () => {
     registerAssetHashManifest({ [VIRTUAL_TAGS_PUBLIC_PATH]: 'hash-v2' });
     fetchOk(set('deployed'));
     const out = await loadVirtualTagSet();
-    expect(out.tags[0].key).toBe('deployed');
+    expect(firstCode(out)).toBe('deployed');
     expect(stored()).toBeNull();
   });
 
@@ -126,7 +139,7 @@ describe('운영 (localStorage 봉투)', () => {
     );
     fetchOk(set('deployed'));
     const out = await loadVirtualTagSet();
-    expect(out.tags[0].key).toBe('deployed');
+    expect(firstCode(out)).toBe('deployed');
     expect(stored()).toBeNull();
   });
 
@@ -136,8 +149,38 @@ describe('운영 (localStorage 봉투)', () => {
     registerAssetHashManifest({ [VIRTUAL_TAGS_PUBLIC_PATH]: 'hash-v2' });
     fetchMock.mockRejectedValue(new Error('offline'));
     const out = await loadVirtualTagSet();
-    expect(out.tags[0].key).toBe('local');
+    expect(firstCode(out)).toBe('local');
     expect(stored()).not.toBeNull();
+  });
+
+  it('버전 1 로컬 봉투는 로드 때 장비 계층으로 변환돼 돌아온다', async () => {
+    registerAssetHashManifest({ [VIRTUAL_TAGS_PUBLIC_PATH]: 'hash-v1' });
+    window.localStorage.setItem(
+      VIRTUAL_TAGS_STORAGE_KEY,
+      JSON.stringify({
+        baseVersion: 'hash-v1',
+        set: {
+          version: 1,
+          tickMs: 100,
+          tags: [
+            {
+              id: 'a',
+              key: 'GC_04:gantry',
+              min: 0,
+              max: 1,
+              initial: 0,
+              pattern: { kind: 'manual' },
+              enabled: true,
+            },
+          ],
+        },
+      }),
+    );
+    const out = await loadVirtualTagSet();
+    expect(out.version).toBe(2);
+    expect(out.equipments[0].craneId).toBe('GC_04');
+    expect(firstCode(out)).toBe('gantry');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('로컬도 없고 배포본도 실패하면 throw', async () => {
@@ -153,9 +196,13 @@ describe('운영 (localStorage 봉투)', () => {
   });
 
   it('배포본도 정규화를 거친다(손상 항목 제거)', async () => {
-    fetchOk({ version: 1, tickMs: 'x', tags: [set().tags[0], { id: 'bad' }] });
+    fetchOk({
+      version: 2,
+      tickMs: 'x',
+      equipments: [set().equipments[0], { id: 'bad' }],
+    });
     const out = await loadVirtualTagSet();
     expect(out.tickMs).toBe(100);
-    expect(out.tags.map((t) => t.id)).toEqual(['a']);
+    expect(out.equipments.map((e) => e.id)).toEqual(['e']);
   });
 });

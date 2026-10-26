@@ -1,4 +1,4 @@
-import { ArrowLeft, Copy } from 'lucide-react';
+import { ArrowLeft, Copy, FlaskConical } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseIsoMs } from '@crane/domain/monitoring';
@@ -33,6 +33,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import { copyText } from '../lib/copy-text';
 import { AgeText } from './age-text';
+import { VirtualEquipmentDialog } from './virtual-equipment-dialog';
 
 const COLUMNS = [
   ['code', ''],
@@ -67,18 +68,23 @@ const BOOL_VARIANT: Record<
 };
 
 /**
- * 크레인 상세 — 머리글(목록 버튼 · 상태 점 · ID · 구역 · 마지막 수신),
- * 태그 검색(목록과 같이 맨 왼쪽)·묶음 선택·JSON 복사, 태그 표. 값은 스토어의 그 크레인 항목이
- * 바뀔 때(스냅샷마다)와 벽시계 틱마다 다시 그린다.
+ * 크레인 상세 — 머리글(목록 버튼 · 상태 점 · ID · 구역 · 마지막 수신 · 가상
+ * 장비로 복제), 태그 검색(목록과 같이 맨 왼쪽)·묶음 선택·JSON 복사, 태그 표.
+ * 값은 스토어의 그 크레인 항목이 바뀔 때(스냅샷마다)와 벽시계 틱마다 다시
+ * 그린다. "가상 장비로 복제" 는 장비 등록 다이얼로그를 이 크레인으로 미리
+ * 채워 열고, 만들어지면 `onOpenVirtual` 로 가상 탭 상세로 옮긴다.
  */
 export function CraneDetail({
   craneId,
   connected,
   onBack,
+  onOpenVirtual,
 }: {
   craneId: string;
   connected: boolean;
   onBack: () => void;
+  /** 복제로 만든 가상 장비의 상세를 연다. 없으면 복제 버튼을 숨긴다. */
+  onOpenVirtual?: (equipmentId: string) => void;
 }) {
   const { t } = useTranslation();
   const entry = useCraneSnapshotStore((s) => s.cranes[craneId]);
@@ -86,6 +92,7 @@ export function CraneDetail({
   const [category, setCategory] = useState<TagCategory | 'all'>('all');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [cloneOpen, setCloneOpen] = useState(false);
   const rows = useMemo(() => (entry ? buildTagRows(entry) : []), [entry]);
   const visible = useMemo(
     () => filterTagRows(rows, category, query),
@@ -131,7 +138,29 @@ export function CraneDetail({
             {entry ? formatClock(entry.receivedAt) : '—'}
           </span>
         </span>
+        {onOpenVirtual && entry ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCloneOpen(true)}
+          >
+            <FlaskConical />
+            {t('monitoring:virtualTags.cloneToVirtual')}
+          </Button>
+        ) : null}
       </div>
+      {onOpenVirtual ? (
+        <VirtualEquipmentDialog
+          open={cloneOpen}
+          onOpenChange={setCloneOpen}
+          cloneCraneId={craneId}
+          onCreated={(equipmentId) => {
+            setCloneOpen(false);
+            onOpenVirtual(equipmentId);
+          }}
+        />
+      ) : null}
 
       {!entry ? (
         <p className="text-muted-foreground text-xs">

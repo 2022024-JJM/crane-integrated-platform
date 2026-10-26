@@ -112,6 +112,7 @@ function TagPickDialogBody({
             onChange={(key) =>
               setDraft((prev) => setSlotTagKey(prev, 'virtual', key))
             }
+            modelCraneId={modelCraneId}
           />
         </TabsPanel>
       </Tabs>

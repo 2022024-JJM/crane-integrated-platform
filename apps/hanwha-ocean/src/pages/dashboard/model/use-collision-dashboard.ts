@@ -49,7 +49,7 @@ export function useCollisionDashboard(): {
   const pauseOnCollision = useSceneCollisionStore((s) => s.pauseOnCollision);
   const simulationRunning = useVirtualTagStore((s) => s.isRunning);
   const virtualTagsHydrated = useVirtualTagStore((s) => s.hydrated);
-  const virtualTags = useVirtualTagStore((s) => s.tags);
+  const virtualTagEntries = useVirtualTagStore((s) => s.entries);
   const realtimeRunning = useRealtimeStore((s) => s.isRunning);
   const realtimeHeld = useRealtimeStore((s) => s.held);
   const activeAlarms = useRealtimeAlarmStore((s) => s.activeAlarms);
@@ -105,7 +105,10 @@ export function useCollisionDashboard(): {
   ]);
 
   const equipment = useMemo(() => {
-    const defsByKey = new Map(virtualTags.map((def) => [def.key, def]));
+    // 가상 키 → 정의(장비 계층의 평탄 목록). 라벨은 이름, 비면 코드.
+    const defsByKey = new Map(
+      virtualTagEntries.map((entry) => [entry.key, entry.tag]),
+    );
     return sceneOverview.equipment.map((row) => ({
       ...row,
       tags: row.tags.map((tag) => {
@@ -115,14 +118,14 @@ export function useCollisionDashboard(): {
         return {
           tagKey: tag.tagKey,
           virtualTagKey: tag.virtualTagKey,
-          label: def?.name || tag.tagKey,
+          label: def ? def.name || def.code : tag.tagKey,
           unit: def?.unit ?? null,
           min: def ? def.min : null,
           max: def ? def.max : null,
         };
       }),
     }));
-  }, [sceneOverview.equipment, virtualTags]);
+  }, [sceneOverview.equipment, virtualTagEntries]);
 
   return { summary, equipment };
 }

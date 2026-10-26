@@ -199,7 +199,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈·직교 탑뷰 토글 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts`, `packages/ui/src/organisms/use-ortho-top-view.ts` — `docs/agents/3d-editor.md` |
 | 씬에 놓는 조명(투광등) — 스키마·배치·인스펙터 / 밤 점등·SpotLight 슬롯·기구 글로우 | 스키마 `SavedFloodlightInfo`(`packages/domain/src/3d/model/floodlight-types.ts`), 기하 `packages/domain/src/3d/lib/floodlight.ts`, 배치 `packages/widgets/src/3d/ui/use-floodlight-place.ts`, 편집 `packages/widgets/src/3d/lib/floodlight-editor.ts` — `docs/agents/3d-editor.md`; 렌더 `packages/features/src/3d/ui/{scene-floodlights,scene-floodlight-fixture}.tsx`, `lib/floodlight-{spot,slots}.ts` — `docs/agents/rendering-perf.md` |
 | 태그 맵핑 스키마(실시간·가상 두 슬롯)·방어 / 활성 슬롯 해석 / 값 버스 / 편집 UI·태그 연결 다이얼로그 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/lib/tag-slot.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/{tag-mapping-section,tag-slot-field,tag-pick-dialog}.tsx` — `docs/agents/tag-mapping-rig.md` |
-| 가상 태그 정의 / 스토어·러너 / 관리 탭 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/tags/ui/virtual-tags-page.tsx` — `docs/agents/tag-mapping-rig.md` |
+| 가상 태그(장비 › 그룹 › 태그) 정의·키 조립 / 스토어·러너·실시간 복제 / 가상 탭(장비 목록·상세·등록 다이얼로그) | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/features/src/3d/lib/virtual-tag-clone.ts`, `packages/widgets/src/tags/ui/virtual-tags-view.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 실시간 태그 피드(크레인 스냅샷 서버 STOMP) / 실시간 태그 탭 / 3D 실시간 모드 값 생산자 / 수신 간격 스무딩 | `packages/core/src/ws/stomp-client.ts`, `packages/domain/src/monitoring/lib/crane-snapshot.ts`, `packages/features/src/3d/model/{use-crane-snapshot-store,use-crane-snapshot-feed,use-crane-snapshot-realtime-bridge,use-realtime-runner}.ts`, `packages/features/src/3d/lib/realtime-smoothing.ts`, `packages/widgets/src/tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
@@ -248,7 +248,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - variant 스타일링은 CVA(`class-variance-authority`) 패턴을 따른다.
 - 서체는 Pretendard 하나다(`global.css` 의 `--font-sans`, 캔버스는 같은 스택을 상수로). 화면·앱마다 `fontFamily` 를 따로 지정하지 않고, 고정폭·좁은 글꼴도 두지 않는다. Pretendard 숫자는 비례폭이라 `html` 에 `tabular-nums` 를 전역으로 건다 — 크게 적는 숫자만 `proportional-nums` 로 푼다.
 - 고정 높이 컨트롤의 한 줄 글자는 `text-box-cap`(`global.css`)으로 세로 가운데를 맞춘다 — Chrome 이 서체 높이를 px 로 깎아 Pretendard 가 0.5~1.5px 뜬다. 글자를 직접 감싼 요소에만 걸려서 공용 Button·Badge·Toggle·Kbd·Select·Tabs 는 안에서 글자를 감싸 두었고(`@crane/ui/atoms/cap-text`), 직접 만든 버튼·탭은 글자 span 에 붙인다. 높이가 내용으로 정해지는 요소에 붙이면 그만큼 줄어든다.
-- blur·Enter 로 확정하는 텍스트 입력은 `@crane/core/lib/use-ime-safe-blur` 를 거친다 — blur 는 `useImeSafeBlur`, keydown 은 `isImeComposing`. 한글 조합 중에 값을 바꾸거나 비우면 마지막 글자가 한 번 더 들어간다. 3D 에디터 팔레트의 이름 입력·가상 태그 키 입력은 아직 거치지 않는다.
+- blur·Enter 로 확정하는 텍스트 입력은 `@crane/core/lib/use-ime-safe-blur` 를 거친다 — blur 는 `useImeSafeBlur`, keydown 은 `isImeComposing`. 한글 조합 중에 값을 바꾸거나 비우면 마지막 글자가 한 번 더 들어간다. 3D 에디터 팔레트의 이름 입력·가상 태그의 장비 ID·코드 입력은 아직 거치지 않는다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다(`react-refresh/only-export-components` 규칙과도 맞물린다. 선례 `packages/features/src/3d/lib/scene-shadow.ts`).
 
 ### State / Data / i18n
@@ -269,7 +269,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태 | `docs/agents/3d-play.md` |
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치 | `docs/agents/assets-glb.md` |
-| 태그 맵핑·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
+| 태그 맵핑·가상 태그(장비·그룹·복제)·시뮬레이션·리깅 | `docs/agents/tag-mapping-rig.md` |
 | 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·씬 파일 매핑) | `docs/agents/3d-editor.md` |
 | 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·독·경보 알림) | `docs/agents/monitoring-ui.md` |
 | 3D 자산 라이브러리(자산 스키마·버전·상태·배치 속성·저장소·자산 뷰어·통계 표), 씬의 자산 참조·편집 팔레트·새 버전 갱신 | `docs/agents/asset-library.md` |
@@ -300,6 +300,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 값 생산자의 정상 전진 스무딩 시간은 **다음 값이 올 때까지의 벽시계 시간**이다 — 가상 태그 `tickMs / speed`, 리플레이 프레임 길이 ÷ 배속(`lib/replay-smoothing.ts`), 실시간은 키별 값 변화 간격(`lib/realtime-smoothing.ts`, publish 간격이 아니다 — 브리지가 스냅샷의 태그 전부를 재발행한다). 바뀌지 않은 재발행은 마지막 스무딩 시간을 이어받는다 — 기본값으로 넘기면 진행 중 스무딩이 잘린다 (tag-mapping-rig, 3d-play).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
+- 가상 태그 키는 저장하지 않고 `buildVirtualTagKey`(`장비키:코드`, 콜론)로 조립한다. 구분자를 실시간 키의 점으로 바꾸지 않는다 — 한 버스에서 소스가 섞인다 (tag-mapping-rig).
 - 모델·지도·배경의 목록은 자산 라이브러리(`library.json`)가 유일한 원천이다. 코드에 자산 목록을 두지 않는다 (asset-library).
 - 씬에 놓인 모델·지도·배경은 파일 경로와 자산 참조(`asset: { id, version }`)를 함께 든다. 모니터링·3D 플레이는 라이브러리를 읽지 않는다 — 지도의 역할도 씬의 `role` 로 판정한다(`resolveGroundMaps`·`isContextMap`) (asset-library).
 - 자산에 붙이는 라벨은 카테고리(`categories`)다. "태그"·`Tag` 아이콘은 데이터 태그(태그 맵핑·가상 태그)만 가리킨다 (asset-library).
