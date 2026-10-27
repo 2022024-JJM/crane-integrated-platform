@@ -36,8 +36,11 @@ import {
   sanitizeSceneAssetRef,
   sanitizeSceneEnvironment,
 } from './scene-asset-ref';
-import { sanitizeModelStatusTags } from './sanitize-status-tags';
-import { resolveModelTagMappings } from './sanitize-tag-mappings';
+import { sanitizeStatusTagEntries } from './sanitize-status-tags';
+import {
+  finalizeModelTagKeys,
+  resolveModelTagMappings,
+} from './sanitize-tag-mappings';
 import {
   sanitizeMainViewByRegion,
   sanitizeSceneViews,
@@ -61,6 +64,13 @@ function isVector3Tuple(value: unknown) {
     value.length === 3 &&
     value.every((item) => isFiniteNumber(item))
   );
+}
+
+/** 모델 craneId — trim 한 비어 있지 않은 문자열만. 나머지는 필드 생략. */
+function sanitizeCraneId(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function clampOpacity(value: unknown) {
@@ -171,9 +181,15 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
         const rigId = sanitizeModelRigId(model.rigId, safeRigs);
         const rig = rigId ? safeRigs?.find((r) => r.id === rigId) : undefined;
 
-        // 태그 맵핑 — 레거시 valueMapList·rigBindings 는 여기서 변환되고
-        // 출력에서 사라진다(legacy 단수 `map` → `maps` 와 같은 규칙).
-        const tagMappings = resolveModelTagMappings(model, rig);
+        // 태그 맵핑·상태 태그 — 레거시(두 슬롯 키·단일 tagKey·valueMapList·
+        // rigBindings)는 여기서 코드로 변환되고 출력에서 사라진다(legacy 단수
+        // `map` → `maps` 와 같은 규칙). 레거시 키의 크레인 접두어는 모델
+        // craneId 와 맞춘다 — 없으면 채우고, 같으면 떼고, 다르면 맵핑에 남긴다.
+        const { craneId, tagMappings, statusTags } = finalizeModelTagKeys(
+          sanitizeCraneId(model.craneId),
+          resolveModelTagMappings(model, rig),
+          sanitizeStatusTagEntries(model.statusTags),
+        );
         const {
           valueMapList: _legacyValueMapList,
           rigBindings: _legacyRigBindings,
@@ -186,6 +202,8 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
           {
             ...rest,
             id: nextId,
+            // `...rest` 가 원본 craneId 를 실어 오므로 검사한 값으로 덮어쓴다.
+            craneId,
             // `...rest` 가 원본을 실어 오므로 덮어쓴다 — 무효면 필드가 빠진다.
             asset: sanitizeSceneAssetRef(model.asset),
             opacity: clampOpacity(model.opacity),
@@ -196,8 +214,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             labelHidden: model.labelHidden === true ? true : undefined,
             rigId,
             tagMappings,
-            // `...rest` 가 원본을 실어 오므로 덮어쓴다 — 무효면 필드가 빠진다.
-            statusTags: sanitizeModelStatusTags(model.statusTags),
+            statusTags,
             // `...rest` 가 원본 zones 를 실어 오므로 반드시 덮어쓴다 —
             // 무효면 undefined 로 필드가 빠진다.
             zones: sanitizeModelZones(model.zones),

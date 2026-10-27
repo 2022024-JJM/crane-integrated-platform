@@ -111,6 +111,11 @@ interface UseSelectedSceneObjectEditorResult {
   ) => void;
   /** 선택 모델을 다른 모델 영역 감지에서 제외(zoneExempt, true-only). */
   updateSelectedZoneExempt: (exempt: boolean) => void;
+  /**
+   * 선택 모델의 크레인 ID — 맵핑·상태 태그 키의 앞부분. undefined 면 필드를
+   * 지워 직렬화에서 빠진다(그 모델의 태그는 어느 소스에서도 값을 받지 않는다).
+   */
+  updateSelectedCraneId: (craneId: string | undefined) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedLabelHidden: (hidden: boolean) => void;
   updateSelectedTransform: (
@@ -847,6 +852,23 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const updateSelectedCraneId = (craneId: string | undefined) => {
+    const next = craneId?.trim() || undefined;
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) return model;
+          if ((model.craneId ?? undefined) === next) return model;
+          const rest = { ...model };
+          delete rest.craneId;
+          return next ? { ...rest, craneId: next } : rest;
+        }),
+      };
+    });
+  };
+
   // ==== 리깅 ====
 
   /**
@@ -979,6 +1001,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
+    updateSelectedCraneId,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,

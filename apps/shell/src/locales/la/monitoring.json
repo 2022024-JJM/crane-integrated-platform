@@ -89,7 +89,6 @@
       "axis": "Axis",
       "joint": "Articulus",
       "tagSearch": "Clavem aut nomen quaere",
-      "tagEmpty": "Nulla signa ficta. In tabula signorum fictorum machinam inscribe.",
       "tagUnknown": "Tag ignotum",
       "tagMissing": "Tag selige. Designationes sine tag in servando abiciuntur.",
       "scale": "scale",
@@ -142,32 +141,34 @@
         "endstop": "Endstop"
       }
     },
+    "crane": {
+      "label": "Grus",
+      "placeholder": "Gruem elige…",
+      "search": "Quaere per numerum aut ID gruis",
+      "empty": "Nullae grues inscriptae.",
+      "unregistered": "non inscripta",
+      "missing": "Nulla grus — claves signorum fieri non possunt",
+      "clear": "Gruem solvere"
+    },
     "tagPick": {
       "title": "Tag iungere",
       "tag": "Tag",
-      "slots": {
-        "realtime": "Tempus reale",
-        "virtual": "Simulatio"
-      },
       "pick": "Tag elige…",
       "clear": "Solvere",
       "search": "Quaere per numerum gruis aut nomen tag (e.g. C_171, tl_distance)",
       "currentValue": "Valor praesens",
-      "craneList": "Index gruum",
       "preview": "Praevisio",
       "recent": "Ultima 60 s · singulis secundis renovatur",
       "dataType": "Genus datorum",
       "category": "Classis",
       "bay": "Regio",
-      "unit": "Unitas",
-      "range": "Ambitus",
       "noSelection": "Tag ex indice elige ut valor praesens hic appareat.",
-      "noCranes": "Nullae grues a servo acceptae. Nexum inspice.",
+      "craneMissing": "Exemplar gruem non habet; signa iungi non possunt. Primum gruem elige.",
+      "noServerTags": "Nulla signa pro {{craneId}} a servo accepta. Nexum inspice aut codicem scribe.",
+      "draftNotOnServer": "\"{{code}}\" in indice signorum servi non est. Iungi tamen potest.",
       "emptyTags": "Nihil inventum.",
       "cancel": "Abrogare",
-      "apply": "Iungere",
-      "equipmentList": "Machinae",
-      "noEquipments": "Nullae machinae fictae. In tabula signorum fictorum inscribe."
+      "apply": "Iungere"
     },
     "ruler": {
       "title": "Regula",
@@ -383,9 +384,6 @@
     "expandNodes": "Nodos explicare",
     "collapseNodes": "Nodos plicare",
     "jointNode": "Nodus iuncturae",
-    "virtualTags": {
-      "unregistered": "non inscriptum"
-    },
     "drawRuler": "Regulam duce",
     "rulerName": "Regula {{index}}",
     "rulerDrawStartHint": "Punctum initii preme",
@@ -436,99 +434,7 @@
       "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem et lusum sistit. Post resumptionem, ea invasio non iterum sistet donec exeat.\nObservatio temporis realis numquam sistit."
     }
   },
-  "virtualTags": {
-    "play": "Omnia age",
-    "pause": "Siste",
-    "resetValues": "Valores restitue",
-    "tick": "Intervallum (s)",
-    "save": "Serva",
-    "saveFailed": "Signa virtualia servari non potuerunt.",
-    "cloneToVirtual": "In machinam fictam duplica",
-    "equipment": {
-      "add": "Machinam inscribe",
-      "id": "ID machinae",
-      "bay": "Regio",
-      "enabled": "Activa",
-      "search": "ID vel aream machinae quaere",
-      "tagCount": "{{count}} signa",
-      "count": "Machinae {{count}} / {{max}}",
-      "empty": "Nullae machinae fictae. \"Machinam inscribe\" preme vel ex grue reali duplica.",
-      "emptyFiltered": "Nulla machina congruit.",
-      "unknown": "Machina {{id}} non exstat.",
-      "back": "Index",
-      "duplicate": "Machinam duplica",
-      "remove": "Machinam dele",
-      "removeTitle": "Machinam delere?",
-      "removeDescription": "{{id}} et {{count}} signa delebuntur. Nexus scaenae his clavibus utentes ut non inscripti apparebunt.",
-      "cancel": "Abroga",
-      "confirmRemove": "Dele",
-      "idHint": "Sine spatiis et colis. In clavibus lineola in lineam subiectam mutatur (GC-04 → GC_04).",
-      "errors": {
-        "invalid-id": "ID machinae vacuum esse non potest, sine spatiis et colis, nec longius quam {{idMax}}.",
-        "duplicate-id": "Machina eodem ID (lineola vel linea subiecta) iam exstat.",
-        "limit": "Ad summum {{max}} machinae creari possunt."
-      }
-    },
-    "dialog": {
-      "title": "Machinam inscribe",
-      "basic": "Fundamenta",
-      "clone": "Ex tempore reali duplica",
-      "create": "Inscribe",
-      "cloneHint": "Signa gruis electae cum valoribus praesentibus et ambitu observato copiat. Postea a tempore reali seiuncta sunt et formae manuales.",
-      "noFeed": "Nullae grues ex fluxu reali acceptae. Connexionem inspice.",
-      "noClone": "Non duplicare",
-      "selected": "{{selected}} / {{total}} electa",
-      "selectAll": "Omnia elige",
-      "selectNone": "Omnia solve",
-      "cloned": "{{count}} signa duplicata.",
-      "clonedSkipped": "{{count}} signa duplicata, {{skipped}} omissa (duplicata vel limes).",
-      "pickCrane": "Gruem ad duplicandum a sinistra elige. Sine ea, machina vacua creatur."
-    },
-    "columns": {
-      "code": "Codex",
-      "name": "Nomen",
-      "dataType": "Genus",
-      "unit": "Unitas",
-      "min": "Min",
-      "max": "Max",
-      "initial": "Initiale",
-      "pattern": "Forma",
-      "period": "Periodus (s)",
-      "value": "Valor",
-      "actions": ""
-    },
-    "dataTypes": {
-      "number": "Numerus",
-      "bool": "Booleanum"
-    },
-    "patterns": {
-      "manual": "Manuale",
-      "triangle": "Triangulum",
-      "sine": "Sinus",
-      "sawtooth": "Serra",
-      "square": "Quadratum"
-    },
-    "addTag": "Signum adde",
-    "duplicate": "Duplica",
-    "remove": "Dele",
-    "empty": "Nulla signa. \"Signum adde\" preme.",
-    "emptyFiltered": "Nullum signum congruit.",
-    "errors": {
-      "invalid-code": "Codex vacuus esse non potest, sine spatiis et colis, nec longior quam {{codeMax}}.",
-      "duplicate-code": "Signum eodem codice iam exstat.",
-      "limit": "Ad summum {{max}} signa per machinam.",
-      "no-equipment": "Machina non inventa."
-    },
-    "newCode": "tag",
-    "count": "Signa {{count}} / {{max}}",
-    "codeHint": "Claves ut clavisMachinae:codex componuntur (e.g. GC_04:gantry_position). Codice vel ID mutato, claves quibus scaenae nectuntur quoque mutantur.",
-    "periodHint": "Tempus (s) unius cycli (min→max→min)"
-  },
   "tags": {
-    "tabs": {
-      "realtime": "Tags Temporis Veri",
-      "virtual": "Tags Ficta"
-    },
     "searchCrane": "Gruis ID quaere (ex. 867)",
     "allBays": "Omnes",
     "online": "In linea",
@@ -764,7 +670,84 @@
     "stop": "Simulationem finire",
     "stopHint": "Simulationem finire — tempus 0, exemplaria in statum quietis",
     "badgeRunning": "Simulatio agitur",
-    "badgePaused": "Simulatio sistitur"
+    "badgePaused": "Simulatio sistitur",
+    "scenario": "Scaenarium",
+    "noScenario": "Nullum scaenarium",
+    "noScenarioHint": "In tabula Scaenarii dextra ex exemplaribus et signis in scaena iunctis crea."
+  },
+  "scenario": {
+    "tab": "Scaenarium",
+    "sideTabs": "Tabula lateralis",
+    "select": "Scaenarium elige",
+    "none": "Nullum scaenarium",
+    "noneHint": "Haec scaena scaenaria non habet. Exemplaria et signa iuncta elige ut crees.",
+    "noScene": "Haec regio scaenae fasciculum non habet; scaenarium creari non potest.",
+    "add": "Novum scaenarium",
+    "name": "Nomen",
+    "namePlaceholder": "Nomen scaenarii",
+    "duplicate": "Duplica",
+    "remove": "Dele",
+    "removeTitle": "Scaenarium delere",
+    "removeDescription": "Scaenarium \"{{name}}\" ({{count}} signa) deletur. Servatum revocari non potest.",
+    "confirmRemove": "Dele",
+    "save": "Serva",
+    "saveFailed": "Scaenaria servari non potuerunt.",
+    "addTags": "Signa adde",
+    "removeModel": "Exemplaris fasciculum tolle",
+    "emptyTags": "Nulla signa. Ex exemplaribus in scaena iunctis signa elige.",
+    "count": "{{tags}} signa · {{models}} exemplaria",
+    "tick": "Intervallum (s)",
+    "hint": "Valores solum ad signa scaenarii mittuntur.",
+    "errors": {
+      "invalid-name": "Nomen vacuum aut nimis longum est.",
+      "limit": "Numerus scaenariorum maximus attactus est."
+    },
+    "issue": {
+      "model-missing": "Hoc exemplar in scaena non est — deletum aut id mutatum.",
+      "crane-missing": "Exemplar gruem non habet. In editore gruem elige.",
+      "duplicate-key": "Signum prius eandem clavem adhibet.",
+      "model-missing-short": "non in scaena"
+    },
+    "row": {
+      "dataType": "Genus",
+      "unit": "Unitas",
+      "min": "Min",
+      "max": "Max",
+      "initial": "Initium",
+      "pattern": "Forma",
+      "period": "Periodus (s)",
+      "periodHint": "Una periodus in secundis",
+      "remove": "Signum tolle",
+      "noValue": "Nullus valor",
+      "targetMissing": "Nulla iunctio"
+    },
+    "dataTypes": {
+      "number": "Numerus",
+      "bool": "Booleanum"
+    },
+    "patterns": {
+      "manual": "Manuale",
+      "triangle": "Triangulum",
+      "sine": "Sinus",
+      "sawtooth": "Serra",
+      "square": "Quadratum"
+    },
+    "pick": {
+      "createTitle": "Novum scaenarium",
+      "addTitle": "Signa adde",
+      "search": "Quaere exemplaria, grues, codices",
+      "selected": "{{selected}} / {{total}} electa",
+      "selectAll": "Omnia elige",
+      "selectNone": "Omnia solve",
+      "tagCount": "{{count}} signa",
+      "alreadyAdded": "iam additum",
+      "noMappedModels": "Nullum exemplar in scaena signa iuncta habet. In editore primum signa iunge.",
+      "emptyFiltered": "Nihil inventum.",
+      "summary": "{{models}} exemplaria · {{tags}} signa electa",
+      "cancel": "Abrogare",
+      "create": "Crea",
+      "add": "Adde"
+    }
   },
   "play3d": {
     "report": "Relatio cursus",

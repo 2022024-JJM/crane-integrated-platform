@@ -1,14 +1,24 @@
 import {
+  normalizeCraneKey,
+  normalizeLegacyCraneTagKey,
+  parseCraneTagKey,
+} from '@crane/core/lib/crane-tag-key';
+import {
   getDrivenJointIds,
   RIG_AXES,
   type RigAxis,
   type RigDefinition,
 } from '../model/rig-types';
 import {
+  STATUS_TAG_ROLES,
+  type ModelStatusTags,
+  type StatusTagRole,
+} from '../model/status-tag-types';
+import {
   getTagMappingTargetKey,
+  normalizeTagCode,
   TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
-  type TagKeySlots,
   type TagMapping,
   type TagMappingChannel,
   type TagMappingTarget,
@@ -17,13 +27,18 @@ import type { ValueMapType } from '../model/types';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
- * 태그 맵핑 정규화 + 레거시(valueMapList·rigBindings) 변환.
- * sanitize-scene-info 가 모델마다 부른다.
+ * 태그 맵핑 정규화 + 레거시(두 슬롯 키·단일 tagKey·valueMapList·rigBindings)
+ * 변환. sanitize-scene-info 가 모델마다 부른다.
  *
  * 원칙은 리그와 같다 — 깨진 항목은 개별로 버리고 나머지는 살린다. 같은
  * 대상(노드·채널·축 또는 관절)을 가리키는 항목은 **첫 것만** 남긴다(first-
  * wins). 런타임이 last-write 로 뒤섞이면 순서에 따라 결과가 달라져 디버깅이
  * 불가능하므로, 데이터 경계에서 하나로 고정한다.
+ *
+ * 맵핑은 태그 **코드**만 든다. 레거시 키(`C_171.tl_distance`·`GC_04:gantry`)는
+ * 코드와 크레인 접두어로 나뉘고, 접두어는 모델 단위 후처리
+ * (`finalizeModelTagKeys`)가 모델 craneId 와 맞춘다 — 같으면 떼고, 모델에
+ * craneId 가 없으면 접두어로 채우고, 다르면 맵핑에 `craneId` 로 남긴다.
  */
 
 function isFiniteNumber(value: unknown): value is number {
@@ -44,42 +59,46 @@ function trimKey(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-/**
- * 단일 키 시절의 실시간 키 `크레인:코드` 를 지금 표기 `크레인.코드` 로. 이미
- * 점이 있거나 콜론이 없으면 그대로. `@crane/domain/monitoring` 의
- * `normalizeLegacyCraneTagKey` 와 같은 규칙이다 — 같은 레이어 슬라이스 간
- * import 를 하지 않아 여기 한 번 더 적는다. 바꾸면 둘 다 고친다.
- */
-function toDottedLegacyKey(key: string): string {
-  if (key.includes('.')) return key;
-  const colon = key.indexOf(':');
-  if (colon <= 0 || colon >= key.length - 1) return key;
-  return `${key.slice(0, colon)}.${key.slice(colon + 1)}`;
-}
-
-function legacyKey(value: unknown): string | undefined {
-  const trimmed = trimKey(value);
-  return trimmed === undefined ? undefined : toDottedLegacyKey(trimmed);
+/** 태그 참조의 중간형 — 크레인 접두어를 아직 모델과 맞추기 전. */
+export interface TagCodeRef {
+  code: string;
+  /** 키에 있던 크레인(`C_171`). 코드만 있던 입력이면 없다. */
+  craneKey?: string;
 }
 
 /**
- * 두 슬롯 키를 정규화한다. 레거시 `tagKey`(단일 키 시절)는 실시간 슬롯으로
- * 옮기며 콜론 표기를 점으로 바꾼다 — 그 시절 배포 씬(dock-in)의 키가 서버
- * 키였다. 가상 키였던 배포 씬(philly)은 데이터를 `virtualTagKey` 로 직접
- * 옮겼다. 둘 다 비면 null.
- *
- * 맵핑과 상태 태그 역할이 같은 함수를 쓴다.
+ * 키 문자열(점 또는 옛 콜론 표기) → 참조. 구분자가 없으면 통째로 코드다.
+ * 코드에 금지 글자(공백·점·콜론)가 남으면 null.
  */
-export function sanitizeTagKeySlots(raw: unknown): TagKeySlots | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const r = raw as Record<string, unknown>;
-  const realtimeTagKey = trimKey(r.realtimeTagKey) ?? legacyKey(r.tagKey);
-  const virtualTagKey = trimKey(r.virtualTagKey);
-  if (!realtimeTagKey && !virtualTagKey) return null;
-  const out: TagKeySlots = {};
-  if (realtimeTagKey) out.realtimeTagKey = realtimeTagKey;
-  if (virtualTagKey) out.virtualTagKey = virtualTagKey;
-  return out;
+export function parseTagKeyRef(raw: unknown): TagCodeRef | null {
+  const trimmed = trimKey(raw);
+  if (!trimmed) return null;
+  const dotted = normalizeLegacyCraneTagKey(trimmed);
+  const parts = parseCraneTagKey(dotted);
+  if (parts) {
+    const code = normalizeTagCode(parts.tagCode);
+    return code ? { code, craneKey: parts.craneKey } : null;
+  }
+  const code = normalizeTagCode(dotted);
+  return code ? { code } : null;
+}
+
+/**
+ * 맵핑·상태 태그 객체 하나의 태그 참조 — 새 포맷 `code`(+ 보존용 `craneId`) 가
+ * 있으면 그것, 아니면 레거시 `realtimeTagKey` › `virtualTagKey` › `tagKey`
+ * 순으로 첫 유효 키. 전부 비면 null.
+ */
+export function resolveTagRef(raw: Record<string, unknown>): TagCodeRef | null {
+  const code = normalizeTagCode(raw.code);
+  if (code) {
+    const craneKey = trimKey(raw.craneId);
+    return craneKey ? { code, craneKey } : { code };
+  }
+  for (const field of ['realtimeTagKey', 'virtualTagKey', 'tagKey'] as const) {
+    const ref = parseTagKeyRef(raw[field]);
+    if (ref) return ref;
+  }
+  return null;
 }
 
 function isChannel(value: unknown): value is TagMappingChannel {
@@ -110,7 +129,8 @@ interface SanitizeTagMappingsContext {
 
 /**
  * 배열을 정규화한다. 반환이 undefined 면 필드 자체를 생략하라는 뜻 —
- * 맵핑이 없는 씬은 JSON diff 가 없어야 한다.
+ * 맵핑이 없는 씬은 JSON diff 가 없어야 한다. 레거시 키의 크레인 접두어는
+ * `craneId` 로 실려 나온다 — 모델과 맞추는 것은 `finalizeModelTagKeys`.
  */
 export function sanitizeTagMappings(
   raw: unknown,
@@ -127,8 +147,8 @@ export function sanitizeTagMappings(
     if (!item || typeof item !== 'object') continue;
     const m = item as Record<string, unknown>;
     if (!isNonEmptyString(m.id) || seenIds.has(m.id)) continue;
-    const slots = sanitizeTagKeySlots(m);
-    if (!slots) continue;
+    const ref = resolveTagRef(m);
+    if (!ref) continue;
     const target = sanitizeTarget(m.target);
     if (!target) continue;
     if (target.kind === 'joint') {
@@ -139,7 +159,8 @@ export function sanitizeTagMappings(
     const targetKey = getTagMappingTargetKey(target);
     if (seenTargets.has(targetKey)) continue;
 
-    const mapping: TagMapping = { id: m.id, target, ...slots };
+    const mapping: TagMapping = { id: m.id, target, code: ref.code };
+    if (ref.craneKey) mapping.craneId = ref.craneKey;
     if (isFiniteNumber(m.scale)) mapping.scale = m.scale;
     if (isFiniteNumber(m.offset)) mapping.offset = m.offset;
     // 라벨 표시는 true 만, 이름은 trim 해서 비지 않을 때만 싣는다.
@@ -179,6 +200,11 @@ interface LegacyPlacement {
   scale: Vector3Tuple;
 }
 
+function withRef(mapping: TagMapping, ref: TagCodeRef): TagMapping {
+  if (ref.craneKey) mapping.craneId = ref.craneKey;
+  return mapping;
+}
+
 /**
  * 레거시 `valueMapList` → 루트 node 맵핑.
  *
@@ -190,8 +216,7 @@ interface LegacyPlacement {
  * 없어 실데이터 영향은 없다.
  *
  * id 는 결정론적(`legacy-pz`)이다 — 변환이 멱등해야 같은 파일을 두 번
- * 로드해도 히스토리·dirty 가 어긋나지 않는다. 키는 실시간 슬롯 — 이 형식을
- * 쓴 씬(dock-in)의 키가 서버 키다.
+ * 로드해도 히스토리·dirty 가 어긋나지 않는다.
  */
 export function convertLegacyValueMapList(
   raw: unknown,
@@ -205,20 +230,24 @@ export function convertLegacyValueMapList(
     const type = v.type as ValueMapType;
     const spec = LEGACY_VALUE_MAP_TARGET[type];
     if (!spec) continue;
-    if (typeof v.key !== 'string' || v.key.trim().length === 0) continue;
+    const ref = parseTagKeyRef(v.key);
+    if (!ref) continue;
     const rest = placement[spec.channel][AXIS_INDEX[spec.axis]];
     const legacyOffset =
       spec.channel === 'position' && isFiniteNumber(v.offset) ? v.offset : 0;
-    const mapping: TagMapping = {
-      id: `legacy-${type.toLowerCase()}`,
-      target: {
-        kind: 'node',
-        node: '',
-        channel: spec.channel,
-        axis: spec.axis,
+    const mapping = withRef(
+      {
+        id: `legacy-${type.toLowerCase()}`,
+        target: {
+          kind: 'node',
+          node: '',
+          channel: spec.channel,
+          axis: spec.axis,
+        },
+        code: ref.code,
       },
-      realtimeTagKey: toDottedLegacyKey(v.key.trim()),
-    };
+      ref,
+    );
     if (isFiniteNumber(v.scale)) mapping.scale = v.scale;
     const offset = legacyOffset - rest;
     if (offset !== 0) mapping.offset = offset;
@@ -235,12 +264,16 @@ export function convertLegacyRigBindings(raw: unknown): TagMapping[] {
     if (!item || typeof item !== 'object') continue;
     const b = item as Record<string, unknown>;
     if (!isNonEmptyString(b.jointId)) continue;
-    if (typeof b.key !== 'string' || b.key.trim().length === 0) continue;
-    const mapping: TagMapping = {
-      id: `legacy-joint-${b.jointId}`,
-      target: { kind: 'joint', jointId: b.jointId },
-      realtimeTagKey: toDottedLegacyKey(b.key.trim()),
-    };
+    const ref = parseTagKeyRef(b.key);
+    if (!ref) continue;
+    const mapping = withRef(
+      {
+        id: `legacy-joint-${b.jointId}`,
+        target: { kind: 'joint', jointId: b.jointId },
+        code: ref.code,
+      },
+      ref,
+    );
     if (isFiniteNumber(b.scale)) mapping.scale = b.scale;
     if (isFiniteNumber(b.offset)) mapping.offset = b.offset;
     out.push(mapping);
@@ -274,4 +307,85 @@ export function resolveModelTagMappings(
     ...convertLegacyRigBindings(model.rigBindings),
   ];
   return legacy.length > 0 ? sanitizeTagMappings(legacy, { rig }) : undefined;
+}
+
+/** 상태 태그 역할 → 참조(크레인 접두어 포함). sanitize-status-tags 가 만든다. */
+export type StatusTagEntries = Partial<Record<StatusTagRole, TagCodeRef>>;
+
+export interface FinalizedModelTagKeys {
+  craneId?: string;
+  tagMappings?: TagMapping[];
+  statusTags?: ModelStatusTags;
+}
+
+/**
+ * 모델 단위로 크레인 접두어를 정리한다.
+ *
+ * - 모델에 craneId 가 없고 맵핑·상태 태그의 접두어가 (정규화 기준) 하나뿐이면
+ *   그것을 craneId 로 채운다 — 옛 저장본(philly)은 키에만 크레인이 있었다.
+ * - 맵핑의 접두어가 모델 craneId 와 같으면 `craneId` 필드를 뗀다. 다르면
+ *   남긴다(그 맵핑만 다른 크레인을 읽는다).
+ * - 상태 태그는 역할 값이 코드 하나라 다른 크레인을 들 자리가 없다 — 접두어가
+ *   모델과 다르면 버리고 경고한다.
+ */
+export function finalizeModelTagKeys(
+  modelCraneId: string | undefined,
+  mappings: TagMapping[] | undefined,
+  statusEntries: StatusTagEntries | undefined,
+): FinalizedModelTagKeys {
+  let craneId = modelCraneId;
+  if (!craneId) {
+    const prefixes = new Map<string, string>();
+    for (const mapping of mappings ?? []) {
+      if (mapping.craneId) {
+        prefixes.set(normalizeCraneKey(mapping.craneId), mapping.craneId);
+      }
+    }
+    for (const role of STATUS_TAG_ROLES) {
+      const entry = statusEntries?.[role];
+      if (entry?.craneKey) {
+        prefixes.set(normalizeCraneKey(entry.craneKey), entry.craneKey);
+      }
+    }
+    if (prefixes.size === 1) {
+      craneId = prefixes.values().next().value;
+    }
+  }
+  const craneKey = craneId ? normalizeCraneKey(craneId) : undefined;
+
+  const tagMappings = mappings?.map((mapping) => {
+    if (
+      mapping.craneId &&
+      craneKey &&
+      normalizeCraneKey(mapping.craneId) === craneKey
+    ) {
+      const { craneId: _same, ...rest } = mapping;
+      void _same;
+      return rest;
+    }
+    return mapping;
+  });
+
+  const statusTags: ModelStatusTags = {};
+  for (const role of STATUS_TAG_ROLES) {
+    const entry = statusEntries?.[role];
+    if (!entry) continue;
+    if (
+      entry.craneKey &&
+      (!craneKey || normalizeCraneKey(entry.craneKey) !== craneKey)
+    ) {
+      console.warn(
+        `[sanitize-tag-mappings] status tag "${role}" references crane "${entry.craneKey}" but the model crane is "${craneId ?? '(none)'}". Dropped.`,
+      );
+      continue;
+    }
+    statusTags[role] = entry.code;
+  }
+
+  return {
+    craneId,
+    tagMappings:
+      tagMappings && tagMappings.length > 0 ? tagMappings : undefined,
+    statusTags: Object.keys(statusTags).length > 0 ? statusTags : undefined,
+  };
 }

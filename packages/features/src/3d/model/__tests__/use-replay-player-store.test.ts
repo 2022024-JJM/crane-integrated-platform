@@ -73,7 +73,7 @@ describe('loadFrames', () => {
   it('숫자가 아닌 태그 값은 적용하지 않는다', () => {
     expect(() => store().loadFrames([frame(5)], [1000])).not.toThrow();
     expect(xValue()).toBe(5);
-    expect(received.has('crane_1:NOTE')).toBe(false);
+    expect(received.has('crane_1.NOTE')).toBe(false);
   });
 
   it("상태 비트('true'/'false')는 1/0 으로 싣고, 숫자 문자열·null 은 버린다", () => {
@@ -97,8 +97,8 @@ describe('loadFrames', () => {
 
     expect(received.get('crane_1.crane_control_on')).toBe(1);
     expect(received.get('crane_1.accs_bypass_on')).toBe(0);
-    expect(received.has('crane_1:NUMERIC_TEXT')).toBe(false);
-    expect(received.has('crane_1:EMPTY')).toBe(false);
+    expect(received.has('crane_1.NUMERIC_TEXT')).toBe(false);
+    expect(received.has('crane_1.EMPTY')).toBe(false);
   });
 });
 
@@ -260,17 +260,17 @@ describe('화면 적용 스무딩', () => {
     return options;
   }
 
-  it('seekTo 는 즉시 대입(smoothTime 0), loadFrames 는 기본, tick 은 들어가는 프레임 길이 ÷ 배속', () => {
+  it('모든 publish 가 source: replay 를 싣는다 — seekTo 는 즉시 대입(smoothTime 0), loadFrames 는 기본, tick 은 들어가는 프레임 길이 ÷ 배속', () => {
     const options = captureOptions();
     store().loadFrames([frame(0), frame(10), frame(20)], [1000, 1000, 1000]);
-    expect(options).toEqual([undefined]);
+    expect(options).toEqual([{ source: 'replay' }]);
     store().seekTo(2);
-    expect(options.at(-1)).toEqual({ smoothTime: 0 });
+    expect(options.at(-1)).toEqual({ smoothTime: 0, source: 'replay' });
     store().seekTo(0);
     store().play();
     store().tick();
     expect(options.length).toBe(4);
-    expect(options.at(-1)).toEqual({ smoothTime: 1 });
+    expect(options.at(-1)).toEqual({ smoothTime: 1, source: 'replay' });
   });
 
   it('배속을 올리면 스무딩도 그만큼 짧아진다 — 다음 프레임이 올 때 정확히 닿는다', () => {
@@ -280,10 +280,10 @@ describe('화면 적용 스무딩', () => {
     store().play();
     store().tick();
     // 1번 프레임(2000ms)에 들어간다 — 2000 / 4 = 500ms.
-    expect(options.at(-1)).toEqual({ smoothTime: 0.5 });
+    expect(options.at(-1)).toEqual({ smoothTime: 0.5, source: 'replay' });
     store().setSpeed(0.5);
     store().tick();
-    expect(options.at(-1)).toEqual({ smoothTime: 2 });
+    expect(options.at(-1)).toEqual({ smoothTime: 2, source: 'replay' });
   });
 
   it('마지막 프레임(길이 0)에 닿는 tick 은 직전 프레임 길이로 스무딩한다 — 끝에서 점프하지 않는다', () => {
@@ -293,7 +293,7 @@ describe('화면 적용 스무딩', () => {
     store().play();
     store().tick();
     expect(store().frameIndex).toBe(2);
-    expect(options.at(-1)).toEqual({ smoothTime: 1 });
+    expect(options.at(-1)).toEqual({ smoothTime: 1, source: 'replay' });
   });
 
   it('길이 표가 기본값으로 채워졌으면 기본 길이 ÷ 배속', () => {
@@ -302,6 +302,6 @@ describe('화면 적용 스무딩', () => {
     store().setSpeed(2);
     store().play();
     store().tick();
-    expect(options.at(-1)).toEqual({ smoothTime: 2.5 });
+    expect(options.at(-1)).toEqual({ smoothTime: 2.5, source: 'replay' });
   });
 });

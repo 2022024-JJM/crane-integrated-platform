@@ -18,7 +18,6 @@ import {
   reportExcludedModelIds,
 } from '../lib/play3d-scope';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
-import { tagSlotOfPlay3dSource } from '../lib/tag-slot';
 import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
 import {
   diffZoneIntrusions,
@@ -43,7 +42,7 @@ import { useReplayPlayerStore } from './use-replay-player-store';
 import { useSceneCollisionStore } from './use-scene-collision-store';
 import { useSceneInfoStore } from './use-scene-info-store';
 import { useSceneZoneStore } from './use-scene-zone-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
+import { useScenarioStore } from './use-scenario-store';
 
 /** 위치·검사 구간·상태 누적 폴링 주기. */
 export const PLAY3D_STATS_POLL_MS = 250;
@@ -256,14 +255,10 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   );
   const source = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
-  const rawStatuses = useModelRuntimeStatuses(
-    sceneInfo,
-    tagSlotOfPlay3dSource(source),
-    {
-      paused: !transport.isPlaying,
-      timeScale: transport.speed,
-    },
-  );
+  const rawStatuses = useModelRuntimeStatuses(sceneInfo, {
+    paused: !transport.isPlaying,
+    timeScale: transport.speed,
+  });
   const excluded = useMemo(
     () => reportExcludedModelIds(sceneInfo),
     [sceneInfo],
@@ -331,7 +326,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     const unsubReplay = useReplayPlayerStore.subscribe((state, prev) => {
       if (source === 'replay' && state.frames !== prev.frames) restart();
     });
-    const unsubSim = useVirtualTagStore.subscribe((state, prev) => {
+    const unsubSim = useScenarioStore.subscribe((state, prev) => {
       if (source !== 'simulation') return;
       if (!state.hasSession && prev.hasSession) restart();
     });
@@ -520,12 +515,10 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     return () => window.clearInterval(timer);
   }, []);
 
-  // 태그 집계 — 버스 publish 마다(소스 슬롯으로 맵핑된 키만). 한계 포화는
-  // 시뮬레이션만. 소스가 바뀌면 키 집합도 바뀌므로 의존성에 둔다.
+  // 태그 집계 — 버스 publish 마다(씬이 맵핑한 키만). 게이트가 소스를 거르므로
+  // 키 집합은 씬만 본다. 소스 전환은 reset 이 새 실행을 연다.
   useEffect(() => {
-    const keys = new Set(
-      collectSceneTagKeys(sceneInfo, tagSlotOfPlay3dSource(source)),
-    );
+    const keys = new Set(collectSceneTagKeys(sceneInfo));
     if (keys.size === 0) return;
     return subscribeTagValues((key, value) => {
       if (!keys.has(key)) return;
@@ -537,5 +530,5 @@ export function usePlay3dStatsRecorder(regionId: string): void {
       }
       accumulateTagValue(agg, value, readPlay3dPositionMs());
     });
-  }, [sceneInfo, source]);
+  }, [sceneInfo]);
 }

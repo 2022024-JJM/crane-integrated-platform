@@ -41,7 +41,8 @@ import {
   computeCollisionViewPose,
   computeObjectViewPose,
 } from '../lib/scene-collision-pairs';
-import { resolveActiveTagSlot } from '../lib/tag-slot';
+import { resolveActiveTagSource } from '../lib/tag-source';
+import { useActiveTagSource } from '../model/use-active-tag-source';
 import { RigDriver } from './rig-driver';
 import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
@@ -207,18 +208,18 @@ export function Monitoring3dView({
   const trueNorth = resolveTrueNorth(sceneInfo);
   const metersPerUnit = getSceneMetersPerUnit(regionId);
   const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
-  // 맵핑·상태 태그의 어느 슬롯(실시간|가상)을 읽을지 — 값 생산자와 짝이다.
-  const tagSlot = resolveActiveTagSlot(mode, play3dSource);
-  // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
-  // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
-  useTagBindingSource(sceneInfo, true, tagSlot);
+  // 버스가 통과시킬 값 생산자 — 모드·소스와 짝이다. 다른 생산자의 publish 는
+  // 게이트가 버린다(세 생산자가 같은 키 표기를 쓴다).
+  useActiveTagSource(resolveActiveTagSource(mode, play3dSource));
+  // 태그 값 버스(시나리오 러너·WebSocket·리플레이) → 씬 맵핑 → 값 저장소.
+  // 드라이버는 Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
+  useTagBindingSource(sceneInfo, true);
   // 모델별 운전 상태(HUD)·라벨 표시 상태(색·아이콘)·외곽선 — 같은 판정 한
   // 번에서 함께 나온다. 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D
   // 플레이는 정지 중 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면
   // 일시정지 뒤 전 장비가 두절이 된다.
   const statusRecords = useModelStatusRecords(
     sceneInfo,
-    tagSlot,
     isPlay3d
       ? { paused: !transport.isPlaying, timeScale: transport.speed }
       : undefined,

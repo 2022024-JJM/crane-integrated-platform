@@ -5,7 +5,7 @@ import {
   useCraneSnapshotStore,
 } from '@crane/features/3d';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
-import { realtimeTagsPath, virtualTagsPath } from '../lib/tags-route';
+import { realtimeTagsPath } from '../lib/tags-route';
 import { CraneDetail } from './crane-detail';
 import { CraneList } from './crane-list';
 import { FeedBanner } from './feed-banner';
@@ -13,8 +13,7 @@ import { FeedBanner } from './feed-banner';
 /**
  * 실시간 태그 탭 — 크레인 스냅샷 피드를 켜고(마운트 = 구독) 목록 또는 상세를
  * 보인다. "연결 해제" 는 이 화면의 구독만 놓는다(`enabled`). 값은 스토어에
- * 마지막 상태로 남아 끊긴 뒤에도 읽을 수 있다. 상세의 "가상 장비로 복제" 는
- * 만든 장비의 가상 탭 상세로 옮겨 간다.
+ * 마지막 상태로 남아 끊긴 뒤에도 읽을 수 있다.
  */
 export function RealtimeTagsView({
   craneId,
@@ -38,9 +37,6 @@ export function RealtimeTagsView({
           craneId={craneId}
           connected={connected}
           onBack={() => navigate(realtimeTagsPath(basePath))}
-          onOpenVirtual={(equipmentId) =>
-            navigate(virtualTagsPath(basePath, equipmentId))
-          }
         />
       ) : (
         <CraneList

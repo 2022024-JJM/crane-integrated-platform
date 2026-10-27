@@ -4,7 +4,7 @@ import { cumulativeMs, frameIndexAtMs, totalMs } from '../lib/replay-position';
 import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
 import { useSceneCollisionStore } from './use-scene-collision-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
+import { useScenarioStore } from './use-scenario-store';
 import { virtualTagRuntime } from './virtual-tag-runner';
 
 /**
@@ -68,7 +68,7 @@ function seekReplay(ms: number): void {
 }
 
 function seekSimulation(ms: number): void {
-  useVirtualTagStore.getState().seek(ms);
+  useScenarioStore.getState().seek(ms);
   useSceneCollisionStore.getState().clearActive();
 }
 
@@ -91,7 +91,7 @@ export function readPlay3dTransport(): Play3dTransport {
       setSpeed: replay.setSpeed,
     };
   }
-  const sim = useVirtualTagStore.getState();
+  const sim = useScenarioStore.getState();
   return {
     source,
     isPlaying: sim.isRunning,
@@ -119,8 +119,8 @@ export function usePlay3dTransport(): Play3dTransport {
   const replayPlaying = useReplayPlayerStore((s) => s.isPlaying);
   const replaySpeed = useReplayPlayerStore((s) => s.speedMultiplier);
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
-  const simRunning = useVirtualTagStore((s) => s.isRunning);
-  const simSpeed = useVirtualTagStore((s) => s.speed);
+  const simRunning = useScenarioStore((s) => s.isRunning);
+  const simSpeed = useScenarioStore((s) => s.speed);
   return useMemo(
     () => readPlay3dTransport(),
     // 스냅샷은 스토어에서 직접 읽는다 — 아래 값들은 "언제 다시 읽을지" 의 키다.

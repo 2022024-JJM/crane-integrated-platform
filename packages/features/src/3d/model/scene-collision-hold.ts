@@ -1,7 +1,7 @@
 import { usePlay3dStore } from './use-play3d-store';
 import { useRealtimeStore } from './use-realtime-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
+import { useScenarioStore } from './use-scenario-store';
 
 /**
  * 충돌·영역 감지가 값 생산자(러너)를 멈추고, 돌고 있는지 묻고, 재개 전이를
@@ -35,14 +35,14 @@ export function isRunnerRunning(runner: SceneCollisionRunner): boolean {
     case 'play3d':
       return usePlay3dStore.getState().source === 'replay'
         ? useReplayPlayerStore.getState().isPlaying
-        : useVirtualTagStore.getState().isRunning;
+        : useScenarioStore.getState().isRunning;
     default:
-      return useVirtualTagStore.getState().isRunning;
+      return useScenarioStore.getState().isRunning;
   }
 }
 
 export function holdRunners(): void {
-  useVirtualTagStore.getState().pause();
+  useScenarioStore.getState().pause();
   useReplayPlayerStore.getState().pause();
   useRealtimeStore.getState().hold();
 }
@@ -66,7 +66,7 @@ export function subscribeRunnerResume(
   onResume: () => void,
 ): () => void {
   if (runner === 'realtime') return () => {};
-  const unsubVirtual = useVirtualTagStore.subscribe((state, prev) => {
+  const unsubVirtual = useScenarioStore.subscribe((state, prev) => {
     if (state.isRunning && !prev.isRunning) onResume();
   });
   if (runner === 'simulation') return unsubVirtual;

@@ -28,13 +28,13 @@ import {
 const DEV_SCENE_API_PATH = '/__dev/scene';
 
 /**
- * 가상 태그 저장 미들웨어 경로·파일. 브라우저 쪽 상수는
- * packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts 에 있다 — 그 슬라이스는
+ * 시뮬레이션 시나리오 저장 미들웨어 경로·파일. 브라우저 쪽 상수는
+ * packages/domain/src/virtual-tag/lib/scenario-storage.ts 에 있다 — 그 슬라이스는
  * import.meta 를 쓰는 모듈을 끌고 와 Node 설정 파일에서 import 할 수 없어
  * 문자열을 여기 한 번 더 둔다. 한쪽을 바꾸면 다른 쪽도 함께 바꾼다.
  */
-const DEV_VIRTUAL_TAGS_API_PATH = '/__dev/virtual-tags';
-const VIRTUAL_TAGS_PUBLIC_FILE = ['simulation', 'virtual-tags.json'];
+const DEV_SCENARIOS_API_PATH = '/__dev/scenarios';
+const SCENARIOS_PUBLIC_FILE = ['simulation', 'scenarios.json'];
 
 /**
  * region→파일 표는 도메인 패키지와 공유한다(scene-file-map). 예전에는 이
@@ -156,55 +156,52 @@ function devSceneSavePlugin(): Plugin {
 }
 
 /** 가상 태그 세트의 최소 형태 — 객체이고 tags 가 배열. 정규화는 브라우저가 한다. */
-function isVirtualTagSetShaped(value: unknown): boolean {
+function isScenarioSetShaped(value: unknown): boolean {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
-  return Array.isArray((value as Record<string, unknown>).equipments);
+  return Array.isArray((value as Record<string, unknown>).scenarios);
 }
 
-function devVirtualTagsSavePlugin(): Plugin {
+function devScenariosSavePlugin(): Plugin {
   return {
-    name: 'dev-virtual-tags-save-plugin',
+    name: 'dev-scenarios-save-plugin',
     configureServer(server) {
-      server.middlewares.use(
-        DEV_VIRTUAL_TAGS_API_PATH,
-        async (req, res, next) => {
-          if (req.method !== 'POST') {
-            next();
+      server.middlewares.use(DEV_SCENARIOS_API_PATH, async (req, res, next) => {
+        if (req.method !== 'POST') {
+          next();
+          return;
+        }
+
+        const filePath = path.resolve(
+          server.config.root,
+          'public',
+          ...SCENARIOS_PUBLIC_FILE,
+        );
+
+        try {
+          const body = JSON.parse(await readRequestBody(req));
+          if (!isScenarioSetShaped(body)) {
+            jsonResponse(res, 400, {
+              message:
+                'Invalid scenario payload: expected an object with a "scenarios" array.',
+            });
             return;
           }
-
-          const filePath = path.resolve(
-            server.config.root,
-            'public',
-            ...VIRTUAL_TAGS_PUBLIC_FILE,
+          await fs.mkdir(path.dirname(filePath), { recursive: true });
+          await fs.writeFile(
+            filePath,
+            `${JSON.stringify(body, null, 2)}\n`,
+            'utf8',
           );
-
-          try {
-            const body = JSON.parse(await readRequestBody(req));
-            if (!isVirtualTagSetShaped(body)) {
-              jsonResponse(res, 400, {
-                message:
-                  'Invalid virtual tag payload: expected an object with a "tags" array.',
-              });
-              return;
-            }
-            await fs.mkdir(path.dirname(filePath), { recursive: true });
-            await fs.writeFile(
-              filePath,
-              `${JSON.stringify(body, null, 2)}\n`,
-              'utf8',
-            );
-            jsonResponse(res, 200, body);
-          } catch (error) {
-            console.error('Failed to save virtual tags file.', error);
-            jsonResponse(res, 500, {
-              message: 'Failed to save virtual tags file.',
-            });
-          }
-        },
-      );
+          jsonResponse(res, 200, body);
+        } catch (error) {
+          console.error('Failed to save scenarios file.', error);
+          jsonResponse(res, 500, {
+            message: 'Failed to save scenarios file.',
+          });
+        }
+      });
     },
   };
 }
@@ -262,7 +259,10 @@ function createAssetStatsRefresher(repoRoot: string): () => void {
     try {
       await execFileAsync(
         process.execPath,
-        [path.join(repoRoot, 'scripts', 'asset-library-stats.mjs'), '--changed'],
+        [
+          path.join(repoRoot, 'scripts', 'asset-library-stats.mjs'),
+          '--changed',
+        ],
         { maxBuffer: 16 * 1024 * 1024 },
       );
     } catch (error) {
@@ -728,7 +728,10 @@ const DEPLOY_ENV_TO_VITE: Record<string, string> = {
 const LOCAL_DEV_ENV = 'prod'; // pnpm dev 가 따라가는 주소 체계
 const LOCAL_DEV_LABEL = 'local'; // 그때 헤더 표시(VITE_APP_ENV)
 
-function applyDeployEnv(mode: string, command: 'serve' | 'build'): Record<string, string> {
+function applyDeployEnv(
+  mode: string,
+  command: 'serve' | 'build',
+): Record<string, string> {
   const isLocalDev = command === 'serve' && mode === 'development';
   const envName = isLocalDev ? LOCAL_DEV_ENV : mode;
   if (!(DEPLOY_ENV_MODES as readonly string[]).includes(envName)) return {};
@@ -744,7 +747,9 @@ function applyDeployEnv(mode: string, command: 'serve' | 'build'): Record<string
     if (eq < 0) continue;
     const key = line.slice(0, eq).trim();
     const value =
-      isLocalDev && key === 'DEPLOY_ENV' ? LOCAL_DEV_LABEL : line.slice(eq + 1).trim();
+      isLocalDev && key === 'DEPLOY_ENV'
+        ? LOCAL_DEV_LABEL
+        : line.slice(eq + 1).trim();
     const viteKey = DEPLOY_ENV_TO_VITE[key];
     if (!viteKey) continue;
     if (process.env[viteKey] === undefined) process.env[viteKey] = value;
@@ -774,7 +779,8 @@ function devIndoorFallbackPlugin(
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
         const pathOnly = (req.url ?? '').split('?')[0];
-        const isIndoor = pathOnly === indoorNoSlash || pathOnly.startsWith(indoor);
+        const isIndoor =
+          pathOnly === indoorNoSlash || pathOnly.startsWith(indoor);
         const wantsHtml = (req.headers.accept ?? '').includes('text/html');
         if (isIndoor && wantsHtml) req.url = `${base}index.html`;
         next();
@@ -785,7 +791,10 @@ function devIndoorFallbackPlugin(
 
 // https://vite.dev/config/
 export default defineConfig(({ mode, command }) => {
-  const env = { ...loadEnv(mode, process.cwd(), ''), ...applyDeployEnv(mode, command) };
+  const env = {
+    ...loadEnv(mode, process.cwd(), ''),
+    ...applyDeployEnv(mode, command),
+  };
   // dev proxy 대상 IP 는 코드에 두지 않는다. 운영에서는 nginx 가 처리하고
   // 개발자는 apps/shell/.env.local 에 본인 환경의 백엔드 주소를 적는다.
   const proxyHttpTarget = env.VITE_DEV_PROXY_TARGET_HTTP;
@@ -811,7 +820,7 @@ export default defineConfig(({ mode, command }) => {
       tailwindcss(),
       devIndoorFallbackPlugin(baseUrl, env.VITE_INDOOR_BASE_URL),
       devSceneSavePlugin(),
-      devVirtualTagsSavePlugin(),
+      devScenariosSavePlugin(),
       devAssetLibraryPlugin(),
       // 위 저장 미들웨어들이 쓰는 public/ 디렉토리(scenes·simulation·
       // asset-library)는

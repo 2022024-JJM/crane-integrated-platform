@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play3dReportPanel, Play3dView } from '@crane/features/3d';
+import { Play3dView } from '@crane/features/3d';
+import { Play3dSidePanel } from '@crane/widgets/scenario';
 import { useMonitoringReplayUiState } from '@crane/features/monitoring';
 import { Spinner } from '@crane/ui/atoms/spinner';
 import {
@@ -11,7 +12,7 @@ import {
 
 /**
  * 3D 플레이(분석) 페이지 — 기록 리플레이 | 시뮬레이션을 한 3D 뷰에서 재생하고
- * 우측에 실행 리포트를 둔다. 소스 전환은 Play3dView 안의 상태 전환이라
+ * 우측에 실행 리포트(시뮬레이션 소스에서는 시나리오 탭도)를 둔다. 소스 전환은 Play3dView 안의 상태 전환이라
  * 이 컴포넌트(검색 상태 소유)는 리마운트되지 않는다.
  */
 function ReplayMonitoringViewContent({ regionId }: { regionId: string }) {
@@ -40,7 +41,7 @@ function ReplayMonitoringViewContent({ regionId }: { regionId: string }) {
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={34} minSize={26}>
-        <Play3dReportPanel />
+        <Play3dSidePanel />
       </ResizablePanel>
     </ResizablePanelGroup>
   );

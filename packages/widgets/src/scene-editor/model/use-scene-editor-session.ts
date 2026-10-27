@@ -101,6 +101,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedZoneExempt: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedZoneExempt'];
+  updateSelectedCraneId: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedCraneId'];
   createRigForSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['createRigForSelectedModel'];
@@ -264,6 +267,7 @@ export function useSceneEditorSession({
     updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
+    updateSelectedCraneId,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,
@@ -388,6 +392,7 @@ export function useSceneEditorSession({
     updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
+    updateSelectedCraneId,
     createRigForSelectedModel,
     assignRigToSelectedModel,
     updateRig,

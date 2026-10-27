@@ -1,9 +1,8 @@
 import {
   getDrivenJointIds,
-  getSlotTagKey,
+  resolveMappingTagKey,
   type RigDefinition,
   type SavedSceneInfo,
-  type TagSlot,
 } from '@crane/domain/3d';
 import {
   makeJointAddress,
@@ -18,8 +17,9 @@ const EMPTY: readonly TagBindingTarget[] = [];
  * 씬의 tagMappings 를 "태그 키 → 값 저장소 주소 목록" 으로 뒤집는다.
  * createTagBindingSource 의 resolve 가 매 값마다 이걸 조회한다.
  *
- * 키는 활성 슬롯(`slot`)의 것만 — 다른 슬롯의 키로 publish 가 와도 아무
- * 데도 닿지 않는다. 그 슬롯에 키가 없는 맵핑은 인덱스에 없고 노드는 rest 다.
+ * 키는 모델 craneId 와 맵핑 코드로 조립한다(`resolveMappingTagKey`). craneId
+ * 가 없는 모델의 맵핑은 인덱스에 없고 노드는 rest 다. 어느 생산자의 값이
+ * 오는지는 버스 게이트가 정하므로 인덱스는 소스를 모른다.
  *
  * - joint 대상: 주소 = `${modelId}/${jointId}` — 드라이버가 관절 값으로 읽어
  *   한계·구속조건 체인을 그대로 탄다. driven 관절·없는 관절은 sanitize 가
@@ -29,7 +29,6 @@ const EMPTY: readonly TagBindingTarget[] = [];
  */
 export function buildTagMappingIndex(
   sceneInfo: SavedSceneInfo | null | undefined,
-  slot: TagSlot,
 ): TagMappingIndex {
   const index = new Map<string, TagBindingTarget[]>();
   if (!sceneInfo) return index;
@@ -45,7 +44,7 @@ export function buildTagMappingIndex(
     const driven = rig ? getDrivenJointIds(rig) : null;
 
     for (const mapping of mappings) {
-      const tagKey = getSlotTagKey(mapping, slot);
+      const tagKey = resolveMappingTagKey(model, mapping);
       if (!tagKey) continue;
       let addressSlot: string;
       if (mapping.target.kind === 'joint') {
@@ -77,18 +76,17 @@ export function resolveFromIndex(
 }
 
 /**
- * 씬이 활성 슬롯으로 참조하는 태그 키 전부(중복 제거, 등장 순). 3D 플레이
- * 통계·리포트의 "맵핑 없음" 판정용.
+ * 씬이 참조하는 태그 키 전부(중복 제거, 등장 순). 3D 플레이 통계·리포트의
+ * "맵핑 없음" 판정용. craneId 없는 모델의 맵핑은 키가 없어 빠진다.
  */
 export function collectSceneTagKeys(
   sceneInfo: SavedSceneInfo | null | undefined,
-  slot: TagSlot,
 ): string[] {
   const keys: string[] = [];
   const seen = new Set<string>();
   for (const model of sceneInfo?.models ?? []) {
     for (const mapping of model.tagMappings ?? []) {
-      const key = getSlotTagKey(mapping, slot);
+      const key = resolveMappingTagKey(model, mapping);
       if (!key || seen.has(key)) continue;
       seen.add(key);
       keys.push(key);

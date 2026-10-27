@@ -9,7 +9,7 @@ import {
   type SceneCollisionRecord,
 } from '../use-scene-collision-store';
 import { useRealtimeStore } from '../use-realtime-store';
-import { useVirtualTagStore } from '../use-virtual-tag-store';
+import { useScenarioStore } from '../use-scenario-store';
 
 function record(
   id: number,
@@ -53,14 +53,14 @@ beforeEach(() => {
   vi.spyOn(sceneCollisionRuntime, 'suppress').mockImplementation(() => {});
   vi.spyOn(sceneCollisionRuntime, 'rebaseline').mockImplementation(() => {});
   vi.spyOn(rigValueStore, 'restore').mockImplementation(() => {});
-  useVirtualTagStore.setState({ isRunning: true });
+  useScenarioStore.setState({ isRunning: true });
 });
 
 afterEach(() => {
   useSceneCollisionStore.getState().clearHistory();
   vi.useRealTimers();
   vi.restoreAllMocks();
-  useVirtualTagStore.setState({ isRunning: false });
+  useScenarioStore.setState({ isRunning: false });
 });
 
 describe('초기값', () => {
@@ -187,10 +187,10 @@ describe('selectRecord / resume', () => {
     vi.mocked(sceneCollisionRuntime.rebaseline).mockImplementation(() => {
       calls.push('rebaseline');
     });
-    useVirtualTagStore.setState({
+    useScenarioStore.setState({
       pause: () => {
         calls.push('pause');
-        useVirtualTagStore.setState({ isRunning: false });
+        useScenarioStore.setState({ isRunning: false });
       },
     });
     const values: Array<[string, number]> = [['a/j', 3]];

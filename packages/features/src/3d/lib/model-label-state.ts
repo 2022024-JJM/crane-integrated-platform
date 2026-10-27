@@ -8,7 +8,6 @@ import {
   type ResolvedStatusTagKeys,
   type SavedModelInfo,
   type StatusTagRole,
-  type TagSlot,
 } from '@crane/domain/3d';
 import {
   DEFAULT_STATUS_WINDOWS,
@@ -52,19 +51,18 @@ export interface ModelStatusKeys {
   motion: string[];
   /** 수신 판정 키 — 움직임 키 + 상태 태그 키. */
   liveness: string[];
-  /** 역할 → 활성 슬롯의 키. */
+  /** 역할 → 키. */
   status: ResolvedStatusTagKeys;
 }
 
-/** 모델의 판정 키를 활성 슬롯(lib/tag-slot.ts)으로 푼다. */
+/** 모델의 판정 키 — 맵핑·상태 태그 코드를 모델 craneId 로 조립한다. */
 export function collectModelStatusKeys(
-  model: Pick<SavedModelInfo, 'tagMappings' | 'statusTags'>,
-  slot: TagSlot,
+  model: Pick<SavedModelInfo, 'craneId' | 'tagMappings' | 'statusTags'>,
 ): ModelStatusKeys {
-  const motion = collectModelTagKeys(model, slot);
+  const motion = collectModelTagKeys(model);
   const liveness = [...motion];
   const seen = new Set(motion);
-  const resolved = resolveStatusTagKeys(model.statusTags, slot);
+  const resolved = resolveStatusTagKeys(model);
   const status: ResolvedStatusTagKeys = {};
   for (const role of STATUS_TAG_ROLES) {
     const key = resolved[role];

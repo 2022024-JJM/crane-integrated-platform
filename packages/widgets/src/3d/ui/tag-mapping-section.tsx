@@ -1,19 +1,17 @@
-import { AlertTriangle, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getDrivenJointIds,
-  getSlotTagKey,
   getTagMappingUnit,
-  hasAnyTagKey,
   LABEL_STATUS_TAG_ROLES,
   modelObjectRegistry,
   OUTLINE_STATUS_TAG_ROLES,
+  resolveMappingTagKey,
   TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
   type ModelStatusTags,
   type RigDefinition,
   type SavedModelInfo,
-  type StatusTagBinding,
   type StatusTagRole,
   type TagMapping,
 } from '@crane/domain/3d';
@@ -31,6 +29,8 @@ import type { EquipmentLabelState } from '@crane/core/types/status';
 import { Button } from '@crane/ui/atoms/button';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
+import { Combobox } from '@crane/ui/molecules/combobox';
+import { isRegisteredCraneId } from '../lib/crane-id-options';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
@@ -40,9 +40,10 @@ import {
   PREVIEW_CHOICES,
   describeLabelState,
   fromPreviewChoice,
-  setStatusTagBinding,
+  setStatusTagCode,
   toPreviewChoice,
 } from '../lib/status-tag-editor';
+import { useCraneIdOptions } from '../model/use-crane-id-options';
 import {
   computeAppliedValue,
   createTagMapping,
@@ -66,7 +67,7 @@ import {
   NumberField,
   type InspectorT,
 } from './inspector-fields';
-import { TagSlotField } from './tag-slot-field';
+import { TagCodeField } from './tag-code-field';
 
 /**
  * 인스펙터 "태그 매핑" 탭 — 맵핑을 하나씩 추가하는 목록.
@@ -74,9 +75,10 @@ import { TagSlotField } from './tag-slot-field';
  * 관절 카드와 같은 문법이다: `+` 가 기본값 카드(모델 루트·위치·x·태그 없음)를
  * 만들고, 카드 안에서 위→아래 순서로 노드 → 타입 → 축 → 태그를 고른다.
  * 카드 머리줄의 순번(# 1, # 2 …)은 목록 순서 — 저장 순서이자 같은 대상 중복을
- * 앞 항목이 이기는 순서다. 태그는 한 줄(`TagSlotField` — 실시간 · 시뮬레이션
- * 전환 버튼 + 고른 슬롯의 키 칸)이고 칸을 누르면 태그 연결 다이얼로그가
- * 열린다. 리그가 할당된 모델은 대상을 "관절"로 바꿔 관절에 직접 꽂을 수
+ * 앞 항목이 이기는 순서다. 태그는 한 줄(`TagCodeField` — 코드 칸)이고 칸을
+ * 누르면 태그 연결 다이얼로그가 모델의 크레인으로 열린다. 크레인은 탭 맨 위
+ * 크레인 칸(레지스트리 콤보박스) 한 곳 — 키 `크레인ID.코드` 는 런타임이
+ * 조립한다. 리그가 할당된 모델은 대상을 "관절"로 바꿔 관절에 직접 꽂을 수
  * 있다(구속조건 체인을 탄다).
  *
  * 편집은 전부 onUpdate(updater) 한 채널 — undo/redo·dirty 에 잡힌다. 라이브
@@ -102,14 +104,96 @@ export type StatusTagsUpdater = (tags: ModelStatusTags) => ModelStatusTags;
 
 const NO_MAPPINGS: TagMapping[] = [];
 const NO_STATUS_TAGS: ModelStatusTags = {};
-const NO_BINDING: StatusTagBinding = {};
 
 export interface TagMappingSectionProps {
   model: SavedModelInfo;
   rigs: RigDefinition[];
   onUpdate: (updater: TagMappingsUpdater) => void;
   onUpdateStatusTags: (updater: StatusTagsUpdater) => void;
+  /** 모델 크레인 ID — undefined 면 비운다. */
+  onUpdateCraneId: (craneId: string | undefined) => void;
   t: InspectorT;
+}
+
+/**
+ * 탭 맨 위 크레인 칸 — 레지스트리에서 검색해 고르는 콤보박스(자유 입력 없음)
+ * 와 비우기 ×. 레지스트리에 없는 현재값(옛 키 접두어에서 채운 philly 의
+ * GC_04 등)은 amber 로 보이되 맵핑은 그 ID 로 동작한다. craneId 가 없는데
+ * 맵핑·상태 태그가 있으면 아래 한 줄로 경고한다 — 어느 화면에서도 움직이지
+ * 않는다.
+ */
+function CraneIdField({
+  craneId,
+  hasTags,
+  onChange,
+  t,
+}: {
+  craneId: string | undefined;
+  hasTags: boolean;
+  onChange: (craneId: string | undefined) => void;
+  t: InspectorT;
+}) {
+  const options = useCraneIdOptions();
+  const registered = isRegisteredCraneId(options, craneId);
+  const label = t('monitoring:inspector.crane.label');
+  return (
+    <div className="space-y-1">
+      <Field compact label={label}>
+        <Combobox
+          value={registered ? (craneId ?? null) : null}
+          options={options}
+          placeholder={t('monitoring:inspector.crane.placeholder')}
+          searchPlaceholder={t('monitoring:inspector.crane.search')}
+          emptyText={t('monitoring:inspector.crane.empty')}
+          aria-label={label}
+          invalid={craneId !== undefined && !registered}
+          className={cn(FIELD_INPUT, 'min-w-0 flex-1 px-1.5')}
+          renderValue={(option) =>
+            option ? (
+              option.label
+            ) : craneId ? (
+              <span
+                className="text-amber-500"
+                title={t('monitoring:inspector.crane.unregistered')}
+              >
+                {craneId}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">
+                {t('monitoring:inspector.crane.placeholder')}
+              </span>
+            )
+          }
+          onValueChange={(next) => {
+            if (next) onChange(next);
+          }}
+        />
+        {craneId ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground shrink-0"
+            aria-label={t('monitoring:inspector.crane.clear')}
+            title={t('monitoring:inspector.crane.clear')}
+            onClick={() => onChange(undefined)}
+          >
+            <X className="size-3.5" />
+          </Button>
+        ) : null}
+      </Field>
+      {craneId && !registered ? (
+        <p className={cn(FIELD_INDENT_COMPACT, 'text-[10px] text-amber-500')}>
+          {t('monitoring:inspector.crane.unregistered')}
+        </p>
+      ) : null}
+      {!craneId && hasTags ? (
+        <p className={cn(FIELD_INDENT_COMPACT, 'text-[10px] text-amber-500')}>
+          {t('monitoring:inspector.crane.missing')}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function ConflictNote({
@@ -315,19 +399,14 @@ function MappingCard({
         </Field>
       )}
 
-      <TagSlotField
-        value={mapping}
-        onChange={(next) =>
-          onChange({
-            realtimeTagKey: next.realtimeTagKey,
-            virtualTagKey: next.virtualTagKey,
-          })
-        }
+      <TagCodeField
+        code={mapping.code}
+        onChange={(code) => onChange({ code })}
         modelCraneId={modelCraneId}
         t={t}
       />
 
-      {hasAnyTagKey(mapping) ? (
+      {mapping.code ? (
         <>
           {/* scale·offset 은 한 줄이다. scale 라벨을 라벨 열에 두어 첫 입력이
               위 줄들의 입력과 같은 자리에서 시작하고, 두 입력이 남는 폭을
@@ -554,12 +633,12 @@ function StatusTagRows({
           title={t(`monitoring:inspector.statusTags.groups.${group.id}`)}
         >
           {group.roles.map((role) => {
-            const binding = tags[role] ?? NO_BINDING;
+            const code = tags[role] ?? '';
             const roleLabel = t(
               `monitoring:inspector.statusTags.roles.${role}`,
             );
             return (
-              <StatusTagCard key={role} linked={hasAnyTagKey(binding)}>
+              <StatusTagCard key={role} linked={code !== ''}>
                 <div className="flex items-center gap-2">
                   <span className="text-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
                     {roleLabel}
@@ -575,13 +654,10 @@ function StatusTagRows({
                     />
                   </div>
                 </div>
-                {/* 모델을 바꾸면 처음 보일 슬롯을 그 모델의 연결로 다시
-                    고른다 — 이 구역은 모델이 바뀌어도 리마운트되지 않는다. */}
-                <TagSlotField
-                  key={modelId}
-                  value={binding}
+                <TagCodeField
+                  code={code}
                   onChange={(next) =>
-                    onUpdate((prev) => setStatusTagBinding(prev, role, next))
+                    onUpdate((prev) => setStatusTagCode(prev, role, next))
                   }
                   modelCraneId={modelCraneId}
                   t={t}
@@ -624,6 +700,7 @@ export function TagMappingSection({
   rigs,
   onUpdate,
   onUpdateStatusTags,
+  onUpdateCraneId,
   t,
 }: TagMappingSectionProps) {
   useRigLivePoll();
@@ -659,6 +736,13 @@ export function TagMappingSection({
         {t('monitoring:inspector.mapping.title')}
       </div>
 
+      <CraneIdField
+        craneId={model.craneId}
+        hasTags={mappings.length > 0 || Object.keys(statusTags).length > 0}
+        onChange={onUpdateCraneId}
+        t={t}
+      />
+
       <CollapsibleSection
         title={t('monitoring:inspector.mapping.list')}
         count={mappings.length}
@@ -689,15 +773,11 @@ export function TagMappingSection({
               root !== null &&
               mapping.target.node !== '' &&
               !knownPaths.has(mapping.target.node);
-            // readout 은 값이 들어온 슬롯을 보인다 — 에디터엔 생산자가 없어
-            // 보통 둘 다 비어 있고, 어느 쪽이든 오면 그 값이다(실시간 우선).
-            const realtimeKey = getSlotTagKey(mapping, 'realtime');
-            const virtualKey = getSlotTagKey(mapping, 'virtual');
-            const tagValue =
-              (realtimeKey
-                ? tagLiveValues.get(realtimeKey)?.value
-                : undefined) ??
-              (virtualKey ? tagLiveValues.get(virtualKey)?.value : undefined);
+            // readout — 에디터엔 생산자가 없어 보통 비어 있고, 값이 오면 보인다.
+            const tagKey = resolveMappingTagKey(model, mapping);
+            const tagValue = tagKey
+              ? tagLiveValues.get(tagKey)?.value
+              : undefined;
             const applied =
               mapping.target.kind === 'joint'
                 ? readout?.jointValues.get(mapping.target.jointId)

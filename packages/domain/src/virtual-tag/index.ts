@@ -1,17 +1,17 @@
 export type {
-  VirtualEquipment,
+  ScenarioSet,
+  ScenarioTag,
+  SimulationScenario,
   VirtualTagDataType,
   VirtualTagDefinition,
   VirtualTagPattern,
   VirtualTagPatternKind,
-  VirtualTagSet,
 } from './model/types';
 export {
+  SCENARIO_NAME_MAX,
+  SCENARIO_TAGS_MAX,
+  SCENARIOS_MAX,
   SIMULATION_SPEED_OPTIONS,
-  VIRTUAL_EQUIPMENT_BAY_MAX,
-  VIRTUAL_EQUIPMENT_ID_MAX,
-  VIRTUAL_EQUIPMENT_TAGS_MAX,
-  VIRTUAL_EQUIPMENTS_MAX,
   VIRTUAL_TAG_BOOL_PATTERN_KINDS,
   VIRTUAL_TAG_CODE_MAX,
   VIRTUAL_TAG_DATA_TYPES,
@@ -26,20 +26,7 @@ export {
   VIRTUAL_TAG_TICK_MIN,
   VIRTUAL_TAG_UNIT_MAX,
 } from './model/types';
-export {
-  buildVirtualTagKey,
-  normalizeVirtualEquipmentId,
-  normalizeVirtualEquipmentKey,
-  normalizeVirtualTagCode,
-  parseVirtualTagKey,
-  VIRTUAL_TAG_KEY_SEPARATOR,
-  type VirtualTagKeyParts,
-} from './lib/virtual-tag-key';
-export {
-  collectVirtualTagEntries,
-  findVirtualTagEntry,
-  type VirtualTagEntry,
-} from './lib/virtual-tag-entries';
+export { normalizeVirtualTagCode } from './lib/tag-code';
 export {
   clampToTag,
   initVirtualTagState,
@@ -50,20 +37,20 @@ export {
 export {
   clampVirtualTagPeriod,
   clampVirtualTagTick,
-  createEmptyVirtualTagSet,
-  migrateVirtualTagSetV1,
-  sanitizeVirtualEquipment,
-  sanitizeVirtualEquipmentList,
+  createEmptyScenarioSet,
+  sanitizeScenario,
+  sanitizeScenarioList,
+  sanitizeScenarioSet,
+  sanitizeScenarioTag,
+  sanitizeScenarioTagList,
   sanitizeVirtualTag,
-  sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
-  sanitizeVirtualTagSet,
-  VIRTUAL_UNASSIGNED_EQUIPMENT_ID,
-} from './lib/sanitize-virtual-tags';
+  scenarioTagKey,
+} from './lib/sanitize-scenarios';
 export {
-  isVirtualTagSetStoredLocallyOnly,
-  loadVirtualTagSet,
-  saveVirtualTagSet,
-  VIRTUAL_TAGS_PUBLIC_PATH,
-  VIRTUAL_TAGS_STORAGE_KEY,
-} from './lib/virtual-tag-storage';
+  isScenarioSetStoredLocallyOnly,
+  loadScenarioSet,
+  saveScenarioSet,
+  SCENARIOS_PUBLIC_PATH,
+  SCENARIOS_STORAGE_KEY,
+} from './lib/scenario-storage';

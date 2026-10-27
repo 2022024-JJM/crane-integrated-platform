@@ -1,13 +1,13 @@
-import type { TagKeySlots, TagSlot } from './tag-mapping-types';
-import { getSlotTagKey } from './tag-mapping-types';
+import { buildCraneTagKey } from '@crane/core/lib/crane-tag-key';
+import type { TagKeyModel } from './tag-mapping-types';
 
 /**
  * 상태 태그 — "모델의 상태 역할 하나 ← 서버(PLC) 상태 비트 하나".
  *
  * 태그 맵핑(tag-mapping-types.ts)이 값으로 노드를 **움직인다면**, 상태 태그는
  * 값으로 라벨을 **칠하고**(운전 상태 색·아이콘) 장비에 **외곽선을 두른다**.
- * 역할마다 맵핑과 같은 두 슬롯(`TagKeySlots` — 실시간·가상)을 들고, 어느
- * 슬롯을 읽을지도 맵핑과 같은 규칙(features `resolveActiveTagSlot`)이다.
+ * 역할 값은 맵핑과 같은 **태그 코드**이고 크레인은 모델 craneId 다 — 키는
+ * `resolveStatusTagKeys` 가 조립한다.
  *
  * 값은 0/1 숫자다 — 버스가 숫자 전용이라 boolean 은 입구에서 바뀌어 들어온다
  * (`@crane/domain/monitoring` toTagNumber). on/off 문턱과 판정 우선순위는
@@ -52,25 +52,25 @@ export const LABEL_STATUS_TAG_ROLES = STATUS_TAG_ROLES.filter(
     !(OUTLINE_STATUS_TAG_ROLES as readonly StatusTagRole[]).includes(role),
 );
 
-/** 역할 하나의 연결 — 두 슬롯 중 하나 이상에 키가 있다. */
-export type StatusTagBinding = TagKeySlots;
+/** 역할 → 태그 코드. 연결하지 않은 역할은 키 자체가 없다. */
+export type ModelStatusTags = Partial<Record<StatusTagRole, string>>;
 
-/** 역할 → 연결. 연결하지 않은 역할은 키 자체가 없다. */
-export type ModelStatusTags = Partial<Record<StatusTagRole, StatusTagBinding>>;
-
-/** 한 슬롯으로 푼 역할 → 값 버스 키. 런타임 판정이 받는 모양. */
+/** 역할 → 값 버스 키. 런타임 판정이 받는 모양. */
 export type ResolvedStatusTagKeys = Partial<Record<StatusTagRole, string>>;
 
-/** 상태 태그를 한 슬롯의 키로 푼다. 그 슬롯에 키가 없는 역할은 빠진다. */
+/**
+ * 상태 태그를 값 버스 키로 푼다. 모델에 craneId 가 없으면 빈 객체 — 어느
+ * 역할도 값을 받지 않는다.
+ */
 export function resolveStatusTagKeys(
-  statusTags: ModelStatusTags | undefined,
-  slot: TagSlot,
+  model: TagKeyModel & { statusTags?: ModelStatusTags },
 ): ResolvedStatusTagKeys {
   const out: ResolvedStatusTagKeys = {};
-  if (!statusTags) return out;
+  const { craneId, statusTags } = model;
+  if (!craneId || !statusTags) return out;
   for (const role of STATUS_TAG_ROLES) {
-    const key = getSlotTagKey(statusTags[role], slot);
-    if (key) out[role] = key;
+    const code = statusTags[role];
+    if (code) out[role] = buildCraneTagKey(craneId, code);
   }
   return out;
 }

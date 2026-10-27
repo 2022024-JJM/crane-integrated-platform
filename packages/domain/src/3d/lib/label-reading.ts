@@ -1,7 +1,7 @@
 import {
-  getSlotTagKey,
+  resolveMappingTagKey,
+  type TagKeyModel,
   type TagMapping,
-  type TagSlot,
 } from '../model/tag-mapping-types';
 
 /**
@@ -32,19 +32,19 @@ export const LABEL_READING_DECIMALS = 1;
 const NO_READINGS: readonly ModelLabelReading[] = [];
 
 /**
- * 라벨에 보일 맵핑만 골라 목록으로 만든다. 키는 활성 슬롯의 것 — 그 슬롯에
- * 키가 없는 맵핑은 줄도 없다. 없으면 **같은 빈 배열 참조**를 돌려준다 —
- * 모델마다 새 배열을 만들면 memo 된 GltfModel 이 렌더마다 다시 그려진다.
+ * 라벨에 보일 맵핑만 골라 목록으로 만든다. 키는 모델 craneId 로 조립한다 —
+ * craneId 가 없는 모델은 줄도 없다. 없으면 **같은 빈 배열 참조**를 돌려준다
+ * — 모델마다 새 배열을 만들면 memo 된 GltfModel 이 렌더마다 다시 그려진다.
  */
 export function buildLabelReadings(
-  mappings: readonly TagMapping[] | undefined,
-  slot: TagSlot,
+  model: TagKeyModel & { tagMappings?: readonly TagMapping[] },
 ): readonly ModelLabelReading[] {
+  const mappings = model.tagMappings;
   if (!mappings) return NO_READINGS;
   const readings: ModelLabelReading[] = [];
   for (const mapping of mappings) {
     if (mapping.showOnLabel !== true) continue;
-    const tagKey = getSlotTagKey(mapping, slot);
+    const tagKey = resolveMappingTagKey(model, mapping);
     if (!tagKey) continue;
     readings.push({
       id: mapping.id,

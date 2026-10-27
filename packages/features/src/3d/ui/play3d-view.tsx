@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { MonitoringReplayUiState } from '@crane/domain/monitoring';
 import type { AlarmSeverity } from '@crane/domain/alarm';
+import { getSceneFileNameByRegionId } from '@crane/domain/3d';
 import { stopSimulation } from '../model/stop-simulation';
 import { usePlay3dStatsRecorder } from '../model/use-play3d-stats-recorder';
-import {
-  usePlay3dStore,
-  type Play3dSource,
-} from '../model/use-play3d-store';
+import { usePlay3dStore, type Play3dSource } from '../model/use-play3d-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
+import { useScenarioStore } from '../model/use-scenario-store';
+import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { Monitoring3dView } from './monitoring-3d-view';
 import { Play3dSourceTabs } from './play3d-source-tabs';
 import { Play3dTransportBar } from './play3d-transport-bar';
@@ -23,8 +23,12 @@ const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
  * 잃었고, loadFrames effect 는 query data 가 바뀔 때만 돌아 되돌아와도 비어
  * 있었다.)
  *
- * 리포트 패널은 페이지가 옆에 둔다(Play3dReportPanel) — 같은 스토어를
- * 읽으므로 여기 안에 있을 필요가 없다.
+ * 시나리오 스토어에는 이 화면의 씬을 붙인다 — 시나리오 태그(`modelId + code`)
+ * 가 키를 만드는 원천이고, 시나리오 목록은 씬 파일 단위로 걸러진다. 떠나면
+ * 뗀다.
+ *
+ * 리포트·시나리오 패널은 페이지가 옆에 둔다 — 같은 스토어를 읽으므로 여기
+ * 안에 있을 필요가 없다.
  */
 export function Play3dView({
   regionId,
@@ -39,8 +43,18 @@ export function Play3dView({
   const source = usePlay3dStore((s) => s.source);
   usePlay3dStatsRecorder(regionId);
 
+  const sceneInfo = useSceneInfoStore(
+    (s) => s.sceneInfoByRegion[regionId] ?? null,
+  );
+  const attachScene = useScenarioStore((s) => s.attachScene);
+  useEffect(() => {
+    attachScene(sceneInfo, getSceneFileNameByRegionId(regionId));
+    return () => attachScene(null, null);
+  }, [attachScene, sceneInfo, regionId]);
+
   // 소스 전환 — 떠나는 소스만 정리한다. 시뮬레이션은 종료(자세 rest·충돌
-  // 기록 삭제), 리플레이는 정지 + 처음 프레임(프레임은 남긴다).
+  // 기록 삭제), 리플레이는 정지 + 처음 프레임(프레임은 남긴다). 그 publish 는
+  // 소스가 달라 버스 게이트가 버린다.
   const prevSourceRef = useRef<Play3dSource | null>(null);
   useEffect(() => {
     const prev = prevSourceRef.current;

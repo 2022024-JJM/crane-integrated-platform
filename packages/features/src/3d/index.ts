@@ -341,8 +341,11 @@ export {
   type TagLiveValue,
   type TagPublish,
   type TagPublishOptions,
-  type TagValueSource,
+  getActiveTagSource,
+  setActiveTagSource,
+  type TagSourceId,
 } from './model/tag-value-bus';
+export { useActiveTagSource } from './model/use-active-tag-source';
 export { useTagBindingSource } from './model/use-tag-binding-source';
 export { useRealtimeStore } from './model/use-realtime-store';
 export { useCraneSnapshotStore } from './model/use-crane-snapshot-store';
@@ -395,40 +398,31 @@ export {
   collectSceneTagKeys,
   type TagMappingIndex,
 } from './lib/tag-mapping-index';
+export { EDITOR_TAG_SOURCE, resolveActiveTagSource } from './lib/tag-source';
 export {
-  EDITOR_TAG_SLOT,
-  resolveActiveTagSlot,
-  tagSlotOfPlay3dSource,
-} from './lib/tag-slot';
-export {
-  resetVirtualTagLoadState,
-  useVirtualTagStore,
-  serializeVirtualTagSet,
+  resetScenarioLoadState,
+  scenariosOfSceneFile,
+  serializeScenarioSet,
   SIMULATION_SPEED_MAX,
   SIMULATION_SPEED_MIN,
-  type VirtualEquipmentAddResult,
-  type VirtualEquipmentDraft,
-  type VirtualTagAddResult,
-  type VirtualTagDraft,
-  type VirtualTagImportResult,
-} from './model/use-virtual-tag-store';
+  useScenarioStore,
+  type ScenarioAddResult,
+  type ScenarioDraft,
+  type ScenarioTagAddResult,
+} from './model/use-scenario-store';
+export { virtualTagRuntime } from './model/virtual-tag-runner';
 export {
-  isVirtualTagEntryEnabled,
-  virtualTagRuntime,
-  virtualTagSource,
-} from './model/virtual-tag-runner';
+  collectScenarioEntries,
+  type ScenarioEntryResult,
+  type ScenarioTagIssue,
+  type ScenarioTagIssueReason,
+  type VirtualTagEntry,
+} from './lib/scenario-entries';
 export {
-  useTagCatalog,
-  useTagCatalogEquipments,
-  type TagCatalogEntry,
-  type TagCatalogEquipment,
-} from './model/use-tag-catalog';
-export {
-  cloneRange,
-  cloneTagsFromSnapshot,
-  fallbackRange,
-  type CloneTagsOptions,
-} from './lib/virtual-tag-clone';
+  createScenarioTagDefaults,
+  SCENARIO_NUMBER_DEFAULT_RANGE,
+  type ScenarioTagDefaults,
+} from './lib/scenario-defaults';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export {
   useSceneDock,

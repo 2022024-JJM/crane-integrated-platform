@@ -23,7 +23,6 @@ import {
 } from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
-import { tagSlotOfPlay3dSource } from '../lib/tag-slot';
 import { usePlay3dTransport } from '../model/play3d-transport';
 import {
   usePlay3dStats,
@@ -31,7 +30,7 @@ import {
 } from '../model/use-play3d-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
-import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { useScenarioStore } from '../model/use-scenario-store';
 import { Play3dKpiCard } from './play3d-report-kpi';
 import {
   EquipmentTable,
@@ -58,7 +57,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   const transport = usePlay3dTransport();
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
-  const tagEntries = useVirtualTagStore((s) => s.entries);
+  const tagEntries = useScenarioStore((s) => s.entries);
   const tagDefs = useMemo(() => toPlay3dTagDefs(tagEntries), [tagEntries]);
   const sceneInfo = useSceneInfoStore(
     (s) => s.sceneInfoByRegion[meta.regionId] ?? null,
@@ -75,13 +74,10 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   );
   const isReplay = meta.source === 'replay';
 
-  // 소스 슬롯 기준 — 가상 키만 있는 씬은 리플레이 소스에서 "맵핑 없음" 이다.
+  // 씬에 키를 만들 수 있는 맵핑(모델 craneId + 코드)이 하나도 없으면 "맵핑 없음".
   const noTagMappings = useMemo(
-    () =>
-      sceneInfo !== null &&
-      collectSceneTagKeys(sceneInfo, tagSlotOfPlay3dSource(meta.source))
-        .length === 0,
-    [sceneInfo, meta.source],
+    () => sceneInfo !== null && collectSceneTagKeys(sceneInfo).length === 0,
+    [sceneInfo],
   );
 
   const derived = useMemo(() => {

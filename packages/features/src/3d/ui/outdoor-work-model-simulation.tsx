@@ -25,9 +25,7 @@ import { isPlanLookCamera } from '../lib/plan-look';
 import { stopSimulation } from '../model/stop-simulation';
 import { readTagLiveValue } from '../model/tag-value-bus';
 import type { MonitoringViewMode } from '../model/types';
-import { usePlay3dStore } from '../model/use-play3d-store';
-import { resolveActiveTagSlot } from '../lib/tag-slot';
-import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { useScenarioStore } from '../model/use-scenario-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
@@ -48,7 +46,7 @@ export function useSceneData(regionId: string, mode: MonitoringViewMode) {
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const setActiveMode = useSceneInfoStore((s) => s.setActiveMode);
   const setActiveRegionId = useSceneInfoStore((s) => s.setActiveRegionId);
-  const loadVirtualTags = useVirtualTagStore((s) => s.load);
+  const loadScenarios = useScenarioStore((s) => s.load);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
   const startRealtime = useRealtimeStore((s) => s.start);
   const stopRealtime = useRealtimeStore((s) => s.stop);
@@ -117,7 +115,7 @@ export function useSceneData(regionId: string, mode: MonitoringViewMode) {
       // Play3dView 가 전환을 정리한다. 여기서는 둘 다 깨끗이 시작하고
       // 정의만 읽어 둔다(자동 재생 없음 — ▶ 가 실행의 시작점이다).
       resetReplay();
-      void loadVirtualTags();
+      void loadScenarios();
     }
     void load();
 
@@ -147,7 +145,7 @@ export function useSceneData(regionId: string, mode: MonitoringViewMode) {
     };
   }, [
     clearSceneInfoFromStore,
-    loadVirtualTags,
+    loadScenarios,
     mode,
     regionId,
     resetReplay,
@@ -228,7 +226,7 @@ export function OutdoorWorkModelSimulation({
   // 평면도 숨은선 대상 — 검출기(ScenePlanOverlapDetector)가 탑뷰에서 채운다.
   const planHiddenIndexById = usePlanOverlapStore((s) => s.hiddenIndexById);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
-  // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
+  // 시나리오는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
   useRealtimeRunner();
   useCraneSnapshotRealtimeBridge(mode === 'realtime');
@@ -240,20 +238,18 @@ export function OutdoorWorkModelSimulation({
   const floodlights = sceneInfo?.floodlights;
   const metersPerUnit = getSceneMetersPerUnit(regionId);
   // 라벨 위 태그 값 목록 — 모델마다 참조를 고정해야 memo 된 GltfModel 이
-  // 렌더마다 다시 그려지지 않는다. 키는 활성 슬롯의 것 — 3D 플레이의 소스
-  // 전환은 리마운트가 아니라 여기 의존성으로 따라간다.
-  const play3dSource = usePlay3dStore((s) => s.source);
-  const tagSlot = resolveActiveTagSlot(mode, play3dSource);
+  // 렌더마다 다시 그려지지 않는다. 키는 모델 craneId 로 조립한다 — 어느
+  // 생산자의 값인지는 버스 게이트가 정하므로 소스 전환에 무관하다.
   const sceneModels = sceneInfo?.models;
   const labelReadingsById = useMemo(
     () =>
       new Map(
         (sceneModels ?? []).map((model) => [
           model.id,
-          buildLabelReadings(model.tagMappings, tagSlot),
+          buildLabelReadings(model),
         ]),
       ),
-    [sceneModels, tagSlot],
+    [sceneModels],
   );
 
   const onResetCameraRef = useRef(onResetCamera);

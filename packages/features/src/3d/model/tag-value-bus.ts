@@ -1,15 +1,21 @@
 /**
- * 태그 값 버스 — 모든 값 생산자(가상 태그·WebSocket·리플레이)가 여기로
- * `publishTagValue(key, value)` 를 부르고, 소비자(태그 바인딩 소스)는
- * `setTagIngest` 로 한 번 꽂힌다.
+ * 태그 값 버스 — 모든 값 생산자(시나리오 러너·실시간 러너·리플레이)가 여기로
+ * `publishTagValue(key, value, { source })` 를 부르고, 소비자(태그 바인딩
+ * 소스)는 `setTagIngest` 로 한 번 꽂힌다.
  *
- * 생산자와 소비자가 서로를 모르게 하는 유일한 접점이다. 실서버가 붙는 날
- * 바뀌는 것은 생산자 하나(WebSocket 브리지를 켜는 스위치)뿐이다.
+ * 생산자와 소비자가 서로를 모르게 하는 유일한 접점이다. 세 생산자가 **같은
+ * 키 표기**(`크레인ID.코드`)를 쓰므로 섞임을 막는 것은 **활성 소스 게이트**
+ * 다 — 화면이 `setActiveTagSource` 로 지금 소스를 정하면 다른 소스의 publish
+ * 는 캐시·소비자·관찰자 어디에도 닿지 않는다. 활성 소스가 null 이면(3D 뷰가
+ * 없는 화면) 전부 통과한다.
  *
  * `tagLiveValues` 는 표시용 마지막 값 캐시다. React 상태가 아니라 mutable
  * Map — 값이 초당 수십 번 오는데 setState 를 태우면 인스펙터·표가 그 속도로
  * 리렌더된다. UI 는 useRigLivePoll(15Hz) 로 폴링해 읽는다.
  */
+
+/** 값 생산자 종류 — 화면 모드와 짝이다(lib/tag-source.ts). */
+export type TagSourceId = 'realtime' | 'replay' | 'simulation';
 
 export interface TagPublishOptions {
   /**
@@ -19,6 +25,11 @@ export interface TagPublishOptions {
    * 관찰자(`subscribeTagValues`)에게는 전달하지 않는다 — 값·시각만 본다.
    */
   smoothTime?: number;
+  /**
+   * 내보내는 생산자. 활성 소스가 정해져 있고 이것과 다르면(없는 것도 다름)
+   * 버린다. 생산자는 항상 싣는다.
+   */
+  source?: TagSourceId;
 }
 
 export type TagPublish = (
@@ -27,19 +38,12 @@ export type TagPublish = (
   options?: TagPublishOptions,
 ) => void;
 
-/** 값 생산자. start 에 받은 publish 로 값을 내보내고 stop 에서 멈춘다. */
-export interface TagValueSource {
-  readonly id: string;
-  start(publish: TagPublish): void;
-  stop(): void;
-}
-
 export interface TagLiveValue {
   value: number;
   /** performance.now() 기준이 아니라 Date.now() — 표시용이라 정밀도 불필요. */
   at: number;
   /**
-   * 값이 직전과 **달라진** 마지막 시각. 같은 값이 반복 수신되면(가상 태그
+   * 값이 직전과 **달라진** 마지막 시각. 같은 값이 반복 수신되면(시나리오
    * manual 패턴, 정지한 장비의 주기 스냅샷) `at` 만 갱신되고 이건 남는다 —
    * 움직임 판정의 근거(lib/model-runtime-status.ts).
    */
@@ -72,6 +76,23 @@ export const tagLiveValues = {
  */
 export function readTagLiveValue(key: string): number | undefined {
   return liveValues.get(key)?.value;
+}
+
+let activeSource: TagSourceId | null = null;
+
+/**
+ * 활성 소스 — 바뀌면 live 캐시를 비운다. 이전 소스가 남긴 값(리플레이 이탈의
+ * frame-0, 시뮬레이션의 마지막 자세)이 새 소스의 상태 판정에 섞이지 않게.
+ * 같은 값이면 no-op. 화면은 `useActiveTagSource` 로 건다.
+ */
+export function setActiveTagSource(source: TagSourceId | null): void {
+  if (activeSource === source) return;
+  activeSource = source;
+  liveValues.clear();
+}
+
+export function getActiveTagSource(): TagSourceId | null {
+  return activeSource;
 }
 
 let tagIngest: TagPublish | null = null;
@@ -108,6 +129,7 @@ export function publishTagValue(
 ): void {
   if (typeof key !== 'string' || key.length === 0) return;
   if (!Number.isFinite(value)) return;
+  if (activeSource !== null && options?.source !== activeSource) return;
   const now = Date.now();
   const prev = liveValues.get(key);
   liveValues.set(key, {

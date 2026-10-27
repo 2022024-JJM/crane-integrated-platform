@@ -9,7 +9,6 @@ import {
 import { useMemo } from 'react';
 import {
   getDrivenJointIds,
-  getPrimaryTagKey,
   getRigJointUnit,
   modelObjectRegistry,
   RIG_HINGE_DEFAULT_RANGE,
@@ -26,7 +25,7 @@ import {
   rigLiveReadouts,
   rigValueStore,
   useRigLivePoll,
-  useVirtualTagStore,
+  useScenarioStore,
   type RigModelReadout,
 } from '@crane/features/3d';
 import { createId } from '@crane/core/lib/create-id';
@@ -436,15 +435,13 @@ export function RiggingSection({
   t,
 }: RiggingSectionProps) {
   useRigLivePoll();
-  const simulating = useVirtualTagStore((s) => s.isRunning);
-  // 관절 id → 연결된 태그 키(태그 매핑 탭의 joint 대상). 표시용이라 소스와
-  // 무관한 대표 키(실시간 우선)다.
+  const simulating = useScenarioStore((s) => s.isRunning);
+  // 관절 id → 연결된 태그 코드(태그 매핑 탭의 joint 대상). 표시용.
   const taggedByJoint = useMemo(() => {
     const out = new Map<string, string>();
     for (const m of model.tagMappings ?? []) {
-      const key = getPrimaryTagKey(m);
-      if (m.target.kind === 'joint' && key) {
-        out.set(m.target.jointId, key);
+      if (m.target.kind === 'joint' && m.code) {
+        out.set(m.target.jointId, m.code);
       }
     }
     return out;

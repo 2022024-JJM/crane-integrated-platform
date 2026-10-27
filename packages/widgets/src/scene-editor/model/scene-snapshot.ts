@@ -21,7 +21,6 @@ import {
   getTagMappingTargetKey,
   isSceneAssetRefEqual,
   isSceneEnvironmentEqual,
-  isTagKeySlotsEqual,
   resolveSeaMirror,
   STATUS_TAG_ROLES,
 } from '@crane/domain/3d';
@@ -61,9 +60,9 @@ function isVector3TupleEqual(a: Vector3Tuple, b: Vector3Tuple): boolean {
 
 /**
  * 순서 무관 비교: id 기준 lookup. scale/offset 은 기본값으로 정규화. 대상은
- * 타깃 키(노드·채널·축 | 관절)로 비교해 객체 참조와 무관하게 판정한다. 두
- * 슬롯 키는 `isTagKeySlotsEqual` — 한쪽 슬롯만 바뀌어도 다르다(빠지면 그
- * 편집이 동등 단락에 먹혀 저장되지 않는다).
+ * 타깃 키(노드·채널·축 | 관절)로 비교해 객체 참조와 무관하게 판정한다. 코드와
+ * 보존용 craneId 도 비교한다(빠지면 그 편집이 동등 단락에 먹혀 저장되지
+ * 않는다).
  */
 function isTagMappingListEqual(
   a: TagMapping[] | undefined,
@@ -78,7 +77,8 @@ function isTagMappingListEqual(
     const bm = bMap.get(am.id);
     if (!bm) return false;
     if (
-      !isTagKeySlotsEqual(am, bm) ||
+      am.code !== bm.code ||
+      (am.craneId ?? '') !== (bm.craneId ?? '') ||
       getTagMappingTargetKey(am.target) !== getTagMappingTargetKey(bm.target) ||
       (am.scale ?? 1) !== (bm.scale ?? 1) ||
       (am.offset ?? 0) !== (bm.offset ?? 0) ||
@@ -330,15 +330,15 @@ function isRigDefinitionListEqual(
 }
 
 /**
- * 상태 태그는 역할별 두 슬롯 키만 비교한다 — 필드 없음·빈 객체·빈 문자열은
- * 전부 "연결 안 함"으로 같은 상태다(sanitize 가 셋 다 필드를 생략한다).
+ * 상태 태그는 역할별 코드만 비교한다 — 필드 없음·빈 문자열은 "연결 안 함"으로
+ * 같은 상태다(sanitize 가 둘 다 필드를 생략한다).
  */
 function isStatusTagsEqual(
   a: ModelStatusTags | undefined,
   b: ModelStatusTags | undefined,
 ): boolean {
   for (const role of STATUS_TAG_ROLES) {
-    if (!isTagKeySlotsEqual(a?.[role], b?.[role])) return false;
+    if ((a?.[role] ?? '') !== (b?.[role] ?? '')) return false;
   }
   return true;
 }

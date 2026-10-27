@@ -5,7 +5,7 @@ import { DETECTION_SETTINGS_STORAGE_KEY } from '../../lib/detection-settings-sto
 import type { ZoneTransition } from '../scene-zone-runtime';
 import { useRealtimeStore } from '../use-realtime-store';
 import { useSceneZoneStore } from '../use-scene-zone-store';
-import { useVirtualTagStore } from '../use-virtual-tag-store';
+import { useScenarioStore } from '../use-scenario-store';
 
 function model(id: string, equipName = id.toUpperCase()): SavedModelInfo {
   return {
@@ -70,7 +70,8 @@ beforeEach(() => {
     acknowledged: [],
   });
   // 정지 경로(holdRunners)가 만지는 러너 스토어 — 재생 중·보류 없음에서 시작.
-  useVirtualTagStore.getState().start();
+  // 시나리오 없이는 start() 가 no-op 이라 러닝 플래그만 세운다(hold 테스트와 같다).
+  useScenarioStore.setState({ isRunning: true });
   useRealtimeStore.getState().start();
 });
 
@@ -236,7 +237,7 @@ describe('정지 등급(level)·hold', () => {
     useSceneZoneStore.getState().applyTransitions([enter(B)]);
     expect(useSceneZoneStore.getState().held).toBeNull();
     expect(useSceneZoneStore.getState().intrusions[0].level).toBe('warn');
-    expect(useVirtualTagStore.getState().isRunning).toBe(true);
+    expect(useScenarioStore.getState().isRunning).toBe(true);
   });
 
   it("'stop' 영역 진입은 러너를 멈추고 held 를 기록한다", () => {
@@ -244,7 +245,7 @@ describe('정지 등급(level)·hold', () => {
     const state = useSceneZoneStore.getState();
     expect(state.held).toMatchObject({ zoneKey: 'a#zs', intruderId: 'b' });
     expect(state.intrusions[0].level).toBe('stop');
-    expect(useVirtualTagStore.getState().isRunning).toBe(false);
+    expect(useScenarioStore.getState().isRunning).toBe(false);
     expect(useRealtimeStore.getState().held).toBe(true);
   });
 
@@ -261,7 +262,7 @@ describe('정지 등급(level)·hold', () => {
     useSceneZoneStore.getState().setStopOnIntrusion(false);
     useSceneZoneStore.getState().applyTransitions([stopEnter()]);
     expect(useSceneZoneStore.getState().held).toBeNull();
-    expect(useVirtualTagStore.getState().isRunning).toBe(true);
+    expect(useScenarioStore.getState().isRunning).toBe(true);
   });
 
   it('resume 은 보류를 풀고 그 쌍을 승인 — 이탈 전 재진입은 다시 멈추지 않고, 이탈 뒤엔 다시 멈춘다', () => {
@@ -274,14 +275,14 @@ describe('정지 등급(level)·hold', () => {
     // 침범 상태 자체는 그대로.
     expect(store.getState().intrusions).toHaveLength(1);
     // 다른 침범자(C)는 새 쌍이라 다시 멈춘다.
-    useVirtualTagStore.getState().start();
+    useScenarioStore.setState({ isRunning: true });
     store.getState().applyTransitions([stopEnter(C)]);
     expect(store.getState().held?.intruderId).toBe('c');
     store.getState().resume();
     // B 이탈 → 승인 해제 → B 재진입 시 다시 멈춘다.
     store.getState().applyTransitions([stopExit()]);
     expect(store.getState().acknowledged).toEqual(['a#zs|c']);
-    useVirtualTagStore.getState().start();
+    useScenarioStore.setState({ isRunning: true });
     store.getState().applyTransitions([stopEnter()]);
     expect(store.getState().held?.intruderId).toBe('b');
   });

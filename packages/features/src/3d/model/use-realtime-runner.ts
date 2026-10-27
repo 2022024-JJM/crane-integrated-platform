@@ -5,7 +5,10 @@ import {
   type RealtimeCadenceTracker,
 } from '../lib/realtime-smoothing';
 import { useRealtimeStore } from './use-realtime-store';
-import { publishTagValue } from './tag-value-bus';
+import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
+
+/** 모든 publish 가 싣는 소스 — 버스 게이트가 실시간 화면에서만 통과시킨다. */
+const REALTIME_SOURCE: TagPublishOptions = { source: 'realtime' };
 
 /**
  * 실시간 WebSocket 값을 R3F 렌더 루프(useFrame)에 동기화한다.
@@ -47,9 +50,9 @@ export function useRealtimeRunner() {
     for (const { key, value } of entries) {
       const smoothTime = cadence.observe(key, value, now);
       if (smoothTime === undefined) {
-        publishTagValue(key, value);
+        publishTagValue(key, value, REALTIME_SOURCE);
       } else {
-        publishTagValue(key, value, { smoothTime });
+        publishTagValue(key, value, { smoothTime, source: 'realtime' });
       }
     }
   });

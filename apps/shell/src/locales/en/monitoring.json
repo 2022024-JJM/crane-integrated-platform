@@ -89,7 +89,6 @@
       "axis": "Axis",
       "joint": "Joint",
       "tagSearch": "Search key or name",
-      "tagEmpty": "No virtual tags. Register equipment in the Virtual tags tab of the Tags page.",
       "tagUnknown": "Unknown tag",
       "tagMissing": "Select a tag. Mappings without a tag are dropped on save.",
       "scale": "scale",
@@ -142,32 +141,34 @@
         "endstop": "Endstop"
       }
     },
+    "crane": {
+      "label": "Crane",
+      "placeholder": "Select a crane…",
+      "search": "Search by crane no. or ID",
+      "empty": "No registered cranes.",
+      "unregistered": "unregistered",
+      "missing": "No crane — tag keys cannot be built",
+      "clear": "Clear crane"
+    },
     "tagPick": {
       "title": "Link tag",
       "tag": "Tag",
-      "slots": {
-        "realtime": "Realtime",
-        "virtual": "Simulation"
-      },
       "pick": "Pick a tag…",
       "clear": "Unlink",
       "search": "Search by crane ID or tag name (e.g. C_171, tl_distance)",
       "currentValue": "Current value",
-      "craneList": "Cranes",
       "preview": "Preview",
       "recent": "Last 60 s · updated every second",
       "dataType": "Data type",
       "category": "Category",
       "bay": "Bay",
-      "unit": "Unit",
-      "range": "Range",
       "noSelection": "Pick a tag from the list to see its current value here.",
-      "noCranes": "No cranes received from the server. Check the connection.",
+      "craneMissing": "This model has no crane, so tags cannot be linked. Pick a crane first.",
+      "noServerTags": "No tags received for {{craneId}} from the server. Check the connection or type the code.",
+      "draftNotOnServer": "\"{{code}}\" is not in the server tag list. It can still be linked.",
       "emptyTags": "No matches.",
       "cancel": "Cancel",
-      "apply": "Link",
-      "equipmentList": "Equipment",
-      "noEquipments": "No virtual equipment. Register one in the Virtual tags tab of the Tags page."
+      "apply": "Link"
     },
     "ruler": {
       "title": "Ruler",
@@ -383,9 +384,6 @@
     "expandNodes": "Expand nodes",
     "collapseNodes": "Collapse nodes",
     "jointNode": "Joint node",
-    "virtualTags": {
-      "unregistered": "unregistered"
-    },
     "drawRuler": "Draw ruler",
     "rulerName": "Ruler {{index}}",
     "rulerDrawStartHint": "Click the start point",
@@ -436,99 +434,7 @@
       "stopHint": "Entering a zone with level 'Stop' pauses simulation and 3D Play. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
     }
   },
-  "virtualTags": {
-    "play": "Play all",
-    "pause": "Pause",
-    "resetValues": "Reset values",
-    "tick": "Tick (s)",
-    "save": "Save",
-    "saveFailed": "Failed to save virtual tags.",
-    "cloneToVirtual": "Clone to virtual equipment",
-    "equipment": {
-      "add": "Add equipment",
-      "id": "Equipment ID",
-      "bay": "Bay",
-      "enabled": "Enabled",
-      "search": "Search equipment ID or bay",
-      "tagCount": "{{count}} tags",
-      "count": "Equipment {{count}} / {{max}}",
-      "empty": "No virtual equipment. Use \"Add equipment\" or clone from a realtime crane.",
-      "emptyFiltered": "No equipment matches.",
-      "unknown": "Equipment {{id}} does not exist.",
-      "back": "List",
-      "duplicate": "Duplicate equipment",
-      "remove": "Delete equipment",
-      "removeTitle": "Delete this equipment?",
-      "removeDescription": "{{id}} and its {{count}} tags will be deleted. Scene mappings using its keys will show as unregistered.",
-      "cancel": "Cancel",
-      "confirmRemove": "Delete",
-      "idHint": "No spaces or colons. Hyphens become underscores in keys (GC-04 → GC_04).",
-      "errors": {
-        "invalid-id": "Equipment ID must be non-empty, without spaces or colons, and at most {{idMax}} characters.",
-        "duplicate-id": "Equipment with the same ID (hyphen/underscore variants included) already exists.",
-        "limit": "At most {{max}} equipment can be created."
-      }
-    },
-    "dialog": {
-      "title": "Add equipment",
-      "basic": "Basics",
-      "clone": "Clone from realtime",
-      "create": "Add",
-      "cloneHint": "Copies the selected crane's tags with their current values and observed ranges. The copy is independent of realtime afterwards and patterns are manual.",
-      "noFeed": "No cranes received from the realtime feed. Check the connection.",
-      "noClone": "Do not clone",
-      "selected": "{{selected}} / {{total}} selected",
-      "selectAll": "Select all",
-      "selectNone": "Clear",
-      "cloned": "Cloned {{count}} tags.",
-      "clonedSkipped": "Cloned {{count}} tags, skipped {{skipped}} (duplicates or limit).",
-      "pickCrane": "Pick a crane on the left to clone. Without one, the equipment is created empty."
-    },
-    "columns": {
-      "code": "Code",
-      "name": "Name",
-      "dataType": "Type",
-      "unit": "Unit",
-      "min": "Min",
-      "max": "Max",
-      "initial": "Initial",
-      "pattern": "Pattern",
-      "period": "Period (s)",
-      "value": "Value",
-      "actions": ""
-    },
-    "dataTypes": {
-      "number": "Number",
-      "bool": "Boolean"
-    },
-    "patterns": {
-      "manual": "Manual",
-      "triangle": "Triangle",
-      "sine": "Sine",
-      "sawtooth": "Sawtooth",
-      "square": "Square"
-    },
-    "addTag": "Add tag",
-    "duplicate": "Duplicate",
-    "remove": "Remove",
-    "empty": "No tags. Use \"Add tag\" to create one.",
-    "emptyFiltered": "No tags match.",
-    "errors": {
-      "invalid-code": "Code must be non-empty, without spaces or colons, and at most {{codeMax}} characters.",
-      "duplicate-code": "A tag with the same code already exists.",
-      "limit": "At most {{max}} tags per equipment.",
-      "no-equipment": "Equipment not found."
-    },
-    "newCode": "tag",
-    "count": "Tags {{count}} / {{max}}",
-    "codeHint": "Bus keys are built as equipmentKey:code (e.g. GC_04:gantry_position). Changing a code or equipment ID also changes the keys scenes are linked to.",
-    "periodHint": "Time (s) for one cycle (min→max→min)"
-  },
   "tags": {
-    "tabs": {
-      "realtime": "Realtime Tags",
-      "virtual": "Virtual Tags"
-    },
     "searchCrane": "Search crane ID (e.g. 867)",
     "allBays": "All",
     "online": "Online",
@@ -764,7 +670,84 @@
     "stop": "Stop simulation",
     "stopHint": "Stop simulation — time 0, models back to rest (realtime view resumes live values)",
     "badgeRunning": "Simulating",
-    "badgePaused": "Simulation paused"
+    "badgePaused": "Simulation paused",
+    "scenario": "Scenario",
+    "noScenario": "No scenario",
+    "noScenarioHint": "Create one in the Scenario tab on the right from the models and tags mapped in the scene."
+  },
+  "scenario": {
+    "tab": "Scenario",
+    "sideTabs": "Side panel",
+    "select": "Select scenario",
+    "none": "No scenario",
+    "noneHint": "This scene has no scenarios. Pick mapped models and tags to create one.",
+    "noScene": "This region has no scene file, so no scenario can be created.",
+    "add": "New scenario",
+    "name": "Name",
+    "namePlaceholder": "Scenario name",
+    "duplicate": "Duplicate",
+    "remove": "Delete",
+    "removeTitle": "Delete scenario",
+    "removeDescription": "Delete scenario \"{{name}}\" ({{count}} tags). This cannot be undone once saved.",
+    "confirmRemove": "Delete",
+    "save": "Save",
+    "saveFailed": "Failed to save scenarios.",
+    "addTags": "Add tags",
+    "removeModel": "Remove model group",
+    "emptyTags": "No tags. Pick tags from the models mapped in the scene.",
+    "count": "{{tags}} tags · {{models}} models",
+    "tick": "Tick (s)",
+    "hint": "Values go only to the tags in the scenario.",
+    "errors": {
+      "invalid-name": "The name is empty or too long.",
+      "limit": "Scenario limit reached."
+    },
+    "issue": {
+      "model-missing": "This model is not in the scene — it was removed or its id changed.",
+      "crane-missing": "The model has no crane. Pick one in the editor.",
+      "duplicate-key": "An earlier tag uses the same key.",
+      "model-missing-short": "not in scene"
+    },
+    "row": {
+      "dataType": "Type",
+      "unit": "Unit",
+      "min": "Min",
+      "max": "Max",
+      "initial": "Initial",
+      "pattern": "Pattern",
+      "period": "Period (s)",
+      "periodHint": "One period in seconds",
+      "remove": "Remove tag",
+      "noValue": "No value",
+      "targetMissing": "No mapping"
+    },
+    "dataTypes": {
+      "number": "Number",
+      "bool": "Boolean"
+    },
+    "patterns": {
+      "manual": "Manual",
+      "triangle": "Triangle",
+      "sine": "Sine",
+      "sawtooth": "Sawtooth",
+      "square": "Square"
+    },
+    "pick": {
+      "createTitle": "New scenario",
+      "addTitle": "Add tags",
+      "search": "Search models, cranes, tag codes",
+      "selected": "{{selected}} / {{total}} selected",
+      "selectAll": "Select all",
+      "selectNone": "Clear",
+      "tagCount": "{{count}} tags",
+      "alreadyAdded": "already added",
+      "noMappedModels": "No model in the scene has mapped tags. Link tags in the editor first.",
+      "emptyFiltered": "No matches.",
+      "summary": "{{models}} models · {{tags}} tags selected",
+      "cancel": "Cancel",
+      "create": "Create",
+      "add": "Add"
+    }
   },
   "play3d": {
     "report": "Run report",

@@ -52,7 +52,7 @@ export function createTagMapping(
     axis: 'x',
   },
 ): TagMapping {
-  return { id: `map-${createId().slice(0, 8)}`, target };
+  return { id: `map-${createId().slice(0, 8)}`, target, code: '' };
 }
 
 /** 카드 readout: 태그값 → 적용값(offset + value × scale). */

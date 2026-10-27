@@ -161,11 +161,13 @@ describe('sanitizeSceneInfo — 모델', () => {
     );
     const json = JSON.parse(JSON.stringify(result));
     expect(json.models[0]).not.toHaveProperty('valueMapList');
+    // 키의 크레인 접두어는 모델 craneId 가 되고 맵핑은 코드만 든다.
+    expect(json.models[0].craneId).toBe('C_171');
     expect(json.models[0].tagMappings).toEqual([
       {
         id: 'legacy-pz',
         target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        realtimeTagKey: 'C_171.tl_distance',
+        code: 'tl_distance',
         scale: 0.1,
         offset: 66,
       },
@@ -766,17 +768,18 @@ describe('sanitizeSceneInfo — 모델 영역(zones)', () => {
 });
 
 describe('sanitizeSceneInfo — 상태 태그(statusTags)', () => {
-  it('유효한 역할만 남기고(레거시 문자열은 실시간 슬롯), 전부 무효·미지정이면 필드를 생략한다', () => {
+  it('유효한 역할만 코드로 남기고(레거시 키·두 슬롯 객체 포함), 전부 무효·미지정이면 필드를 생략한다', () => {
     const out = sanitizeSceneInfo(
       scene({
         models: [
           model({
             id: 'a',
+            craneId: 'GC_04',
             statusTags: {
-              controlOn: ' A.on ',
+              controlOn: ' crane_control_on ',
               fault: 1,
-              bypass: { virtualTagKey: ' V.b ' },
-              junk: 'A.x',
+              bypass: { virtualTagKey: ' GC_04:accs_bypass_on ' },
+              junk: 'GC_04.x',
             },
           }),
           model({ id: 'b', statusTags: { controlOn: '' } }),
@@ -786,8 +789,8 @@ describe('sanitizeSceneInfo — 상태 태그(statusTags)', () => {
       }),
     );
     expect(out.models[0].statusTags).toEqual({
-      controlOn: { realtimeTagKey: 'A.on' },
-      bypass: { virtualTagKey: 'V.b' },
+      controlOn: 'crane_control_on',
+      bypass: 'accs_bypass_on',
     });
     expect(out.models[1].statusTags).toBeUndefined();
     expect(out.models[2].statusTags).toBeUndefined();
@@ -800,6 +803,251 @@ describe('sanitizeSceneInfo — 상태 태그(statusTags)', () => {
     );
     const json = JSON.parse(JSON.stringify(out));
     expect('statusTags' in json.models[0]).toBe(false);
+  });
+});
+
+describe('sanitizeSceneInfo — 크레인 ID 와 태그 키 접두어', () => {
+  it('craneId 는 trim 한 문자열만 싣고, 비문자열·공백은 필드를 생략한다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({ id: 'a', craneId: ' C_171 ' }),
+          model({ id: 'b', craneId: '   ' }),
+          model({ id: 'c', craneId: 171 }),
+          model({ id: 'd' }),
+        ],
+      }),
+    );
+    expect(out.models[0].craneId).toBe('C_171');
+    const json = JSON.parse(JSON.stringify(out));
+    for (const m of json.models.slice(1)) {
+      expect('craneId' in m).toBe(false);
+    }
+  });
+
+  it('craneId 없는 모델의 레거시 키 접두어가 하나뿐이면 craneId 로 채운다 (philly-2dock 형태)', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            id: 'gc',
+            tagMappings: [
+              {
+                id: 'map-1',
+                target: {
+                  kind: 'node',
+                  node: '',
+                  channel: 'position',
+                  axis: 'z',
+                },
+                virtualTagKey: 'GC_04:gantry_position',
+              },
+              {
+                id: 'map-2',
+                target: {
+                  kind: 'node',
+                  node: '[0]Goliath/[1]Trolley_01',
+                  channel: 'position',
+                  axis: 'x',
+                },
+                virtualTagKey: 'GC_04:trolley_position',
+              },
+            ],
+            statusTags: { fault: 'GC_04.crane_system_error' },
+          }),
+        ],
+      }),
+    );
+    const json = JSON.parse(JSON.stringify(out));
+    expect(json.models[0].craneId).toBe('GC_04');
+    expect(
+      json.models[0].tagMappings.map((m: { code: string }) => m.code),
+    ).toEqual(['gantry_position', 'trolley_position']);
+    for (const m of json.models[0].tagMappings) {
+      expect('craneId' in m).toBe(false);
+    }
+    expect(json.models[0].statusTags).toEqual({ fault: 'crane_system_error' });
+    expect(sanitizeSceneInfo(out)).toEqual(out);
+  });
+
+  it('접두어가 둘이면 채우지 않고 맵핑마다 craneId 를 남긴다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            id: 'mixed',
+            tagMappings: [
+              {
+                id: 'm1',
+                target: {
+                  kind: 'node',
+                  node: '',
+                  channel: 'position',
+                  axis: 'z',
+                },
+                realtimeTagKey: 'C_1.a',
+              },
+              {
+                id: 'm2',
+                target: {
+                  kind: 'node',
+                  node: '',
+                  channel: 'position',
+                  axis: 'x',
+                },
+                realtimeTagKey: 'C_2.b',
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(out.models[0].craneId).toBeUndefined();
+    expect(out.models[0].tagMappings?.map((m) => m.craneId)).toEqual([
+      'C_1',
+      'C_2',
+    ]);
+  });
+
+  it('모델 craneId 와 다른 접두어의 맵핑은 craneId 를 들고 남는다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            id: 'x',
+            craneId: 'C_171',
+            tagMappings: [
+              {
+                id: 'own',
+                target: {
+                  kind: 'node',
+                  node: '',
+                  channel: 'position',
+                  axis: 'z',
+                },
+                realtimeTagKey: 'C_171.tl_distance',
+              },
+              {
+                id: 'other',
+                target: {
+                  kind: 'node',
+                  node: '',
+                  channel: 'position',
+                  axis: 'x',
+                },
+                realtimeTagKey: 'C_172.tl_distance',
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(out.models[0].tagMappings).toEqual([
+      {
+        id: 'own',
+        target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+        code: 'tl_distance',
+      },
+      {
+        id: 'other',
+        target: { kind: 'node', node: '', channel: 'position', axis: 'x' },
+        code: 'tl_distance',
+        craneId: 'C_172',
+      },
+    ]);
+  });
+
+  it('새 포맷 저장본은 읽어도 바뀌지 않는다 — dock-in·philly-2dock 발췌', () => {
+    const dockIn = scene({
+      models: [
+        model({
+          id: '6e85691d',
+          equipName: 'C-171',
+          craneId: 'C_171',
+          position: [-10.5, 0, 151.475],
+          tagMappings: [
+            {
+              id: 'legacy-pz',
+              target: {
+                kind: 'node',
+                node: '',
+                channel: 'position',
+                axis: 'z',
+              },
+              code: 'tl_distance',
+              scale: 0.1,
+              offset: -151.475,
+            },
+            {
+              id: 'map-mh1',
+              target: {
+                kind: 'node',
+                node: '[0]3_Bay_C_171_Body/[0]3_Bay_C_171_Head_01/[0]3_Bay_C_171_Head_01_Hook_01',
+                channel: 'position',
+                axis: 'y',
+              },
+              code: 'mh1_height',
+              scale: 0.01,
+              offset: -21.37,
+            },
+          ],
+          statusTags: {
+            controlOn: 'crane_control_on',
+            fault: 'crane_system_error',
+            bypass: 'accs_bypass_on',
+          },
+          valueMapList: undefined,
+        }),
+      ],
+    });
+    const philly = scene({
+      models: [
+        model({
+          id: 'id-mt0rhrsw-icvq0ukr',
+          equipName: 'GC-04',
+          craneId: 'GC_04',
+          tagMappings: [
+            {
+              id: 'map-ccd940e8',
+              target: {
+                kind: 'node',
+                node: '',
+                channel: 'position',
+                axis: 'z',
+              },
+              code: 'gantry_position',
+            },
+            {
+              id: 'map-a890d17b',
+              target: {
+                kind: 'node',
+                node: '[0]Goliath/[1]Goliath_Crane_Trolley_01',
+                channel: 'position',
+                axis: 'x',
+              },
+              code: 'trolley_position',
+            },
+          ],
+          valueMapList: undefined,
+        }),
+      ],
+    });
+    for (const fixture of [dockIn, philly]) {
+      const once = sanitizeSceneInfo(fixture);
+      expect(JSON.parse(JSON.stringify(once)).models).toEqual(
+        JSON.parse(JSON.stringify(fixture))
+          .models.map((m: object) => ({
+            ...m,
+            locked: undefined,
+          }))
+          .map((m: Record<string, unknown>) => {
+            const copy = { ...m };
+            delete copy.locked;
+            return copy;
+          }),
+      );
+      expect(sanitizeSceneInfo(once)).toEqual(once);
+    }
   });
 });
 

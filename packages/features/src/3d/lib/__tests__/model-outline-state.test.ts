@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
-import type { ModelStatusTags, ResolvedStatusTagKeys } from '@crane/domain/3d';
+import type {
+  ModelStatusTags,
+  ResolvedStatusTagKeys,
+  TagMapping,
+} from '@crane/domain/3d';
 import {
   EMPTY_LABEL_PREVIEW,
   STATUS_BIT_ON_THRESHOLD,
@@ -28,7 +32,7 @@ function bit(value: number): TagReading {
   return { value, at: NOW, changedAt: LONG_AGO };
 }
 
-/** 활성 슬롯으로 푼 상태 키 — resolveOutlineState 가 받는 모양. */
+/** 값 버스 키로 푼 상태 키 — resolveOutlineState 가 받는 모양. */
 const STATUS: ResolvedStatusTagKeys = {
   controlOn: 'on',
   commError: 'comm',
@@ -36,15 +40,22 @@ const STATUS: ResolvedStatusTagKeys = {
   endstop: 'end',
 };
 
-const rt = (key: string) => ({ realtimeTagKey: key });
-
-/** 같은 연결을 씬 모델의 상태 태그(두 슬롯 객체) 모양으로. */
+/** 같은 연결을 씬 모델의 상태 태그(역할 → 코드) 모양으로. */
 const STATUS_TAGS: ModelStatusTags = {
-  controlOn: rt('on'),
-  commError: rt('comm'),
-  slowdown: rt('slow'),
-  endstop: rt('end'),
+  controlOn: 'on',
+  commError: 'comm',
+  slowdown: 'slow',
+  endstop: 'end',
 };
+
+/** STATUS_TAGS 를 단 크레인 A 의 모델 — 키는 `A.코드` 로 조립된다. */
+const MODEL = { craneId: 'A', statusTags: STATUS_TAGS };
+
+const m = (code: string): TagMapping => ({
+  id: code,
+  target: { kind: 'node', node: '', channel: 'position', axis: 'x' },
+  code,
+});
 
 /** 수신 중인 장비(tone 은 외곽선과 무관한 아무 값)의 외곽선. */
 function outline(
@@ -112,12 +123,9 @@ describe('resolveOutlineState — 수신 끊김', () => {
   });
 
   it('라벨 판정의 offline 창 경계를 그대로 따른다 — 정확값은 수신 중, +1ms 는 회색', () => {
-    const keys = collectModelStatusKeys(
-      { statusTags: STATUS_TAGS },
-      'realtime',
-    );
+    const keys = collectModelStatusKeys(MODEL);
     const at = (age: number) =>
-      readings({ end: { value: 1, at: NOW - age, changedAt: 0 } });
+      readings({ 'A.end': { value: 1, at: NOW - age, changedAt: 0 } });
     const resolve = (age: number) => {
       const get = at(age);
       const tone = resolveLabelState(keys, get, NOW).tone;
@@ -128,13 +136,10 @@ describe('resolveOutlineState — 수신 끊김', () => {
   });
 
   it('낡은 비트도 다른 키가 오고 있으면 마지막 값으로 읽는다', () => {
-    const keys = collectModelStatusKeys(
-      { statusTags: STATUS_TAGS },
-      'realtime',
-    );
+    const keys = collectModelStatusKeys(MODEL);
     const get = readings({
-      on: bit(1),
-      end: { value: 1, at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 },
+      'A.on': bit(1),
+      'A.end': { value: 1, at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 },
     });
     const tone = resolveLabelState(keys, get, NOW).tone;
     expect(tone).toBe('standby');
@@ -170,28 +175,22 @@ describe('resolveOutlineState — 모르는 값', () => {
     expect(outline({ end: bit(Number.NaN) })).toBe('none');
   });
 
-  it('빈 키·문자열이 아닌 키는 연결하지 않은 것과 같다(sanitize 를 안 거친 입력)', () => {
-    // 판정에 들어오는 키는 collectModelStatusKeys 가 거른 것이다 — 방어는 그
+  it('빈 코드·craneId 없는 모델은 연결하지 않은 것과 같다(sanitize 를 안 거친 입력)', () => {
+    // 판정에 들어오는 키는 collectModelStatusKeys 가 조립한 것이다 — 방어는 그
     // 경계에 있다.
-    const keys = collectModelStatusKeys(
-      {
-        statusTags: {
-          commError: rt(''),
-          slowdown: { realtimeTagKey: 42 },
-          endstop: null,
-        },
-      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
-      'realtime',
-    );
-    expect(keys.status).toEqual({});
-    expect(outline({ '': bit(1), '42': bit(1) }, 'running', keys.status)).toBe(
-      'none',
-    );
-  });
+    const empty = collectModelStatusKeys({
+      craneId: 'A',
+      statusTags: { commError: '', slowdown: 'slow' },
+    });
+    expect(empty.status).toEqual({ slowdown: 'A.slow' });
+    expect(outline({ 'A.': bit(1) }, 'running', empty.status)).toBe('none');
 
-  it.todo(
-    'resolveOutlineState 에 거르지 않은 상태 태그를 직접 넘기면 숫자 키도 읽는다 — 호출자는 collectModelStatusKeys 결과만 넘긴다',
-  );
+    const noCrane = collectModelStatusKeys({ statusTags: STATUS_TAGS });
+    expect(noCrane.status).toEqual({});
+    expect(
+      outline({ end: bit(1), 'A.end': bit(1) }, 'running', noCrane.status),
+    ).toBe('none');
+  });
 
   it('문턱 정확값은 on, 바로 아래는 off', () => {
     expect(outline({ end: bit(STATUS_BIT_ON_THRESHOLD) })).toBe('endstop');
@@ -212,48 +211,39 @@ describe('resolveOutlineState — 모르는 값', () => {
 
 describe('collectModelStatusKeys — 외곽선 역할', () => {
   it('외곽선 역할의 키도 수신 키에 들어가고 움직임 키에는 들어가지 않는다', () => {
-    const keys = collectModelStatusKeys(
-      {
-        tagMappings: [rt('A:x')],
-        statusTags: {
-          commError: rt('A:comm'),
-          slowdown: rt('A:slow'),
-          endstop: rt('A:end'),
-        },
-      } as unknown as Parameters<typeof collectModelStatusKeys>[0],
-      'realtime',
-    );
-    expect(keys.motion).toEqual(['A:x']);
-    expect(keys.liveness).toEqual(['A:x', 'A:comm', 'A:slow', 'A:end']);
+    const keys = collectModelStatusKeys({
+      craneId: 'A',
+      tagMappings: [m('x')],
+      statusTags: { commError: 'comm', slowdown: 'slow', endstop: 'end' },
+    });
+    expect(keys.motion).toEqual(['A.x']);
+    expect(keys.liveness).toEqual(['A.x', 'A.comm', 'A.slow', 'A.end']);
     expect(keys.status).toEqual({
-      commError: 'A:comm',
-      slowdown: 'A:slow',
-      endstop: 'A:end',
+      commError: 'A.comm',
+      slowdown: 'A.slow',
+      endstop: 'A.end',
     });
   });
 
   it('외곽선 태그만 단 모델도 수신이 끊기면 offline 이 된다', () => {
-    const keys = collectModelStatusKeys(
-      { statusTags: { endstop: rt('A:end') } },
-      'realtime',
-    );
+    const keys = collectModelStatusKeys({
+      craneId: 'A',
+      statusTags: { endstop: 'end' },
+    });
     const stale = readings({
-      'A:end': { value: 0, at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 },
+      'A.end': { value: 0, at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 },
     });
     expect(resolveLabelState(keys, stale, NOW).tone).toBe('offline');
   });
 
   it('외곽선 비트는 라벨의 색·아이콘을 바꾸지 않는다', () => {
-    const keys = collectModelStatusKeys(
-      { statusTags: STATUS_TAGS },
-      'realtime',
-    );
-    const base = { on: bit(1) };
+    const keys = collectModelStatusKeys(MODEL);
+    const base = { 'A.on': bit(1) };
     const withOutline = {
-      on: bit(1),
-      comm: bit(1),
-      slow: bit(1),
-      end: bit(1),
+      'A.on': bit(1),
+      'A.comm': bit(1),
+      'A.slow': bit(1),
+      'A.end': bit(1),
     };
     expect(resolveLabelState(keys, readings(withOutline), NOW)).toBe(
       resolveLabelState(keys, readings(base), NOW),

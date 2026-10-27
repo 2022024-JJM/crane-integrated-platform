@@ -142,7 +142,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "virtualTagKey": "GC_04:gantry_position"
+          "code": "gantry_position"
         },
         {
           "id": "map-a890d17b",
@@ -152,7 +152,7 @@
             "channel": "position",
             "axis": "x"
           },
-          "virtualTagKey": "GC_04:trolley_position"
+          "code": "trolley_position"
         },
         {
           "id": "map-37300718",
@@ -162,9 +162,10 @@
             "channel": "position",
             "axis": "x"
           },
-          "virtualTagKey": "GC_04:trolley_position_2"
+          "code": "trolley_position_2"
         }
-      ]
+      ],
+      "craneId": "GC_04"
     },
     {
       "id": "id-mt0riz7x-bxncy0uk",
@@ -200,7 +201,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "virtualTagKey": "LLC_002:gantry_position"
+          "code": "gantry_position"
         },
         {
           "id": "map-d6890e5a",
@@ -208,7 +209,7 @@
             "kind": "joint",
             "jointId": "joint-8d326e4d"
           },
-          "virtualTagKey": "LLC_002:luff_angle"
+          "code": "luff_angle"
         },
         {
           "id": "map-d5c8438e",
@@ -218,7 +219,7 @@
             "channel": "rotation",
             "axis": "y"
           },
-          "virtualTagKey": "LLC_002:slew_angle"
+          "code": "slew_angle"
         }
       ],
       "zones": [
@@ -228,7 +229,8 @@
           "color": "#38bdf8",
           "radius": 46
         }
-      ]
+      ],
+      "craneId": "LLC_002"
     },
     {
       "id": "id-mt0rka4j-lfz5p217",
@@ -264,7 +266,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "virtualTagKey": "LLC_002:gantry_position_2"
+          "code": "gantry_position_2"
         },
         {
           "id": "map-95881074",
@@ -272,7 +274,7 @@
             "kind": "joint",
             "jointId": "joint-8d326e4d"
           },
-          "virtualTagKey": "LLC_002:luff_angle"
+          "code": "luff_angle"
         },
         {
           "id": "map-60bd1bd8",
@@ -282,9 +284,10 @@
             "channel": "rotation",
             "axis": "y"
           },
-          "virtualTagKey": "LLC_002:slew_angle"
+          "code": "slew_angle"
         }
-      ]
+      ],
+      "craneId": "LLC_002"
     },
     {
       "id": "beccf605-d547-4854-88e3-fc152f999a34",

@@ -6,7 +6,7 @@ import {
   normalizeCraneKey,
   parseCraneTagKey,
 } from '@crane/domain/monitoring';
-import type { VirtualTagEntry } from '@crane/domain/virtual-tag';
+import type { VirtualTagEntry } from './scenario-entries';
 import { RUNTIME_STATUS_COLORS } from './model-runtime-status';
 import {
   assignCollisionsToRows,
@@ -425,7 +425,7 @@ export interface TagRowLabel {
   unit: string;
 }
 
-/** 축 표가 가상 태그에서 읽는 것 — 키·이름·단위·범위. */
+/** 축 표가 시나리오 태그에서 읽는 것 — 키·이름·단위·범위. */
 export interface Play3dTagDef {
   key: string;
   name: string;
@@ -434,13 +434,13 @@ export interface Play3dTagDef {
   max: number;
 }
 
-/** 가상 태그 스토어의 평탄 목록을 축 표 입력으로. 라벨은 `장비 · 이름`. */
+/** 시나리오 스토어의 평탄 목록을 축 표 입력으로. 라벨은 `모델 · 이름|코드`. */
 export function toPlay3dTagDefs(
   entries: readonly VirtualTagEntry[],
 ): Play3dTagDef[] {
-  return entries.map(({ key, equipment, tag }) => ({
+  return entries.map(({ key, modelName, craneId, tag }) => ({
     key,
-    name: `${equipment.craneId} · ${tag.name || tag.code}`,
+    name: `${modelName || craneId} · ${tag.name || tag.code}`,
     unit: tag.unit,
     min: tag.min,
     max: tag.max,

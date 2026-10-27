@@ -1,53 +1,57 @@
-import { X } from 'lucide-react';
-import { useState } from 'react';
+import { Check, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { normalizeCraneKey } from '@crane/core/lib/crane-tag-key';
+import { getMonitoringTagMetadata } from '@crane/domain/monitoring';
 import {
-  TAG_SLOTS,
-  getSlotTagKey,
-  isTagKeySlotsEqual,
-  setSlotTagKey,
-  type TagKeySlots,
-  type TagSlot,
-} from '@crane/domain/3d';
-import { useCraneSnapshotFeed } from '@crane/features/3d';
+  TAG_CATEGORIES,
+  buildTagRows,
+  formatTagNumber,
+  resolveBoolDisplay,
+  useCraneSnapshotFeed,
+  useCraneSnapshotStore,
+  type TagRow,
+} from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Dialog, DialogPopup, DialogTitle } from '@crane/ui/molecules/dialog';
-import { Tabs, TabsList, TabsPanel, TabsTab } from '@crane/ui/molecules/tabs';
-import { TagPickRealtimeTab } from './tag-pick-realtime-tab';
-import { TagPickVirtualTab } from './tag-pick-virtual-tab';
+import { ScrollArea } from '@crane/ui/molecules/scroll-area';
+import { SearchField } from '@crane/ui/molecules/search-field';
+import { filterPickTags, findSnapshotEntry } from '../lib/tag-pick';
+import { useTagValueHistory } from '../model/use-tag-value-history';
+import { TagSparkline } from './tag-sparkline';
+
+type T = (key: string, options?: Record<string, unknown>) => string;
 
 export interface TagPickDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 열릴 때 보일 탭 — 카드에서 누른 슬롯. */
-  initialSlot: TagSlot;
-  /** 지금 연결된 두 슬롯. */
-  value: TagKeySlots;
-  /** 모델의 craneId — 실시간 탭이 그 크레인을 먼저 고른다. */
+  /** 지금 연결된 코드(없으면 빈 문자열). */
+  value: string;
+  /** 모델의 craneId — 이 크레인의 서버 태그만 보인다. 없으면 고를 수 없다. */
   modelCraneId?: string;
-  /**
-   * "연결" — 두 슬롯 초안을 한 번에 넘긴다. 바뀐 슬롯만 다르다. `slot` 은
-   * 연결을 누를 때 보던 탭이다.
-   */
-  onApply: (next: TagKeySlots, slot: TagSlot) => void;
+  /** "연결" — 고른 코드를 넘긴다. */
+  onApply: (code: string) => void;
 }
 
 /**
- * 태그 연결 다이얼로그 — 탭이 곧 슬롯이다(실시간 태그 | 가상 태그). 두 탭의
- * 선택을 초안으로 들고 있다가 "연결" 한 번에 적용한다. 슬롯 비우기는 카드의
- * × 가 한다. 머리줄은 제목과 닫기뿐이고, 탭·검색창은 에디터 팔레트와 같은
- * 모양(`@crane/ui` Tabs·SearchField)이다.
+ * 태그 연결 다이얼로그 — 모델의 크레인이 머리줄에 고정되고, 서버에서 받은 그
+ * 크레인의 태그 목록(분류 묶음·현재 값)과 미리보기(큰 현재 값·최근 60초
+ * 스파크라인·형식·분류)만 있다. 행을 누르면 코드가 초안이 되고 "연결" 이
+ * 넘긴다. 크레인·구역 단계는 없다 — 크레인은 인스펙터의 크레인 칸 한 곳에서
+ * 정한다.
  *
- * 본문은 열려 있을 때만 마운트해 열 때마다 초안·탭이 `value`·`initialSlot`
- * 으로 돌아온다. 크레인 스냅샷 피드(REST + STOMP)도 본문 수명 — 닫으면
- * 소켓 참조를 놓는다(에디터에는 다른 참조자가 없어 소켓이 닫힌다).
+ * 데이터는 본문이 켠 `useCraneSnapshotFeed(true)`(REST 전체 + STOMP) — 에디터
+ * 에는 다른 참조자가 없어 닫으면 소켓이 닫히고, 브리지가 없어 버스로는 가지
+ * 않는다(모델이 움직이지 않는다). 본문은 열려 있을 때만 마운트해 열 때마다
+ * `value` 로 돌아온다. 모델에 craneId 가 없거나 서버에 그 크레인이 없으면
+ * 목록 대신 안내만 보이고 연결할 수 없다.
  */
 export function TagPickDialog(props: TagPickDialogProps) {
   const { open, onOpenChange } = props;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPopup className="flex h-[min(82vh,760px)] w-[min(96vw,64rem)] max-w-none flex-col gap-0 overflow-hidden p-0">
+      <DialogPopup className="flex h-[min(82vh,760px)] w-[min(96vw,56rem)] max-w-none flex-col gap-0 overflow-hidden p-0">
         {open ? <TagPickDialogBody {...props} /> : null}
       </DialogPopup>
     </Dialog>
@@ -55,7 +59,6 @@ export function TagPickDialog(props: TagPickDialogProps) {
 }
 
 function TagPickDialogBody({
-  initialSlot,
   value,
   modelCraneId,
   onApply,
@@ -63,15 +66,38 @@ function TagPickDialogBody({
 }: TagPickDialogProps) {
   const { t } = useTranslation();
   useCraneSnapshotFeed(true);
-  const [slot, setSlot] = useState<TagSlot>(initialSlot);
-  const [draft, setDraft] = useState<TagKeySlots>(value);
-  const dirty = !isTagKeySlotsEqual(draft, value);
+  const cranes = useCraneSnapshotStore((s) => s.cranes);
+  const loadError = useCraneSnapshotStore((s) => s.loadError);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState(value);
+  const dirty = draft !== value;
+
+  const found = useMemo(
+    () => findSnapshotEntry(cranes, modelCraneId),
+    [cranes, modelCraneId],
+  );
+  const rows = useMemo(() => (found ? buildTagRows(found.entry) : []), [found]);
+  const tagRows = useMemo(() => filterPickTags(rows, query), [rows, query]);
+  const selectedRow = draft
+    ? rows.find((row) => row.code === draft)
+    : undefined;
+  const history = useTagValueHistory(
+    found?.craneId ?? null,
+    draft || null,
+    selectedRow !== undefined,
+  );
+  const craneKey = modelCraneId ? normalizeCraneKey(modelCraneId) : null;
 
   return (
     <>
       <header className="border-border flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">
           {t('monitoring:inspector.tagPick.title')}
+          {modelCraneId ? (
+            <span className="text-muted-foreground ml-2 font-normal">
+              · {t('monitoring:inspector.crane.label')} {modelCraneId}
+            </span>
+          ) : null}
         </DialogTitle>
         <Button
           type="button"
@@ -85,62 +111,155 @@ function TagPickDialogBody({
         </Button>
       </header>
 
-      <Tabs
-        value={slot}
-        onValueChange={(next) => setSlot(next as TagSlot)}
-        className="min-h-0 flex-1"
-      >
-        <TabsList>
-          {TAG_SLOTS.map((option) => (
-            <TabsTab key={option} value={option}>
-              {t(`monitoring:tags.tabs.${option}`)}
-            </TabsTab>
-          ))}
-        </TabsList>
-        <TabsPanel value="realtime">
-          <TagPickRealtimeTab
-            value={draft.realtimeTagKey}
-            onChange={(key) =>
-              setDraft((prev) => setSlotTagKey(prev, 'realtime', key))
-            }
-            modelCraneId={modelCraneId}
-          />
-        </TabsPanel>
-        <TabsPanel value="virtual">
-          <TagPickVirtualTab
-            value={draft.virtualTagKey}
-            onChange={(key) =>
-              setDraft((prev) => setSlotTagKey(prev, 'virtual', key))
-            }
-            modelCraneId={modelCraneId}
-          />
-        </TabsPanel>
-      </Tabs>
+      {!modelCraneId ? (
+        <Notice tone="amber">
+          {t('monitoring:inspector.tagPick.craneMissing')}
+        </Notice>
+      ) : !found ? (
+        <Notice>
+          {t('monitoring:inspector.tagPick.noServerTags', {
+            craneId: modelCraneId,
+          })}
+          {loadError ? (
+            <span className="mt-1 block text-amber-500">
+              {t('monitoring:tags.banner.loadError')}
+            </span>
+          ) : null}
+        </Notice>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="px-3 py-2">
+            <SearchField
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t('monitoring:inspector.tagPick.search')}
+              aria-label={t('monitoring:inspector.tagPick.search')}
+            />
+          </div>
+          <div className="border-border grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_16rem] border-t">
+            <section className="flex min-h-0 flex-col">
+              {/* 머리글은 행과 같은 열 구성(이름 · 값 · 체크 자리)이라 "현재 값" 이
+                  체크 표시가 아니라 값 열 위에 선다. */}
+              <div className="text-muted-foreground flex items-center gap-3 px-3.5 pt-2 pb-1 text-xs">
+                <span className="min-w-0 flex-1">
+                  {t('monitoring:tags.columns.name')}
+                </span>
+                <span className="shrink-0">
+                  {t('monitoring:inspector.tagPick.currentValue')}
+                </span>
+                <span className="size-3.5 shrink-0" aria-hidden />
+              </div>
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="px-1.5 pb-2">
+                  {TAG_CATEGORIES.map((category) => {
+                    const group = tagRows.filter(
+                      (row) => row.category === category,
+                    );
+                    if (group.length === 0) return null;
+                    return (
+                      <div key={category}>
+                        <p className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wide">
+                          {t(`monitoring:tags.categories.${category}`)}
+                        </p>
+                        <ul>
+                          {group.map((row) => (
+                            <TagPickRow
+                              key={row.code}
+                              row={row}
+                              selected={row.code === draft}
+                              onSelect={() => setDraft(row.code)}
+                              t={t}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                  {tagRows.length === 0 ? (
+                    <p className="text-muted-foreground px-2 py-6 text-center text-xs">
+                      {t('monitoring:inspector.tagPick.emptyTags')}
+                    </p>
+                  ) : null}
+                </div>
+              </ScrollArea>
+            </section>
+
+            <aside className="border-border bg-muted/20 flex min-h-0 flex-col gap-3 overflow-y-auto border-l p-3 text-xs">
+              <p className="text-muted-foreground font-medium">
+                {t('monitoring:inspector.tagPick.preview')}
+              </p>
+              {selectedRow ? (
+                <>
+                  <div>
+                    <p className="text-base font-semibold">
+                      {selectedRow.name}
+                    </p>
+                    <p className="text-muted-foreground text-[11px]">
+                      {craneKey}.{selectedRow.code}
+                    </p>
+                  </div>
+                  <div className="border-border bg-background rounded-lg border p-3">
+                    <p className="text-2xl font-semibold tabular-nums">
+                      {formatRowValue(selectedRow, t)}{' '}
+                      <span className="text-muted-foreground text-sm">
+                        {selectedRow.unit ?? ''}
+                      </span>
+                    </p>
+                    <TagSparkline samples={history.samples} className="mt-2" />
+                    <p className="text-muted-foreground mt-1 text-[10px]">
+                      {t('monitoring:inspector.tagPick.recent')}
+                    </p>
+                  </div>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    <dt className="text-muted-foreground">
+                      {t('monitoring:inspector.tagPick.dataType')}
+                    </dt>
+                    <dd>
+                      {getMonitoringTagMetadata(selectedRow.code).dataType ??
+                        '—'}
+                    </dd>
+                    <dt className="text-muted-foreground">
+                      {t('monitoring:inspector.tagPick.category')}
+                    </dt>
+                    <dd>
+                      {t(`monitoring:tags.categories.${selectedRow.category}`)}
+                    </dd>
+                    <dt className="text-muted-foreground">
+                      {t('monitoring:inspector.tagPick.bay')}
+                    </dt>
+                    <dd>{found.entry.snapshot.bay ?? '—'}</dd>
+                  </dl>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  {draft
+                    ? t('monitoring:inspector.tagPick.draftNotOnServer', {
+                        code: draft,
+                      })
+                    : t('monitoring:inspector.tagPick.noSelection')}
+                </p>
+              )}
+            </aside>
+          </div>
+        </div>
+      )}
 
       <footer className="border-border flex items-center gap-3 border-t px-3 py-2 text-xs">
-        <div className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1">
-          {TAG_SLOTS.map((option) => {
-            const key = getSlotTagKey(draft, option);
-            return (
-              <span
-                key={option}
-                className="inline-flex min-w-0 items-center gap-1.5"
-              >
-                <span className="text-muted-foreground shrink-0">
-                  {t(`monitoring:inspector.tagPick.slots.${option}`)}
+        <span className="min-w-0 flex-1 truncate">
+          {draft ? (
+            <>
+              <span className="text-orange-400">{draft}</span>
+              {craneKey ? (
+                <span className="text-muted-foreground">
+                  {' '}
+                  → {craneKey}.{draft}
                 </span>
-                <span
-                  className={cn(
-                    'truncate',
-                    key ? 'text-orange-400' : 'text-muted-foreground',
-                  )}
-                >
-                  {key ?? '—'}
-                </span>
-              </span>
-            );
-          })}
-        </div>
+              ) : null}
+            </>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </span>
         <Button
           type="button"
           variant="outline"
@@ -152,12 +271,84 @@ function TagPickDialogBody({
         <Button
           type="button"
           size="sm"
-          disabled={!dirty}
-          onClick={() => onApply(draft, slot)}
+          disabled={!dirty || !found}
+          onClick={() => onApply(draft)}
         >
           {t('monitoring:inspector.tagPick.apply')}
         </Button>
       </footer>
     </>
+  );
+}
+
+function Notice({
+  tone,
+  children,
+}: {
+  tone?: 'amber';
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs">
+      <p
+        className={cn(
+          tone === 'amber' ? 'text-amber-500' : 'text-muted-foreground',
+        )}
+      >
+        {children}
+      </p>
+    </div>
+  );
+}
+
+/** 값 표기 — 불리언은 태그 페이지와 같은 글자(ON/OFF·OK/NG), 계측값은 천 단위. */
+function formatRowValue(row: TagRow, t: T): string {
+  if (typeof row.value === 'boolean') {
+    return t(`monitoring:tags.bool.${resolveBoolDisplay(row, row.value).key}`);
+  }
+  return formatTagNumber(row.value, row.category === 'measurement');
+}
+
+function TagPickRow({
+  row,
+  selected,
+  onSelect,
+  t,
+}: {
+  row: TagRow;
+  selected: boolean;
+  onSelect: () => void;
+  t: T;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onSelect}
+        className={cn(
+          'hover:bg-muted flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-left text-xs',
+          selected && 'bg-primary/10',
+        )}
+      >
+        <span className="min-w-0 flex-1 truncate">
+          <span className="font-medium">{row.name}</span>
+          <span className="text-muted-foreground ml-1.5 text-[10px]">
+            {row.code}
+          </span>
+        </span>
+        <span className="shrink-0 tabular-nums">
+          {formatRowValue(row, t)}{' '}
+          <span className="text-muted-foreground">{row.unit ?? ''}</span>
+        </span>
+        <Check
+          className={cn(
+            'size-3.5 shrink-0',
+            selected ? 'text-primary' : 'opacity-0',
+          )}
+          aria-hidden
+        />
+      </button>
+    </li>
   );
 }

@@ -45,15 +45,15 @@ afterEach(() => {
 });
 
 describe('useRealtimeRunner', () => {
-  it('실행 중엔 매 프레임 버퍼를 비우고 순서대로 버스에 내보낸다', () => {
+  it('실행 중엔 매 프레임 버퍼를 비우고 순서대로 버스에 내보낸다 — 모든 publish 가 source: realtime 을 싣는다', () => {
     useRealtimeStore.getState().start();
     renderHook(() => useRealtimeRunner());
     useRealtimeStore.getState().pushValue('c1:a', 1);
     useRealtimeStore.getState().pushValue('c1:b', 2);
     frame();
     expect(vi.mocked(publishTagValue).mock.calls).toEqual([
-      ['c1:a', 1],
-      ['c1:b', 2],
+      ['c1:a', 1, { source: 'realtime' }],
+      ['c1:b', 2, { source: 'realtime' }],
     ]);
     expect(useRealtimeStore.getState().buffer).toEqual([]);
     // 빈 버퍼 프레임은 조용하다.
@@ -85,7 +85,9 @@ describe('useRealtimeRunner', () => {
     useRealtimeStore.getState().pushValue('c1:a', 2);
     frame();
     expect(publishTagValue).toHaveBeenCalledTimes(1);
-    expect(publishTagValue).toHaveBeenCalledWith('c1:a', 2);
+    expect(publishTagValue).toHaveBeenCalledWith('c1:a', 2, {
+      source: 'realtime',
+    });
   });
 
   it('hold 전에 쌓인 값도 held 프레임에서 함께 버려진다', () => {
@@ -99,18 +101,21 @@ describe('useRealtimeRunner', () => {
   });
 
   describe('수신 간격 스무딩', () => {
-    it('첫 값은 옵션 없이(소비자 기본), 값이 바뀌면 직전 변화와의 간격을 smoothTime 으로 넘긴다', () => {
+    it('첫 값은 smoothTime 없이(소비자 기본), 값이 바뀌면 직전 변화와의 간격을 smoothTime 으로 넘긴다', () => {
       useRealtimeStore.getState().start();
       renderHook(() => useRealtimeRunner());
       useRealtimeStore.getState().pushValue('c1:a', 1);
       frame();
-      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 1);
+      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 1, {
+        source: 'realtime',
+      });
 
       nowMs = 1000;
       useRealtimeStore.getState().pushValue('c1:a', 2);
       frame();
       expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 2, {
         smoothTime: 1,
+        source: 'realtime',
       });
 
       nowMs = 1500;
@@ -118,6 +123,7 @@ describe('useRealtimeRunner', () => {
       frame();
       expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 3, {
         smoothTime: 0.5,
+        source: 'realtime',
       });
     });
 
@@ -135,15 +141,18 @@ describe('useRealtimeRunner', () => {
         frame();
         expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 2, {
           smoothTime: 1,
+          source: 'realtime',
         });
       }
-      // 첫 값의 재발행은 아직 간격을 몰라 옵션이 없다.
+      // 첫 값의 재발행은 아직 간격을 몰라 smoothTime 이 없다.
       useRealtimeStore.getState().pushValue('c1:b', 7);
       frame();
       nowMs = 2000;
       useRealtimeStore.getState().pushValue('c1:b', 7);
       frame();
-      expect(publishTagValue).toHaveBeenLastCalledWith('c1:b', 7);
+      expect(publishTagValue).toHaveBeenLastCalledWith('c1:b', 7, {
+        source: 'realtime',
+      });
     });
 
     it('한 프레임의 항목은 같은 시각으로 잰다 — 키마다 독립', () => {
@@ -159,8 +168,8 @@ describe('useRealtimeRunner', () => {
       useRealtimeStore.getState().pushValue('c1:b', 2);
       frame();
       expect(vi.mocked(publishTagValue).mock.calls.slice(-2)).toEqual([
-        ['c1:a', 2, { smoothTime: 1 }],
-        ['c1:b', 2, { smoothTime: 0.5 }],
+        ['c1:a', 2, { smoothTime: 1, source: 'realtime' }],
+        ['c1:b', 2, { smoothTime: 0.5, source: 'realtime' }],
       ]);
     });
 
@@ -174,6 +183,7 @@ describe('useRealtimeRunner', () => {
       frame();
       expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 2, {
         smoothTime: 1,
+        source: 'realtime',
       });
 
       act(() => useRealtimeStore.getState().stop());
@@ -182,12 +192,15 @@ describe('useRealtimeRunner', () => {
       useRealtimeStore.getState().pushValue('c1:a', 3);
       frame();
       // 이전 세션의 변경 시각(1000ms)과 재지 않는다.
-      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 3);
+      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 3, {
+        source: 'realtime',
+      });
       nowMs = 2250;
       useRealtimeStore.getState().pushValue('c1:a', 4);
       frame();
       expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 4, {
         smoothTime: 0.25,
+        source: 'realtime',
       });
     });
 
@@ -202,12 +215,15 @@ describe('useRealtimeRunner', () => {
       nowMs = 1000;
       useRealtimeStore.getState().pushValue('c1:a', 2);
       frame();
-      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 2);
+      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 2, {
+        source: 'realtime',
+      });
       nowMs = 2000;
       useRealtimeStore.getState().pushValue('c1:a', 3);
       frame();
       expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 3, {
         smoothTime: 1,
+        source: 'realtime',
       });
     });
   });

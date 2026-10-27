@@ -1,13 +1,11 @@
 /**
- * 가상 태그 — 서버(PLC) 없이 태그 값을 흘려보내는 시뮬레이션 정의.
+ * 시뮬레이션 시나리오 — 서버(PLC) 없이 태그 값을 흘려보내는 정의.
  *
- * 실시간 태그와 같은 모양으로 **장비 › 태그** 계층이다. 장비는 실시간 크레인에
- * 대응하는 묶음이고, 태그는 그 장비가 내보내는 값 하나다.
- *
- * 값 버스 키는 저장하지 않고 `장비키:코드` 로 조립한다(lib/virtual-tag-key.ts).
- * 구분자가 콜론이라 실시간 키(`크레인.코드`)와 절대 겹치지 않는다 — 두 소스가
- * 한 버스를 쓰므로 표기가 같아지면 마지막 publish 가 이긴다. 씬의 맵핑은 이
- * 키 문자열만 참조한다.
+ * 시나리오는 **씬에 이미 맵핑된 모델·태그 중 고른 것**에 값·동작을 붙인
+ * 것이다. 태그는 `modelId + code` 로 저장하고 값 버스 키 `크레인ID.코드` 는
+ * 재생 때 그 씬의 모델 `craneId` 로 조립한다(features scenario-entries) —
+ * 에디터에서 모델의 크레인을 바꾸면 시나리오가 따라온다. 시나리오에 없는
+ * 태그는 값이 나가지 않는다(노드는 rest).
  *
  * 값 변화는 `pattern` 이 정한다. manual 만 사용자가 슬라이더(불리언은 토글)로
  * 밀고, 나머지는 시간의 함수(파형)라 결정론적으로 재현된다. 시간 단위는 저장본
@@ -51,11 +49,11 @@ export const VIRTUAL_TAG_DATA_TYPES = [
 ] as const satisfies readonly VirtualTagDataType[];
 
 export interface VirtualTagDefinition {
-  /** 장비 안에서 고유한 행 식별자. 외부(씬)에서 참조하지 않는다. */
+  /** 시나리오 안에서 고유한 행 식별자. 외부(씬)에서 참조하지 않는다. */
   id: string;
-  /** 태그 코드 — 장비 안에서 유일, 공백·콜론 없음. 키의 뒷부분이다. */
+  /** 태그 코드 — 모델 맵핑·상태 태그의 코드와 같다. 공백·점·콜론 없음. */
   code: string;
-  /** 표시명. 비면 code 를 보여 준다. */
+  /** 표시명. 비면 맵핑 대상(노드·역할)을 보인다. */
   name: string;
   dataType: VirtualTagDataType;
   /** 표시 전용(mm, deg …). 단위 환산은 맵핑의 scale/offset 이 한다. */
@@ -68,37 +66,36 @@ export interface VirtualTagDefinition {
   pattern: VirtualTagPattern;
 }
 
-export interface VirtualEquipment {
-  /** 내부 식별자(행·라우트). */
-  id: string;
-  /**
-   * 장비 ID — 실시간 크레인 ID 와 같은 자리(`GC-04`, `C_171`). 표시용 그대로
-   * 저장하고 키 조립 때만 하이픈을 밑줄로 정규화한다. 정규화 결과가 장비마다
-   * 유일해야 한다(sanitize). 공백·콜론 없음.
-   */
-  craneId: string;
-  /** 구역 — 실시간 목록의 구역 칩과 같은 필터. */
-  bay?: string;
-  /** false 면 이 장비의 태그 전부를 내보내지 않는다. */
-  enabled: boolean;
-  /** 배열 순서가 표시 순서. */
-  tags: VirtualTagDefinition[];
+/** 시나리오의 태그 하나 — 씬 모델 하나의 맵핑 코드에 붙인 값 정의. */
+export interface ScenarioTag extends VirtualTagDefinition {
+  /** 씬 모델 id(`SavedModelInfo.id`). 그 모델의 craneId 가 키의 앞부분이다. */
+  modelId: string;
 }
 
-export interface VirtualTagSet {
-  version: 3;
-  /** 값 갱신 주기(초). [VIRTUAL_TAG_TICK_MIN, VIRTUAL_TAG_TICK_MAX]. */
+export interface SimulationScenario {
+  /** 내부 식별자(활성 선택·라우트). */
+  id: string;
+  /** 표시 이름. SCENARIO_NAME_MAX. */
+  name: string;
+  /** 씬 파일 이름(`okpo.json`) — 이 씬의 모델만 가리킨다. region 과 무관. */
+  sceneFile: string;
+  /** 배열 순서가 표시 순서. `(modelId, code)` 가 시나리오 안에서 유일하다. */
+  tags: ScenarioTag[];
+}
+
+export interface ScenarioSet {
+  version: 1;
+  /** 값 갱신 주기(초). [VIRTUAL_TAG_TICK_MIN, VIRTUAL_TAG_TICK_MAX]. 전역. */
   tickSec: number;
-  equipments: VirtualEquipment[];
+  scenarios: SimulationScenario[];
 }
 
 /** 재생 배속 선택지. 시뮬레이션 시계에만 적용되고 저장하지 않는다(세션). */
 export const SIMULATION_SPEED_OPTIONS = [0.5, 1, 2, 4, 8] as const;
 
-export const VIRTUAL_EQUIPMENTS_MAX = 100;
-export const VIRTUAL_EQUIPMENT_TAGS_MAX = 100;
-export const VIRTUAL_EQUIPMENT_ID_MAX = 32;
-export const VIRTUAL_EQUIPMENT_BAY_MAX = 20;
+export const SCENARIOS_MAX = 50;
+export const SCENARIO_NAME_MAX = 40;
+export const SCENARIO_TAGS_MAX = 500;
 export const VIRTUAL_TAG_CODE_MAX = 48;
 export const VIRTUAL_TAG_NAME_MAX = 40;
 export const VIRTUAL_TAG_UNIT_MAX = 12;

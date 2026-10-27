@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { ScenarioTag } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from '../model-runtime-status';
 import {
   PLAY3D_DRAWN_STATUSES,
@@ -36,6 +37,7 @@ import {
   timelineRows,
   timelineTrackScale,
   timelineViewTicks,
+  toPlay3dTagDefs,
   transportMarks,
   transportTicks,
   type TimelineScrollGeometry,
@@ -46,6 +48,7 @@ import {
   type Play3dEvent,
   type StatusMs,
 } from '../play3d-stats';
+import type { VirtualTagEntry } from '../scenario-entries';
 
 describe('msAtFraction / markerPercent', () => {
   it('클릭 비율 → 씬 시간, 범위 밖은 clamp', () => {
@@ -215,9 +218,77 @@ describe('timelineAxisMs / markerSeekLeadMs', () => {
   });
 });
 
+/** 시나리오 러너·리포트가 보는 항목 하나 — 키는 씬 모델의 craneId 로 이미 조립돼 있다. */
+function entry(
+  key: string,
+  tag: Pick<ScenarioTag, 'code'> & Partial<Pick<ScenarioTag, 'name' | 'unit'>>,
+  model: Partial<Pick<VirtualTagEntry, 'modelName' | 'craneId'>> = {},
+): VirtualTagEntry {
+  return {
+    key,
+    modelId: 'm1',
+    modelName: model.modelName ?? 'GC#1',
+    craneId: model.craneId ?? 'gc-01',
+    tag: {
+      id: key,
+      modelId: 'm1',
+      code: tag.code,
+      name: tag.name ?? '',
+      dataType: 'number',
+      unit: tag.unit,
+      min: 0,
+      max: 1,
+      initial: 0,
+      pattern: { kind: 'manual' },
+    },
+  };
+}
+
+describe('toPlay3dTagDefs', () => {
+  it('항목 → 리포트 정의: 키·범위·단위를 옮기고 이름은 모델 이름 · 태그 이름', () => {
+    expect(
+      toPlay3dTagDefs([
+        entry('gc_01.mh1_height', {
+          code: 'mh1_height',
+          name: '주권 높이',
+          unit: 'm',
+        }),
+      ]),
+    ).toEqual([
+      {
+        key: 'gc_01.mh1_height',
+        name: 'GC#1 · 주권 높이',
+        unit: 'm',
+        min: 0,
+        max: 1,
+      },
+    ]);
+  });
+
+  it('태그 이름이 비면 코드, 모델 이름이 비면 craneId 로 채운다', () => {
+    const [def] = toPlay3dTagDefs([
+      entry('gc_01.mh1_speed', { code: 'mh1_speed' }, { modelName: '' }),
+    ]);
+    expect(def.name).toBe('gc-01 · mh1_speed');
+    expect(def.unit).toBeUndefined();
+  });
+
+  it('빈 항목은 빈 정의', () => {
+    expect(toPlay3dTagDefs([])).toEqual([]);
+  });
+});
+
 describe('tagRowLabel', () => {
   const defs = [
-    { key: 'v1', name: '주권 높이', unit: 'm', min: 0, max: 1 },
+    ...toPlay3dTagDefs([
+      entry('gc_01.mh1_height', {
+        code: 'mh1_height',
+        name: '주권 높이',
+        unit: 'm',
+      }),
+      entry('gc_01.mh1_speed', { code: 'mh1_speed' }, { modelName: '' }),
+    ]),
+    // 이름이 빈 정의 — toPlay3dTagDefs 는 이름을 항상 채우지만 tagRowLabel 은 방어한다.
     { key: 'v2', name: '', unit: undefined, min: 0, max: 1 },
   ];
   const scene = {
@@ -230,8 +301,15 @@ describe('tagRowLabel', () => {
   const sim = { source: 'simulation' as const, defs, scene };
   const replay = { source: 'replay' as const, defs, scene };
 
-  it('시뮬레이션: 정의의 이름·단위, 이름이 비면 키, 단위 없으면 빈 문자열', () => {
-    expect(tagRowLabel('v1', sim)).toEqual({ label: '주권 높이', unit: 'm' });
+  it('시뮬레이션: 정의의 이름(모델 이름 · 태그 이름)·단위, 정의 이름이 비면 키, 단위 없으면 빈 문자열', () => {
+    expect(tagRowLabel('gc_01.mh1_height', sim)).toEqual({
+      label: 'GC#1 · 주권 높이',
+      unit: 'm',
+    });
+    expect(tagRowLabel('gc_01.mh1_speed', sim)).toEqual({
+      label: 'gc-01 · mh1_speed',
+      unit: '',
+    });
     expect(tagRowLabel('v2', sim)).toEqual({ label: 'v2', unit: '' });
   });
   it('시뮬레이션: 정의가 없으면 키 그대로', () => {

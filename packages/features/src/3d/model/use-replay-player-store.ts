@@ -11,8 +11,14 @@ import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
 
 const DEFAULT_REPLAY_FRAME_DURATION_MS = 5_000;
 
+/** 모든 publish 가 싣는 소스 — 버스 게이트가 리플레이 화면에서만 통과시킨다. */
+const REPLAY_SOURCE: TagPublishOptions = { source: 'replay' };
+
 /** seek — 위치 불연속. 화면에 즉시 대입해 rest 를 거쳐 미끄러지지 않는다. */
-const PUBLISH_IMMEDIATE: TagPublishOptions = { smoothTime: 0 };
+const PUBLISH_IMMEDIATE: TagPublishOptions = {
+  smoothTime: 0,
+  source: 'replay',
+};
 
 /**
  * 정상 전진(tick) — 들어가는 프레임이 화면에 머무는 벽시계 시간만큼 스무딩해
@@ -30,12 +36,14 @@ function advanceOptions(
     speedMultiplier,
     DEFAULT_REPLAY_FRAME_DURATION_MS,
   );
-  return smoothTime === undefined ? undefined : { smoothTime };
+  return smoothTime === undefined
+    ? REPLAY_SOURCE
+    : { smoothTime, source: 'replay' };
 }
 
 function applyReplayFrame(
   frame: ReplayLiteFrame | undefined,
-  options?: TagPublishOptions,
+  options: TagPublishOptions = REPLAY_SOURCE,
 ) {
   if (!frame) {
     return;
