@@ -164,11 +164,6 @@ const craneIdsByRegion: Record<string, string[]> = {
   'philly-dock-2': ['C_864', 'C_865', 'C_866', 'C_867', 'C_868', 'C_869'],
 };
 
-/** 등록된 크레인 전부 — 씬 모델의 크레인 ID 를 고르는 콤보박스가 쓴다. */
-export function listCranes(): readonly CraneRegistryEntry[] {
-  return craneRegistry;
-}
-
 export function getCraneById(craneId: string) {
   return craneRegistryById.get(craneId);
 }

@@ -142,11 +142,16 @@
       }
     },
     "crane": {
-      "label": "Grus",
+      "label": "ID gruis",
       "placeholder": "Gruem elige…",
-      "search": "Quaere per numerum aut ID gruis",
-      "empty": "Nullae grues inscriptae.",
-      "unregistered": "non inscripta",
+      "search": "Quaere per ID gruis aut regionem",
+      "empty": "Nullae grues a servo adhuc acceptae.",
+      "connecting": "Ad servum conectitur…",
+      "disconnected": "Nexus cum servo ruptus — index gruum deest.",
+      "loadError": "Index gruum accipi non potuit. Nexum inspice.",
+      "offline": "exstincta",
+      "notOnServer": "Non in servo",
+      "notOnServerHint": "Servus hanc gruem non mittit.\nIunctiones hoc ID tamen adhibent.",
       "missing": "Nulla grus — claves signorum fieri non possunt",
       "clear": "Gruem solvere"
     },

@@ -11,7 +11,7 @@
 | 태그 맵핑 스키마(코드 하나) / 키 조립 / 모델의 코드 목록 / 방어·레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`(`TagMapping`·`normalizeTagCode`·`resolveMappingTagKey`), `packages/domain/src/3d/lib/model-tag-codes.ts`(`collectModelTagCodes`), `packages/domain/src/3d/lib/sanitize-tag-mappings.ts`(`parseTagKeyRef`·`resolveTagRef`·`finalizeModelTagKeys`) |
 | 활성 소스 해석 / 소스 게이트 훅 | `packages/features/src/3d/lib/tag-source.ts`(`resolveActiveTagSource`·`EDITOR_TAG_SOURCE`, 테스트 대상), `packages/features/src/3d/model/use-active-tag-source.ts`(`useActiveTagSource`) |
 | 크레인 태그 키 조립·파싱(`${craneId}.${tagCode}`) | `packages/core/src/lib/crane-tag-key.ts`(`buildCraneTagKey`·`parseCraneTagKey`·`normalizeCraneKey`·`normalizeLegacyCraneTagKey`; `@crane/domain/monitoring` 이 재export) |
-| 크레인 레지스트리 / 인스펙터 크레인 콤보박스 옵션 | `packages/domain/src/crane/model/registry.ts`(`listCranes`), `packages/widgets/src/3d/lib/crane-id-options.ts`(`buildCraneIdOptions`·`isRegisteredCraneId`, 테스트 대상) + `model/use-crane-id-options.ts` |
+| 인스펙터 크레인 콤보박스 옵션(크레인 스냅샷 스토어 기준) / 빈 목록 이유 | `packages/widgets/src/3d/lib/crane-id-options.ts`(`buildCraneIdOptions`·`isListedCraneId`·`craneListEmptyReason`, 테스트 대상) + `model/use-crane-id-options.ts` |
 | 라벨의 태그 값 줄(목록 구성·표기 / 값 읽기 / 표시) | `packages/domain/src/3d/lib/label-reading.ts`(`buildLabelReadings(model)`, 테스트 대상), `packages/features/src/3d/model/tag-value-bus.ts`(`readTagLiveValue`), `packages/domain/src/3d/ui/model-label.tsx` |
 | 상태 태그 스키마 / 방어 / 편집 로직 / 미리보기 | `packages/domain/src/3d/model/status-tag-types.ts`(`ModelStatusTags`·`resolveStatusTagKeys`), `packages/domain/src/3d/lib/sanitize-status-tags.ts`(`sanitizeStatusTagEntries`), `packages/widgets/src/3d/lib/status-tag-editor.ts`(`setStatusTagCode`), `packages/features/src/3d/model/use-label-preview-store.ts` |
 | 서버 값 → 버스 숫자 | `packages/domain/src/monitoring/lib/tag-number.ts` (`toTagNumber`) |
@@ -74,8 +74,9 @@
 
 "태그 매핑" 탭 맨 위다. 모델 `craneId` 가 맵핑·상태 태그 키의 접두어이자 서버·리플레이 데이터의 크레인이라 여기서 고른다.
 
-- `@crane/ui/molecules/combobox`(검색 가능, 자유 입력 없음)로 **크레인 레지스트리**(`@crane/domain/crane` 의 `listCranes`)에서만 고른다. 옵션은 `buildCraneIdOptions` — value `craneId`, label `craneNo`, description `regionId`, `compareCraneIds` 정렬. 콤보박스에 비우기가 없어 옆 × 가 `updateSelectedCraneId(undefined)` 로 비운다.
-- 레지스트리에 없는 값(philly 의 `GC_04`·`LLC_002` 등)은 `renderValue(null)` 로 raw 값을 amber "미등록" 으로 보이고 `invalid` 다 — 동작은 그대로이고 사용자가 다시 고르기 전까지 지우지 않는다. 등록하려면 `registry.ts` 에 크레인을 추가한다.
+- `@crane/ui/molecules/combobox`(검색 가능, 자유 입력 없음)로 **서버가 주는 크레인**에서만 고른다 — 원천은 크레인 스냅샷 스토어(`useCraneSnapshotStore` 의 `order`·`cranes`, 아래 "실시간 태그 피드")이고 탭이 열려 있는 동안 칸이 `useCraneSnapshotFeed(true)` 로 피드를 켠다(태그 연결 다이얼로그와 같은 클라이언트를 세어 쓴다, 브리지가 없어 버스로는 가지 않는다). 옵션은 `buildCraneIdOptions(order, cranes)` — value·label 은 서버 ID 그대로, description 은 구역(bay), 서버가 `online=false` 로 주는 크레인은 "오프라인" 배지를 달되 고를 수 있다. 정렬은 스토어 순서(ID 순). 콤보박스에 비우기가 없어 옆 × 가 `updateSelectedCraneId(undefined)` 로 비운다.
+- 목록이 비면 `craneListEmptyReason(connection, loadError)` 로 이유를 가른다 — 연결 중 / 끊김·해제 / 초기 조회 실패 / 아직 받은 크레인 없음. 서버가 없는 환경에서는 고를 크레인이 없고 저장값은 그대로 보인다.
+- 서버에 없는 값(philly 의 `GC_04`·`LLC_002` 등)은 `renderValue(null)` 로 raw 값을 amber "서버에 없음" 으로 보이고 `invalid` 다 — 동작은 그대로이고 사용자가 다시 고르기 전까지 지우지 않는다.
 - 크레인이 없는데 맵핑·상태 태그가 있으면 칸 아래 amber 한 줄(키를 만들 수 없음).
 - 편집 채널 `updateSelectedCraneId(craneId | undefined)` 는 다른 필드와 같은 규칙(같은 값 = no-op)이고 `scene-snapshot.ts` 가 `craneId` 를 비교한다.
 
@@ -85,7 +86,7 @@
 - **다이얼로그**: shadcn `Dialog`(`@crane/ui/molecules/dialog`, 포털 규약 `usePortalContainer`·`z-9999`). 머리줄은 "태그 연결 · 크레인 {craneId}" 와 닫기 — 크레인은 **모델의 `craneId` 로 고정**이고 탭이 없다. 본문은 열려 있을 때만 마운트해 열 때마다 초안이 `value` 로 돌아온다. 검색창은 팔레트·태그 페이지와 같은 `SearchField`.
 - 본문: 검색 › 그 크레인의 서버 태그 목록(머리글 "이름 · 현재 값", 분류 묶음 `TAG_CATEGORIES`, 현재 값·단위, 불리언은 태그 페이지와 같은 글자 — `buildTagRows`·`filterPickTags`) › 미리보기(큰 현재 값, 최근 60초 스파크라인, 데이터 형식·분류·구역). 서버 항목은 `findSnapshotEntry(cranes, craneId)`(`normalizeCraneKey` 비교). 데이터는 다이얼로그 본문이 켠 `useCraneSnapshotFeed(true)`(REST 전체 + STOMP) — 에디터에는 다른 참조자가 없어 닫으면 소켓이 닫히고, 브리지가 없어 버스로는 가지 않는다(모델이 움직이지 않는다).
 - 행을 누르면 코드가 초안이 되고 선택 강조·미리보기는 초안을 되읽는다. 하단에 초안과 조립될 키(`크레인키.코드`)를 보이고 "연결"(`onApply(code)`)은 초안이 `value` 와 다를 때만 산다. 초안이 서버 목록에 없으면(서버에 없는 코드를 연결해 둔 씬) 안내만 하고 그대로 둔다.
-- 크레인이 없는 모델은 안내만 보이고 연결할 수 없다. 서버에 그 크레인이 없으면(philly 의 미등록 크레인) 안내를 보이고 목록이 빈다.
+- 크레인이 없는 모델은 안내만 보이고 연결할 수 없다. 서버에 그 크레인이 없으면(philly 의 `GC_04` 등) 안내를 보이고 목록이 빈다.
 - **최근 60초**(`model/use-tag-value-history.ts`): 고른 태그가 바뀌면 `getCraneHistory`(1초 간격, 60초)로 채우고 스냅샷 스토어 구독으로 뒤에 붙인다(`lib/tag-history.ts` `appendSample` 이 창 밖을 버린다). 조회가 실패하면 라이브 표본만 쌓인다. 그리기는 `tag-sparkline.tsx`.
 
 ### 값 흐름
@@ -172,7 +173,7 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 태그 값 생산자를 새로 만들면 `publishTagValue` 로만 내보내고 `TagSourceId` 를 붙인다 — 버스가 단일 진입점이고, 표시 캐시·바인딩·운전 상태 판정·3D 플레이 통계가 전부 여기서 갈라진다. 소스 없는 publish 는 게이트가 걸린 화면에서 버려진다.
 - 소스를 가르는 것은 버스의 활성 소스 게이트(`setActiveTagSource`, 화면은 `useActiveTagSource`) 하나다. 키 표기(콜론·접두어)나 소비자의 `mode`·`source` 분기로 소스를 나누지 않는다 — 소비자는 모델 하나를 받아 키를 풀 뿐이다.
 - 태그 키는 조립값이다 — 맵핑·상태 태그·시나리오 어디에도 키 필드를 두지 않고 `resolveMappingTagKey`/`resolveStatusTagKeys` 로만 만든다. 크레인 없는 모델의 맵핑은 키가 없는 것이 맞다 — 기본 접두어로 채우지 않는다.
-- 인스펙터의 크레인 ID 는 레지스트리에서만 고른다 — 자유 입력을 두지 않는다. 레지스트리에 없는 저장값은 표시·보존만 한다.
+- 인스펙터의 크레인 ID 는 서버가 주는 크레인(스냅샷 스토어)에서만 고른다 — 자유 입력도 코드 목록도 두지 않는다. 서버에 없는 저장값은 표시·보존만 한다.
 - 시뮬레이션을 끝내는 코드는 `stopSimulation()` 을 부른다. 스토어 `stop()` 만 부르면 값 저장소·충돌 기록·실시간 보류가 남는다.
 - 같은 대상(노드·채널·축 / 관절)에 맵핑을 두 개 만들지 않는다 — sanitize 가 뒤 항목을 조용히 버린다.
 - 버스에 숫자가 아닌 값을 싣지 않는다. 서버 값의 형식이 늘면 `toTagNumber` 한 곳에서 받는다.
@@ -192,7 +193,8 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 가상 태그 키를 콜론 표기로 두어 실시간 키와 키 공간을 나누는 것 — 소스 구분이 키 표기에 숨어 같은 태그가 두 이름을 가졌다. 소스는 게이트가 가른다.
 - 전역 가상 장비 등록(태그 페이지의 가상 탭) — 크레인 ID 를 손으로 다시 치고 씬의 맵핑과 어긋났다. 시나리오는 씬에 맵핑된 모델·태그에서 고른다.
 - 실시간 값을 스냅샷해 시나리오를 만드는 것(실시간 복제) — 피드가 있어야 하고 1회 복사라 바로 낡는다. 기본값에서 손으로 고친다.
-- 인스펙터의 크레인 ID 자유 입력 — 오타가 키를 조용히 깨뜨린다. 레지스트리 콤보박스만.
+- 인스펙터의 크레인 ID 자유 입력 — 오타가 키를 조용히 깨뜨린다. 서버 크레인 콤보박스만.
+- 크레인 레지스트리 전체를 콤보박스 선택지로 — 서버가 주지 않는 크레인을 골라도 값이 오지 않고, 레지스트리 번호(`C-171`)와 서버 ID(`C_171`) 표기가 달라 헷갈렸다. 끊긴 상태의 레지스트리 fallback 도 두지 않는다.
 - 서버 태그 전체(크레인 20대 × 태그 45개)를 콤보박스 하나에 — 고를 수 없고 서버에는 태그 정의 API 가 없다. 다이얼로그는 모델 크레인으로 고정하고 그 크레인의 태그만 보인다.
 - 장비 안 그룹(사용자 정의 분류)·태그별 사용 스위치·속도/가속 한계·장비 이름 — 등록 화면이 복잡해지고 표가 가로로 넘쳐 뺐다. 한계는 3D 플레이 리포트의 포화 지표까지 함께 뺐다.
 - 벽시계 dt 로 값을 계산하는 것 — 틱 지터로 같은 씬 시각의 값이 달라진다. 씬 시간 `tickMs` 고정 스텝 경계에서만 계산한다.
@@ -205,8 +207,7 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 
 - 시나리오의 시각별 스텝(타임라인) — 지금은 태그별 동작까지다. 구조(시나리오 = 태그별 동작)는 그 위에 얹을 수 있게 둔다.
 - 시나리오 태그의 초기값·범위를 실시간 값에서 가져오기(피드가 필요하다). 지금은 기본값에서 손으로.
-- 맵핑 `craneId` 덮어쓰기의 편집 UI, 크레인 콤보박스의 region 필터, 태그 페이지에서 시나리오 조회.
-- philly 의 `GC_04`·`LLC_002` 를 크레인 레지스트리에 넣는 것 — 지금은 미등록으로 표시만 한다.
+- 맵핑 `craneId` 덮어쓰기의 편집 UI, 크레인 콤보박스의 구역(bay) 필터, 태그 페이지에서 시나리오 조회.
 - 라벨 값 줄의 단위 표시·표시용 환산. 서버 태그의 원시 단위가 m 가 아니면(dock-in `tl_distance` 는 맵핑 scale 이 0.1 이다) 숫자가 m 로 읽히지 않는다.
 - 맵핑되지 않은 태그(Load 등)를 라벨에 보이는 것.
 - 다이얼로그의 "같은 태그를 전체 크레인에 적용" — 크레인마다 GLB 노드 경로가 달라(`3_Bay_C_800_Head_01` vs `3_Bay_C_172_Head`) 루트 대상에만 맞는다. 여러 크레인의 맵핑은 한 대를 에디터에서 맞춘 뒤 스크립트로 씬 JSON 에 일괄 생성하는 쪽이 맞다.

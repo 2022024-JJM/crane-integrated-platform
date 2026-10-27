@@ -142,11 +142,16 @@
       }
     },
     "crane": {
-      "label": "크레인",
+      "label": "크레인 ID",
       "placeholder": "크레인 선택…",
-      "search": "크레인 번호·ID 검색",
-      "empty": "등록된 크레인이 없습니다.",
-      "unregistered": "미등록",
+      "search": "크레인 ID·구역 검색",
+      "empty": "서버에서 받은 크레인이 아직 없습니다.",
+      "connecting": "서버에 연결 중…",
+      "disconnected": "서버 연결이 끊겨 크레인 목록을 받을 수 없습니다.",
+      "loadError": "크레인 목록 조회에 실패했습니다. 연결 상태를 확인하세요.",
+      "offline": "오프라인",
+      "notOnServer": "서버에 없음",
+      "notOnServerHint": "서버에서 받고 있지 않은 크레인입니다.\n맵핑은 이 ID 로 동작합니다.",
       "missing": "크레인 없음 — 태그 키를 만들 수 없습니다",
       "clear": "크레인 해제"
     },
