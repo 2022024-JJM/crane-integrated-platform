@@ -8,7 +8,10 @@ import {
   withBaseUrl,
 } from '@crane/domain/3d';
 import type { CraneType } from '@crane/domain/asset';
-import { ASPECT_ESTIMATE, computeFrontalViewFromBox } from '../lib/compute-frontal-view';
+import {
+  ASPECT_ESTIMATE,
+  computeFrontalViewFromBox,
+} from '../lib/compute-frontal-view';
 
 /* compute-frontal-view는 R3F 기본 fov(75) 기준으로 거리를 계산하므로 동일하게 맞춘다.
  * (다른 값을 쓰면 모델이 잘리거나 지나치게 작게 보인다) */
@@ -18,7 +21,12 @@ const FRONT_FOV_DEG = 75;
 function FrontModel({ craneType }: { craneType: CraneType }) {
   const cfg = getCraneModel(craneType);
   // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(@crane/domain/3d).
-  const gltf = useGLTF(withBaseUrl(cfg.url), true, true, extendGltfLoaderWithKtx2);
+  const gltf = useGLTF(
+    withBaseUrl(cfg.url),
+    true,
+    true,
+    extendGltfLoaderWithKtx2,
+  );
   const clone = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   const innerRef = useRef<Group>(null);
   const camera = useThree((s) => s.camera);
@@ -29,9 +37,11 @@ function FrontModel({ craneType }: { craneType: CraneType }) {
 
   useFrame(() => {
     if (!innerRef.current) return;
-    const currentAspect = 'aspect' in camera ? (camera.aspect as number) : ASPECT_ESTIMATE;
+    const currentAspect =
+      'aspect' in camera ? (camera.aspect as number) : ASPECT_ESTIMATE;
     // 종횡비가 유의미하게 달라졌으면 재프레이밍 (리사이즈 대응)
-    if (fitted.current && Math.abs(currentAspect - fittedAspect.current) < 0.01) return;
+    if (fitted.current && Math.abs(currentAspect - fittedAspect.current) < 0.01)
+      return;
     innerRef.current.updateWorldMatrix(true, true);
     const box = new Box3().setFromObject(innerRef.current);
     if (box.isEmpty()) {
@@ -49,7 +59,9 @@ function FrontModel({ craneType }: { craneType: CraneType }) {
     const target = new Vector3(...view.target);
     if (currentAspect < ASPECT_ESTIMATE) {
       const offset = camera.position.clone().sub(target);
-      camera.position.copy(target).addScaledVector(offset, ASPECT_ESTIMATE / currentAspect);
+      camera.position
+        .copy(target)
+        .addScaledVector(offset, ASPECT_ESTIMATE / currentAspect);
       camera.lookAt(target);
     }
 
@@ -65,10 +77,19 @@ function FrontModel({ craneType }: { craneType: CraneType }) {
   );
 }
 
-export default function CraneFrontViewScene({ craneType }: { craneType: CraneType }) {
+export default function CraneFrontViewScene({
+  craneType,
+}: {
+  craneType: CraneType;
+}) {
   return (
     <Canvas
-      camera={{ fov: FRONT_FOV_DEG, position: [0, 0, 10], near: 0.01, far: 5000 }}
+      camera={{
+        fov: FRONT_FOV_DEG,
+        position: [0, 0, 10],
+        near: 0.01,
+        far: 5000,
+      }}
       gl={{ alpha: true, antialias: true }}
       style={{ pointerEvents: 'none' }}
       dpr={[1, 2]}

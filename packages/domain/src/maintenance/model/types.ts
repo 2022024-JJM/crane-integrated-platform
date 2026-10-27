@@ -1,3 +1,5 @@
+import type { FieldReport } from '../../shared/field-report';
+
 export type RepairSource =
   | 'inspection'
   | 'breakdown'
@@ -66,6 +68,8 @@ export interface RepairWO {
   preventiveAction?: string;
   preventiveAction_ko?: string;
   reInspectionResult?: 'pass' | 'fail' | null;
+  /** 현장(모바일) 보고로 생성된 경우 — 접수함 판정. */
+  fieldReport?: FieldReport;
 }
 
 export interface MaintenanceSummary {

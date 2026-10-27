@@ -18,5 +18,8 @@ export {
   updateRepairDetails,
   updateRepairStatus,
   updateRepairSchedule,
+  triageRepairWO,
+  assignRepairWO,
 } from './model/mock-data';
 export type { RepairDetailsUpdate } from './model/mock-data';
+export type { RepairTriageInput } from './model/mock-data';

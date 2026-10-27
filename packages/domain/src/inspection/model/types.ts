@@ -1,3 +1,5 @@
+import type { FieldReport } from '../../shared/field-report';
+
 export type InspectionType = 'frequent' | 'periodic' | 'emergency' | 'special';
 
 export type InspectionStatus =
@@ -14,7 +16,11 @@ export type PerformerType = 'internal' | 'third_party' | 'local';
 export type ChecklistJudgment = 'pass' | 'fail' | 'na';
 
 /** 반복 점검 주기 — 완료 시 다음 회차 WO가 자동 생성된다. */
-export type RecurrenceInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+export type RecurrenceInterval =
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'quarterly';
 
 export type ActionRequired =
   | 'none'
@@ -60,6 +66,8 @@ export interface InspectionWO {
   checklistItems: ChecklistItem[];
   /** 반복 주기 — 없으면 단발성 점검 */
   recurrence?: RecurrenceInterval | null;
+  /** 현장(모바일) 보고로 생성된 경우 — 접수함 판정. */
+  fieldReport?: FieldReport;
 }
 
 export interface InspectionSummary {

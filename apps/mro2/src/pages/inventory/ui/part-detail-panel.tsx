@@ -66,7 +66,8 @@ export function PartDetailPanel({
   if (partId !== null && partId !== lastId) setLastId(partId);
   const displayId = partId ?? lastId;
 
-  const { item, transactions, repairUsages, openPoLines, onOrderQty } = usePartDetail(displayId ?? '');
+  const { item, transactions, repairUsages, openPoLines, onOrderQty } =
+    usePartDetail(displayId ?? '');
 
   // 확장/모달은 열려 있을 때만 의미가 있다. 닫히면 이펙트로 리셋하는 대신
   // 읽는 쪽에서 open 으로 게이트한다 — 리셋용 렌더 한 번이 사라지고,
@@ -77,7 +78,9 @@ export function PartDetailPanel({
   const expanded = open ? expandedState : false;
 
   const rawTab = searchParams.get('ptab');
-  const tab: PanelTab = TABS.includes(rawTab as PanelTab) ? (rawTab as PanelTab) : 'info';
+  const tab: PanelTab = TABS.includes(rawTab as PanelTab)
+    ? (rawTab as PanelTab)
+    : 'info';
   const setTab = (next: PanelTab) => {
     const params = new URLSearchParams(searchParams);
     if (next === 'info') params.delete('ptab');
@@ -102,9 +105,14 @@ export function PartDetailPanel({
   if (!item) return null;
 
   const statusRow = (
-    <div className="flex items-center gap-1.5 text-[10.5px]">
-      <span className="inline-block h-3 w-[4px]" style={{ background: STATUS_COLOR[item.status] }} />
-      <span style={{ color: KC.text }}>{t(`inventory.${STATUS_KEY[item.status]}`)}</span>
+    <div className="flex items-center gap-1.5 text-[12px]">
+      <span
+        className="inline-block h-3 w-[4px]"
+        style={{ background: STATUS_COLOR[item.status] }}
+      />
+      <span style={{ color: KC.text }}>
+        {t(`inventory.${STATUS_KEY[item.status]}`)}
+      </span>
       <span style={{ color: KC.faint }}>·</span>
       <span style={{ color: KC.muted }}>{item.criticality}</span>
     </div>
@@ -127,22 +135,32 @@ export function PartDetailPanel({
   if (open && expanded) {
     return (
       <div
-        className={`fixed top-14 right-0 bottom-0 left-0 z-40 flex flex-col ${sidebarOpen ? 'lg:left-64' : ''}`}
+        className={`fixed top-14 right-0 bottom-0 left-0 z-30 flex flex-col ${sidebarOpen ? 'lg:left-64' : ''}`}
         style={{ background: KC.bg }}
       >
         {/* 헤더 */}
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-3.5" style={{ borderColor: KC.border }}>
+        <div
+          className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-3.5"
+          style={{ borderColor: KC.border }}
+        >
           <div className="min-w-0">
-            <div className="text-[10.5px]" style={{ color: KC.muted }}>
+            <div className="text-[12px]" style={{ color: KC.muted }}>
               {item.partNumber}
             </div>
-            <h2 className="truncate text-[17px] font-bold tracking-wide" style={{ color: KC.ink }}>
+            <h2
+              className="truncate text-[17px] font-bold tracking-wide"
+              style={{ color: KC.ink }}
+            >
               {item.partName}
             </h2>
             <div className="mt-1">{statusRow}</div>
           </div>
           <div className="flex items-center gap-3">
-            <StockChips item={item} onOrderQty={onOrderQty} className="w-[380px] max-w-full" />
+            <StockChips
+              item={item}
+              onOrderQty={onOrderQty}
+              className="w-[380px] max-w-full"
+            />
             <div className="flex items-center">
               <button
                 type="button"
@@ -152,7 +170,12 @@ export function PartDetailPanel({
               >
                 <Minimize2 size={15} style={{ color: KC.ink }} />
               </button>
-              <button type="button" onClick={onClose} className={iconBtn} aria-label={t('inventory.detail.close')}>
+              <button
+                type="button"
+                onClick={onClose}
+                className={iconBtn}
+                aria-label={t('inventory.detail.close')}
+              >
                 <X size={15} style={{ color: KC.ink }} />
               </button>
             </div>
@@ -161,17 +184,32 @@ export function PartDetailPanel({
 
         {/* 3열 본문 */}
         <div className="grid flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[1.1fr_1.2fr_1fr] lg:overflow-hidden">
-          <section className="border-b p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r" style={{ borderColor: KC.border }}>
-            <h3 className="mb-2.5 text-[11.5px] font-bold" style={{ color: KC.ink }}>
+          <section
+            className="border-b p-4 lg:overflow-y-auto lg:border-r lg:border-b-0"
+            style={{ borderColor: KC.border }}
+          >
+            <h3
+              className="mb-2.5 text-[13px] font-bold"
+              style={{ color: KC.ink }}
+            >
               {t(TAB_LABEL_KEY.info)}
             </h3>
             <InfoContent item={item} openPoLines={openPoLines} />
           </section>
-          <section className="border-b p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r" style={{ borderColor: KC.border }}>
-            <h3 className="mb-2.5 text-[11.5px] font-bold" style={{ color: KC.ink }}>
+          <section
+            className="border-b p-4 lg:overflow-y-auto lg:border-r lg:border-b-0"
+            style={{ borderColor: KC.border }}
+          >
+            <h3
+              className="mb-2.5 text-[13px] font-bold"
+              style={{ color: KC.ink }}
+            >
               {t(TAB_LABEL_KEY.history)}
               {transactions.length > 0 && (
-                <span className="ml-1.5 tabular-nums" style={{ color: KC.muted }}>
+                <span
+                  className="ml-1.5 tabular-nums"
+                  style={{ color: KC.muted }}
+                >
                   {transactions.length}
                 </span>
               )}
@@ -179,10 +217,16 @@ export function PartDetailPanel({
             <HistoryContent transactions={transactions} />
           </section>
           <section className="p-4 lg:overflow-y-auto">
-            <h3 className="mb-2.5 text-[11.5px] font-bold" style={{ color: KC.ink }}>
+            <h3
+              className="mb-2.5 text-[13px] font-bold"
+              style={{ color: KC.ink }}
+            >
               {t(TAB_LABEL_KEY.usage)}
               {repairUsages.length > 0 && (
-                <span className="ml-1.5 tabular-nums" style={{ color: KC.muted }}>
+                <span
+                  className="ml-1.5 tabular-nums"
+                  style={{ color: KC.muted }}
+                >
                   {repairUsages.length}
                 </span>
               )}
@@ -192,8 +236,16 @@ export function PartDetailPanel({
         </div>
 
         {/* 푸터 액션 */}
-        <div className="flex justify-end border-t px-5 py-2.5" style={{ borderColor: KC.border }}>
-          <ActionButtons onAction={setActionMode} partId={item.partId} craneIds={item.craneIds} className="w-72" />
+        <div
+          className="flex justify-end border-t px-5 py-2.5"
+          style={{ borderColor: KC.border }}
+        >
+          <ActionButtons
+            onAction={setActionMode}
+            partId={item.partId}
+            craneIds={item.craneIds}
+            className="w-72"
+          />
         </div>
 
         {modal}
@@ -207,7 +259,7 @@ export function PartDetailPanel({
       role="complementary"
       aria-label={t('inventory.detail.panelLabel', { part: item.partName })}
       aria-hidden={!open}
-      className="fixed top-14 right-0 bottom-0 z-40 flex w-[380px] max-w-[calc(100vw-1rem)] flex-col border-l shadow-xl transition-transform duration-300 ease-out"
+      className="fixed top-[100px] right-0 bottom-0 z-30 flex w-[380px] max-w-[calc(100vw-1rem)] flex-col border-l shadow-xl transition-transform duration-300 ease-out"
       style={{
         borderColor: KC.border,
         background: KC.bg,
@@ -217,13 +269,19 @@ export function PartDetailPanel({
       }}
     >
       {/* 헤더 */}
-      <div className="flex flex-col gap-1.5 border-b px-4 pt-4 pb-3" style={{ borderColor: KC.border }}>
+      <div
+        className="flex flex-col gap-1.5 border-b px-4 pt-4 pb-3"
+        style={{ borderColor: KC.border }}
+      >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px]" style={{ color: KC.muted }}>
+            <div className="text-[11px]" style={{ color: KC.muted }}>
               {item.partNumber}
             </div>
-            <h3 className="truncate text-[13px] font-bold" style={{ color: KC.ink }}>
+            <h3
+              className="truncate text-[14px] font-bold"
+              style={{ color: KC.ink }}
+            >
               {item.partName}
             </h3>
           </div>
@@ -236,7 +294,12 @@ export function PartDetailPanel({
             >
               <Maximize2 size={14} style={{ color: KC.ink }} />
             </button>
-            <button type="button" onClick={onClose} className={iconBtn} aria-label={t('inventory.detail.close')}>
+            <button
+              type="button"
+              onClick={onClose}
+              className={iconBtn}
+              aria-label={t('inventory.detail.close')}
+            >
               <X size={15} style={{ color: KC.ink }} />
             </button>
           </div>
@@ -250,7 +313,10 @@ export function PartDetailPanel({
       </div>
 
       {/* 탭 */}
-      <div className="flex border-b text-[11.5px]" style={{ borderColor: KC.border }}>
+      <div
+        className="flex border-b text-[13px]"
+        style={{ borderColor: KC.border }}
+      >
         {TABS.map((key) => (
           <button
             key={key}
@@ -260,7 +326,8 @@ export function PartDetailPanel({
             style={{
               color: KC.ink,
               fontWeight: tab === key ? 700 : 400,
-              borderBottom: tab === key ? `2px solid ${KC.ink}` : '2px solid transparent',
+              borderBottom:
+                tab === key ? `2px solid ${KC.ink}` : '2px solid transparent',
             }}
           >
             {t(TAB_LABEL_KEY[key])}
@@ -280,7 +347,9 @@ export function PartDetailPanel({
 
       {/* 본문 */}
       <div className="flex-1 overflow-y-auto p-3.5">
-        {tab === 'info' && <InfoContent item={item} openPoLines={openPoLines} />}
+        {tab === 'info' && (
+          <InfoContent item={item} openPoLines={openPoLines} />
+        )}
         {tab === 'history' && <HistoryContent transactions={transactions} />}
         {tab === 'usage' && <UsageContent repairUsages={repairUsages} />}
       </div>

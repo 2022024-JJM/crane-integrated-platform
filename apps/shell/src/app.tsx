@@ -68,7 +68,11 @@ function ScopeRedirect() {
   useEffect(() => {
     if (!INDOOR_BASE_URL) return;
     window.location.replace(
-      toScopeUrl(location.pathname, location.search + location.hash, INDOOR_BASE_URL),
+      toScopeUrl(
+        location.pathname,
+        location.search + location.hash,
+        INDOOR_BASE_URL,
+      ),
     );
   }, [location]);
   return null;
@@ -346,11 +350,6 @@ const Mro2CalendarPage = lazy(() =>
     default: m.Mro2CalendarPage,
   })),
 );
-const Mro2ServicePlanPage = lazy(() =>
-  import('@crane/mro2/pages/service-plan').then((m) => ({
-    default: m.Mro2ServicePlanPage,
-  })),
-);
 const Mro2ServiceRequestsPage = lazy(() =>
   import('@crane/mro2/pages/service-request').then((m) => ({
     default: m.Mro2ServiceRequestsPage,
@@ -374,6 +373,16 @@ const Mro2SpendPage = lazy(() =>
 const Mro2DocumentsPage = lazy(() =>
   import('@crane/mro2/pages/documents').then((m) => ({
     default: m.Mro2DocumentsPage,
+  })),
+);
+const Mro2FieldPage = lazy(() =>
+  import('@crane/mro2/pages/field').then((m) => ({
+    default: m.Mro2FieldPage,
+  })),
+);
+const Mro2TriagePage = lazy(() =>
+  import('@crane/mro2/pages/triage').then((m) => ({
+    default: m.Mro2TriagePage,
   })),
 );
 
@@ -451,14 +460,6 @@ const craneRoutes = (
         }
       />
       <Route
-        path="service-plan"
-        element={
-          <LazyRoute>
-            <Mro2ServicePlanPage />
-          </LazyRoute>
-        }
-      />
-      <Route
         path="service-requests"
         element={
           <LazyRoute>
@@ -495,6 +496,31 @@ const craneRoutes = (
         element={
           <LazyRoute>
             <Mro2DocumentsPage />
+          </LazyRoute>
+        }
+      />
+      {/* 현장 모드 — 휴대폰은 레이아웃이 여기로 보낸다. 서브라우트는 페이지 안에서 */}
+      <Route
+        path="field"
+        element={
+          <LazyRoute>
+            <Mro2FieldPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="field/*"
+        element={
+          <LazyRoute>
+            <Mro2FieldPage />
+          </LazyRoute>
+        }
+      />
+      <Route
+        path="triage"
+        element={
+          <LazyRoute>
+            <Mro2TriagePage />
           </LazyRoute>
         }
       />

@@ -2,8 +2,17 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { KcModal } from './kc-modal';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ChevronDown, Plus, Trash2, Wrench, ClipboardCheck, Package, X } from 'lucide-react';
 import {
+  ChevronDown,
+  Plus,
+  Trash2,
+  Wrench,
+  ClipboardCheck,
+  Package,
+  X,
+} from 'lucide-react';
+import {
+  REPAIR_TEMPLATES,
   useCreateInspectionTicket,
   useCreatePartsTicket,
   useCreateRepairTicket,
@@ -13,7 +22,11 @@ import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getTechnicians } from '@crane/domain/shared';
 import { KC } from './kc';
 import { KcButton } from './kc-ui';
-import { consumeTicketPrefill, useNewTicket, type TicketKind } from '../lib/use-new-ticket';
+import {
+  consumeTicketPrefill,
+  useNewTicket,
+  type TicketKind,
+} from '../lib/use-new-ticket';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -22,12 +35,20 @@ function today(): string {
 /* ── 공용 폼 요소 (KC 스타일) ──────────────────────────────────────── */
 
 const inputBase =
-  'w-full rounded-[4px] border px-2.5 py-1.5 text-[12.5px] outline-none focus:ring-2';
+  'w-full rounded-[4px] border px-2.5 py-1.5 text-[13px] outline-none focus:ring-2';
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-semibold" style={{ color: KC.ink }}>
+      <span className="text-[12px] font-semibold" style={{ color: KC.ink }}>
         {label}
         {required ? <span style={{ color: KC.safety }}> *</span> : null}
       </span>
@@ -43,11 +64,20 @@ function Segmented<T extends string>({
 }: {
   value: T;
   // activeBg/activeText: 선택 시 의미색으로 채울 때 지정 (미지정 시 브랜드 accent/흰색)
-  options: { key: T; label: string; icon?: ReactNode; activeBg?: string; activeText?: string }[];
+  options: {
+    key: T;
+    label: string;
+    icon?: ReactNode;
+    activeBg?: string;
+    activeText?: string;
+  }[];
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
+    <div
+      className="grid gap-1.5"
+      style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}
+    >
       {options.map((o) => {
         const active = o.key === value;
         const activeBg = o.activeBg ?? KC.accent;
@@ -56,7 +86,7 @@ function Segmented<T extends string>({
             key={o.key}
             type="button"
             onClick={() => onChange(o.key)}
-            className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 text-[12px] font-semibold transition-colors"
+            className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 text-[13px] font-semibold transition-colors"
             style={{
               background: active ? activeBg : KC.bg,
               color: active ? (o.activeText ?? KC.onAccent) : KC.text,
@@ -74,7 +104,11 @@ function Segmented<T extends string>({
 
 /* ── 본체 ──────────────────────────────────────────────────────────── */
 
-function TicketForm({ initialKind, initialCraneId, onClose }: {
+function TicketForm({
+  initialKind,
+  initialCraneId,
+  onClose,
+}: {
   initialKind: TicketKind;
   initialCraneId: string | null;
   onClose: () => void;
@@ -94,18 +128,27 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   const [craneId, setCraneId] = useState(initialCraneId ?? cranes[0]?.id ?? '');
   const crane = cranes.find((c) => c.id === craneId) ?? cranes[0];
 
-  const components = useMemo(() => (craneId ? getComponentsByCraneId(craneId) : []), [craneId]);
+  const components = useMemo(
+    () => (craneId ? getComponentsByCraneId(craneId) : []),
+    [craneId],
+  );
 
   // repair
   const [component, setComponent] = useState(prefill?.componentName ?? '');
   const [failure, setFailure] = useState(prefill?.failureDescription ?? '');
-  const [failureType, setFailureType] = useState<'mechanical' | 'electrical' | 'structural' | 'control' | 'other'>('mechanical');
-  const [repairPriority, setRepairPriority] = useState<'emergency' | 'high' | 'normal' | 'low'>(prefill?.priority ?? 'normal');
+  const [failureType, setFailureType] = useState<
+    'mechanical' | 'electrical' | 'structural' | 'control' | 'other'
+  >('mechanical');
+  const [repairPriority, setRepairPriority] = useState<
+    'emergency' | 'high' | 'normal' | 'low'
+  >(prefill?.priority ?? 'normal');
   const [schedStart, setSchedStart] = useState(today());
   const [schedEnd, setSchedEnd] = useState(today());
 
   // inspection
-  const [woType, setWoType] = useState<'frequent' | 'periodic' | 'emergency' | 'special'>('frequent');
+  const [woType, setWoType] = useState<
+    'frequent' | 'periodic' | 'emergency' | 'special'
+  >('frequent');
   const [inspDate, setInspDate] = useState(today());
 
   // parts — 재고 패널의 "부품 요청"에서 열리면 해당 부품이 프리필된다
@@ -114,7 +157,9 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   ]);
 
   // shared advanced
-  const [performerType, setPerformerType] = useState<'internal' | 'third_party' | 'local'>('internal');
+  const [performerType, setPerformerType] = useState<
+    'internal' | 'third_party' | 'local'
+  >('internal');
   const [assignee, setAssignee] = useState('');
   const [note, setNote] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -124,7 +169,9 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
     firstRender.current = false;
   }, []);
 
-  const assigneeOptions = technicians.filter((x) => x.performerType === performerType);
+  const assigneeOptions = technicians.filter(
+    (x) => x.performerType === performerType,
+  );
   const resolvedAssignee =
     assignee.trim() || assigneeOptions[0]?.name || technicians[0]?.name || '';
 
@@ -138,7 +185,12 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
 
   const submit = () => {
     if (!crane || !canSubmit) return;
-    const base = { craneId: crane.id, craneName: crane.name, siteId: crane.siteId, siteName: crane.siteName };
+    const base = {
+      craneId: crane.id,
+      craneName: crane.name,
+      siteId: crane.siteId,
+      siteName: crane.siteName,
+    };
     let woNumber = '';
 
     if (kind === 'repair') {
@@ -196,11 +248,22 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   return (
     <>
       {/* 헤더 */}
-      <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink }}>
+      <div
+        className="flex items-center justify-between border-b px-4 py-3"
+        style={{ borderColor: KC.hairline }}
+      >
+        <h2
+          className="text-[15px] font-semibold tracking-wide"
+          style={{ color: KC.ink }}
+        >
           {t('mro2:ticket.title')}
         </h2>
-        <button type="button" aria-label="Close" onClick={onClose} className="cursor-pointer">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="cursor-pointer"
+        >
           <X size={16} style={{ color: KC.ink }} />
         </button>
       </div>
@@ -211,9 +274,21 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
           value={kind}
           onChange={setKind}
           options={[
-            { key: 'repair', label: t('mro2:ticket.typeRepair'), icon: <Wrench size={14} /> },
-            { key: 'inspection', label: t('mro2:ticket.typeInspection'), icon: <ClipboardCheck size={14} /> },
-            { key: 'parts', label: t('mro2:ticket.typeParts'), icon: <Package size={14} /> },
+            {
+              key: 'repair',
+              label: t('mro2:ticket.typeRepair'),
+              icon: <Wrench size={14} />,
+            },
+            {
+              key: 'inspection',
+              label: t('mro2:ticket.typeInspection'),
+              icon: <ClipboardCheck size={14} />,
+            },
+            {
+              key: 'parts',
+              label: t('mro2:ticket.typeParts'),
+              icon: <Package size={14} />,
+            },
           ]}
         />
 
@@ -236,6 +311,39 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
         {/* ── 수리 ── */}
         {kind === 'repair' && (
           <>
+            {/* 자주 쓰는 티켓 — 한 번 눌러 구성품·고장 유형·설명을 채운다 (MRO 이식) */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[12px] font-bold" style={{ color: KC.ink }}>
+                {t('ticket:templates.title')}
+                <span className="ml-2 font-normal" style={{ color: KC.muted }}>
+                  {t('ticket:templates.hint')}
+                </span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {REPAIR_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => {
+                      setComponent(tpl.componentName);
+                      setFailure(t(`ticket:${tpl.descKey}`));
+                      if (tpl.draft.failureType)
+                        setFailureType(tpl.draft.failureType);
+                      if (tpl.draft.priority)
+                        setRepairPriority(tpl.draft.priority);
+                    }}
+                    className="h-7 cursor-pointer rounded-[4px] px-2.5 text-[12px] font-semibold"
+                    style={{
+                      border: `1px solid ${KC.border}`,
+                      color: KC.ink,
+                      background: KC.bg,
+                    }}
+                  >
+                    {t(`ticket:${tpl.labelKey}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Field label={t('mro2:ticket.failure')} required>
               <textarea
                 value={failure}
@@ -243,7 +351,12 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 rows={2}
                 placeholder={t('mro2:ticket.failurePlaceholder')}
                 className={inputBase}
-                style={{ borderColor: KC.border, color: KC.ink, background: KC.bg, resize: 'vertical' }}
+                style={{
+                  borderColor: KC.border,
+                  color: KC.ink,
+                  background: KC.bg,
+                  resize: 'vertical',
+                }}
                 autoFocus
               />
             </Field>
@@ -254,7 +367,11 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 onChange={(e) => setComponent(e.target.value)}
                 placeholder={t('mro2:ticket.componentPlaceholder')}
                 className={inputBase}
-                style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                style={{
+                  borderColor: KC.border,
+                  color: KC.ink,
+                  background: KC.bg,
+                }}
               />
               <datalist id="mro2-components">
                 {components
@@ -270,10 +387,25 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 onChange={setRepairPriority}
                 options={[
                   // 심각도 사다리: 긴급=red(safety) / 높음=orange(production) / 보통=accent / 낮음=grey(planned)
-                  { key: 'emergency', label: t('mro2:ticket.prioEmergency'), activeBg: KC.safety, activeText: KC.onSafety },
-                  { key: 'high', label: t('mro2:ticket.prioHigh'), activeBg: KC.production, activeText: KC.onProduction },
+                  {
+                    key: 'emergency',
+                    label: t('mro2:ticket.prioEmergency'),
+                    activeBg: KC.safety,
+                    activeText: KC.onSafety,
+                  },
+                  {
+                    key: 'high',
+                    label: t('mro2:ticket.prioHigh'),
+                    activeBg: KC.production,
+                    activeText: KC.onProduction,
+                  },
                   { key: 'normal', label: t('mro2:ticket.prioNormal') },
-                  { key: 'low', label: t('mro2:ticket.prioLow'), activeBg: KC.planned, activeText: KC.onPlanned },
+                  {
+                    key: 'low',
+                    label: t('mro2:ticket.prioLow'),
+                    activeBg: KC.planned,
+                    activeText: KC.onPlanned,
+                  },
                 ]}
               />
             </Field>
@@ -287,11 +419,15 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
               <Segmented
                 value={woType}
                 onChange={setWoType}
-                options={(['frequent', 'periodic', 'emergency', 'special'] as const).map((k) => ({
+                options={(
+                  ['frequent', 'periodic', 'emergency', 'special'] as const
+                ).map((k) => ({
                   key: k,
                   label: t(`calendar:type.${k}`),
                   // 긴급 점검만 safety 색 — 수리 우선순위의 긴급과 동일한 시그널
-                  ...(k === 'emergency' ? { activeBg: KC.safety, activeText: KC.onSafety } : null),
+                  ...(k === 'emergency'
+                    ? { activeBg: KC.safety, activeText: KC.onSafety }
+                    : null),
                 }))}
               />
             </Field>
@@ -301,7 +437,11 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 value={inspDate}
                 onChange={(e) => setInspDate(e.target.value)}
                 className={inputBase}
-                style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                style={{
+                  borderColor: KC.border,
+                  color: KC.ink,
+                  background: KC.bg,
+                }}
               />
             </Field>
           </>
@@ -316,10 +456,18 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                   <select
                     value={row.partId}
                     onChange={(e) =>
-                      setPartRows((rows) => rows.map((r, j) => (j === i ? { ...r, partId: e.target.value } : r)))
+                      setPartRows((rows) =>
+                        rows.map((r, j) =>
+                          j === i ? { ...r, partId: e.target.value } : r,
+                        ),
+                      )
                     }
                     className={`${inputBase} min-w-0 flex-1`}
-                    style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                    style={{
+                      borderColor: KC.border,
+                      color: KC.ink,
+                      background: KC.bg,
+                    }}
                   >
                     <option value="">{t('mro2:ticket.selectPart')}</option>
                     {inventory.map((inv) => (
@@ -335,18 +483,31 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                     value={row.qty}
                     onChange={(e) =>
                       setPartRows((rows) =>
-                        rows.map((r, j) => (j === i ? { ...r, qty: Math.max(1, Number(e.target.value) || 1) } : r)),
+                        rows.map((r, j) =>
+                          j === i
+                            ? {
+                                ...r,
+                                qty: Math.max(1, Number(e.target.value) || 1),
+                              }
+                            : r,
+                        ),
                       )
                     }
                     // inputBase의 w-full과 충돌하지 않도록 별도 클래스 (수량은 고정 폭)
-                    className="w-16 shrink-0 rounded-[4px] border px-2 py-1.5 text-center text-[12.5px] outline-none focus:ring-2"
-                    style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                    className="w-16 shrink-0 rounded-[4px] border px-2 py-1.5 text-center text-[13px] outline-none focus:ring-2"
+                    style={{
+                      borderColor: KC.border,
+                      color: KC.ink,
+                      background: KC.bg,
+                    }}
                   />
                   {partRows.length > 1 && (
                     <button
                       type="button"
                       aria-label="Remove"
-                      onClick={() => setPartRows((rows) => rows.filter((_, j) => j !== i))}
+                      onClick={() =>
+                        setPartRows((rows) => rows.filter((_, j) => j !== i))
+                      }
                       className="shrink-0 cursor-pointer px-1"
                       style={{ color: KC.muted }}
                     >
@@ -357,8 +518,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
               ))}
               <button
                 type="button"
-                onClick={() => setPartRows((rows) => [...rows, { partId: '', qty: 1 }])}
-                className="flex w-fit cursor-pointer items-center gap-1 text-[11px]"
+                onClick={() =>
+                  setPartRows((rows) => [...rows, { partId: '', qty: 1 }])
+                }
+                className="flex w-fit cursor-pointer items-center gap-1 text-[12px]"
                 style={{ color: KC.link }}
               >
                 <Plus size={12} /> {t('mro2:ticket.addPart')}
@@ -372,12 +535,15 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="flex cursor-pointer items-center gap-1 text-[11.5px] font-semibold"
+            className="flex cursor-pointer items-center gap-1 text-[13px] font-semibold"
             style={{ color: KC.muted }}
           >
             <ChevronDown
               size={13}
-              style={{ transform: showAdvanced ? undefined : 'rotate(-90deg)', transition: 'transform 150ms' }}
+              style={{
+                transform: showAdvanced ? undefined : 'rotate(-90deg)',
+                transition: 'transform 150ms',
+              }}
             />
             {t('mro2:ticket.moreOptions')}
           </button>
@@ -397,12 +563,22 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                   ]}
                 />
               </Field>
-              <Field label={kind === 'parts' ? t('mro2:ticket.requester') : t('mro2:ticket.assignee')}>
+              <Field
+                label={
+                  kind === 'parts'
+                    ? t('mro2:ticket.requester')
+                    : t('mro2:ticket.assignee')
+                }
+              >
                 <select
                   value={assignee || resolvedAssignee}
                   onChange={(e) => setAssignee(e.target.value)}
                   className={inputBase}
-                  style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                  style={{
+                    borderColor: KC.border,
+                    color: KC.ink,
+                    background: KC.bg,
+                  }}
                 >
                   {assigneeOptions.map((tech) => (
                     <option key={tech.id} value={tech.name}>
@@ -416,11 +592,25 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                   <Field label={t('mro2:ticket.failureType')}>
                     <select
                       value={failureType}
-                      onChange={(e) => setFailureType(e.target.value as typeof failureType)}
+                      onChange={(e) =>
+                        setFailureType(e.target.value as typeof failureType)
+                      }
                       className={inputBase}
-                      style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                      style={{
+                        borderColor: KC.border,
+                        color: KC.ink,
+                        background: KC.bg,
+                      }}
                     >
-                      {(['mechanical', 'electrical', 'structural', 'control', 'other'] as const).map((k) => (
+                      {(
+                        [
+                          'mechanical',
+                          'electrical',
+                          'structural',
+                          'control',
+                          'other',
+                        ] as const
+                      ).map((k) => (
                         <option key={k} value={k}>
                           {t(`mro2:ticket.ft_${k}`)}
                         </option>
@@ -434,7 +624,11 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                         value={schedStart}
                         onChange={(e) => setSchedStart(e.target.value)}
                         className={inputBase}
-                        style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                        style={{
+                          borderColor: KC.border,
+                          color: KC.ink,
+                          background: KC.bg,
+                        }}
                       />
                     </Field>
                     <Field label={t('mro2:ticket.scheduledEnd')}>
@@ -443,7 +637,11 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                         value={schedEnd}
                         onChange={(e) => setSchedEnd(e.target.value)}
                         className={inputBase}
-                        style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                        style={{
+                          borderColor: KC.border,
+                          color: KC.ink,
+                          background: KC.bg,
+                        }}
                       />
                     </Field>
                   </div>
@@ -456,7 +654,12 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                     onChange={(e) => setNote(e.target.value)}
                     rows={2}
                     className={inputBase}
-                    style={{ borderColor: KC.border, color: KC.ink, background: KC.bg, resize: 'vertical' }}
+                    style={{
+                      borderColor: KC.border,
+                      color: KC.ink,
+                      background: KC.bg,
+                      resize: 'vertical',
+                    }}
                   />
                 </Field>
               )}
@@ -466,7 +669,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
       </div>
 
       {/* 푸터 */}
-      <div className="flex items-center justify-end gap-2 border-t px-4 py-3" style={{ borderColor: KC.hairline }}>
+      <div
+        className="flex items-center justify-end gap-2 border-t px-4 py-3"
+        style={{ borderColor: KC.hairline }}
+      >
         <KcButton variant="ghost" onClick={onClose}>
           {t('mro2:ticket.cancel')}
         </KcButton>
@@ -485,7 +691,12 @@ export function NewTicketModal() {
   return (
     <KcModal onClose={closeTicket}>
       {/* key로 열 때마다 폼 상태 초기화 */}
-      <TicketForm key={`${kind}-${craneId ?? ''}`} initialKind={kind} initialCraneId={craneId} onClose={closeTicket} />
+      <TicketForm
+        key={`${kind}-${craneId ?? ''}`}
+        initialKind={kind}
+        initialCraneId={craneId}
+        onClose={closeTicket}
+      />
     </KcModal>
   );
 }

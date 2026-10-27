@@ -19,3 +19,5 @@ export {
   newPartsRequestId,
   newAssetId,
 } from './id-generator';
+export { isUntriagedFieldReport, markTriaged } from './field-report';
+export type { FieldReport } from './field-report';

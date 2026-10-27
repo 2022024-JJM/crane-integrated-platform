@@ -14,6 +14,7 @@ import { useAuth } from '@crane/features/auth';
 import { cn } from '@crane/core/lib/utils';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
 import { useSiteType } from '@crane/core/lib/site-type-context';
+import { useIsMobile } from '@crane/core/lib/use-is-mobile';
 import { getNavigationConfig } from '../config/navigation';
 import { sidebarRailMinWidth } from '../lib/sidebar-breakpoint';
 
@@ -32,7 +33,16 @@ export function AppSidebar() {
   const { siteType } = useSiteType();
   const { pathname } = useLocation();
   const { user } = useAuth();
-  const navGroups = getNavigationConfig(pathname, siteType, user?.role);
+  const isMobile = useIsMobile();
+  const navGroups = getNavigationConfig(pathname, siteType, user?.role).map(
+    (group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) =>
+          !item.viewport || item.viewport === (isMobile ? 'mobile' : 'desktop'),
+      ),
+    }),
+  );
   const collapsed = !isOpen;
   // 레일이 서는 선 — tailwind 는 클래스 문자열을 정적으로 읽으므로 두 벌을 그대로 적는다
   const railFromMd = sidebarRailMinWidth(user?.role) === 768;

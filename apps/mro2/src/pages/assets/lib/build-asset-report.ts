@@ -8,7 +8,11 @@ import { computeSpend } from '../../../shared/lib/spend';
  * 매뉴얼 5p "Asset Reports" 4종 — Open risks / Service history / Material history / Service spend.
  * 라벨은 호출부(i18n)에서 주입받아 이 모듈이 번역에 의존하지 않게 한다.
  */
-export type AssetReportKey = 'openRisks' | 'serviceHistory' | 'materialHistory' | 'serviceSpend';
+export type AssetReportKey =
+  | 'openRisks'
+  | 'serviceHistory'
+  | 'materialHistory'
+  | 'serviceSpend';
 
 export const ASSET_REPORT_KEYS: AssetReportKey[] = [
   'openRisks',
@@ -80,7 +84,9 @@ function yearOf(d: string): number {
   return new Date(d).getFullYear();
 }
 
-export function buildOpenRisksReport(input: AssetReportInput): AssetReport<OpenRiskRow> {
+export function buildOpenRisksReport(
+  input: AssetReportInput,
+): AssetReport<OpenRiskRow> {
   const rows: OpenRiskRow[] = input.risks.map((r) => ({
     assetName: r.assetName ?? '',
     riskType: r.riskType,
@@ -104,7 +110,9 @@ export function buildOpenRisksReport(input: AssetReportInput): AssetReport<OpenR
   };
 }
 
-export function buildServiceHistoryReport(input: AssetReportInput): AssetReport<ServiceHistoryRow> {
+export function buildServiceHistoryReport(
+  input: AssetReportInput,
+): AssetReport<ServiceHistoryRow> {
   const { year } = input;
   const rows: ServiceHistoryRow[] = [
     ...input.inspections
@@ -126,7 +134,8 @@ export function buildServiceHistoryReport(input: AssetReportInput): AssetReport<
         woNumber: w.woNumber,
         kind: 'Repair',
         assetName: w.craneName,
-        product: w.sourceType === 'breakdown' ? 'On-Call Repair' : 'Planned Repair',
+        product:
+          w.sourceType === 'breakdown' ? 'On-Call Repair' : 'Planned Repair',
         status: w.status,
         scheduledDate: dayOf(w.scheduledStart),
         actualDate: dayOf(w.actualEnd),
@@ -151,7 +160,9 @@ export function buildServiceHistoryReport(input: AssetReportInput): AssetReport<
   };
 }
 
-export function buildMaterialHistoryReport(input: AssetReportInput): AssetReport<MaterialHistoryRow> {
+export function buildMaterialHistoryReport(
+  input: AssetReportInput,
+): AssetReport<MaterialHistoryRow> {
   const { year } = input;
   const rows: MaterialHistoryRow[] = input.repairs
     .filter((w) => yearOf(w.actualStart ?? w.scheduledStart) === year)
@@ -182,7 +193,9 @@ export function buildMaterialHistoryReport(input: AssetReportInput): AssetReport
   };
 }
 
-export function buildServiceSpendReport(input: AssetReportInput): AssetReport<ServiceSpendRow> {
+export function buildServiceSpendReport(
+  input: AssetReportInput,
+): AssetReport<ServiceSpendRow> {
   const spend = computeSpend(input.inspections, input.repairs, input.year);
   const rows: ServiceSpendRow[] = Object.values(spend.byAsset)
     .map((a) => ({
@@ -199,7 +212,10 @@ export function buildServiceSpendReport(input: AssetReportInput): AssetReport<Se
     rows,
     columns: [
       { header: 'Asset', value: (r) => r.assetName },
-      { header: 'Inspections & Preventive Maintenance (USD)', value: (r) => r.ipm },
+      {
+        header: 'Inspections & Preventive Maintenance (USD)',
+        value: (r) => r.ipm,
+      },
       { header: 'Planned Repairs (USD)', value: (r) => r.planned },
       { header: 'On-Call Service (USD)', value: (r) => r.oncall },
       { header: 'Spare Parts (USD)', value: (r) => r.parts },
@@ -219,7 +235,10 @@ export type AnyAssetReport =
   | AssetReport<MaterialHistoryRow>
   | AssetReport<ServiceSpendRow>;
 
-export function buildAssetReport(key: AssetReportKey, input: AssetReportInput): AnyAssetReport {
+export function buildAssetReport(
+  key: AssetReportKey,
+  input: AssetReportInput,
+): AnyAssetReport {
   switch (key) {
     case 'openRisks':
       return buildOpenRisksReport(input);

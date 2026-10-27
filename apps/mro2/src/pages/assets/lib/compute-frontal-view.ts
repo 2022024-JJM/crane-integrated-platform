@@ -3,11 +3,11 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 
 // R3F 기본 카메라 fov (Canvas에 fov 미지정 시 75)
 const CAMERA_FOV_DEG = 75;
-// 뷰어 컨테이너의 대략적 가로/세로 비 — 가로 폭 fit 계산용 보수적 추정치.
-// 실제 종횡비가 이보다 좁은 컨테이너는 이 값을 기준으로 거리를 보정한다.
+// 뷰어 종횡비를 아직 모를 때의 추정치 — 실제 캔버스 비율을 넘기면 그 값을 쓴다.
+// 추정치로만 재면 넓은 캔버스에서 모델이 작게 잡혀 위아래가 빈다.
 export const ASPECT_ESTIMATE = 1.4;
 // 프레이밍 여백
-const FIT_MARGIN = 1.15;
+const FIT_MARGIN = 1.08;
 
 /**
  * 모델 바운딩 박스 기준 정면·근접 카메라 위치/타깃 계산.
@@ -18,9 +18,10 @@ const FIT_MARGIN = 1.15;
  */
 export function computeFrontalView(
   object: Object3D,
+  aspect: number = ASPECT_ESTIMATE,
 ): { position: Vector3Tuple; target: Vector3Tuple } | null {
   object.updateWorldMatrix(true, true);
-  return computeFrontalViewFromBox(new Box3().setFromObject(object));
+  return computeFrontalViewFromBox(new Box3().setFromObject(object), aspect);
 }
 
 /**
@@ -29,20 +30,24 @@ export function computeFrontalView(
  */
 export function computeFrontalViewFromObjects(
   objects: Object3D[],
+  aspect: number = ASPECT_ESTIMATE,
 ): { position: Vector3Tuple; target: Vector3Tuple } | null {
   const box = new Box3();
   for (const object of objects) {
     object.updateWorldMatrix(true, true);
     box.union(new Box3().setFromObject(object));
   }
-  return computeFrontalViewFromBox(box);
+  return computeFrontalViewFromBox(box, aspect);
 }
 
 /** 바운딩 박스 기준 정면 뷰 — 서브 존(파트 내 영역)처럼 Object3D가 없는 대상용 */
 export function computeFrontalViewFromBox(
   box: Box3,
+  aspect: number = ASPECT_ESTIMATE,
 ): { position: Vector3Tuple; target: Vector3Tuple } | null {
   if (box.isEmpty()) return null;
+  const safeAspect =
+    Number.isFinite(aspect) && aspect > 0 ? aspect : ASPECT_ESTIMATE;
 
   const size = box.getSize(new Vector3());
   const center = box.getCenter(new Vector3());
@@ -53,10 +58,10 @@ export function computeFrontalViewFromBox(
   const viewDepth = viewAxis === 'x' ? size.x : size.z;
 
   const vFov = (CAMERA_FOV_DEG * Math.PI) / 180;
-  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * ASPECT_ESTIMATE);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * safeAspect);
   const fitDist = Math.max(
-    (visibleWidth / 2) / Math.tan(hFov / 2),
-    (size.y / 2) / Math.tan(vFov / 2),
+    visibleWidth / 2 / Math.tan(hFov / 2),
+    size.y / 2 / Math.tan(vFov / 2),
   );
   const dist = fitDist * FIT_MARGIN + viewDepth / 2;
 

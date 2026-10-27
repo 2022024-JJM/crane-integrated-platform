@@ -46,11 +46,15 @@ export function formatLocalizedDate(date: Date, language: string) {
   }).format(date);
 }
 
-export function formatLocalizedTime(date: Date, language: string) {
+export function formatLocalizedTime(
+  date: Date,
+  language: string,
+  options: { seconds?: boolean } = {},
+) {
   return new Intl.DateTimeFormat(getFormatLocale(language), {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
+    ...(options.seconds === false ? {} : { second: '2-digit' as const }),
     hour12: false,
   }).format(date);
 }

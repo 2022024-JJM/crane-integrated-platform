@@ -18,6 +18,13 @@ export {
   getInspectionWOById,
   updateChecklistItems,
   updateInspectionSchedule,
+  triageInspectionWO,
+  acknowledgeInspectionReport,
+  assignInspectionWO,
   submitInspectionResult,
 } from './model/mock-data';
-export type { ChecklistItemPatch, SubmitInspectionOutcome } from './model/mock-data';
+export type {
+  ChecklistItemPatch,
+  SubmitInspectionOutcome,
+} from './model/mock-data';
+export type { InspectionTriageInput } from './model/mock-data';

@@ -23,7 +23,7 @@ export function AppHeader() {
     // 아래 선은 border-b 대신 inset 그림자다. border 가 가운데 맞춤 높이를
     // 55px 로 줄이면 32px pill 이 0.5px 위치에 놓이는데, 테두리는 픽셀에 맞춰
     // 그려지고 글자는 그렇지 않아 pill 안에서 1px 가까이 떠 보인다.
-    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-1.5 pr-4 pl-0 shadow-[inset_0_-1px_0_var(--color-border)]">
+    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-1.5 pr-4 pl-0 shadow-[inset_0_-1px_0_var(--color-border)] max-sm:pr-2">
       {/* 햄버거는 접힌 사이드바 레일(독 레일과 같은 40px 열·28px 버튼)과 같은
           열에 놓여 아래 레일 아이콘과 세로로 정렬된다 */}
       <div
@@ -51,7 +51,8 @@ export function AppHeader() {
         </span>
       </AppLink>
       {APP_ENV_BADGE && (
-        <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] leading-none font-semibold tracking-wider text-amber-600 dark:text-amber-400">
+        // 휴대폰 폭에선 시계 자리를 위해 환경 배지를 뺀다(운영엔 배지가 없다).
+        <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] leading-none font-semibold tracking-wider text-amber-600 max-sm:hidden dark:text-amber-400">
           {APP_ENV_BADGE}
         </span>
       )}
@@ -60,7 +61,7 @@ export function AppHeader() {
         <HeaderStatusStrip />
       </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-3 max-sm:gap-1">
         <HeaderAlarmButton />
         <PageSettings />
       </div>

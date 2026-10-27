@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type CSSProperties } from 'react';
 import type { CraneAsset, CraneComponent } from '@crane/domain/asset';
 import { getCraneZoneConfig } from '@crane/domain/3d';
+import { useFillHeight } from '../../../shared/lib/use-fill-height';
+import { clampViewerHeight } from '../lib/viewer-layout';
 import { Crane3dViewer } from './crane-3d-viewer';
 import { ZoneSpecPanel, type ZoneClusterGroup } from './zone-spec-panel';
 
@@ -19,8 +21,14 @@ export function Asset3dTab({
   const [hoveredZoneKey, setHoveredZoneKey] = useState<string | null>(null);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
 
-  const zoneConfig = useMemo(() => getCraneZoneConfig(asset.craneType), [asset.craneType]);
-  const zoneKeys = useMemo(() => zoneConfig.zones.map((z) => z.key), [zoneConfig]);
+  const zoneConfig = useMemo(
+    () => getCraneZoneConfig(asset.craneType),
+    [asset.craneType],
+  );
+  const zoneKeys = useMemo(
+    () => zoneConfig.zones.map((z) => z.key),
+    [zoneConfig],
+  );
 
   // 클러스터 루트: id = `comp-{craneId}-{clusterKey}` → clusterKey 역파싱
   const clusterEntries = useMemo(() => {
@@ -36,8 +44,13 @@ export function Asset3dTab({
     const byClusterKey = new Map<string, ZoneClusterGroup>();
     for (const c of components) {
       if (c.parentId !== null) continue;
-      const clusterKey = c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id;
-      byClusterKey.set(clusterKey, { cluster: c, parts: childrenByParent.get(c.id) ?? [] });
+      const clusterKey = c.id.startsWith(prefix)
+        ? c.id.slice(prefix.length)
+        : c.id;
+      byClusterKey.set(clusterKey, {
+        cluster: c,
+        parts: childrenByParent.get(c.id) ?? [],
+      });
     }
     return byClusterKey;
   }, [asset.id, components]);
@@ -61,8 +74,20 @@ export function Asset3dTab({
     setSelectedPartId(null);
   }, []);
 
+  // 넓은 화면에선 그리드가 화면 아래까지 꼭 차게 — 페이지 스크롤이 생기지 않는다
+  const [fillRef, fillHeight, fillWidth] = useFillHeight();
+  const viewerHeight = clampViewerHeight(fillHeight, fillWidth);
+
   return (
-    <div className="grid grid-cols-1 gap-4 pt-4 lg:h-[calc(100vh-172px)] lg:grid-cols-[minmax(0,1fr)_380px]">
+    <div
+      ref={fillRef}
+      className="grid grid-cols-1 gap-4 lg:h-[var(--fill)] lg:grid-cols-[minmax(0,1fr)_380px]"
+      style={
+        viewerHeight
+          ? ({ '--fill': `${viewerHeight}px` } as CSSProperties)
+          : undefined
+      }
+    >
       <Crane3dViewer
         craneType={asset.craneType}
         zoneConfig={zoneConfig}

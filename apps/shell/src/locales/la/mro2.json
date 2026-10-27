@@ -7,8 +7,9 @@
     "serviceCalendar": "Calendarium Servitii",
     "spend": "Sumptus",
     "inventory": "Inventarium et Partes",
-    "servicePlan": "Consilium Servitii",
-    "documents": "Documenta"
+    "documents": "Documenta",
+    "field": "Modus campi",
+    "triage": "Arca"
   },
   "common": {
     "back": "Retro",
@@ -17,8 +18,6 @@
     "clearFilter": "Filtrum purgare",
     "searchAssets": "Bona quaerere...",
     "searchParts": "Partes quaerere...",
-    "selectedCustomers": "Cliens selectus",
-    "selectedLocations": "Loci selecti",
     "customerName": "Philly Shipyard",
     "customerAddress": "Dock No.4, Philadelphia, PA, USA",
     "customerSiteId": "Situs ID: PHL-DOCK4",
@@ -31,8 +30,6 @@
     "activities": "{{count}} Actiones",
     "serviceRequest": "Petitio Servitii",
     "scheduled": "Praestitutum",
-    "quote": "Aestimatio",
-    "quotes": "Aestimationes",
     "openItems": "Res Apertae",
     "safety": "Securitas",
     "production": "Productio",
@@ -82,16 +79,8 @@
     "parts": "Partes Vicariae"
   },
   "overview": {
-    "serviceOpenItems": "SERVITIUM - RES APERTAE",
     "openRisks": "Pericula Aperta",
-    "service": "SERVITIUM",
-    "calendarCard": "Calendarium et Relationes Servitii",
-    "serviceVisits": "Visitationes Servitii",
-    "assetsServiced": "Bona Curata",
-    "totalFindings": "Inventa Totalia",
     "assetFleet": "Classis Bonorum",
-    "operatingAssets": "Bona operantia",
-    "nAssets": "{{n}}/{{total}} Bona",
     "serviceRequests": "Petitiones Servitii",
     "open": "Apertae",
     "completed": "Perfectae",
@@ -102,13 +91,24 @@
     "plannedRepairs": "Reparationes Ordinatae",
     "onCallService": "Servitium Vocatum",
     "inventoryCard": "Inventarium et Partes",
-    "parts": "Partes",
     "lowStock": "Copia Exigua",
     "activePOs": "Mandata Activa",
     "stockValue": "Valor copiae {{value}}",
-    "assetsWithOpenItems": "Bona cum rebus apertis",
-    "recentActivity": "Actiones Recentes",
-    "viewAll": "Omnia videre"
+    "todo": {
+      "title": "Agenda",
+      "empty": "Nulla pericula aperta",
+      "more": "{{n}} plura aperta — omnia in Petitionibus",
+      "source": {
+        "inspection_finding": "Inventum inspectionis",
+        "repair": "Reparatio",
+        "stock": "Copia",
+        "overdue_inspection": "Inspectio tardata"
+      }
+    },
+    "fleet": {
+      "total": "{{n}} omnino",
+      "health": "Valetudo {{pct}}%"
+    }
   },
   "assets": {
     "nAssets": "{{count}} Bona",
@@ -135,14 +135,26 @@
     },
     "ownLabels": "Pittacia Propria",
     "addLabel": "Pittacium addere…",
-    "removeLabel": "Pittacium {{label}} removere"
+    "removeLabel": "Pittacium {{label}} removere",
+    "card": {
+      "health": "Valetudo",
+      "worst": "Infima: {{name}}",
+      "components": "Partes",
+      "issuesN": "{{n}} vitia",
+      "critical": "Criticum",
+      "warning": "Monitum",
+      "caution": "Cautio",
+      "woSplit": "Insp {{i}} · Rep {{r}}",
+      "inspection": "Inspectio",
+      "overdue": "Tardata D+{{n}}",
+      "overdueHint": "Dies praeteriit",
+      "nextHint": "Proxima inspectio",
+      "noneHint": "Nulla statuta"
+    }
   },
   "detail": {
-    "tabOpenItems": "Res Apertae",
-    "tabActivities": "Omnes Actiones",
     "tabMonitoring": "Monitoratio",
-    "tabInfo": "Informatio Boni",
-    "openItemsNow": "Res apertae servitii · Nunc",
+    "tabInfo": "Notitia",
     "safetyRisks": "Pericula Securitatis",
     "productionRisks": "Pericula Productionis",
     "noOpenItems": "Nullae res apertae nunc",
@@ -152,7 +164,10 @@
     "typeInspection": "Inspectio {{type}}",
     "tab3d": "Visio 3D",
     "loading3d": "Visor 3D oneratur…",
-    "tabDocuments": "Documenta"
+    "tabWork": "Opera",
+    "tabCondition": "Condicio",
+    "filterOpen": "Aperta {{n}}",
+    "filterAll": "Omnia {{n}}"
   },
   "monitoring": {
     "summary": "Summarium – Condicio praesens",
@@ -201,7 +216,9 @@
     "indoorOutdoor": "Intus / Foris",
     "oshaClassification": "Classificatio OSHA",
     "status": "Status",
-    "frontViewCaption": "Facies antica — {{name}}"
+    "frontViewCaption": "Facies antica — {{name}}",
+    "indoor": "Intus",
+    "outdoor": "Foris"
   },
   "calendar": {
     "title": "Calendarium Servitii",
@@ -252,8 +269,6 @@
     "plannedRepairs": "Reparationes Ordinatae",
     "noRequests": "Nullae petitiones servitii in hoc tempore.",
     "notFound": "Petitio servitii non inventa.",
-    "customerServiceInfo": "Informatio Clientis et Servitii",
-    "summary": "Summarium",
     "customer": "Cliens",
     "location": "Locus",
     "asset": "Bonum",
@@ -263,16 +278,11 @@
     "scheduledDate": "Dies Praestituta",
     "actualDate": "Dies Vera",
     "totalHours": "Horae Totales",
-    "srStatus": "Status Petitionis Servitii",
-    "serviceProducts": "Producta Servitii",
-    "assetsServiced": "Bona Curata",
     "findingsAndActions": "Inventa et Actiones",
-    "findingsByAsset": "Inventa et Actiones per Bonum",
     "note": "Nota!",
     "noteText": "Condicio quarundam partium sine dissolutione ulteriore et/aut aliis methodis inspectionis per inspectionem visualem directe verificari non potest. Hae partes separatim enumerantur et sic notantur:",
     "undeterminedLegend": "Condiciones Incertae (Inspici non potest - Extra Ambitum)",
-    "findingsSection": "Inventa et Actiones (1 Bonum)",
-    "serviceProductsLine": "Producta Servitii: {{product}}",
+    "findingsSection": "Inventa et actiones",
     "onlyFindings": "Solum inventa et actiones",
     "completeStructure": "Structura partium completa",
     "unableToInspect": "Inspici non potest",
@@ -316,7 +326,73 @@
     "createRepair": "Petitionem reparationis creare",
     "attachments": "Adiuncta ({{count}})",
     "noAttachments": "Nulla adiuncta.",
-    "addAttachment": "Addere"
+    "addAttachment": "Addere",
+    "col": {
+      "date": "Dies",
+      "status": "Status",
+      "number": "Numerus",
+      "title": "Res",
+      "product": "Productum",
+      "asset": "Res",
+      "assignee": "Curator"
+    },
+    "work": {
+      "addPart": "Partem adde",
+      "noParts": "Nullae partes adhibitae",
+      "searchPart": "Partes quaere",
+      "avail": "praesto {{n}}",
+      "by": "Scriptor",
+      "issue": "Emitte et scribe",
+      "partIssued": "{{part}} ×{{n}} → {{number}}",
+      "insufficient": "Copia praesto non sufficit",
+      "partFailed": "Pars scribi non potuit",
+      "locked": "Opus perfectum mutari non potest",
+      "title": "Status operis",
+      "action": "Actio facta",
+      "actionPending": "Exspectans relationem campi"
+    },
+    "exportCsv": "CSV",
+    "partsTitle": "{{first}} ×{{qty}}",
+    "partsTitleMore": "{{first}} ×{{qty}} +{{more}}",
+    "count": "{{count}} petitiones",
+    "bulk": {
+      "selected": "{{n}} selecta",
+      "date": "Dies",
+      "assignee": "Curator",
+      "apply": "Applica",
+      "clear": "Deselige",
+      "select": "Selige {{number}}",
+      "rescheduled": "{{n}} dies mutati",
+      "reassigned": "{{n}} curatores mutati"
+    },
+    "tabs": {
+      "active": "Pendentia",
+      "delayed": "Tardata",
+      "received": "Recepta",
+      "inProgress": "In opere",
+      "open": "Statuta",
+      "completed": "Perfecta",
+      "all": "Omnia"
+    },
+    "unassigned": "Non assignatum",
+    "reportedBy": "Ex campo: {{name}}",
+    "urgent": "Urgens",
+    "high": "Altum",
+    "searchPlaceholder": "Rem aut numerum quaere",
+    "panel": {
+      "reporter": "Nuntius",
+      "toInbox": "In arca assigna",
+      "photos": "{{n}} imagines",
+      "fullDetail": "Totum aperi"
+    },
+    "checklistSection": "{{n}} capita — inspectio campi exspectatur",
+    "pending": "Non iudicatum",
+    "print": "Imprime",
+    "level": {
+      "minor": "Minor",
+      "major": "Maior",
+      "overhaul": "Renovatio"
+    }
   },
   "inventory": {
     "title": "Inventarium et Partes",
@@ -407,7 +483,18 @@
       "toastInsufficient": "Copia disponibilis non sufficit",
       "toastWoClosed": "Ad mandatum clausum emitti non potest",
       "toastFailed": "Actio defecit"
-    }
+    },
+    "colStockMin": "Praesens / Min",
+    "colLevel": "Gradus copiae",
+    "crit": {
+      "critical": "Criticum",
+      "essential": "Necessarium",
+      "standard": "Vulgare"
+    },
+    "lowStockStrip": "{{n}} partes infra copiam tutam",
+    "showInTable": "In tabula monstra ›",
+    "poTitle": "Mandata aperta",
+    "reorderNeeded": "Iterum ordinanda {{n}}"
   },
   "spend": {
     "title": "Sumptus",
@@ -511,10 +598,177 @@
       "uploaded": "A cliente impositum"
     },
     "assetDocs": "{{count}} Documenta",
-    "emptyAsset": "Nulla documenta huius boni adhuc."
+    "emptyAsset": "Nulla documenta huius boni adhuc.",
+    "certStatus": {
+      "valid": "Validum",
+      "expiry_soon": "Mox exspirat",
+      "expired": "Exspiratum",
+      "renewing": "Renovatur"
+    },
+    "requestRenewal": "Renovationem pete",
+    "renewalRequested": "Renovatio petita: {{name}}"
   },
   "search": {
     "placeholder": "Quaere bona aut petitiones servitii…",
     "noResults": "Nihil inventum."
+  },
+  "field": {
+    "title": "Modus campi",
+    "reporter": "Relator",
+    "workerPrompt": "Nomen tuum scribe",
+    "workerHint": "Ut relator in tesseris notatur et in hoc instrumento servatur",
+    "workerSave": "Serva",
+    "workerChange": "Muta",
+    "workerFirst": "Primum nomen scribe",
+    "reportRepair": "Defectum nuntia",
+    "reportParts": "Partes pete",
+    "reportInspection": "Eventus inspectionis",
+    "recentAssets": "Res recentes",
+    "myTickets": "Opera mea",
+    "seeAll": "Omnia vide",
+    "noTickets": "Nulla nuntia aut opera tibi assignata",
+    "back": "Retro",
+    "next": "Porro",
+    "skip": "Omitte",
+    "submit": "Mitte",
+    "stepOf": "{{n}} / {{total}}",
+    "searchAsset": "Nomen vel exemplar rei quaere",
+    "searchPart": "Nomen vel numerum partis quaere",
+    "symptomPlaceholder": "Symptoma describe",
+    "findingsPlaceholder": "Inventum describe",
+    "componentPlaceholder": "Pars (optio)",
+    "notePlaceholder": "Nota (optio)",
+    "inspType": "Genus inspectionis",
+    "resultPass": "Nihil mali",
+    "resultFail": "Vitium inventum",
+    "addPhoto": "Photographiam cape / elige",
+    "photoCount": "{{n}} / {{max}} imagines",
+    "photoN": "{{n}} imagines",
+    "removePhoto": "Imaginem dele",
+    "qtyMinus": "Quantitatem minue",
+    "qtyPlus": "Quantitatem auge",
+    "kind": {
+      "repair": "Nuntius defectus",
+      "parts": "Petitio partium",
+      "inspection": "Eventus inspectionis"
+    },
+    "step": {
+      "asset": "Quae res?",
+      "symptom": "Quod symptoma?",
+      "parts": "Quae partes opus sunt?",
+      "inspection": "Eventus inspectionis?",
+      "photo": "Imagines adiunge",
+      "priority": "Quam urgens?"
+    },
+    "prio": {
+      "emergency": "Urgentissimum — operatio sistatur",
+      "high": "Altum — hodie",
+      "normal": "Normale",
+      "urgent": "Urgens"
+    },
+    "preset": {
+      "wireDamage": "Funis laesus",
+      "brakeAbnormal": "Frenum vitiosum",
+      "noise": "Sonus insolitus",
+      "motorStop": "Motor stetit",
+      "limitFault": "Limes vitiosus",
+      "leak": "Olei effluvium",
+      "wear": "Attritus",
+      "crack": "Rima",
+      "loose": "Clavi laxi",
+      "corrosion": "Rubigo"
+    },
+    "confirm": {
+      "reporter": "Relator",
+      "asset": "Res",
+      "symptom": "Symptoma",
+      "component": "Pars",
+      "priority": "Prioritas",
+      "parts": "Partes",
+      "note": "Nota",
+      "result": "Eventus",
+      "findings": "Inventa",
+      "photos": "Imagines",
+      "partsN": "{{n}} partes"
+    },
+    "done": {
+      "title": "Missum est",
+      "another": "Aliud mitte",
+      "home": "Domum"
+    },
+    "tone": {
+      "done": "Factum",
+      "active": "In cursu",
+      "waiting": "Exspectans"
+    },
+    "ticketNotFound": "Tessera non inventa",
+    "detail": {
+      "status": "Status",
+      "date": "Dies",
+      "openPortal": "In portali administratoris aperi",
+      "addPhoto": "Imaginem adde"
+    },
+    "checklist": {
+      "pass": "Bene",
+      "fail": "Vitium",
+      "na": "N/A",
+      "allPass": "Omnia bene",
+      "progress": "{{n}} / {{total}} iudicata",
+      "failedN": "{{n}} vitiosa",
+      "failedItems": "Vitiosa"
+    },
+    "emergency": {
+      "button": "Nuntius sistendi urgentis",
+      "title": "Nuntius sistendi urgentis",
+      "hint": "Rem elige et premere — statim recipitur. Symptomata et imagines postea addi possunt.",
+      "submit": "Nuntium urgentem mitte",
+      "description": "Sistendum urgens — periculum",
+      "notePlaceholder": "Nota brevis (optio)",
+      "alreadyOpen": "Nuntius urgens {{number}} iam apertus est huic rei",
+      "sent": "Nuntius urgens receptus",
+      "sentHint": "In summo arcae administratoris stat."
+    },
+    "duplicate": {
+      "title": "{{n}} nuntii defectus aperti huic rei",
+      "addPhoto": "Imaginem adde",
+      "hint": "Si idem defectus est, imaginem nuntio exsistenti adde."
+    },
+    "work": {
+      "start": "Opus incipe",
+      "complete": "Opus perfice",
+      "actionTitle": "Quid fecisti?",
+      "actionPlaceholder": "Actionem describe",
+      "sendComplete": "Relationem mitte",
+      "started": "{{number}} opus coeptum",
+      "completed": "{{number}} perfectum relatum",
+      "action": "Actio facta",
+      "preset": {
+        "partReplaced": "Pars mutata",
+        "adjusted": "Correctum",
+        "cleaned": "Purgatum",
+        "tempFix": "Remedium temporale"
+      }
+    }
+  },
+  "triage": {
+    "title": "Arca nuntiorum campi",
+    "count": "{{n}} exspectant",
+    "empty": "Nulli nuntii campi tractandi",
+    "band": "{{n}} nuntii campi exspectant",
+    "open": "Arcam aperi",
+    "reportedBy": "Relator {{name}}",
+    "waitedMinutes": "ante {{n}} min",
+    "waitedHours": "ante {{n}} h",
+    "waitedDays": "ante {{n}} d",
+    "assign": "Assigna",
+    "assigned": "{{number}} → {{name}}",
+    "createRepair": "Petitionem reparationis crea",
+    "approve": "Approba",
+    "reject": "Reice",
+    "approved": "{{number}} approbatum",
+    "rejected": "{{number}} reiectum",
+    "acknowledge": "Agnosce",
+    "acknowledged": "{{number}} agnitum",
+    "openField": "Aperi tabulam campi"
   }
 }

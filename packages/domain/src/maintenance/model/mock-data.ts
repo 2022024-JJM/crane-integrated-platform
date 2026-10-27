@@ -1,3 +1,4 @@
+import { markTriaged } from '../../shared/field-report';
 import { seedSequence } from '../../shared/id-generator';
 import type { MaintenanceSummary, RepairWO } from './types';
 
@@ -31,7 +32,12 @@ const allRepairWOs: RepairWO[] = [
     actualEnd: null,
     downtimeHours: null,
     partsUsed: [
-      { partId: 'hf1016414', partName: 'FAN / FILTER UNIT, AC 115VAC', qty: 1, unitCost: 350 },
+      {
+        partId: 'hf1016414',
+        partName: 'FAN / FILTER UNIT, AC 115VAC',
+        qty: 1,
+        unitCost: 350,
+      },
     ],
     laborHours: null,
     laborCost: null,
@@ -41,7 +47,8 @@ const allRepairWOs: RepairWO[] = [
     rootCause_ko: '연속 운전에 따른 냉각팬 베어링 마모',
     correctiveAction: 'Replace DCM cabinet fan/filter unit',
     correctiveAction_ko: 'DCM 판넬 팬/필터 유닛 교체',
-    preventiveAction: 'Add fan noise/vibration check to frequent inspection checklist',
+    preventiveAction:
+      'Add fan noise/vibration check to frequent inspection checklist',
     preventiveAction_ko: '수시 점검 체크리스트에 팬 소음/진동 항목 추가',
   },
   {
@@ -74,11 +81,13 @@ const allRepairWOs: RepairWO[] = [
     laborCost: null,
     partsCost: null,
     totalCost: null,
-    rootCause: 'Motor winding insulation degradation due to prolonged high-temperature operation',
+    rootCause:
+      'Motor winding insulation degradation due to prolonged high-temperature operation',
     rootCause_ko: '장시간 고온 운전으로 인한 모터 권선 절연 열화',
     correctiveAction: 'Rewind motor winding / Full motor overhaul',
     correctiveAction_ko: '모터 권선 재권선 / 전체 모터 오버홀',
-    preventiveAction: 'Trend motor temperature via DCM feedback, improve ventilation',
+    preventiveAction:
+      'Trend motor temperature via DCM feedback, improve ventilation',
     preventiveAction_ko: 'DCM 피드백 기반 모터 온도 추이 관리, 환기 개선',
   },
   {
@@ -166,8 +175,10 @@ const allRepairWOs: RepairWO[] = [
     rootCause_ko: '전원 서지로 인한 PLC CPU 모듈 고장',
     correctiveAction: 'Replaced PLC CPU module and PROFINET cables',
     correctiveAction_ko: 'PLC CPU 모듈 및 PROFINET 케이블 교체',
-    preventiveAction: 'Verify SPD (VPU AC II) wiring, schedule annual PLC diagnostics',
-    preventiveAction_ko: '서지 보호기(VPU AC II) 결선 점검, 연간 PLC 진단 일정 수립',
+    preventiveAction:
+      'Verify SPD (VPU AC II) wiring, schedule annual PLC diagnostics',
+    preventiveAction_ko:
+      '서지 보호기(VPU AC II) 결선 점검, 연간 PLC 진단 일정 수립',
     reInspectionResult: null,
   },
   {
@@ -263,7 +274,8 @@ const allRepairWOs: RepairWO[] = [
     failureType: 'mechanical',
     failureDescription:
       'Wire rope wear exceeded the discard criteria at the drum-side termination during periodic inspection.',
-    failureDescription_ko: '정기 점검 중 드럼측 단말부 와이어 로프 마모가 폐기 기준을 초과.',
+    failureDescription_ko:
+      '정기 점검 중 드럼측 단말부 와이어 로프 마모가 폐기 기준을 초과.',
     repairLevel: 'major',
     performerType: 'internal',
     assignedTo: '조범희',
@@ -274,7 +286,14 @@ const allRepairWOs: RepairWO[] = [
     actualStart: '2025-04-14T08:00:00',
     actualEnd: '2025-04-15T15:30:00',
     downtimeHours: 31.5,
-    partsUsed: [{ partId: 'hf1010233', partName: 'WIRE ROPE, 28MM', qty: 1, unitCost: 4200 }],
+    partsUsed: [
+      {
+        partId: 'hf1010233',
+        partName: 'WIRE ROPE, 28MM',
+        qty: 1,
+        unitCost: 4200,
+      },
+    ],
     laborHours: 16,
     laborCost: 1920,
     partsCost: 4200,
@@ -297,7 +316,8 @@ const allRepairWOs: RepairWO[] = [
     componentName: 'Luffing Limit Switch',
     componentName_ko: '기복 리밋 스위치',
     failureType: 'electrical',
-    failureDescription: 'Luffing upper limit switch failed to trigger, halting luffing operation.',
+    failureDescription:
+      'Luffing upper limit switch failed to trigger, halting luffing operation.',
     failureDescription_ko: '기복 상한 리밋 스위치 미작동으로 기복 동작 정지.',
     repairLevel: 'minor',
     performerType: 'internal',
@@ -309,12 +329,20 @@ const allRepairWOs: RepairWO[] = [
     actualStart: '2025-09-08T13:20:00',
     actualEnd: '2025-09-08T17:10:00',
     downtimeHours: 3.8,
-    partsUsed: [{ partId: 'hf1013877', partName: 'LIMIT SWITCH, ROLLER LEVER', qty: 2, unitCost: 180 }],
+    partsUsed: [
+      {
+        partId: 'hf1013877',
+        partName: 'LIMIT SWITCH, ROLLER LEVER',
+        qty: 2,
+        unitCost: 180,
+      },
+    ],
     laborHours: 4,
     laborCost: 480,
     partsCost: 360,
     totalCost: 840,
-    rootCause: 'Moisture ingress into the switch enclosure corroded the contacts',
+    rootCause:
+      'Moisture ingress into the switch enclosure corroded the contacts',
     rootCause_ko: '스위치 하우징 내부 습기 유입으로 접점 부식',
     correctiveAction: 'Replace limit switch and reseal the enclosure',
     correctiveAction_ko: '리밋 스위치 교체 및 하우징 재실링',
@@ -332,7 +360,8 @@ const allRepairWOs: RepairWO[] = [
     componentName: 'Travelling Gearbox',
     componentName_ko: '주행 감속기',
     failureType: 'mechanical',
-    failureDescription: 'Scheduled gearbox oil change and backlash measurement.',
+    failureDescription:
+      'Scheduled gearbox oil change and backlash measurement.',
     failureDescription_ko: '주행 감속기 오일 교환 및 백래시 측정.',
     repairLevel: 'minor',
     performerType: 'third_party',
@@ -344,7 +373,14 @@ const allRepairWOs: RepairWO[] = [
     actualStart: '2024-06-11T08:00:00',
     actualEnd: '2024-06-11T16:00:00',
     downtimeHours: 8,
-    partsUsed: [{ partId: 'hf1011902', partName: 'GEAR OIL, ISO VG220 20L', qty: 3, unitCost: 210 }],
+    partsUsed: [
+      {
+        partId: 'hf1011902',
+        partName: 'GEAR OIL, ISO VG220 20L',
+        qty: 3,
+        unitCost: 210,
+      },
+    ],
     laborHours: 8,
     laborCost: 960,
     partsCost: 630,
@@ -363,8 +399,10 @@ const allRepairWOs: RepairWO[] = [
     componentName: 'Slew Bearing Grease Line',
     componentName_ko: '선회 베어링 그리스 라인',
     failureType: 'mechanical',
-    failureDescription: 'Automatic lubrication line blocked, causing a slew bearing grease shortage alarm.',
-    failureDescription_ko: '자동 급지 라인 막힘으로 선회 베어링 그리스 부족 알람 발생.',
+    failureDescription:
+      'Automatic lubrication line blocked, causing a slew bearing grease shortage alarm.',
+    failureDescription_ko:
+      '자동 급지 라인 막힘으로 선회 베어링 그리스 부족 알람 발생.',
     repairLevel: 'minor',
     performerType: 'internal',
     assignedTo: '정종민',
@@ -375,7 +413,14 @@ const allRepairWOs: RepairWO[] = [
     actualStart: '2024-10-22T09:10:00',
     actualEnd: '2024-10-22T14:20:00',
     downtimeHours: 5.2,
-    partsUsed: [{ partId: 'hf1014550', partName: 'GREASE HOSE ASSY', qty: 1, unitCost: 260 }],
+    partsUsed: [
+      {
+        partId: 'hf1014550',
+        partName: 'GREASE HOSE ASSY',
+        qty: 1,
+        unitCost: 260,
+      },
+    ],
     laborHours: 5,
     laborCost: 600,
     partsCost: 260,
@@ -409,13 +454,17 @@ function localNow(): string {
   return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}T${p(now.getHours())}:${p(now.getMinutes())}:00`;
 }
 
-export function updateRepairStatus(id: string, status: RepairWO['status']): boolean {
+export function updateRepairStatus(
+  id: string,
+  status: RepairWO['status'],
+): boolean {
   const idx = allRepairWOs.findIndex((w) => w.id === id);
   if (idx === -1) return false;
   const wo = allRepairWOs[idx];
   // 실적 타임스탬프 자동 기록 — 착수/완료 시점을 사용자가 따로 입력하지 않는다.
   const stamps: Partial<RepairWO> = {};
-  if (status === 'in_progress' && !wo.actualStart) stamps.actualStart = localNow();
+  if (status === 'in_progress' && !wo.actualStart)
+    stamps.actualStart = localNow();
   if (status === 'completed') {
     stamps.actualEnd = localNow();
     if (!wo.actualStart) stamps.actualStart = wo.scheduledStart;
@@ -452,6 +501,38 @@ export function updateRepairSchedule(
   return true;
 }
 
+export interface RepairTriageInput {
+  assignedTo: string;
+  performerType: RepairWO['performerType'];
+  priority: RepairWO['priority'];
+  scheduledStart: string;
+  scheduledEnd: string;
+}
+
+/** 현장 보고 접수 — 담당자·일정·우선순위를 확정하고 접수 표식을 찍는다. */
+export function triageRepairWO(
+  id: string,
+  input: RepairTriageInput,
+  triagedBy: string,
+): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allRepairWOs[idx];
+  if (wo.status === 'completed') return false;
+  allRepairWOs[idx] = {
+    ...wo,
+    ...input,
+    scheduledEnd:
+      input.scheduledEnd < input.scheduledStart
+        ? input.scheduledStart
+        : input.scheduledEnd,
+    fieldReport: wo.fieldReport
+      ? markTriaged(wo.fieldReport, triagedBy)
+      : wo.fieldReport,
+  };
+  return true;
+}
+
 /** 수리 WO에 사용 부품 추가 — partsCost/totalCost 재계산. 완료된 WO에는 추가 불가. */
 export function addPartUsedToRepair(
   repairId: string,
@@ -473,6 +554,14 @@ export function addPartUsedToRepair(
   return true;
 }
 
+/** 담당자 변경 — 완료된 WO 는 거부. */
+export function assignRepairWO(id: string, assignedTo: string): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1 || allRepairWOs[idx].status === 'completed') return false;
+  allRepairWOs[idx] = { ...allRepairWOs[idx], assignedTo };
+  return true;
+}
+
 export interface RepairDetailsUpdate {
   rootCause?: string;
   correctiveAction?: string;
@@ -483,7 +572,10 @@ export interface RepairDetailsUpdate {
 }
 
 /** 수리 결과 기록 — 완료된 WO는 변경 불가. 텍스트는 localizeRepair의 _ko 우선 규칙 때문에 base/_ko 동시 기록. */
-export function updateRepairDetails(id: string, update: RepairDetailsUpdate): boolean {
+export function updateRepairDetails(
+  id: string,
+  update: RepairDetailsUpdate,
+): boolean {
   const idx = allRepairWOs.findIndex((w) => w.id === id);
   if (idx === -1) return false;
   const wo = allRepairWOs[idx];
@@ -503,8 +595,10 @@ export function updateRepairDetails(id: string, update: RepairDetailsUpdate): bo
     patch.preventiveAction_ko = update.preventiveAction;
   }
   if (update.laborHours !== undefined) patch.laborHours = update.laborHours;
-  if (update.downtimeHours !== undefined) patch.downtimeHours = update.downtimeHours;
-  if (update.reInspectionResult !== undefined) patch.reInspectionResult = update.reInspectionResult;
+  if (update.downtimeHours !== undefined)
+    patch.downtimeHours = update.downtimeHours;
+  if (update.reInspectionResult !== undefined)
+    patch.reInspectionResult = update.reInspectionResult;
 
   const next = { ...wo, ...patch };
   if (next.laborCost != null || next.partsCost != null) {
@@ -519,7 +613,8 @@ export function getMaintenanceSummary(): MaintenanceSummary {
     .filter((w) => w.status === 'completed' && w.actualStart && w.actualEnd)
     .map(
       (w) =>
-        (new Date(w.actualEnd as string).getTime() - new Date(w.actualStart as string).getTime()) /
+        (new Date(w.actualEnd as string).getTime() -
+          new Date(w.actualStart as string).getTime()) /
         3_600_000,
     )
     .filter((hours) => hours > 0);
@@ -528,14 +623,19 @@ export function getMaintenanceSummary(): MaintenanceSummary {
     inProgress: allRepairWOs.filter((w) =>
       ['in_progress', 're_inspection'].includes(w.status),
     ).length,
-    waitingParts: allRepairWOs.filter((w) => w.status === 'waiting_parts').length,
+    waitingParts: allRepairWOs.filter((w) => w.status === 'waiting_parts')
+      .length,
     // 완료된 긴급 건은 조치 대상이 아니므로 제외 — 화면 라벨(긴급 진행)과 계산을 일치시킨다
     emergency: allRepairWOs.filter(
       (w) => w.priority === 'emergency' && w.status !== 'completed',
     ).length,
     avgMttrHours:
       repairDurations.length > 0
-        ? Math.round((repairDurations.reduce((a, b) => a + b, 0) / repairDurations.length) * 10) / 10
+        ? Math.round(
+            (repairDurations.reduce((a, b) => a + b, 0) /
+              repairDurations.length) *
+              10,
+          ) / 10
         : null,
   };
 }

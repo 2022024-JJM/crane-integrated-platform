@@ -1,7 +1,11 @@
 import type { InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
 import type { ServiceTone } from '../../../shared/ui/kc';
-import { inspectionTone, repairTone, yearOf } from '../../../shared/lib/service-status';
+import {
+  inspectionTone,
+  repairTone,
+  yearOf,
+} from '../../../shared/lib/service-status';
 
 /**
  * 자산×월 서비스 플랜 매트릭스 집계 (매뉴얼 6p "Assets and Service Plan").
@@ -47,7 +51,12 @@ export interface PlanSummary {
 }
 
 /** 상태 요약에 표시되는 4개 항목 — 퍼센티지 합이 100이 되어야 하는 단위 */
-export const PLAN_STATUS_KEYS = ['completed', 'open', 'inProgress', 'delayed'] as const;
+export const PLAN_STATUS_KEYS = [
+  'completed',
+  'open',
+  'inProgress',
+  'delayed',
+] as const;
 
 export type PlanStatusKey = (typeof PLAN_STATUS_KEYS)[number];
 
@@ -58,7 +67,9 @@ export type PlanStatusKey = (typeof PLAN_STATUS_KEYS)[number];
  * 내림으로 배분한 뒤 남는 몫을 소수부가 큰 항목부터 1씩 나눠주는
  * 최대 잔여(largest remainder) 방식으로 합을 정확히 100에 맞춘다.
  */
-export function planStatusPercents(summary: PlanSummary): Record<PlanStatusKey, number> {
+export function planStatusPercents(
+  summary: PlanSummary,
+): Record<PlanStatusKey, number> {
   const result = { completed: 0, open: 0, inProgress: 0, delayed: 0 };
   if (summary.total <= 0) return result;
 
@@ -135,7 +146,13 @@ export function buildServicePlan(
 
   const byAsset = new Map<string, AssetPlan>();
   const productSet = new Set<string>();
-  const summary: PlanSummary = { total: 0, completed: 0, open: 0, inProgress: 0, delayed: 0 };
+  const summary: PlanSummary = {
+    total: 0,
+    completed: 0,
+    open: 0,
+    inProgress: 0,
+    delayed: 0,
+  };
 
   for (const ev of events) {
     summary.total += 1;
@@ -162,8 +179,11 @@ export function buildServicePlan(
     addToRow(productRow, ev);
   }
 
-  const assets = [...byAsset.values()].sort((a, b) => a.craneName.localeCompare(b.craneName));
-  for (const a of assets) a.products.sort((x, y) => x.label.localeCompare(y.label));
+  const assets = [...byAsset.values()].sort((a, b) =>
+    a.craneName.localeCompare(b.craneName),
+  );
+  for (const a of assets)
+    a.products.sort((x, y) => x.label.localeCompare(y.label));
 
   return { assets, summary, products: [...productSet].sort() };
 }

@@ -23,7 +23,7 @@ export function KcStat({
         {value}
       </span>
       <span
-        className="border-b-[3px] pb-0.5 text-center text-[10.5px] leading-tight whitespace-pre-line"
+        className="border-b-[3px] pb-0.5 text-center text-[12px] leading-tight whitespace-pre-line"
         style={{ borderColor: tone, color: KC.muted }}
       >
         {label}

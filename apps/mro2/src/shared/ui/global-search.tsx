@@ -129,7 +129,7 @@ export function Mro2GlobalSearch() {
           onKeyDown={onKeyDown}
           placeholder={t('search.placeholder')}
           aria-label={t('search.placeholder')}
-          className="w-[200px] bg-transparent text-[11.5px]"
+          className="w-[200px] bg-transparent text-[13px]"
           style={{ color: KC.ink }}
         />
       </div>
@@ -140,7 +140,7 @@ export function Mro2GlobalSearch() {
           style={{ borderColor: KC.border, background: KC.bg }}
         >
           {hits.length === 0 ? (
-            <div className="px-3 py-3 text-[11px]" style={{ color: KC.muted }}>
+            <div className="px-3 py-3 text-[12px]" style={{ color: KC.muted }}>
               {t('search.noResults')}
             </div>
           ) : (
@@ -150,7 +150,7 @@ export function Mro2GlobalSearch() {
               return (
                 <div key={kind}>
                   <div
-                    className="px-3 pt-2 pb-1 text-[9.5px] font-bold tracking-wider uppercase"
+                    className="px-3 pt-2 pb-1 text-[11px] font-bold tracking-wider uppercase"
                     style={{ color: KC.faint }}
                   >
                     {label}
@@ -173,12 +173,12 @@ export function Mro2GlobalSearch() {
                         )}
                         <span className="min-w-0 flex-1">
                           <span
-                            className="block truncate text-[11.5px]"
+                            className="block truncate text-[13px]"
                             style={{ color: KC.ink }}
                           >
                             {hit.title}
                           </span>
-                          <span className="block truncate text-[10px]" style={{ color: KC.muted }}>
+                          <span className="block truncate text-[11px]" style={{ color: KC.muted }}>
                             {hit.subtitle}
                           </span>
                         </span>

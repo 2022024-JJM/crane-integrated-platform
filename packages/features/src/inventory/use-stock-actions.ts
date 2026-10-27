@@ -4,7 +4,11 @@ import {
   issuePart,
   receivePart,
 } from '@crane/domain/inventory';
-import { addPartUsedToRepair, getRepairWOById } from '@crane/domain/maintenance';
+import {
+  addPartUsedToRepair,
+  getRepairWOById,
+  updateRepairStatus,
+} from '@crane/domain/maintenance';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export type StockActionOutcome =
@@ -65,6 +69,9 @@ export function useIssuePart() {
           qty: input.qty,
           unitCost: item.unitPrice,
         });
+        // 기다리던 부품이 나왔으면 "부품 대기"는 저절로 풀린다 — 사람이 상태를 고르지 않는다
+        if (repair.status === 'waiting_parts')
+          updateRepairStatus(repair.id, 'in_progress');
         publish('repair', repair.id);
       }
       publish('parts', input.partId);

@@ -1,7 +1,11 @@
+import type { FieldReport } from '@crane/domain/shared';
 import { useCallback } from 'react';
 import { addPartsRequest } from '@crane/domain/inventory';
 import type { PartsRequest, PartsRequestItem } from '@crane/domain/inventory';
-import { newPartsRequestId, nextPartsRequestNumber } from '@crane/domain/shared';
+import {
+  newPartsRequestId,
+  nextPartsRequestNumber,
+} from '@crane/domain/shared';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface PartsTicketDraft {
@@ -15,6 +19,8 @@ export interface PartsTicketDraft {
   /** 부품 대기 수리 WO에서 발행된 경우 원천 수리 WO 번호 */
   sourceWoNumber?: string;
   note?: string;
+  /** 현장(모바일) 보고 표식 — 접수함이 본다. */
+  fieldReport?: FieldReport;
 }
 
 export function useCreatePartsTicket() {

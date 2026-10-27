@@ -1,3 +1,5 @@
+import type { FieldReport } from '../../shared/field-report';
+
 // BOM 21개 클러스터 기준 카테고리 (shared/bom-catalog.ts의 BomClusterKey와 동일 키)
 export type PartCategory =
   | 'power-dist'
@@ -25,7 +27,12 @@ export type PartCategory =
 
 export type PartCriticality = 'critical' | 'essential' | 'standard';
 
-export type InventoryStatus = 'normal' | 'low' | 'out_of_stock' | 'excess' | 'expiry_soon';
+export type InventoryStatus =
+  | 'normal'
+  | 'low'
+  | 'out_of_stock'
+  | 'excess'
+  | 'expiry_soon';
 
 export type PoStatus =
   | 'requested'
@@ -86,7 +93,13 @@ export interface PurchaseOrder {
   orderDate: string;
   expectedDelivery: string;
   actualDelivery?: string;
-  items: { partId: string; partName: string; qty: number; unitPrice: number; total: number }[];
+  items: {
+    partId: string;
+    partName: string;
+    qty: number;
+    unitPrice: number;
+    total: number;
+  }[];
   totalAmount: number;
   status: PoStatus;
   urgency: 'urgent' | 'normal' | 'scheduled';
@@ -109,7 +122,11 @@ export interface OpenPoLine {
   note_ko?: string;
 }
 
-export type PartsRequestStatus = 'pending' | 'approved' | 'ordered' | 'cancelled';
+export type PartsRequestStatus =
+  | 'pending'
+  | 'approved'
+  | 'ordered'
+  | 'cancelled';
 export type PartsRequestPriority = 'urgent' | 'normal' | 'scheduled';
 
 export interface PartsRequestItem {
@@ -134,6 +151,8 @@ export interface PartsRequest {
   /** 부품 대기 수리 WO에서 발행된 경우 원천 수리 WO 번호 */
   sourceWoNumber?: string;
   note?: string;
+  /** 현장(모바일) 보고로 생성된 경우 — 접수함 판정. */
+  fieldReport?: FieldReport;
 }
 
 export interface InventorySummary {
@@ -180,4 +199,7 @@ export interface StockMovementInput {
 
 export type StockMovementResult =
   | { success: true }
-  | { success: false; reason: 'not_found' | 'insufficient_stock' | 'invalid_qty' };
+  | {
+      success: false;
+      reason: 'not_found' | 'insufficient_stock' | 'invalid_qty';
+    };

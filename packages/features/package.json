@@ -22,7 +22,8 @@
     "./calendar": "./src/calendar/index.ts",
     "./shared": "./src/shared/index.ts",
     "./history": "./src/history/index.ts",
-    "./risk": "./src/risk/index.ts"
+    "./risk": "./src/risk/index.ts",
+    "./triage": "./src/triage/index.ts"
   },
   "scripts": {
     "test": "vitest run"

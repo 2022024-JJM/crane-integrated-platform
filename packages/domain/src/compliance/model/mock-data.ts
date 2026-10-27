@@ -164,7 +164,9 @@ function deriveCertStatus(cert: Certification): Certification['status'] {
   const expiry = new Date(y as number, (m as number) - 1, d as number);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffDays = Math.round((expiry.getTime() - today.getTime()) / 86_400_000);
+  const diffDays = Math.round(
+    (expiry.getTime() - today.getTime()) / 86_400_000,
+  );
   if (diffDays < 0) return 'expired';
   if (diffDays <= EXPIRY_SOON_DAYS) return 'expiry_soon';
   return 'valid';

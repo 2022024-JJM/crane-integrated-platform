@@ -8,14 +8,34 @@ import type { AssetStatus, CraneType } from '@crane/domain/asset';
 import { KC } from '../../../shared/ui/kc';
 import { KcButton, KcModal } from '../../../shared/ui/kc-ui';
 
-const CRANE_TYPES: CraneType[] = ['goliath', 'overhead', 'gantry', 'jib', 'ttc', 'llc', 'luffing'];
-const STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
+const CRANE_TYPES: CraneType[] = [
+  'goliath',
+  'overhead',
+  'gantry',
+  'jib',
+  'ttc',
+  'llc',
+  'luffing',
+];
+const STATUSES: AssetStatus[] = [
+  'operating',
+  'inspection',
+  'repair',
+  'idle',
+  'decommissioned',
+];
 
 const inputBase =
-  'w-full rounded-[4px] border px-2.5 py-1.5 text-[12.5px] outline-none focus:ring-2';
+  'w-full rounded-[4px] border px-2.5 py-1.5 text-[13px] outline-none focus:ring-2';
 const inputStyle = { borderColor: KC.border, color: KC.ink, background: KC.bg };
 
-function Field({ label, required, error, colSpan2, children }: {
+function Field({
+  label,
+  required,
+  error,
+  colSpan2,
+  children,
+}: {
   label: string;
   required?: boolean;
   error?: string;
@@ -24,13 +44,13 @@ function Field({ label, required, error, colSpan2, children }: {
 }) {
   return (
     <label className={`flex flex-col gap-1 ${colSpan2 ? 'sm:col-span-2' : ''}`}>
-      <span className="text-[11px] font-semibold" style={{ color: KC.ink }}>
+      <span className="text-[12px] font-semibold" style={{ color: KC.ink }}>
         {label}
         {required ? <span style={{ color: KC.safety }}> *</span> : null}
       </span>
       {children}
       {error ? (
-        <span className="text-[10.5px]" style={{ color: KC.safety }}>
+        <span className="text-[12px]" style={{ color: KC.safety }}>
           {error}
         </span>
       ) : null}
@@ -47,7 +67,9 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
   const { form, errors, dirty, set, validate } = useAssetForm({
     messages: {
       nameRequired: t('asset-management:modal.validation.nameRequired'),
-      manufacturerRequired: t('asset-management:modal.validation.manufacturerRequired'),
+      manufacturerRequired: t(
+        'asset-management:modal.validation.manufacturerRequired',
+      ),
       modelRequired: t('asset-management:modal.validation.modelRequired'),
       serialRequired: t('asset-management:modal.validation.serialRequired'),
       capacityRequired: t('asset-management:modal.validation.capacityRequired'),
@@ -64,7 +86,8 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
 
   // 미저장 내용이 있으면 닫기 전 확인 (ESC·백드롭·취소 공통)
   const requestClose = useCallback(() => {
-    if (dirty && !window.confirm(t('asset-management:modal.unsavedConfirm'))) return;
+    if (dirty && !window.confirm(t('asset-management:modal.unsavedConfirm')))
+      return;
     onClose();
   }, [dirty, onClose, t]);
 
@@ -82,7 +105,9 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
   const submit = () => {
     if (!validate()) return;
     const asset = createAsset(form);
-    toast.success(t('asset-management:modal.toastCreated', { name: asset.name }));
+    toast.success(
+      t('asset-management:modal.toastCreated', { name: asset.name }),
+    );
     onClose();
   };
 
@@ -91,11 +116,22 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
   return (
     <KcModal onClose={requestClose} maxWidth={640}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink }}>
+      <div
+        className="flex items-center justify-between border-b px-4 py-3"
+        style={{ borderColor: KC.hairline }}
+      >
+        <h2
+          className="text-[15px] font-semibold tracking-wide"
+          style={{ color: KC.ink }}
+        >
           {t('asset-management:modal.title')}
         </h2>
-        <button type="button" aria-label={t('asset-management:modal.close')} onClick={requestClose} className="cursor-pointer">
+        <button
+          type="button"
+          aria-label={t('asset-management:modal.close')}
+          onClick={requestClose}
+          className="cursor-pointer"
+        >
           <X size={16} style={{ color: KC.ink }} />
         </button>
       </div>
@@ -127,7 +163,11 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
           </select>
         </Field>
 
-        <Field label={fieldT('manufacturer')} required error={errors.manufacturer}>
+        <Field
+          label={fieldT('manufacturer')}
+          required
+          error={errors.manufacturer}
+        >
           <input
             className={inputBase}
             style={inputStyle}
@@ -147,7 +187,11 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
           />
         </Field>
 
-        <Field label={fieldT('capacityTon')} required error={errors.capacityTon}>
+        <Field
+          label={fieldT('capacityTon')}
+          required
+          error={errors.capacityTon}
+        >
           <input
             type="number"
             min={0}
@@ -158,7 +202,11 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
           />
         </Field>
 
-        <Field label={fieldT('serialNumber')} required error={errors.serialNumber}>
+        <Field
+          label={fieldT('serialNumber')}
+          required
+          error={errors.serialNumber}
+        >
           <input
             className={inputBase}
             style={inputStyle}
@@ -175,7 +223,9 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
             className={inputBase}
             style={inputStyle}
             value={form.spanM ?? ''}
-            onChange={(e) => set('spanM', e.target.value ? Number(e.target.value) : undefined)}
+            onChange={(e) =>
+              set('spanM', e.target.value ? Number(e.target.value) : undefined)
+            }
           />
         </Field>
 
@@ -186,7 +236,12 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
             className={inputBase}
             style={inputStyle}
             value={form.liftHeightM ?? ''}
-            onChange={(e) => set('liftHeightM', e.target.value ? Number(e.target.value) : undefined)}
+            onChange={(e) =>
+              set(
+                'liftHeightM',
+                e.target.value ? Number(e.target.value) : undefined,
+              )
+            }
           />
         </Field>
 
@@ -218,7 +273,7 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
                   key={v}
                   type="button"
                   onClick={() => set('indoorOutdoor', v)}
-                  className="cursor-pointer rounded-[4px] border px-2 py-1.5 text-[12px] font-semibold transition-colors"
+                  className="cursor-pointer rounded-[4px] border px-2 py-1.5 text-[13px] font-semibold transition-colors"
                   style={{
                     background: active ? KC.accent : KC.bg,
                     color: active ? KC.onAccent : KC.text,
@@ -232,7 +287,12 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
           </div>
         </Field>
 
-        <Field label={fieldT('locationZone')} required error={errors.locationZone} colSpan2>
+        <Field
+          label={fieldT('locationZone')}
+          required
+          error={errors.locationZone}
+          colSpan2
+        >
           <input
             className={inputBase}
             style={inputStyle}
@@ -291,7 +351,7 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
                   key={s}
                   type="button"
                   onClick={() => set('status', s)}
-                  className="cursor-pointer rounded-[4px] border px-2.5 py-1.5 text-[12px] font-semibold transition-colors"
+                  className="cursor-pointer rounded-[4px] border px-2.5 py-1.5 text-[13px] font-semibold transition-colors"
                   style={{
                     background: active ? KC.accent : KC.bg,
                     color: active ? KC.onAccent : KC.text,
@@ -307,7 +367,10 @@ export function NewAssetModal({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* 푸터 */}
-      <div className="flex items-center justify-end gap-2 border-t px-4 py-3" style={{ borderColor: KC.hairline }}>
+      <div
+        className="flex items-center justify-end gap-2 border-t px-4 py-3"
+        style={{ borderColor: KC.hairline }}
+      >
         <KcButton variant="ghost" onClick={requestClose}>
           {t('asset-management:modal.cancel')}
         </KcButton>

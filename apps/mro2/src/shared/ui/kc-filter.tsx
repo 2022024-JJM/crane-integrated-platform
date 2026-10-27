@@ -16,13 +16,13 @@ export function KcFilterRail({
   const { t } = useTranslation('mro2');
   return (
     <aside className="w-[168px] shrink-0">
-      <div className="mb-1 text-[12px] font-bold" style={{ color: KC.ink }}>
+      <div className="mb-1 text-[13px] font-bold" style={{ color: KC.ink }}>
         {selectedCount ? t('common.filterSelected', { count: selectedCount }) : t('common.filter')}
       </div>
       <button
         type="button"
         onClick={onClear}
-        className="mb-3 block cursor-pointer text-[11px]"
+        className="mb-3 block cursor-pointer text-[12px]"
         style={{ color: KC.link }}
       >
         {t('common.clearFilter')}
@@ -48,7 +48,7 @@ export function KcFilterGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-pointer items-center justify-between py-1 text-left text-[11.5px] font-bold"
+        className="flex w-full cursor-pointer items-center justify-between py-1 text-left text-[13px] font-bold"
         style={{ color: KC.ink }}
       >
         {title}
@@ -76,7 +76,7 @@ export function KcFilterChip({
     <button
       type="button"
       onClick={onClick}
-      className="cursor-pointer rounded-[3px] px-1.5 py-0.5 text-[11px]"
+      className="cursor-pointer rounded-[3px] px-1.5 py-0.5 text-[12px]"
       style={{
         background: active ? KC.accent : KC.bgRow,
         color: active ? KC.onAccent : KC.text,

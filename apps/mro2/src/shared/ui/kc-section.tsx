@@ -24,7 +24,7 @@ export function KcSection({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full cursor-pointer items-center justify-between py-1 text-left"
       >
-        <span className="text-[13px] font-bold" style={{ color: KC.ink }}>
+        <span className="text-[14px] font-bold" style={{ color: KC.ink }}>
           {title}
         </span>
         <span className="flex items-center gap-2">

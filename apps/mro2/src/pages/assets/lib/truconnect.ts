@@ -16,7 +16,10 @@ export interface DateRange {
   end: Date;
 }
 
-export function presetRange(preset: Exclude<RangePreset, 'custom'>, now: Date): DateRange {
+export function presetRange(
+  preset: Exclude<RangePreset, 'custom'>,
+  now: Date,
+): DateRange {
   if (preset === 'last30') {
     return { start: new Date(now.getTime() - 30 * 86400_000), end: now };
   }
@@ -47,11 +50,15 @@ export interface LifeProjection {
 }
 
 /** 현재까지의 평균 마모율을 직선 연장해 연도별 잔여수명을 추정한다 */
-export function buildLifeProjection(c: CraneComponent, now: Date): LifeProjection {
+export function buildLifeProjection(
+  c: CraneComponent,
+  now: Date,
+): LifeProjection {
   const installYear = new Date(c.installDate).getFullYear();
   const nowYear = now.getFullYear();
   const yearsInService = Math.max(nowYear - installYear, 1);
-  const usedPct = c.expectedLifeHours > 0 ? (c.currentHours / c.expectedLifeHours) * 100 : 0;
+  const usedPct =
+    c.expectedLifeHours > 0 ? (c.currentHours / c.expectedLifeHours) * 100 : 0;
   const currentPct = Math.max(0, Math.round(100 - usedPct));
   const wearPerYear = usedPct / yearsInService;
 
@@ -62,7 +69,10 @@ export function buildLifeProjection(c: CraneComponent, now: Date): LifeProjectio
 
   const points: LifePoint[] = [];
   for (let y = installYear; y <= lastYear; y += 1) {
-    points.push({ year: y, pct: Math.max(0, Math.round(100 - wearPerYear * (y - installYear))) });
+    points.push({
+      year: y,
+      pct: Math.max(0, Math.round(100 - wearPerYear * (y - installYear))),
+    });
   }
   return { points, estimatedEndYear, currentPct };
 }
@@ -79,7 +89,13 @@ export interface DerivedAlert {
 }
 
 /** 수리 고장유형 키 집합 — 점검 카테고리가 같은 의미면 한 원인으로 합치기 위한 기준 */
-const FAILURE_TYPE_KEYS = new Set(['mechanical', 'electrical', 'structural', 'control', 'other']);
+const FAILURE_TYPE_KEYS = new Set([
+  'mechanical',
+  'electrical',
+  'structural',
+  'control',
+  'other',
+]);
 
 /** 점검 카테고리 원문("Electrical")과 수리 고장유형 키("electrical")를 같은 원인 축으로 정규화 */
 export function normalizeCause(raw: string): string {
@@ -101,7 +117,10 @@ export function deriveAlerts(
     alerts.push({
       date: wo.actualStart ?? wo.scheduledStart,
       cause: normalizeCause(wo.failureType),
-      kind: wo.priority === 'emergency' || wo.sourceType === 'breakdown' ? 'safety' : 'production',
+      kind:
+        wo.priority === 'emergency' || wo.sourceType === 'breakdown'
+          ? 'safety'
+          : 'production',
     });
   }
   for (const wo of inspections) {
@@ -111,7 +130,10 @@ export function deriveAlerts(
       alerts.push({
         date,
         cause: normalizeCause(item.category),
-        kind: item.severity === 'critical' || item.severity === 'major' ? 'safety' : 'production',
+        kind:
+          item.severity === 'critical' || item.severity === 'major'
+            ? 'safety'
+            : 'production',
       });
     }
   }
@@ -148,17 +170,27 @@ export interface MonthBucket {
 }
 
 /** 기간 내 알림의 월별 safety/production 건수 — 빈 달도 채워 연속 축을 만든다 */
-export function alertMonthlyTrend(alerts: DerivedAlert[], range: DateRange): MonthBucket[] {
+export function alertMonthlyTrend(
+  alerts: DerivedAlert[],
+  range: DateRange,
+): MonthBucket[] {
   const buckets: MonthBucket[] = [];
   const cur = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
   const last = new Date(range.end.getFullYear(), range.end.getMonth(), 1);
   while (cur.getTime() <= last.getTime()) {
-    buckets.push({ year: cur.getFullYear(), month: cur.getMonth(), safety: 0, production: 0 });
+    buckets.push({
+      year: cur.getFullYear(),
+      month: cur.getMonth(),
+      safety: 0,
+      production: 0,
+    });
     cur.setMonth(cur.getMonth() + 1);
   }
   for (const a of alerts) {
     const d = new Date(a.date);
-    const b = buckets.find((x) => x.year === d.getFullYear() && x.month === d.getMonth());
+    const b = buckets.find(
+      (x) => x.year === d.getFullYear() && x.month === d.getMonth(),
+    );
     if (b) b[a.kind] += 1;
   }
   return buckets;

@@ -21,6 +21,7 @@ export type {
 } from './model/types';
 export {
   addPartsRequest,
+  triagePartsRequest,
   getAllInventoryItems,
   getAllPartsRequests,
   getAllPurchaseOrders,

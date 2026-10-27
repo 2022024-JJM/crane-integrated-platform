@@ -15,7 +15,9 @@
     "./pages/spend": "./src/pages/spend/index.ts",
     "./layout": "./src/shared/ui/layout/index.ts",
     "./pages/service-plan": "./src/pages/service-plan/index.ts",
-    "./pages/documents": "./src/pages/documents/index.ts"
+    "./pages/documents": "./src/pages/documents/index.ts",
+    "./pages/field": "./src/pages/field/index.ts",
+    "./pages/triage": "./src/pages/triage/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

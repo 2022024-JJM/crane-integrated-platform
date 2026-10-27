@@ -62,7 +62,9 @@ function repair(over: Partial<RepairWO>): RepairWO {
   } as RepairWO;
 }
 
-function inspection(items: Array<Partial<InspectionWO['checklistItems'][number]>>): InspectionWO {
+function inspection(
+  items: Array<Partial<InspectionWO['checklistItems'][number]>>,
+): InspectionWO {
   return {
     id: 'i1',
     woNumber: 'WO-I-1',
@@ -93,7 +95,9 @@ describe('presetRange / inRange', () => {
   it('last30 은 30일 전부터 지금까지', () => {
     const r = presetRange('last30', NOW);
     expect(r.end).toEqual(NOW);
-    expect(Math.round((r.end.getTime() - r.start.getTime()) / 86400_000)).toBe(30);
+    expect(Math.round((r.end.getTime() - r.start.getTime()) / 86400_000)).toBe(
+      30,
+    );
   });
 
   it('year 는 1월 1일부터', () => {
@@ -149,10 +153,16 @@ describe('deriveAlerts', () => {
 
   it('점검 카테고리 원문과 수리 고장유형 키가 같은 원인으로 합쳐진다', () => {
     const alerts = deriveAlerts(
-      [inspection([{ judgment: 'fail', severity: 'minor', category: 'Electrical' }])],
+      [
+        inspection([
+          { judgment: 'fail', severity: 'minor', category: 'Electrical' },
+        ]),
+      ],
       [{ ...repair({}), failureType: 'electrical' } as RepairWO],
     );
-    expect(new Set(alerts.map((a) => a.cause))).toEqual(new Set(['electrical']));
+    expect(new Set(alerts.map((a) => a.cause))).toEqual(
+      new Set(['electrical']),
+    );
   });
 
   it('점검 fail 항목만 알림이 되고 심각도로 분류된다', () => {

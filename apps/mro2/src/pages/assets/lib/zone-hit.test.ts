@@ -23,12 +23,18 @@ const zones = [
 
 describe('classifyPointToZone', () => {
   it('정규화 좌표로 존을 분류한다', () => {
-    expect(classifyPointToZone(vec(5, 8, 5), unitBox, zones)?.key).toBe('upper');
-    expect(classifyPointToZone(vec(5, 2, 5), unitBox, zones)?.key).toBe('lower');
+    expect(classifyPointToZone(vec(5, 8, 5), unitBox, zones)?.key).toBe(
+      'upper',
+    );
+    expect(classifyPointToZone(vec(5, 2, 5), unitBox, zones)?.key).toBe(
+      'lower',
+    );
   });
 
   it('경계값(0.5)은 배열 순서 우선 — 먼저 매칭되는 존', () => {
-    expect(classifyPointToZone(vec(5, 5, 5), unitBox, zones)?.key).toBe('upper');
+    expect(classifyPointToZone(vec(5, 5, 5), unitBox, zones)?.key).toBe(
+      'upper',
+    );
   });
 
   it('어느 존에도 속하지 않으면 null', () => {
@@ -54,7 +60,9 @@ describe('classifyPointToZone', () => {
   it('오프셋 바운딩박스도 정규화가 정확하다', () => {
     const offset = box(vec(100, 50, -20), vec(120, 70, 0));
     // (110, 66, -10) → 정규화 (0.5, 0.8, 0.5) → upper
-    expect(classifyPointToZone(vec(110, 66, -10), offset, zones)?.key).toBe('upper');
+    expect(classifyPointToZone(vec(110, 66, -10), offset, zones)?.key).toBe(
+      'upper',
+    );
   });
 });
 

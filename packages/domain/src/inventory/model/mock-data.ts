@@ -1,3 +1,4 @@
+import { markTriaged } from '../../shared/field-report';
 import { bomCatalog, getBomCraneIds } from '../../shared/bom-catalog';
 import type { BomClusterKey } from '../../shared/bom-catalog';
 import { seedSequence } from '../../shared/id-generator';
@@ -27,27 +28,132 @@ interface ClusterRule {
 }
 
 const CLUSTER_RULES: Record<BomClusterKey, ClusterRule> = {
-  'power-dist': { criticality: 'essential', leadTimeDays: 21, priceRange: [40, 2500], minStockRange: [1, 3] },
-  'motor-starter': { criticality: 'essential', leadTimeDays: 21, priceRange: [30, 900], minStockRange: [1, 3] },
-  'pilot-device': { criticality: 'standard', leadTimeDays: 14, priceRange: [12, 90], minStockRange: [3, 8] },
-  network: { criticality: 'essential', leadTimeDays: 30, priceRange: [120, 1800], minStockRange: [1, 2] },
-  fuse: { criticality: 'standard', leadTimeDays: 14, priceRange: [15, 420], minStockRange: [3, 8] },
-  plc: { criticality: 'critical', leadTimeDays: 45, priceRange: [180, 3400], minStockRange: [1, 2] },
-  sensing: { criticality: 'critical', leadTimeDays: 35, priceRange: [150, 2800], minStockRange: [1, 2] },
-  'dcm-drive': { criticality: 'critical', leadTimeDays: 60, priceRange: [900, 24000], minStockRange: [1, 1] },
-  wiring: { criticality: 'standard', leadTimeDays: 10, priceRange: [8, 120], minStockRange: [3, 8] },
-  'power-supply': { criticality: 'essential', leadTimeDays: 25, priceRange: [90, 1600], minStockRange: [1, 2] },
-  instrument: { criticality: 'standard', leadTimeDays: 21, priceRange: [60, 400], minStockRange: [1, 3] },
-  computing: { criticality: 'essential', leadTimeDays: 30, priceRange: [150, 2200], minStockRange: [1, 2] },
-  'mech-drive': { criticality: 'critical', leadTimeDays: 90, priceRange: [3500, 28000], minStockRange: [1, 1] },
-  enclosure: { criticality: 'standard', leadTimeDays: 28, priceRange: [80, 1200], minStockRange: [1, 3] },
-  operator: { criticality: 'essential', leadTimeDays: 40, priceRange: [400, 3200], minStockRange: [1, 2] },
-  transformer: { criticality: 'essential', leadTimeDays: 35, priceRange: [250, 2400], minStockRange: [1, 2] },
-  'current-sensing': { criticality: 'essential', leadTimeDays: 21, priceRange: [90, 380], minStockRange: [1, 3] },
-  resistor: { criticality: 'standard', leadTimeDays: 28, priceRange: [60, 320], minStockRange: [1, 3] },
-  warning: { criticality: 'standard', leadTimeDays: 21, priceRange: [80, 350], minStockRange: [1, 3] },
-  cctv: { criticality: 'essential', leadTimeDays: 30, priceRange: [400, 1600], minStockRange: [1, 2] },
-  surge: { criticality: 'essential', leadTimeDays: 21, priceRange: [180, 520], minStockRange: [1, 2] },
+  'power-dist': {
+    criticality: 'essential',
+    leadTimeDays: 21,
+    priceRange: [40, 2500],
+    minStockRange: [1, 3],
+  },
+  'motor-starter': {
+    criticality: 'essential',
+    leadTimeDays: 21,
+    priceRange: [30, 900],
+    minStockRange: [1, 3],
+  },
+  'pilot-device': {
+    criticality: 'standard',
+    leadTimeDays: 14,
+    priceRange: [12, 90],
+    minStockRange: [3, 8],
+  },
+  network: {
+    criticality: 'essential',
+    leadTimeDays: 30,
+    priceRange: [120, 1800],
+    minStockRange: [1, 2],
+  },
+  fuse: {
+    criticality: 'standard',
+    leadTimeDays: 14,
+    priceRange: [15, 420],
+    minStockRange: [3, 8],
+  },
+  plc: {
+    criticality: 'critical',
+    leadTimeDays: 45,
+    priceRange: [180, 3400],
+    minStockRange: [1, 2],
+  },
+  sensing: {
+    criticality: 'critical',
+    leadTimeDays: 35,
+    priceRange: [150, 2800],
+    minStockRange: [1, 2],
+  },
+  'dcm-drive': {
+    criticality: 'critical',
+    leadTimeDays: 60,
+    priceRange: [900, 24000],
+    minStockRange: [1, 1],
+  },
+  wiring: {
+    criticality: 'standard',
+    leadTimeDays: 10,
+    priceRange: [8, 120],
+    minStockRange: [3, 8],
+  },
+  'power-supply': {
+    criticality: 'essential',
+    leadTimeDays: 25,
+    priceRange: [90, 1600],
+    minStockRange: [1, 2],
+  },
+  instrument: {
+    criticality: 'standard',
+    leadTimeDays: 21,
+    priceRange: [60, 400],
+    minStockRange: [1, 3],
+  },
+  computing: {
+    criticality: 'essential',
+    leadTimeDays: 30,
+    priceRange: [150, 2200],
+    minStockRange: [1, 2],
+  },
+  'mech-drive': {
+    criticality: 'critical',
+    leadTimeDays: 90,
+    priceRange: [3500, 28000],
+    minStockRange: [1, 1],
+  },
+  enclosure: {
+    criticality: 'standard',
+    leadTimeDays: 28,
+    priceRange: [80, 1200],
+    minStockRange: [1, 3],
+  },
+  operator: {
+    criticality: 'essential',
+    leadTimeDays: 40,
+    priceRange: [400, 3200],
+    minStockRange: [1, 2],
+  },
+  transformer: {
+    criticality: 'essential',
+    leadTimeDays: 35,
+    priceRange: [250, 2400],
+    minStockRange: [1, 2],
+  },
+  'current-sensing': {
+    criticality: 'essential',
+    leadTimeDays: 21,
+    priceRange: [90, 380],
+    minStockRange: [1, 3],
+  },
+  resistor: {
+    criticality: 'standard',
+    leadTimeDays: 28,
+    priceRange: [60, 320],
+    minStockRange: [1, 3],
+  },
+  warning: {
+    criticality: 'standard',
+    leadTimeDays: 21,
+    priceRange: [80, 350],
+    minStockRange: [1, 3],
+  },
+  cctv: {
+    criticality: 'essential',
+    leadTimeDays: 30,
+    priceRange: [400, 1600],
+    minStockRange: [1, 2],
+  },
+  surge: {
+    criticality: 'essential',
+    leadTimeDays: 21,
+    priceRange: [180, 520],
+    minStockRange: [1, 2],
+  },
 };
 
 // 수리 WO 스토리와 연동되는 재고 연출 (partId → 현재 수량 강제)
@@ -65,7 +171,12 @@ const STORY_QTY_OVERRIDES: Record<string, number> = {
 };
 
 // LAPP 벌크 케이블은 미터 단위로 관리 (수량 스케일도 ×10)
-const METER_UOM_PART_IDS = new Set(['2170484', '2170893', '2170820', '7038904']);
+const METER_UOM_PART_IDS = new Set([
+  '2170484',
+  '2170893',
+  '2170820',
+  '7038904',
+]);
 
 function pseudoRandom(seed: number) {
   let v = seed;
@@ -110,7 +221,8 @@ const allInventoryItems: InventoryItem[] = bomCatalog.map((bomItem, idx) => {
   const unitPrice = roundPrice(priceMin + rand() * (priceMax - priceMin));
   const isMeterUom = METER_UOM_PART_IDS.has(bomItem.partId);
   const qtyScale = isMeterUom ? 10 : 1;
-  const minStockQty = randInt(rule.minStockRange[0], rule.minStockRange[1]) * qtyScale;
+  const minStockQty =
+    randInt(rule.minStockRange[0], rule.minStockRange[1]) * qtyScale;
   const reorderPoint = minStockQty + randInt(0, 2) * qtyScale;
 
   let currentQty: number;
@@ -121,10 +233,16 @@ const allInventoryItems: InventoryItem[] = bomCatalog.map((bomItem, idx) => {
     // 대략 8%는 재고 소진, 15%는 부족 상태로 연출
     const roll = rand();
     if (roll < 0.08) currentQty = 0;
-    else if (roll < 0.23) currentQty = Math.max(0, minStockQty - randInt(1, 2) * qtyScale);
-    else currentQty = minStockQty + randInt(1, minStockQty / qtyScale + 3) * qtyScale;
+    else if (roll < 0.23)
+      currentQty = Math.max(0, minStockQty - randInt(1, 2) * qtyScale);
+    else
+      currentQty =
+        minStockQty + randInt(1, minStockQty / qtyScale + 3) * qtyScale;
   }
-  const reservedQty = currentQty > 0 ? randInt(0, Math.min(2, currentQty / qtyScale)) * qtyScale : 0;
+  const reservedQty =
+    currentQty > 0
+      ? randInt(0, Math.min(2, currentQty / qtyScale)) * qtyScale
+      : 0;
   const availableQty = currentQty - reservedQty;
 
   const item: InventoryItem = {
@@ -168,8 +286,15 @@ function poItem(partId: string, qty: number): PurchaseOrder['items'][number] {
 const sumTotal = (items: PurchaseOrder['items']) =>
   items.reduce((sum, it) => sum + it.total, 0);
 
-const po1Items = [poItem('6ra8082-6fv62-0aa0-z', 1), poItem('6es7516-3ap03-0ab0', 1)];
-const po2Items = [poItem('170m8636', 4), poItem('ktk-r-1', 10), poItem('fwp-30a14fi', 6)];
+const po1Items = [
+  poItem('6ra8082-6fv62-0aa0-z', 1),
+  poItem('6es7516-3ap03-0ab0', 1),
+];
+const po2Items = [
+  poItem('170m8636', 4),
+  poItem('ktk-r-1', 10),
+  poItem('fwp-30a14fi', 6),
+];
 const po3Items = [
   poItem('787-2742', 2),
   poItem('855-1001-2500-1001', 3),
@@ -417,7 +542,9 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function getTransactionsByPartId(partId: string): InventoryTransaction[] {
+export function getTransactionsByPartId(
+  partId: string,
+): InventoryTransaction[] {
   return allInventoryTransactions
     .filter((tx) => tx.partId === partId)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -486,7 +613,12 @@ export function getInventoryItemByPartId(
   return allInventoryItems.find((i) => i.partId === partId);
 }
 
-const OPEN_PO_STATUSES: PoStatus[] = ['requested', 'approved', 'ordered', 'in_transit'];
+const OPEN_PO_STATUSES: PoStatus[] = [
+  'requested',
+  'approved',
+  'ordered',
+  'in_transit',
+];
 
 /** 부품 기준 발주중(미입고) PO 라인 — ETA 오름차순 */
 export function getOpenPoLinesByPartId(partId: string): OpenPoLine[] {
@@ -511,7 +643,10 @@ export function getOpenPoLinesByPartId(partId: string): OpenPoLine[] {
 }
 
 export function getOnOrderQtyByPartId(partId: string): number {
-  return getOpenPoLinesByPartId(partId).reduce((sum, line) => sum + line.qty, 0);
+  return getOpenPoLinesByPartId(partId).reduce(
+    (sum, line) => sum + line.qty,
+    0,
+  );
 }
 
 const allPartsRequests: PartsRequest[] = [];
@@ -524,6 +659,26 @@ seedSequence('parts', maxPartsSeq);
 
 export function getAllPartsRequests(): PartsRequest[] {
   return allPartsRequests;
+}
+
+/** 현장 부품 요청 접수 — 승인/반려로 상태를 정하고 접수 표식을 찍는다. */
+export function triagePartsRequest(
+  id: string,
+  status: Extract<PartsRequest['status'], 'approved' | 'cancelled'>,
+  triagedBy: string,
+): boolean {
+  const idx = allPartsRequests.findIndex((r) => r.id === id);
+  if (idx === -1) return false;
+  const req = allPartsRequests[idx];
+  if (req.status !== 'pending') return false;
+  allPartsRequests[idx] = {
+    ...req,
+    status,
+    fieldReport: req.fieldReport
+      ? markTriaged(req.fieldReport, triagedBy)
+      : req.fieldReport,
+  };
+  return true;
 }
 
 export function addPartsRequest(req: PartsRequest): void {

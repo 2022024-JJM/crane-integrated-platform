@@ -1,19 +1,125 @@
-import { newInspectionId, nextInspectionWoNumber, seedSequence } from '../../shared/id-generator';
-import type { ChecklistItem, InspectionSummary, InspectionWO, RecurrenceInterval } from './types';
+import { markTriaged } from '../../shared/field-report';
+import {
+  newInspectionId,
+  nextInspectionWoNumber,
+  seedSequence,
+} from '../../shared/id-generator';
+import type {
+  ChecklistItem,
+  InspectionSummary,
+  InspectionWO,
+  RecurrenceInterval,
+} from './types';
 
 const frequentChecklist = [
-  { id: 'fi-01', category: 'Fluid & Equipment', category_ko: '유체 및 설비', itemName: 'Oil Leak Check', itemName_ko: '오일 누유 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-02', category: 'Fluid & Equipment', category_ko: '유체 및 설비', itemName: 'Sensor Condition', itemName_ko: '센서 상태 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-03', category: 'Fluid & Equipment', category_ko: '유체 및 설비', itemName: 'Piping Condition', itemName_ko: '배관 상태 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-04', category: 'Key Components', category_ko: '주요 구성품', itemName: 'Shaft & Chain Condition', itemName_ko: '샤프트 및 체인 상태', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-05', category: 'Key Components', category_ko: '주요 구성품', itemName: 'Wire Rope Condition', itemName_ko: '와이어 로프 상태', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-06', category: 'Safety Devices', category_ko: '안전 장치', itemName: 'Brake Operation', itemName_ko: '브레이크 작동 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-07', category: 'Safety Devices', category_ko: '안전 장치', itemName: 'Limit Switch Operation', itemName_ko: '리밋 스위치 작동 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-08', category: 'Safety Devices', category_ko: '안전 장치', itemName: 'E-Stop Function', itemName_ko: '비상 정지 기능 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-09', category: 'Electrical', category_ko: '전기', itemName: 'Controller Check', itemName_ko: '제어기 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-10', category: 'Electrical', category_ko: '전기', itemName: 'Panel Inspection', itemName_ko: '패널 점검', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-11', category: 'Dynamic Check', category_ko: '동적 점검', itemName: 'No-Load Test Run', itemName_ko: '무부하 시운전', judgment: null, actionRequired: 'none' as const },
-  { id: 'fi-12', category: 'Dynamic Check', category_ko: '동적 점검', itemName: 'Loaded Test Run', itemName_ko: '부하 시운전', judgment: null, actionRequired: 'none' as const },
+  {
+    id: 'fi-01',
+    category: 'Fluid & Equipment',
+    category_ko: '유체 및 설비',
+    itemName: 'Oil Leak Check',
+    itemName_ko: '오일 누유 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-02',
+    category: 'Fluid & Equipment',
+    category_ko: '유체 및 설비',
+    itemName: 'Sensor Condition',
+    itemName_ko: '센서 상태 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-03',
+    category: 'Fluid & Equipment',
+    category_ko: '유체 및 설비',
+    itemName: 'Piping Condition',
+    itemName_ko: '배관 상태 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-04',
+    category: 'Key Components',
+    category_ko: '주요 구성품',
+    itemName: 'Shaft & Chain Condition',
+    itemName_ko: '샤프트 및 체인 상태',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-05',
+    category: 'Key Components',
+    category_ko: '주요 구성품',
+    itemName: 'Wire Rope Condition',
+    itemName_ko: '와이어 로프 상태',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-06',
+    category: 'Safety Devices',
+    category_ko: '안전 장치',
+    itemName: 'Brake Operation',
+    itemName_ko: '브레이크 작동 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-07',
+    category: 'Safety Devices',
+    category_ko: '안전 장치',
+    itemName: 'Limit Switch Operation',
+    itemName_ko: '리밋 스위치 작동 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-08',
+    category: 'Safety Devices',
+    category_ko: '안전 장치',
+    itemName: 'E-Stop Function',
+    itemName_ko: '비상 정지 기능 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-09',
+    category: 'Electrical',
+    category_ko: '전기',
+    itemName: 'Controller Check',
+    itemName_ko: '제어기 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-10',
+    category: 'Electrical',
+    category_ko: '전기',
+    itemName: 'Panel Inspection',
+    itemName_ko: '패널 점검',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-11',
+    category: 'Dynamic Check',
+    category_ko: '동적 점검',
+    itemName: 'No-Load Test Run',
+    itemName_ko: '무부하 시운전',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
+  {
+    id: 'fi-12',
+    category: 'Dynamic Check',
+    category_ko: '동적 점검',
+    itemName: 'Loaded Test Run',
+    itemName_ko: '부하 시운전',
+    judgment: null,
+    actionRequired: 'none' as const,
+  },
 ];
 
 const baseInspectionWOs: InspectionWO[] = [
@@ -85,7 +191,10 @@ const baseInspectionWOs: InspectionWO[] = [
     priority: 'high',
     result: null,
     recurrence: 'monthly',
-    checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: null })),
+    checklistItems: frequentChecklist.map((item) => ({
+      ...item,
+      judgment: null,
+    })),
   },
   {
     id: 'insp-004',
@@ -106,7 +215,10 @@ const baseInspectionWOs: InspectionWO[] = [
     findings_ko: '정상 상태. 모든 안전 장치 정상 작동.',
     totalHours: 2.0,
     cost: 260,
-    checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: 'pass' })),
+    checklistItems: frequentChecklist.map((item) => ({
+      ...item,
+      judgment: 'pass',
+    })),
   },
   {
     id: 'insp-005',
@@ -127,7 +239,10 @@ const baseInspectionWOs: InspectionWO[] = [
     findings_ko: '정상 상태. 판넬 필터 오염 확인 — 관찰 필요.',
     totalHours: 2.5,
     cost: 320,
-    checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: 'pass' })),
+    checklistItems: frequentChecklist.map((item) => ({
+      ...item,
+      judgment: 'pass',
+    })),
   },
   {
     id: 'insp-006',
@@ -145,7 +260,10 @@ const baseInspectionWOs: InspectionWO[] = [
     priority: 'normal',
     result: null,
     recurrence: 'monthly',
-    checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: null })),
+    checklistItems: frequentChecklist.map((item) => ({
+      ...item,
+      judgment: null,
+    })),
   },
   {
     id: 'insp-007',
@@ -162,20 +280,75 @@ const baseInspectionWOs: InspectionWO[] = [
     status: 'scheduled',
     priority: 'normal',
     result: null,
-    checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: null })),
+    checklistItems: frequentChecklist.map((item) => ({
+      ...item,
+      judgment: null,
+    })),
   },
 ];
 
-const CRANE_POOL: Array<{ craneId: string; craneName: string; siteId: string; siteName: string }> = [
-  { craneId: 'crane-660t', craneName: '660T Goliath Crane', siteId: 'dock-4', siteName: 'Dock No.4' },
-  { craneId: 'crane-50t', craneName: '50T East Luffing Crane', siteId: 'dock-4', siteName: 'Dock No.4' },
+const CRANE_POOL: Array<{
+  craneId: string;
+  craneName: string;
+  siteId: string;
+  siteName: string;
+}> = [
+  {
+    craneId: 'crane-660t',
+    craneName: '660T Goliath Crane',
+    siteId: 'dock-4',
+    siteName: 'Dock No.4',
+  },
+  {
+    craneId: 'crane-50t',
+    craneName: '50T East Luffing Crane',
+    siteId: 'dock-4',
+    siteName: 'Dock No.4',
+  },
 ];
 
-const INSPECTOR_POOL = ['조범희', '박순영', '정종민', 'John Smith', 'Maria Garcia', 'David Chen', '이준호', 'Priya Sharma'];
-const WO_TYPES: InspectionWO['woType'][] = ['frequent', 'frequent', 'frequent', 'periodic', 'periodic', 'emergency', 'special'];
-const STATUS_POOL: InspectionWO['status'][] = ['scheduled', 'scheduled', 'in_progress', 'completed', 'completed', 'completed', 'overdue'];
-const PRIORITY_POOL: InspectionWO['priority'][] = ['normal', 'normal', 'normal', 'high', 'urgent', 'low'];
-const PERFORMER_POOL: InspectionWO['performerType'][] = ['internal', 'internal', 'third_party', 'local'];
+const INSPECTOR_POOL = [
+  '조범희',
+  '박순영',
+  '정종민',
+  'John Smith',
+  'Maria Garcia',
+  'David Chen',
+  '이준호',
+  'Priya Sharma',
+];
+const WO_TYPES: InspectionWO['woType'][] = [
+  'frequent',
+  'frequent',
+  'frequent',
+  'periodic',
+  'periodic',
+  'emergency',
+  'special',
+];
+const STATUS_POOL: InspectionWO['status'][] = [
+  'scheduled',
+  'scheduled',
+  'in_progress',
+  'completed',
+  'completed',
+  'completed',
+  'overdue',
+];
+const PRIORITY_POOL: InspectionWO['priority'][] = [
+  'normal',
+  'normal',
+  'normal',
+  'high',
+  'urgent',
+  'low',
+];
+const PERFORMER_POOL: InspectionWO['performerType'][] = [
+  'internal',
+  'internal',
+  'third_party',
+  'local',
+];
 
 function seededRandom(seed: number) {
   let v = seed;
@@ -186,75 +359,91 @@ function seededRandom(seed: number) {
 }
 
 const ispRand = seededRandom(2026);
-const pick = <T,>(arr: T[]): T => arr[Math.floor(ispRand() * arr.length)];
+const pick = <T>(arr: T[]): T => arr[Math.floor(ispRand() * arr.length)];
 
 function randDate(startMonth: number, endMonth: number): string {
-  const month = startMonth + Math.floor(ispRand() * (endMonth - startMonth + 1));
+  const month =
+    startMonth + Math.floor(ispRand() * (endMonth - startMonth + 1));
   const day = Math.floor(ispRand() * 28) + 1;
   return `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-const generatedInspectionWOs: InspectionWO[] = Array.from({ length: 19 }, (_, i) => {
-  const n = i + 8;
-  const crane = pick(CRANE_POOL);
-  const woType = pick(WO_TYPES);
-  const status = pick(STATUS_POOL);
-  const priority = pick(PRIORITY_POOL);
-  // 완료/기한초과는 과거(4~6월), 예정은 미래(7~8월), 진행 중은 최근(6~7월)으로 앵커링
-  const scheduledDate =
-    status === 'overdue' || status === 'completed'
-      ? randDate(4, 6)
-      : status === 'in_progress'
-        ? randDate(6, 7)
-        : randDate(7, 8);
-  const actualDate = status === 'completed' ? scheduledDate : null;
-  let result: InspectionWO['result'] = null;
-  if (status === 'completed') {
-    const r = ispRand();
-    result = r < 0.7 ? 'pass' : r < 0.9 ? 'conditional' : 'fail';
-  }
-  const checklistItems = frequentChecklist.map((item, idx) => {
+const generatedInspectionWOs: InspectionWO[] = Array.from(
+  { length: 19 },
+  (_, i) => {
+    const n = i + 8;
+    const crane = pick(CRANE_POOL);
+    const woType = pick(WO_TYPES);
+    const status = pick(STATUS_POOL);
+    const priority = pick(PRIORITY_POOL);
+    // 완료/기한초과는 과거(4~6월), 예정은 미래(7~8월), 진행 중은 최근(6~7월)으로 앵커링
+    const scheduledDate =
+      status === 'overdue' || status === 'completed'
+        ? randDate(4, 6)
+        : status === 'in_progress'
+          ? randDate(6, 7)
+          : randDate(7, 8);
+    const actualDate = status === 'completed' ? scheduledDate : null;
+    let result: InspectionWO['result'] = null;
     if (status === 'completed') {
-      const judgment = result === 'fail' && idx % 4 === 0
-        ? 'fail'
-        : result === 'conditional' && idx === 5
-          ? 'fail'
-          : 'pass';
-      return {
-        ...item,
-        judgment: judgment as 'pass' | 'fail',
-        severity: (judgment === 'fail' ? 'minor' : 'normal') as 'minor' | 'normal',
-        actionRequired: (judgment === 'fail' ? 'repair_needed' : 'none') as 'repair_needed' | 'none',
-      };
+      const r = ispRand();
+      result = r < 0.7 ? 'pass' : r < 0.9 ? 'conditional' : 'fail';
     }
-    if (status === 'in_progress') {
-      return { ...item, judgment: idx < 4 ? ('pass' as const) : null };
-    }
-    return { ...item, judgment: null };
-  });
+    const checklistItems = frequentChecklist.map((item, idx) => {
+      if (status === 'completed') {
+        const judgment =
+          result === 'fail' && idx % 4 === 0
+            ? 'fail'
+            : result === 'conditional' && idx === 5
+              ? 'fail'
+              : 'pass';
+        return {
+          ...item,
+          judgment: judgment as 'pass' | 'fail',
+          severity: (judgment === 'fail' ? 'minor' : 'normal') as
+            | 'minor'
+            | 'normal',
+          actionRequired: (judgment === 'fail' ? 'repair_needed' : 'none') as
+            | 'repair_needed'
+            | 'none',
+        };
+      }
+      if (status === 'in_progress') {
+        return { ...item, judgment: idx < 4 ? ('pass' as const) : null };
+      }
+      return { ...item, judgment: null };
+    });
 
-  return {
-    id: `insp-${String(n).padStart(3, '0')}`,
-    woNumber: `INS-2026-${String(n).padStart(4, '0')}`,
-    woType,
-    craneId: crane.craneId,
-    craneName: crane.craneName,
-    siteId: crane.siteId,
-    siteName: crane.siteName,
-    scheduledDate,
-    actualDate,
-    assignedTo: pick(INSPECTOR_POOL),
-    performerType: pick(PERFORMER_POOL),
-    status,
-    priority,
-    result,
-    findings: result === 'fail' ? 'Critical issue detected during inspection.' : undefined,
-    findings_ko: result === 'fail' ? '점검 중 주요 이슈 발견.' : undefined,
-    totalHours: status === 'completed' ? Math.round(ispRand() * 40 + 10) / 10 : undefined,
-    cost: status === 'completed' ? Math.floor(ispRand() * 500) + 200 : undefined,
-    checklistItems,
-  };
-});
+    return {
+      id: `insp-${String(n).padStart(3, '0')}`,
+      woNumber: `INS-2026-${String(n).padStart(4, '0')}`,
+      woType,
+      craneId: crane.craneId,
+      craneName: crane.craneName,
+      siteId: crane.siteId,
+      siteName: crane.siteName,
+      scheduledDate,
+      actualDate,
+      assignedTo: pick(INSPECTOR_POOL),
+      performerType: pick(PERFORMER_POOL),
+      status,
+      priority,
+      result,
+      findings:
+        result === 'fail'
+          ? 'Critical issue detected during inspection.'
+          : undefined,
+      findings_ko: result === 'fail' ? '점검 중 주요 이슈 발견.' : undefined,
+      totalHours:
+        status === 'completed'
+          ? Math.round(ispRand() * 40 + 10) / 10
+          : undefined,
+      cost:
+        status === 'completed' ? Math.floor(ispRand() * 500) + 200 : undefined,
+      checklistItems,
+    };
+  },
+);
 
 /* 과거 연도(2024~2025) 완료 이력 — Spend 연도 추이와 Service Plan 이력이 성립하려면
  * 현재 연도 외의 데이터가 필요하다. 과거이므로 전부 completed로 둔다. */
@@ -271,7 +460,8 @@ const historicalInspectionWOs: InspectionWO[] = HISTORY_YEARS.flatMap((year) =>
     const woType = pick(WO_TYPES);
     // 연중 고르게 분포시켜 월별 추이가 한쪽으로 쏠리지 않게 한다
     const scheduledDate = historyDate(year, i * 2 + 2);
-    const result: InspectionWO['result'] = ispRand() < 0.75 ? 'pass' : 'conditional';
+    const result: InspectionWO['result'] =
+      ispRand() < 0.75 ? 'pass' : 'conditional';
     return {
       id: `insp-h${year}-${String(i + 1).padStart(2, '0')}`,
       woNumber: `INS-${year}-${String(i + 1).padStart(4, '0')}`,
@@ -290,12 +480,17 @@ const historicalInspectionWOs: InspectionWO[] = HISTORY_YEARS.flatMap((year) =>
       totalHours: Math.round(ispRand() * 40 + 10) / 10,
       cost: Math.floor(ispRand() * 500) + 200,
       checklistItems: frequentChecklist.map((item, idx) => {
-        const judgment = result === 'conditional' && idx === 5 ? 'fail' : 'pass';
+        const judgment =
+          result === 'conditional' && idx === 5 ? 'fail' : 'pass';
         return {
           ...item,
           judgment: judgment as 'pass' | 'fail',
-          severity: (judgment === 'fail' ? 'minor' : 'normal') as 'minor' | 'normal',
-          actionRequired: (judgment === 'fail' ? 'repair_needed' : 'none') as 'repair_needed' | 'none',
+          severity: (judgment === 'fail' ? 'minor' : 'normal') as
+            | 'minor'
+            | 'normal',
+          actionRequired: (judgment === 'fail' ? 'repair_needed' : 'none') as
+            | 'repair_needed'
+            | 'none',
         };
       }),
     };
@@ -386,7 +581,9 @@ export interface SubmitInspectionOutcome {
   nextWo?: InspectionWO;
 }
 
-export function submitInspectionResult(inspectionId: string): SubmitInspectionOutcome {
+export function submitInspectionResult(
+  inspectionId: string,
+): SubmitInspectionOutcome {
   const idx = allInspectionWOs.findIndex((w) => w.id === inspectionId);
   if (idx === -1) return { ok: false };
   const wo = allInspectionWOs[idx];
@@ -407,7 +604,8 @@ export function submitInspectionResult(inspectionId: string): SubmitInspectionOu
 
   // 반복 점검이면 다음 회차 자동 생성 — 지연 완료여도 과거 날짜로 태어나지 않게 오늘 이후로 보정.
   if (!wo.recurrence) return { ok: true };
-  const base = wo.scheduledDate > localToday() ? wo.scheduledDate : localToday();
+  const base =
+    wo.scheduledDate > localToday() ? wo.scheduledDate : localToday();
   const nextWo: InspectionWO = {
     ...wo,
     id: newInspectionId(),
@@ -430,7 +628,10 @@ export function submitInspectionResult(inspectionId: string): SubmitInspectionOu
  * 점검 예정일 변경 (캘린더 드래그 재조정).
  * 완료/취소 WO는 변경 불가. scheduled↔overdue는 새 날짜 기준으로 재계산한다.
  */
-export function updateInspectionSchedule(id: string, scheduledDate: string): boolean {
+export function updateInspectionSchedule(
+  id: string,
+  scheduledDate: string,
+): boolean {
   const idx = allInspectionWOs.findIndex((w) => w.id === id);
   if (idx === -1) return false;
   const wo = allInspectionWOs[idx];
@@ -445,7 +646,59 @@ export function updateInspectionSchedule(id: string, scheduledDate: string): boo
   return true;
 }
 
-export function getDefaultChecklist(woType: 'frequent' | 'periodic' | 'emergency' | 'special') {
+export interface InspectionTriageInput {
+  assignedTo: string;
+  performerType: InspectionWO['performerType'];
+  priority: InspectionWO['priority'];
+  scheduledDate: string;
+}
+
+/** 현장 점검 결과 접수 — 담당자·우선순위를 확정하고 접수 표식을 찍는다. */
+export function triageInspectionWO(
+  id: string,
+  input: InspectionTriageInput,
+  triagedBy: string,
+): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allInspectionWOs[idx];
+  if (wo.status === 'completed' || wo.status === 'cancelled') return false;
+  allInspectionWOs[idx] = {
+    ...wo,
+    ...input,
+    fieldReport: wo.fieldReport
+      ? markTriaged(wo.fieldReport, triagedBy)
+      : wo.fieldReport,
+  };
+  return true;
+}
+
+/** 현장에서 완료된 점검 결과의 접수 확인 — 배정 없이 접수 표식만 찍는다. */
+/** 담당자 변경 — 완료·취소된 WO 는 거부. */
+export function assignInspectionWO(id: string, assignedTo: string): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allInspectionWOs[idx];
+  if (wo.status === 'completed' || wo.status === 'cancelled') return false;
+  allInspectionWOs[idx] = { ...wo, assignedTo };
+  return true;
+}
+
+export function acknowledgeInspectionReport(id: string, by: string): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allInspectionWOs[idx];
+  if (!wo.fieldReport) return false;
+  allInspectionWOs[idx] = {
+    ...wo,
+    fieldReport: markTriaged(wo.fieldReport, by),
+  };
+  return true;
+}
+
+export function getDefaultChecklist(
+  woType: 'frequent' | 'periodic' | 'emergency' | 'special',
+) {
   void woType;
   return frequentChecklist.map((item) => ({ ...item, judgment: null as null }));
 }

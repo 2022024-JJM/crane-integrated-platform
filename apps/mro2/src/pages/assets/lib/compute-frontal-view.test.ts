@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Group, Mesh } from 'three';
-import { computeFrontalView, computeFrontalViewFromObjects } from './compute-frontal-view';
+import {
+  computeFrontalView,
+  computeFrontalViewFromObjects,
+} from './compute-frontal-view';
 
 function meshOfSize(x: number, y: number, z: number): Mesh {
   return new Mesh(new BoxGeometry(x, y, z));
@@ -57,5 +60,18 @@ describe('computeFrontalViewFromObjects', () => {
     // z 스팬(12) > x(2) → x축 시선
     expect(view!.position[2]).toBeCloseTo(5, 5);
     expect(view!.position[0]).toBeGreaterThan(1);
+  });
+
+  it('캔버스가 넓을수록(aspect 큼) 카메라가 가까워진다 — 넓은 모델은 가로 fit 이 좌우한다', () => {
+    const wide = meshOfSize(2, 5, 20);
+    const narrow = computeFrontalView(wide, 1.0)!.position[0];
+    const broad = computeFrontalView(wide, 2.0)!.position[0];
+    expect(broad).toBeLessThan(narrow);
+    // 잘못된 aspect 는 추정치로 — NaN/0 이어도 결과가 나온다
+    expect(computeFrontalView(wide, NaN)).not.toBeNull();
+    expect(computeFrontalView(wide, 0)!.position[0]).toBeCloseTo(
+      computeFrontalView(wide)!.position[0],
+      6,
+    );
   });
 });

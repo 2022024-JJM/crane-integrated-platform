@@ -48,7 +48,10 @@ export function CraneFrontView({
         </Suspense>
       </div>
       {caption ? (
-        <figcaption className="mt-1.5 shrink-0 text-center text-[10.5px]" style={{ color: KC.faint }}>
+        <figcaption
+          className="mt-1.5 shrink-0 text-center text-[12px]"
+          style={{ color: KC.faint }}
+        >
           {caption}
         </figcaption>
       ) : null}

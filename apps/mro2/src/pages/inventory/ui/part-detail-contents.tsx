@@ -52,19 +52,42 @@ export function StockChips({
   const { t } = useTranslation('mro2');
   const chips = [
     { label: t('inventory.currentQty'), value: item.currentQty, tone: KC.ink },
-    { label: t('inventory.reserved'), value: item.reservedQty, tone: item.reservedQty > 0 ? KC.production : KC.ink },
-    { label: t('inventory.available'), value: item.availableQty, tone: item.availableQty > 0 ? KC.ink : KC.safety },
-    { label: t('inventory.detail.stockOnOrder'), value: onOrderQty, tone: onOrderQty > 0 ? KC.link : KC.ink },
-    { label: t('inventory.reorderPoint'), value: item.reorderPoint, tone: KC.muted },
+    {
+      label: t('inventory.reserved'),
+      value: item.reservedQty,
+      tone: item.reservedQty > 0 ? KC.production : KC.ink,
+    },
+    {
+      label: t('inventory.available'),
+      value: item.availableQty,
+      tone: item.availableQty > 0 ? KC.ink : KC.safety,
+    },
+    {
+      label: t('inventory.detail.stockOnOrder'),
+      value: onOrderQty,
+      tone: onOrderQty > 0 ? KC.link : KC.ink,
+    },
+    {
+      label: t('inventory.reorderPoint'),
+      value: item.reorderPoint,
+      tone: KC.muted,
+    },
   ];
   return (
     <div className={`grid grid-cols-5 gap-1.5 ${className ?? ''}`}>
       {chips.map(({ label, value, tone }) => (
-        <div key={label} className="px-1 py-1.5 text-center" style={{ background: KC.bgRow }}>
-          <div className="text-[15px] font-bold leading-none tabular-nums" style={{ color: tone }}>
+        <div
+          key={label}
+          className="px-1 py-1.5 text-center"
+          style={{ background: KC.bgRow }}
+        >
+          <div
+            className="text-[15px] leading-none font-bold tabular-nums"
+            style={{ color: tone }}
+          >
             {value}
           </div>
-          <div className="mt-1 text-[9.5px]" style={{ color: KC.muted }}>
+          <div className="mt-1 text-[11px]" style={{ color: KC.muted }}>
             {label}
           </div>
         </div>
@@ -86,18 +109,27 @@ export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
           <div
             key={line.poId}
             className="border px-2.5 py-2"
-            style={{ borderColor: KC.hairline, borderLeft: `4px solid ${KC.link}` }}
+            style={{
+              borderColor: KC.hairline,
+              borderLeft: `4px solid ${KC.link}`,
+            }}
           >
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px]">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px]">
               <ShoppingCart size={11} style={{ color: KC.link }} />
               <span className="font-medium" style={{ color: KC.link }}>
                 {line.poNumber}
               </span>
-              <span className="font-bold tabular-nums" style={{ color: KC.ink }}>
+              <span
+                className="font-bold tabular-nums"
+                style={{ color: KC.ink }}
+              >
                 ×{line.qty}
               </span>
               {line.requester === 'System' && (
-                <span className="px-1.5 py-px text-[9.5px]" style={{ background: KC.bgRow, color: KC.text }}>
+                <span
+                  className="px-1.5 py-px text-[11px]"
+                  style={{ background: KC.bgRow, color: KC.text }}
+                >
                   {t('inventory.detail.onOrderAuto')}
                 </span>
               )}
@@ -108,11 +140,14 @@ export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
                 {fmtDate(line.expectedDelivery)}
               </span>
             </div>
-            <div className="mt-0.5 text-[10px]" style={{ color: KC.muted }}>
+            <div className="mt-0.5 text-[11px]" style={{ color: KC.muted }}>
               {line.vendor} · {t(`inventory.poStatus.${line.status}`)}
             </div>
             {line.note && (
-              <div className="mt-0.5 text-[10px] leading-relaxed" style={{ color: KC.muted }}>
+              <div
+                className="mt-0.5 text-[11px] leading-relaxed"
+                style={{ color: KC.muted }}
+              >
                 {line.note}
               </div>
             )}
@@ -138,21 +173,34 @@ export function InfoContent({
     { label: t('inventory.criticality'), value: item.criticality },
     { label: t('inventory.uom'), value: item.uom },
     { label: t('inventory.unitPrice'), value: usd(item.unitPrice) },
-    { label: t('inventory.leadTime'), value: t('inventory.leadTimeDays', { days: item.leadTimeDays }) },
+    {
+      label: t('inventory.leadTime'),
+      value: t('inventory.leadTimeDays', { days: item.leadTimeDays }),
+    },
     { label: t('inventory.colBin'), value: item.locationBin },
     { label: t('inventory.minStock'), value: String(item.minStockQty) },
     { label: t('inventory.reorderPoint'), value: String(item.reorderPoint) },
     { label: t('inventory.lastReceipt'), value: fmtDate(item.lastReceiptDate) },
     { label: t('inventory.lastIssue'), value: fmtDate(item.lastIssueDate) },
-    { label: t('inventory.detail.cranes'), value: craneLabel(item.craneIds, t('inventory.detail.cranesCommon')) },
+    {
+      label: t('inventory.detail.cranes'),
+      value: craneLabel(item.craneIds, t('inventory.detail.cranesCommon')),
+    },
   ];
 
   return (
     <div className="flex flex-col gap-3">
       <div>
         {rows.map(({ label, value }) => (
-          <div key={label} className="flex border-b py-1 text-[10.5px]" style={{ borderColor: KC.hairline }}>
-            <span className="w-[110px] shrink-0 font-bold" style={{ color: KC.ink }}>
+          <div
+            key={label}
+            className="flex border-b py-1 text-[12px]"
+            style={{ borderColor: KC.hairline }}
+          >
+            <span
+              className="w-[110px] shrink-0 font-bold"
+              style={{ color: KC.ink }}
+            >
               {label}
             </span>
             <span style={{ color: KC.text }}>{value}</span>
@@ -162,7 +210,10 @@ export function InfoContent({
 
       {openPoLines.length > 0 && (
         <section>
-          <h4 className="mb-1.5 text-[11.5px] font-bold" style={{ color: KC.ink }}>
+          <h4
+            className="mb-1.5 text-[13px] font-bold"
+            style={{ color: KC.ink }}
+          >
             {t('inventory.detail.onOrderTitle')}
           </h4>
           <OnOrderList lines={openPoLines} />
@@ -172,12 +223,14 @@ export function InfoContent({
   );
 }
 
-export function HistoryContent({ transactions }: { transactions: InventoryTransaction[] }) {
+export function HistoryContent({
+  transactions,
+}: {
+  transactions: InventoryTransaction[];
+}) {
   const { t } = useTranslation('mro2');
   if (transactions.length === 0) {
-    return (
-      <KcEmpty>{t('inventory.noTransactions')}</KcEmpty>
-    );
+    return <KcEmpty>{t('inventory.noTransactions')}</KcEmpty>;
   }
   return (
     <div className="flex flex-col gap-1.5">
@@ -188,32 +241,43 @@ export function HistoryContent({ transactions }: { transactions: InventoryTransa
           <div
             key={tx.id}
             className="border px-2.5 py-2"
-            style={{ borderColor: KC.hairline, borderLeft: `4px solid ${style.tone}` }}
+            style={{
+              borderColor: KC.hairline,
+              borderLeft: `4px solid ${style.tone}`,
+            }}
           >
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px]">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px]">
               <Icon size={11} style={{ color: style.tone }} />
               <span className="font-bold" style={{ color: KC.ink }}>
-                {t(`inventory.txn${tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}`)}
+                {t(
+                  `inventory.txn${tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}`,
+                )}
               </span>
-              <span className="font-bold tabular-nums" style={{ color: style.tone }}>
+              <span
+                className="font-bold tabular-nums"
+                style={{ color: style.tone }}
+              >
                 {style.sign}
                 {tx.qty}
               </span>
               {tx.ref && (
-                <span className="text-[9.5px]" style={{ color: KC.muted }}>
+                <span className="text-[11px]" style={{ color: KC.muted }}>
                   {tx.ref}
                 </span>
               )}
-              <span className="ml-auto text-[9.5px]" style={{ color: KC.faint }}>
+              <span className="ml-auto text-[11px]" style={{ color: KC.faint }}>
                 {fmtDate(tx.date)}
               </span>
             </div>
             {tx.note && (
-              <div className="mt-0.5 text-[10px] leading-relaxed" style={{ color: KC.muted }}>
+              <div
+                className="mt-0.5 text-[11px] leading-relaxed"
+                style={{ color: KC.muted }}
+              >
                 {tx.note}
               </div>
             )}
-            <div className="mt-0.5 text-[9.5px]" style={{ color: KC.faint }}>
+            <div className="mt-0.5 text-[11px]" style={{ color: KC.faint }}>
               {tx.by}
             </div>
           </div>
@@ -223,12 +287,14 @@ export function HistoryContent({ transactions }: { transactions: InventoryTransa
   );
 }
 
-export function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[] }) {
+export function UsageContent({
+  repairUsages,
+}: {
+  repairUsages: PartRepairUsage[];
+}) {
   const { t } = useTranslation('mro2');
   if (repairUsages.length === 0) {
-    return (
-      <KcEmpty>{t('inventory.detail.emptyUsage')}</KcEmpty>
-    );
+    return <KcEmpty>{t('inventory.detail.emptyUsage')}</KcEmpty>;
   }
   return (
     <div className="flex flex-col gap-1.5">
@@ -239,19 +305,22 @@ export function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[]
           className="kc-hover flex cursor-pointer flex-col gap-0.5 border px-2.5 py-2"
           style={{ borderColor: KC.hairline }}
         >
-          <div className="flex items-center gap-2 text-[10.5px]">
+          <div className="flex items-center gap-2 text-[12px]">
             <span className="font-medium" style={{ color: KC.link }}>
               {repair.woNumber}
             </span>
-            <span className="text-[9.5px]" style={{ color: KC.muted }}>
+            <span className="text-[11px]" style={{ color: KC.muted }}>
               {repair.craneName}
             </span>
-            <span className="ml-auto font-bold tabular-nums" style={{ color: KC.ink }}>
+            <span
+              className="ml-auto font-bold tabular-nums"
+              style={{ color: KC.ink }}
+            >
               {t('inventory.detail.usageQty', { n: qty })}
             </span>
             <ChevronRight size={11} style={{ color: KC.muted }} />
           </div>
-          <div className="truncate text-[10px]" style={{ color: KC.muted }}>
+          <div className="truncate text-[11px]" style={{ color: KC.muted }}>
             {repair.componentName}
           </div>
         </Link>
@@ -280,15 +349,27 @@ export function ActionButtons({
         variant="outline"
         className="w-full justify-center"
         // 사용처가 단일 크레인일 때만 크레인까지 프리필(다중이면 사용자가 선택)
-        onClick={() => openTicket('parts', craneIds.length === 1 ? craneIds[0] : undefined, { partId })}
+        onClick={() =>
+          openTicket('parts', craneIds.length === 1 ? craneIds[0] : undefined, {
+            partId,
+          })
+        }
       >
         <PackagePlus size={13} /> {t('inventory.actions.requestPart')}
       </KcButton>
       <div className="flex gap-1.5">
-        <KcButton variant="outline" className="flex-1 justify-center" onClick={() => onAction('issue')}>
+        <KcButton
+          variant="outline"
+          className="flex-1 justify-center"
+          onClick={() => onAction('issue')}
+        >
           <ArrowUpFromLine size={13} /> {t('inventory.actions.issue')}
         </KcButton>
-        <KcButton variant="teal" className="flex-1 justify-center" onClick={() => onAction('receipt')}>
+        <KcButton
+          variant="teal"
+          className="flex-1 justify-center"
+          onClick={() => onAction('receipt')}
+        >
           <ArrowDownToLine size={13} /> {t('inventory.actions.receipt')}
         </KcButton>
       </div>

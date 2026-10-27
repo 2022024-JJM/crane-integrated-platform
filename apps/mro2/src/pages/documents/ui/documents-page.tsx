@@ -1,8 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Download, FileText, Upload, X } from 'lucide-react';
-import { useDocuments, useUploadDocument } from '@crane/features/compliance';
+import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
+import { Download, FileText, Upload, X } from 'lucide-react';
+import {
+  useDocuments,
+  useRequestCertRenewal,
+  useUploadDocument,
+} from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
 import { KC } from '../../../shared/ui/kc';
 import {
@@ -40,6 +45,7 @@ export function Mro2DocumentsPage() {
   const { t } = useTranslation('mro2');
   const [searchParams, setSearchParams] = useSearchParams();
   const { oshaReports, certifications, uploads } = useDocuments();
+  const requestRenewal = useRequestCertRenewal();
   const uploadDocument = useUploadDocument();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +88,11 @@ export function Mro2DocumentsPage() {
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
     const docType: DocumentType =
-      ext === 'dwg' || ext === 'dxf' ? 'drawing' : ext === 'pdf' ? 'manual' : 'other';
+      ext === 'dwg' || ext === 'dxf'
+        ? 'drawing'
+        : ext === 'pdf'
+          ? 'manual'
+          : 'other';
     uploadDocument({
       fileName: file.name,
       docType,
@@ -97,11 +107,6 @@ export function Mro2DocumentsPage() {
     <div className="flex gap-6 pt-2">
       {/* 필터 레일 */}
       <div className="hidden lg:block">
-        <div className="mb-2">
-          <Link to="/mro2" className="flex items-center gap-1 text-[12px]" style={{ color: KC.ink }}>
-            <ChevronLeft size={14} /> {t('common.back')}
-          </Link>
-        </div>
         <KcFilterRail
           selectedCount={types.size}
           onClear={() => {
@@ -113,18 +118,9 @@ export function Mro2DocumentsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('documents.search')}
-            className="w-full border px-2 py-1 text-[11px]"
+            className="w-full border px-2 py-1 text-[12px]"
             style={{ borderColor: KC.border, color: KC.ink }}
           />
-          <KcFilterGroup title={t('common.selectedCustomers')}>
-            <div
-              className="w-full px-2 py-1.5 text-[10.5px] leading-snug"
-              style={{ background: KC.inverseBg, color: KC.inverseText }}
-            >
-              {t('common.customerName')}
-              <div style={{ color: KC.inverseMuted }}>{t('common.customerAddress')}</div>
-            </div>
-          </KcFilterGroup>
           <KcFilterGroup title={t('documents.typeTitle')}>
             {DOCUMENT_TYPES.map((ty) => (
               <KcFilterChip
@@ -150,12 +146,20 @@ export function Mro2DocumentsPage() {
                 className="hidden"
                 onChange={(e) => onPickFile(e.target.files?.[0])}
               />
-              <KcButton variant="outline" onClick={() => fileRef.current?.click()}>
+              <KcButton
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+              >
                 <Upload size={12} /> {t('documents.upload')}
               </KcButton>
               <KcButton
                 variant="teal"
-                onClick={() => downloadCsv('documents.csv', toCsv(filtered, DOCUMENT_CSV_COLUMNS))}
+                onClick={() =>
+                  downloadCsv(
+                    'documents.csv',
+                    toCsv(filtered, DOCUMENT_CSV_COLUMNS),
+                  )
+                }
               >
                 <FileText size={12} /> {t('common.generateReport')}
               </KcButton>
@@ -164,7 +168,7 @@ export function Mro2DocumentsPage() {
         >
           {t('documents.title')}
         </KcSectionHeading>
-        <div className="mb-3 text-[11px]" style={{ color: KC.muted }}>
+        <div className="mb-3 text-[12px]" style={{ color: KC.muted }}>
           {t('documents.subtitle', { count: filtered.length })}
         </div>
 
@@ -172,15 +176,30 @@ export function Mro2DocumentsPage() {
           <KcEmpty>{t('documents.empty')}</KcEmpty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-[11px]">
+            <table className="w-full min-w-[680px] text-[12px]">
               <thead>
-                <tr className="border-b text-left" style={{ borderColor: KC.border, color: KC.muted }}>
-                  <th className="py-1.5 pr-2 font-normal">{t('documents.colName')}</th>
-                  <th className="py-1.5 pr-2 font-normal">{t('documents.colType')}</th>
-                  <th className="py-1.5 pr-2 font-normal">{t('documents.colAsset')}</th>
-                  <th className="py-1.5 pr-2 font-normal">{t('documents.colDate')}</th>
-                  <th className="py-1.5 pr-2 font-normal">{t('documents.colBy')}</th>
-                  <th className="py-1.5 font-normal">{t('documents.colDetail')}</th>
+                <tr
+                  className="border-b text-left"
+                  style={{ borderColor: KC.border, color: KC.muted }}
+                >
+                  <th className="py-1.5 pr-2 font-normal">
+                    {t('documents.colName')}
+                  </th>
+                  <th className="py-1.5 pr-2 font-normal">
+                    {t('documents.colType')}
+                  </th>
+                  <th className="py-1.5 pr-2 font-normal">
+                    {t('documents.colAsset')}
+                  </th>
+                  <th className="py-1.5 pr-2 font-normal">
+                    {t('documents.colDate')}
+                  </th>
+                  <th className="py-1.5 pr-2 font-normal">
+                    {t('documents.colBy')}
+                  </th>
+                  <th className="py-1.5 font-normal">
+                    {t('documents.colDetail')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -212,17 +231,76 @@ export function Mro2DocumentsPage() {
                     <td className="py-1.5 pr-2" style={{ color: KC.text }}>
                       {t(`documents.type.${r.docType}`)}
                     </td>
-                    <td className="max-w-[150px] truncate py-1.5 pr-2" style={{ color: KC.text }}>
+                    <td
+                      className="max-w-[150px] truncate py-1.5 pr-2"
+                      style={{ color: KC.text }}
+                    >
                       {r.assetName ?? '-'}
                     </td>
                     <td className="py-1.5 pr-2" style={{ color: KC.text }}>
                       {fmtDate(r.date)}
                     </td>
-                    <td className="max-w-[110px] truncate py-1.5 pr-2" style={{ color: KC.text }}>
+                    <td
+                      className="max-w-[110px] truncate py-1.5 pr-2"
+                      style={{ color: KC.text }}
+                    >
                       {r.by}
                     </td>
                     <td className="py-1.5" style={{ color: KC.muted }}>
-                      {r.detail}
+                      {r.certStatus ? (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="rounded px-1.5 py-0.5 text-[11px] font-bold"
+                            style={
+                              r.certStatus === 'expired'
+                                ? { background: KC.safety, color: KC.onSafety }
+                                : r.certStatus === 'expiry_soon'
+                                  ? {
+                                      color: KC.production,
+                                      border: `1px solid ${KC.production}`,
+                                    }
+                                  : {
+                                      color: KC.muted,
+                                      border: `1px solid ${KC.border}`,
+                                    }
+                            }
+                          >
+                            {t(`documents.certStatus.${r.certStatus}`)}
+                          </span>
+                          <span className="tabular-nums">
+                            {fmtDate(r.expiryDate)}
+                          </span>
+                          {r.certStatus === 'expired' ||
+                          r.certStatus === 'expiry_soon' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const undo = requestRenewal(r.certId!);
+                                if (undo) {
+                                  toast.success(
+                                    t('documents.renewalRequested', {
+                                      name: r.name,
+                                    }),
+                                    {
+                                      action: {
+                                        label: t('common:undo'),
+                                        onClick: undo,
+                                      },
+                                    },
+                                  );
+                                }
+                              }}
+                              className="cursor-pointer text-[12px] font-semibold underline-offset-2 hover:underline"
+                              style={{ color: KC.link }}
+                            >
+                              {t('documents.requestRenewal')}
+                            </button>
+                          ) : null}
+                        </span>
+                      ) : (
+                        r.detail
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -233,40 +311,76 @@ export function Mro2DocumentsPage() {
       </div>
 
       {/* 문서 상세 패널 (?doc= URL 단일 소스) */}
-      {selected ? <DocumentInfoPanel row={selected} onClose={closeDoc} /> : null}
+      {selected ? (
+        <DocumentInfoPanel row={selected} onClose={closeDoc} />
+      ) : null}
     </div>
   );
 }
 
-function DocumentInfoPanel({ row, onClose }: { row: DocumentRow; onClose: () => void }) {
+function DocumentInfoPanel({
+  row,
+  onClose,
+}: {
+  row: DocumentRow;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('mro2');
 
   return (
     <aside
-      className="fixed top-14 right-0 bottom-0 z-40 w-[300px] overflow-y-auto border-l shadow-xl"
+      className="fixed top-[100px] right-0 bottom-0 z-30 w-[300px] overflow-y-auto border-l shadow-xl"
       style={{ borderColor: KC.border, background: KC.bg }}
     >
       <div className="flex items-start justify-between px-4 pt-4">
-        <h3 className="pr-2 text-[13px] font-bold" style={{ color: KC.ink }}>
+        <h3 className="pr-2 text-[14px] font-bold" style={{ color: KC.ink }}>
           {row.name}
         </h3>
-        <button type="button" aria-label="Close" onClick={onClose} className="cursor-pointer">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="cursor-pointer"
+        >
           <X size={15} style={{ color: KC.ink }} />
         </button>
       </div>
       <div className="px-4 pb-4">
-        <div className="mt-1 text-[10.5px]" style={{ color: KC.muted }}>
+        <div className="mt-1 text-[12px]" style={{ color: KC.muted }}>
           {t(`documents.origin.${row.origin}`)}
         </div>
 
-        <div className="mt-3 border-t pt-2" style={{ borderColor: KC.hairline }}>
-          <KcFieldRow labelWidth={110} k={t('documents.colType')} v={t(`documents.type.${row.docType}`)} />
-          <KcFieldRow labelWidth={110} k={t('documents.colAsset')} v={row.assetName ?? '-'} />
-          <KcFieldRow labelWidth={110} k={t('documents.colDate')} v={fmtDate(row.date)} />
+        <div
+          className="mt-3 border-t pt-2"
+          style={{ borderColor: KC.hairline }}
+        >
+          <KcFieldRow
+            labelWidth={110}
+            k={t('documents.colType')}
+            v={t(`documents.type.${row.docType}`)}
+          />
+          <KcFieldRow
+            labelWidth={110}
+            k={t('documents.colAsset')}
+            v={row.assetName ?? '-'}
+          />
+          <KcFieldRow
+            labelWidth={110}
+            k={t('documents.colDate')}
+            v={fmtDate(row.date)}
+          />
           <KcFieldRow labelWidth={110} k={t('documents.colBy')} v={row.by} />
-          <KcFieldRow labelWidth={110} k={t('documents.colDetail')} v={row.detail || '-'} />
+          <KcFieldRow
+            labelWidth={110}
+            k={t('documents.colDetail')}
+            v={row.detail || '-'}
+          />
           {row.sizeBytes ? (
-            <KcFieldRow labelWidth={110} k={t('documents.size')} v={formatSize(row.sizeBytes)} />
+            <KcFieldRow
+              labelWidth={110}
+              k={t('documents.size')}
+              v={formatSize(row.sizeBytes)}
+            />
           ) : null}
         </div>
 

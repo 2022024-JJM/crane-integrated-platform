@@ -13,7 +13,7 @@ export function KcFieldRow({
   labelWidth?: number;
 }) {
   return (
-    <div className="flex py-1 text-[11.5px]">
+    <div className="flex py-1 text-[13px]">
       <span className="shrink-0 font-bold" style={{ color: KC.ink, width: labelWidth }}>
         {k}:
       </span>

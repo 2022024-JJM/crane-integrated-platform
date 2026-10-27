@@ -7,8 +7,9 @@
     "serviceCalendar": "서비스 캘린더",
     "spend": "비용",
     "inventory": "재고·부품",
-    "servicePlan": "서비스 플랜",
-    "documents": "문서 및 보고서"
+    "documents": "문서 및 보고서",
+    "field": "현장 모드",
+    "triage": "접수함"
   },
   "common": {
     "back": "뒤로",
@@ -17,8 +18,6 @@
     "clearFilter": "필터 초기화",
     "searchAssets": "자산 검색...",
     "searchParts": "부품 검색...",
-    "selectedCustomers": "선택된 고객",
-    "selectedLocations": "선택된 위치",
     "customerName": "Philly Shipyard",
     "customerAddress": "Dock No.4, Philadelphia, PA, USA",
     "customerSiteId": "사이트 ID: PHL-DOCK4",
@@ -31,8 +30,6 @@
     "activities": "활동 {{count}}건",
     "serviceRequest": "서비스 요청",
     "scheduled": "예정",
-    "quote": "견적",
-    "quotes": "견적",
     "openItems": "미결 항목",
     "safety": "안전",
     "production": "생산",
@@ -82,16 +79,8 @@
     "parts": "예비 부품"
   },
   "overview": {
-    "serviceOpenItems": "서비스 · 미결 항목",
     "openRisks": "미결 리스크",
-    "service": "서비스",
-    "calendarCard": "서비스 캘린더·리포트",
-    "serviceVisits": "서비스 방문",
-    "assetsServiced": "서비스 자산",
-    "totalFindings": "총 소견",
     "assetFleet": "자산 플릿",
-    "operatingAssets": "가동 자산",
-    "nAssets": "자산 {{n}}/{{total}}",
     "serviceRequests": "서비스 요청",
     "open": "미결",
     "completed": "완료",
@@ -102,13 +91,24 @@
     "plannedRepairs": "계획 수리",
     "onCallService": "긴급 출동",
     "inventoryCard": "재고·부품",
-    "parts": "부품",
     "lowStock": "저재고",
     "activePOs": "진행 발주",
     "stockValue": "재고 가치 {{value}}",
-    "assetsWithOpenItems": "미결 항목 보유 자산",
-    "recentActivity": "최근 활동",
-    "viewAll": "전체 보기"
+    "todo": {
+      "title": "할 일",
+      "empty": "처리할 리스크가 없습니다",
+      "more": "미결 {{n}}건 더 — 서비스 요청에서 전체 보기",
+      "source": {
+        "inspection_finding": "점검 소견",
+        "repair": "수리",
+        "stock": "재고",
+        "overdue_inspection": "점검 지연"
+      }
+    },
+    "fleet": {
+      "total": "총 {{n}}대",
+      "health": "건강도 {{pct}}%"
+    }
   },
   "assets": {
     "nAssets": "자산 {{count}}대",
@@ -135,14 +135,26 @@
     },
     "ownLabels": "내 라벨",
     "addLabel": "라벨 추가…",
-    "removeLabel": "라벨 {{label}} 제거"
+    "removeLabel": "라벨 {{label}} 제거",
+    "card": {
+      "health": "건강도",
+      "worst": "최저: {{name}}",
+      "components": "구성품",
+      "issuesN": "이상 {{n}}건",
+      "critical": "위험",
+      "warning": "경고",
+      "caution": "주의",
+      "woSplit": "점검 {{i}} · 정비 {{r}}",
+      "inspection": "점검",
+      "overdue": "지연 D+{{n}}",
+      "overdueHint": "예정일 지남",
+      "nextHint": "다음 점검",
+      "noneHint": "예정 없음"
+    }
   },
   "detail": {
-    "tabOpenItems": "미결 항목",
-    "tabActivities": "전체 활동",
     "tabMonitoring": "모니터링",
-    "tabInfo": "자산 정보",
-    "openItemsNow": "서비스 미결 항목 · 방금 전",
+    "tabInfo": "정보",
     "safetyRisks": "안전 리스크",
     "productionRisks": "생산 리스크",
     "noOpenItems": "현재 미결 항목이 없습니다",
@@ -152,7 +164,10 @@
     "typeInspection": "{{type}} 점검",
     "tab3d": "3D 뷰",
     "loading3d": "3D 뷰어 로딩 중…",
-    "tabDocuments": "문서"
+    "tabWork": "작업",
+    "tabCondition": "컨디션",
+    "filterOpen": "미결 {{n}}",
+    "filterAll": "전체 {{n}}"
   },
   "monitoring": {
     "summary": "요약 – 현재 상태",
@@ -201,7 +216,9 @@
     "indoorOutdoor": "실내/실외",
     "oshaClassification": "OSHA 분류",
     "status": "상태",
-    "frontViewCaption": "정면 뷰 — {{name}}"
+    "frontViewCaption": "정면 뷰 — {{name}}",
+    "indoor": "실내",
+    "outdoor": "실외"
   },
   "calendar": {
     "title": "서비스 캘린더",
@@ -252,8 +269,6 @@
     "plannedRepairs": "계획 수리",
     "noRequests": "이 기간에 서비스 요청이 없습니다.",
     "notFound": "서비스 요청을 찾을 수 없습니다.",
-    "customerServiceInfo": "고객·서비스 정보",
-    "summary": "요약",
     "customer": "고객",
     "location": "위치",
     "asset": "자산",
@@ -263,16 +278,11 @@
     "scheduledDate": "예정일",
     "actualDate": "실시일",
     "totalHours": "총 시간",
-    "srStatus": "서비스 요청 상태",
-    "serviceProducts": "서비스 제품",
-    "assetsServiced": "서비스 자산 수",
     "findingsAndActions": "소견 및 조치",
-    "findingsByAsset": "자산별 소견 및 조치",
     "note": "참고!",
     "noteText": "일부 부품은 분해 또는 다른 점검 방법 없이 육안 점검만으로는 상태를 직접 확인할 수 없습니다. 해당 부품은 아래와 같이 별도로 표시됩니다:",
     "undeterminedLegend": "판정 불가 (점검 불가 - 범위 외)",
-    "findingsSection": "소견 및 조치 (자산 1대)",
-    "serviceProductsLine": "서비스 제품: {{product}}",
+    "findingsSection": "소견 및 조치",
     "onlyFindings": "소견·조치만",
     "completeStructure": "전체 부품 구조",
     "unableToInspect": "점검 불가",
@@ -316,7 +326,73 @@
     "createRepair": "수리 요청 생성",
     "attachments": "첨부파일 ({{count}})",
     "noAttachments": "첨부파일이 없습니다.",
-    "addAttachment": "추가"
+    "addAttachment": "추가",
+    "col": {
+      "date": "날짜",
+      "status": "상태",
+      "number": "번호",
+      "title": "내용",
+      "product": "서비스 제품",
+      "asset": "자산",
+      "assignee": "담당"
+    },
+    "work": {
+      "addPart": "부품 추가",
+      "noParts": "사용 부품이 없습니다",
+      "searchPart": "부품 검색",
+      "avail": "가용 {{n}}",
+      "by": "기록자",
+      "issue": "출고·기록",
+      "partIssued": "{{part}} ×{{n}} → {{number}}",
+      "insufficient": "가용 재고가 부족합니다",
+      "partFailed": "부품을 기록하지 못했습니다",
+      "locked": "완료된 작업은 수정할 수 없습니다",
+      "title": "작업 현황",
+      "action": "조치 내용",
+      "actionPending": "현장 완료 보고 대기"
+    },
+    "exportCsv": "CSV",
+    "partsTitle": "{{first}} ×{{qty}}",
+    "partsTitleMore": "{{first}} ×{{qty}} 외 {{more}}",
+    "count": "서비스 요청 {{count}}건",
+    "bulk": {
+      "selected": "{{n}}건 선택",
+      "date": "예정일",
+      "assignee": "담당자",
+      "apply": "적용",
+      "clear": "선택 해제",
+      "select": "{{number}} 선택",
+      "rescheduled": "{{n}}건 예정일 변경됨",
+      "reassigned": "{{n}}건 담당자 변경됨"
+    },
+    "tabs": {
+      "active": "미완료",
+      "delayed": "지연",
+      "received": "접수",
+      "inProgress": "진행 중",
+      "open": "예정",
+      "completed": "완료",
+      "all": "전체"
+    },
+    "unassigned": "미배정",
+    "reportedBy": "현장 보고: {{name}}",
+    "urgent": "긴급",
+    "high": "높음",
+    "searchPlaceholder": "자산·번호 검색",
+    "panel": {
+      "reporter": "보고자",
+      "toInbox": "접수함에서 배정하기",
+      "photos": "사진 {{n}}장",
+      "fullDetail": "상세 페이지 열기"
+    },
+    "checklistSection": "점검 항목 {{n}} — 현장 점검 대기",
+    "pending": "미판정",
+    "print": "인쇄",
+    "level": {
+      "minor": "경수리",
+      "major": "중수리",
+      "overhaul": "오버홀"
+    }
   },
   "inventory": {
     "title": "재고·부품",
@@ -407,7 +483,18 @@
       "toastInsufficient": "가용 재고가 부족합니다",
       "toastWoClosed": "종결된 WO에는 출고할 수 없습니다",
       "toastFailed": "처리에 실패했습니다"
-    }
+    },
+    "colStockMin": "현재/최소",
+    "colLevel": "재고 수준",
+    "crit": {
+      "critical": "위험",
+      "essential": "필수",
+      "standard": "표준"
+    },
+    "lowStockStrip": "안전재고 미달 부품 {{n}}종",
+    "showInTable": "표에서 보기 ›",
+    "poTitle": "진행 중 발주 (PO)",
+    "reorderNeeded": "재주문 필요 {{n}}"
   },
   "spend": {
     "title": "비용",
@@ -511,10 +598,177 @@
       "uploaded": "고객 업로드"
     },
     "assetDocs": "{{count}}개 문서",
-    "emptyAsset": "이 자산의 문서가 아직 없습니다."
+    "emptyAsset": "이 자산의 문서가 아직 없습니다.",
+    "certStatus": {
+      "valid": "유효",
+      "expiry_soon": "만료 임박",
+      "expired": "만료",
+      "renewing": "갱신 중"
+    },
+    "requestRenewal": "갱신 요청",
+    "renewalRequested": "{{name}} 갱신 요청됨"
   },
   "search": {
     "placeholder": "자산·서비스 요청 검색…",
     "noResults": "검색 결과가 없습니다."
+  },
+  "field": {
+    "title": "현장 모드",
+    "reporter": "보고자",
+    "workerPrompt": "이름을 입력하세요",
+    "workerHint": "티켓에 보고자로 기록되고 이 기기에 기억됩니다",
+    "workerSave": "저장",
+    "workerChange": "변경",
+    "workerFirst": "먼저 이름을 입력하세요",
+    "reportRepair": "고장 신고",
+    "reportParts": "부품 요청",
+    "reportInspection": "점검 결과",
+    "recentAssets": "최근 자산",
+    "myTickets": "내 작업",
+    "seeAll": "전체 보기",
+    "noTickets": "올린 신고나 배정된 작업이 없습니다",
+    "back": "뒤로",
+    "next": "다음",
+    "skip": "건너뛰기",
+    "submit": "등록",
+    "stepOf": "{{n}} / {{total}}",
+    "searchAsset": "장비 이름·모델 검색",
+    "searchPart": "부품 이름·번호 검색",
+    "symptomPlaceholder": "증상을 적어 주세요",
+    "findingsPlaceholder": "소견을 적어 주세요",
+    "componentPlaceholder": "부위 (선택)",
+    "notePlaceholder": "메모 (선택)",
+    "inspType": "점검 종류",
+    "resultPass": "이상 없음",
+    "resultFail": "이상 있음",
+    "addPhoto": "사진 찍기 / 선택",
+    "photoCount": "{{n}} / {{max}}장",
+    "photoN": "{{n}}장",
+    "removePhoto": "사진 삭제",
+    "qtyMinus": "수량 줄이기",
+    "qtyPlus": "수량 늘리기",
+    "kind": {
+      "repair": "고장 신고",
+      "parts": "부품 요청",
+      "inspection": "점검 결과"
+    },
+    "step": {
+      "asset": "어느 장비입니까?",
+      "symptom": "무슨 증상입니까?",
+      "parts": "어떤 부품이 필요합니까?",
+      "inspection": "점검 결과는?",
+      "photo": "사진을 첨부하세요",
+      "priority": "얼마나 급합니까?"
+    },
+    "prio": {
+      "emergency": "긴급 — 운전 중지",
+      "high": "높음 — 당일 조치",
+      "normal": "보통",
+      "urgent": "긴급"
+    },
+    "preset": {
+      "wireDamage": "와이어 손상",
+      "brakeAbnormal": "브레이크 이상",
+      "noise": "이상 소음",
+      "motorStop": "모터 정지",
+      "limitFault": "리미트 스위치 고장",
+      "leak": "누유",
+      "wear": "마모",
+      "crack": "균열",
+      "loose": "볼트 풀림",
+      "corrosion": "부식"
+    },
+    "confirm": {
+      "reporter": "보고자",
+      "asset": "장비",
+      "symptom": "증상",
+      "component": "부위",
+      "priority": "우선순위",
+      "parts": "부품",
+      "note": "메모",
+      "result": "결과",
+      "findings": "소견",
+      "photos": "사진",
+      "partsN": "부품 {{n}}종"
+    },
+    "done": {
+      "title": "등록되었습니다",
+      "another": "하나 더 등록",
+      "home": "홈으로"
+    },
+    "tone": {
+      "done": "완료",
+      "active": "진행 중",
+      "waiting": "대기"
+    },
+    "ticketNotFound": "티켓을 찾을 수 없습니다",
+    "detail": {
+      "status": "상태",
+      "date": "날짜",
+      "openPortal": "관리 화면에서 열기",
+      "addPhoto": "사진 추가"
+    },
+    "checklist": {
+      "pass": "양호",
+      "fail": "불량",
+      "na": "해당없음",
+      "allPass": "전부 양호",
+      "progress": "{{n}} / {{total}} 판정",
+      "failedN": "불량 {{n}}건",
+      "failedItems": "불량 항목"
+    },
+    "emergency": {
+      "button": "긴급 정지 신고",
+      "title": "긴급 정지 신고",
+      "hint": "장비를 고르고 아래 버튼을 누르면 바로 접수됩니다. 증상·사진은 나중에 덧붙일 수 있습니다.",
+      "submit": "긴급 신고 보내기",
+      "description": "긴급 정지 — 안전 위험",
+      "notePlaceholder": "한 줄 메모 (선택)",
+      "alreadyOpen": "이 장비에 이미 긴급 신고 {{number}} 가 열려 있습니다",
+      "sent": "긴급 신고가 접수되었습니다",
+      "sentHint": "관리자 접수함 맨 위에 올라갑니다."
+    },
+    "duplicate": {
+      "title": "이 장비에 열린 고장 신고 {{n}}건",
+      "addPhoto": "사진 추가",
+      "hint": "같은 고장이면 새로 올리지 말고 기존 신고에 사진만 덧붙이세요."
+    },
+    "work": {
+      "start": "작업 시작",
+      "complete": "작업 완료",
+      "actionTitle": "무엇을 했습니까?",
+      "actionPlaceholder": "조치 내용을 적어 주세요",
+      "sendComplete": "완료 보고 보내기",
+      "started": "{{number}} 작업 시작",
+      "completed": "{{number}} 완료 보고됨",
+      "action": "조치 내용",
+      "preset": {
+        "partReplaced": "부품 교체",
+        "adjusted": "조정·교정",
+        "cleaned": "청소·정비",
+        "tempFix": "임시 조치"
+      }
+    }
+  },
+  "triage": {
+    "title": "현장 접수함",
+    "count": "{{n}}건 대기",
+    "empty": "처리할 현장 보고가 없습니다",
+    "band": "현장 접수 {{n}}건",
+    "open": "접수함 열기",
+    "reportedBy": "보고자 {{name}}",
+    "waitedMinutes": "{{n}}분 전",
+    "waitedHours": "{{n}}시간 전",
+    "waitedDays": "{{n}}일 전",
+    "assign": "배정",
+    "assigned": "{{number}} → {{name}} 배정됨",
+    "createRepair": "수리 요청 생성",
+    "approve": "승인",
+    "reject": "반려",
+    "approved": "{{number}} 승인됨",
+    "rejected": "{{number}} 반려됨",
+    "acknowledge": "확인",
+    "acknowledged": "{{number}} 확인됨",
+    "openField": "현장 화면 열기"
   }
 }

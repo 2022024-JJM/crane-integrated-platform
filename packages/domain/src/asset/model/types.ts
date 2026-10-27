@@ -23,7 +23,12 @@ export type ComponentType =
   | 'safety'
   | 'control';
 
-export type ComponentStatus = 'normal' | 'caution' | 'warning' | 'critical' | 'replace';
+export type ComponentStatus =
+  | 'normal'
+  | 'caution'
+  | 'warning'
+  | 'critical'
+  | 'replace';
 
 export interface CraneAsset {
   id: string;

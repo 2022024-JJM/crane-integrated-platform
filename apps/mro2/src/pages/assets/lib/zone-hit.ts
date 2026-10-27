@@ -47,9 +47,12 @@ export function classifyPointToZone(
       const [minX, minY, minZ] = region.min;
       const [maxX, maxY, maxZ] = region.max;
       if (
-        nx >= minX && nx <= maxX &&
-        ny >= minY && ny <= maxY &&
-        nz >= minZ && nz <= maxZ
+        nx >= minX &&
+        nx <= maxX &&
+        ny >= minY &&
+        ny <= maxY &&
+        nz >= minZ &&
+        nz <= maxZ
       ) {
         return zone;
       }

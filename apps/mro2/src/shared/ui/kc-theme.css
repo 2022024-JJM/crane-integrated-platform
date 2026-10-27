@@ -173,4 +173,12 @@
   .kc-no-print * {
     display: none !important;
   }
+  .kc-print-only {
+    display: block !important;
+  }
+}
+
+/* 리포트 인쇄에만 보이는 블록 — 화면에선 처리 섹션이 같은 내용을 보여 준다 */
+.kc-print-only {
+  display: none;
 }

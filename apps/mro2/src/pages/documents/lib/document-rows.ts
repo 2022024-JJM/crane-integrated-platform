@@ -4,7 +4,11 @@ import type {
   OshaReport,
   UploadedDocument,
 } from '@crane/domain/compliance';
-import { downloadCsv, toCsv, type CsvColumn } from '../../../shared/lib/export-csv';
+import {
+  downloadCsv,
+  toCsv,
+  type CsvColumn,
+} from '../../../shared/lib/export-csv';
 
 /**
  * 매뉴얼 12p Documents and reports — 점검 보고서·인증서·업로드 파일을
@@ -39,6 +43,10 @@ export interface DocumentRow {
   sizeBytes?: number;
   /** 세션 내 실파일 다운로드 URL (업로드 문서만) */
   objectUrl?: string;
+  /** 인증서 행 — 만료일에서 파생된 상태와 갱신 요청용 id */
+  certId?: string;
+  certStatus?: Certification['status'];
+  expiryDate?: string;
 }
 
 function day(d: string | null | undefined): string {
@@ -60,7 +68,9 @@ export interface BuildDocumentRowsInput {
   uploads: UploadedDocument[];
 }
 
-export function buildDocumentRows(input: BuildDocumentRowsInput): DocumentRow[] {
+export function buildDocumentRows(
+  input: BuildDocumentRowsInput,
+): DocumentRow[] {
   const rows: DocumentRow[] = [
     ...input.oshaReports.map((r) => ({
       id: `osha-${r.id}`,
@@ -81,6 +91,9 @@ export function buildDocumentRows(input: BuildDocumentRowsInput): DocumentRow[] 
       date: day(c.issuedDate),
       by: c.issuingBody,
       detail: c.status,
+      certId: c.id,
+      certStatus: c.status,
+      expiryDate: day(c.expiryDate),
     })),
     ...input.uploads.map((u) => ({
       id: `up-${u.id}`,
@@ -98,7 +111,9 @@ export function buildDocumentRows(input: BuildDocumentRowsInput): DocumentRow[] 
   ];
 
   // 최신순 — 같은 날짜면 이름으로 안정 정렬
-  return rows.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
+  return rows.sort(
+    (a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name),
+  );
 }
 
 /** 문서 목록 CSV 컬럼 — 페이지 테이블과 같은 순서 (Generate Report / 메타데이터 폴백 공용) */
@@ -124,7 +139,10 @@ export function downloadDocumentRow(row: DocumentRow): void {
     a.click();
     return;
   }
-  downloadCsv(`${row.name.replace(/\.[^.]+$/, '')}.csv`, toCsv([row], DOCUMENT_CSV_COLUMNS));
+  downloadCsv(
+    `${row.name.replace(/\.[^.]+$/, '')}.csv`,
+    toCsv([row], DOCUMENT_CSV_COLUMNS),
+  );
 }
 
 export interface DocumentFilter {
@@ -132,11 +150,18 @@ export interface DocumentFilter {
   query: string;
 }
 
-export function filterDocumentRows(rows: DocumentRow[], filter: DocumentFilter): DocumentRow[] {
+export function filterDocumentRows(
+  rows: DocumentRow[],
+  filter: DocumentFilter,
+): DocumentRow[] {
   const q = filter.query.trim().toLowerCase();
   return rows.filter((r) => {
     if (filter.types.size > 0 && !filter.types.has(r.docType)) return false;
-    if (q && !r.name.toLowerCase().includes(q) && !(r.assetName ?? '').toLowerCase().includes(q)) {
+    if (
+      q &&
+      !r.name.toLowerCase().includes(q) &&
+      !(r.assetName ?? '').toLowerCase().includes(q)
+    ) {
       return false;
     }
     return true;

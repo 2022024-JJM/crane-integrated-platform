@@ -7,8 +7,9 @@
     "serviceCalendar": "Service Calendar",
     "spend": "Spend",
     "inventory": "Inventory and Parts",
-    "servicePlan": "Service Plan",
-    "documents": "Documents"
+    "documents": "Documents",
+    "field": "Field mode",
+    "triage": "Inbox"
   },
   "common": {
     "back": "Back",
@@ -17,8 +18,6 @@
     "clearFilter": "Clear filter",
     "searchAssets": "Search Assets...",
     "searchParts": "Search parts...",
-    "selectedCustomers": "Selected customer(s)",
-    "selectedLocations": "Selected location(s)",
     "customerName": "Philly Shipyard",
     "customerAddress": "Dock No.4, Philadelphia, PA, USA",
     "customerSiteId": "Site ID: PHL-DOCK4",
@@ -31,8 +30,6 @@
     "activities": "{{count}} Activities",
     "serviceRequest": "Service Request",
     "scheduled": "Scheduled",
-    "quote": "Quote",
-    "quotes": "Quotes",
     "openItems": "Open Items",
     "safety": "Safety",
     "production": "Production",
@@ -82,16 +79,8 @@
     "parts": "Spare Parts"
   },
   "overview": {
-    "serviceOpenItems": "SERVICE - OPEN ITEMS",
     "openRisks": "Open Risks",
-    "service": "SERVICE",
-    "calendarCard": "Service Calendar and Reports",
-    "serviceVisits": "Service Visits",
-    "assetsServiced": "Assets Serviced",
-    "totalFindings": "Total Findings",
     "assetFleet": "Asset Fleet",
-    "operatingAssets": "Operating assets",
-    "nAssets": "{{n}}/{{total}} Assets",
     "serviceRequests": "Service Requests",
     "open": "Open",
     "completed": "Completed",
@@ -102,13 +91,24 @@
     "plannedRepairs": "Planned Repairs",
     "onCallService": "On-Call Service",
     "inventoryCard": "Inventory and Parts",
-    "parts": "Parts",
     "lowStock": "Low Stock",
     "activePOs": "Active POs",
     "stockValue": "Stock value {{value}}",
-    "assetsWithOpenItems": "Assets with open items",
-    "recentActivity": "Recent Activity",
-    "viewAll": "View all"
+    "todo": {
+      "title": "To do",
+      "empty": "No open risks to handle",
+      "more": "{{n}} more open — see all in Service requests",
+      "source": {
+        "inspection_finding": "Inspection finding",
+        "repair": "Repair",
+        "stock": "Stock",
+        "overdue_inspection": "Overdue inspection"
+      }
+    },
+    "fleet": {
+      "total": "{{n}} total",
+      "health": "Health {{pct}}%"
+    }
   },
   "assets": {
     "nAssets": "{{count}} Assets",
@@ -135,14 +135,26 @@
     },
     "ownLabels": "Own Labels",
     "addLabel": "Add label…",
-    "removeLabel": "Remove label {{label}}"
+    "removeLabel": "Remove label {{label}}",
+    "card": {
+      "health": "Health",
+      "worst": "Lowest: {{name}}",
+      "components": "Components",
+      "issuesN": "{{n}} issues",
+      "critical": "Critical",
+      "warning": "Warning",
+      "caution": "Caution",
+      "woSplit": "Insp {{i}} · Repair {{r}}",
+      "inspection": "Inspection",
+      "overdue": "Overdue D+{{n}}",
+      "overdueHint": "Past due date",
+      "nextHint": "Next inspection",
+      "noneHint": "None scheduled"
+    }
   },
   "detail": {
-    "tabOpenItems": "Open Items",
-    "tabActivities": "All Activities",
     "tabMonitoring": "Monitoring",
-    "tabInfo": "Asset Info",
-    "openItemsNow": "Service open items · Just now",
+    "tabInfo": "Info",
     "safetyRisks": "Safety Risks",
     "productionRisks": "Production Risks",
     "noOpenItems": "No open items just now",
@@ -152,7 +164,10 @@
     "typeInspection": "{{type}} Inspection",
     "tab3d": "3D View",
     "loading3d": "Loading 3D viewer…",
-    "tabDocuments": "Documents"
+    "tabWork": "Work",
+    "tabCondition": "Condition",
+    "filterOpen": "Open {{n}}",
+    "filterAll": "All {{n}}"
   },
   "monitoring": {
     "summary": "Summary – Current condition",
@@ -201,7 +216,9 @@
     "indoorOutdoor": "Indoor / Outdoor",
     "oshaClassification": "OSHA Classification",
     "status": "Status",
-    "frontViewCaption": "Front view — {{name}}"
+    "frontViewCaption": "Front view — {{name}}",
+    "indoor": "Indoor",
+    "outdoor": "Outdoor"
   },
   "calendar": {
     "title": "Service Calendar",
@@ -252,8 +269,6 @@
     "plannedRepairs": "Planned Repairs",
     "noRequests": "No service requests in this time frame.",
     "notFound": "Service request not found.",
-    "customerServiceInfo": "Customer and Service Information",
-    "summary": "Summary",
     "customer": "Customer",
     "location": "Location",
     "asset": "Asset",
@@ -263,16 +278,11 @@
     "scheduledDate": "Scheduled Date",
     "actualDate": "Actual Date",
     "totalHours": "Total Hours",
-    "srStatus": "Service Request Status",
-    "serviceProducts": "Service Products",
-    "assetsServiced": "Assets Serviced",
     "findingsAndActions": "Findings and Actions",
-    "findingsByAsset": "Findings and Actions by Asset",
     "note": "Note!",
     "noteText": "The condition of certain components cannot be directly verified through visual inspection without further disassembly and/or the use of other inspection methods. These components are listed separately and identified as follows:",
     "undeterminedLegend": "Undetermined Conditions (Unable to Inspect - Not in Scope)",
-    "findingsSection": "Findings and Actions (1 Asset)",
-    "serviceProductsLine": "Service Products: {{product}}",
+    "findingsSection": "Findings and actions",
     "onlyFindings": "Only findings and actions",
     "completeStructure": "Complete component structure",
     "unableToInspect": "Unable to Inspect",
@@ -316,7 +326,73 @@
     "createRepair": "Create repair request",
     "attachments": "Attachments ({{count}})",
     "noAttachments": "No attachments.",
-    "addAttachment": "Add"
+    "addAttachment": "Add",
+    "col": {
+      "date": "Date",
+      "status": "Status",
+      "number": "Number",
+      "title": "Subject",
+      "product": "Product",
+      "asset": "Asset",
+      "assignee": "Assignee"
+    },
+    "work": {
+      "addPart": "Add part",
+      "noParts": "No parts used",
+      "searchPart": "Search parts",
+      "avail": "avail {{n}}",
+      "by": "Recorded by",
+      "issue": "Issue & record",
+      "partIssued": "{{part}} ×{{n}} → {{number}}",
+      "insufficient": "Not enough available stock",
+      "partFailed": "Could not record the part",
+      "locked": "Completed work cannot be edited",
+      "title": "Work status",
+      "action": "Action taken",
+      "actionPending": "Awaiting field completion"
+    },
+    "exportCsv": "CSV",
+    "partsTitle": "{{first}} ×{{qty}}",
+    "partsTitleMore": "{{first}} ×{{qty}} +{{more}} more",
+    "count": "{{count}} service requests",
+    "bulk": {
+      "selected": "{{n}} selected",
+      "date": "Due date",
+      "assignee": "Assignee",
+      "apply": "Apply",
+      "clear": "Clear",
+      "select": "Select {{number}}",
+      "rescheduled": "{{n}} rescheduled",
+      "reassigned": "{{n}} reassigned"
+    },
+    "tabs": {
+      "active": "Open",
+      "delayed": "Delayed",
+      "received": "Received",
+      "inProgress": "In progress",
+      "open": "Scheduled",
+      "completed": "Completed",
+      "all": "All"
+    },
+    "unassigned": "Unassigned",
+    "reportedBy": "Reported from field by {{name}}",
+    "urgent": "Emergency",
+    "high": "High",
+    "searchPlaceholder": "Search asset or number",
+    "panel": {
+      "reporter": "Reporter",
+      "toInbox": "Assign in the inbox",
+      "photos": "{{n}} photos",
+      "fullDetail": "Open full detail"
+    },
+    "checklistSection": "{{n}} checklist items — awaiting field inspection",
+    "pending": "Not judged",
+    "print": "Print",
+    "level": {
+      "minor": "Minor",
+      "major": "Major",
+      "overhaul": "Overhaul"
+    }
   },
   "inventory": {
     "title": "Inventory and Parts",
@@ -407,7 +483,18 @@
       "toastInsufficient": "Not enough available stock",
       "toastWoClosed": "Cannot issue to a closed WO",
       "toastFailed": "Action failed"
-    }
+    },
+    "colStockMin": "On hand / Min",
+    "colLevel": "Stock level",
+    "crit": {
+      "critical": "Critical",
+      "essential": "Essential",
+      "standard": "Standard"
+    },
+    "lowStockStrip": "{{n}} parts below safety stock",
+    "showInTable": "Show in table ›",
+    "poTitle": "Open purchase orders",
+    "reorderNeeded": "Reorder needed {{n}}"
   },
   "spend": {
     "title": "Spend",
@@ -511,10 +598,177 @@
     "origin": {
       "generated": "Generated by service",
       "uploaded": "Uploaded by customer"
-    }
+    },
+    "certStatus": {
+      "valid": "Valid",
+      "expiry_soon": "Expiring soon",
+      "expired": "Expired",
+      "renewing": "Renewing"
+    },
+    "requestRenewal": "Request renewal",
+    "renewalRequested": "Renewal requested for {{name}}"
   },
   "search": {
     "placeholder": "Search assets or service requests…",
     "noResults": "No results."
+  },
+  "field": {
+    "title": "Field mode",
+    "reporter": "Reporter",
+    "workerPrompt": "Enter your name",
+    "workerHint": "Recorded as the reporter on tickets and remembered on this device",
+    "workerSave": "Save",
+    "workerChange": "Change",
+    "workerFirst": "Enter your name first",
+    "reportRepair": "Report a fault",
+    "reportParts": "Request parts",
+    "reportInspection": "Inspection result",
+    "recentAssets": "Recent assets",
+    "myTickets": "My work",
+    "seeAll": "See all",
+    "noTickets": "No reports filed or work assigned to you",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "submit": "Submit",
+    "stepOf": "{{n}} / {{total}}",
+    "searchAsset": "Search asset name or model",
+    "searchPart": "Search part name or number",
+    "symptomPlaceholder": "Describe the symptom",
+    "findingsPlaceholder": "Describe the finding",
+    "componentPlaceholder": "Component (optional)",
+    "notePlaceholder": "Note (optional)",
+    "inspType": "Inspection type",
+    "resultPass": "No issues",
+    "resultFail": "Issue found",
+    "addPhoto": "Take / choose photo",
+    "photoCount": "{{n}} / {{max}} photos",
+    "photoN": "{{n}} photos",
+    "removePhoto": "Remove photo",
+    "qtyMinus": "Decrease quantity",
+    "qtyPlus": "Increase quantity",
+    "kind": {
+      "repair": "Fault report",
+      "parts": "Parts request",
+      "inspection": "Inspection result"
+    },
+    "step": {
+      "asset": "Which asset?",
+      "symptom": "What is the symptom?",
+      "parts": "Which parts do you need?",
+      "inspection": "Inspection result?",
+      "photo": "Attach photos",
+      "priority": "How urgent is it?"
+    },
+    "prio": {
+      "emergency": "Emergency — stop operation",
+      "high": "High — fix today",
+      "normal": "Normal",
+      "urgent": "Urgent"
+    },
+    "preset": {
+      "wireDamage": "Wire rope damage",
+      "brakeAbnormal": "Brake abnormal",
+      "noise": "Abnormal noise",
+      "motorStop": "Motor stopped",
+      "limitFault": "Limit switch fault",
+      "leak": "Oil leak",
+      "wear": "Wear",
+      "crack": "Crack",
+      "loose": "Loose bolts",
+      "corrosion": "Corrosion"
+    },
+    "confirm": {
+      "reporter": "Reporter",
+      "asset": "Asset",
+      "symptom": "Symptom",
+      "component": "Component",
+      "priority": "Priority",
+      "parts": "Parts",
+      "note": "Note",
+      "result": "Result",
+      "findings": "Findings",
+      "photos": "Photos",
+      "partsN": "{{n}} parts"
+    },
+    "done": {
+      "title": "Submitted",
+      "another": "Submit another",
+      "home": "Home"
+    },
+    "tone": {
+      "done": "Done",
+      "active": "In progress",
+      "waiting": "Waiting"
+    },
+    "ticketNotFound": "Ticket not found",
+    "detail": {
+      "status": "Status",
+      "date": "Date",
+      "openPortal": "Open in admin portal",
+      "addPhoto": "Add photo"
+    },
+    "checklist": {
+      "pass": "OK",
+      "fail": "Fail",
+      "na": "N/A",
+      "allPass": "All OK",
+      "progress": "{{n}} / {{total}} judged",
+      "failedN": "{{n}} failed",
+      "failedItems": "Failed items"
+    },
+    "emergency": {
+      "button": "Emergency stop report",
+      "title": "Emergency stop report",
+      "hint": "Pick the asset and press the button — it is filed immediately. Symptoms and photos can be added later.",
+      "submit": "Send emergency report",
+      "description": "Emergency stop — safety hazard",
+      "notePlaceholder": "One-line note (optional)",
+      "alreadyOpen": "An emergency report {{number}} is already open for this asset",
+      "sent": "Emergency report filed",
+      "sentHint": "It goes to the top of the admin inbox."
+    },
+    "duplicate": {
+      "title": "{{n}} open fault reports for this asset",
+      "addPhoto": "Add photo",
+      "hint": "If it is the same fault, add a photo to the existing report instead of filing a new one."
+    },
+    "work": {
+      "start": "Start work",
+      "complete": "Finish work",
+      "actionTitle": "What did you do?",
+      "actionPlaceholder": "Describe the action taken",
+      "sendComplete": "Send completion report",
+      "started": "{{number}} work started",
+      "completed": "{{number}} reported complete",
+      "action": "Action taken",
+      "preset": {
+        "partReplaced": "Part replaced",
+        "adjusted": "Adjusted / calibrated",
+        "cleaned": "Cleaned / serviced",
+        "tempFix": "Temporary fix"
+      }
+    }
+  },
+  "triage": {
+    "title": "Field inbox",
+    "count": "{{n}} waiting",
+    "empty": "No field reports to process",
+    "band": "{{n}} field reports waiting",
+    "open": "Open inbox",
+    "reportedBy": "Reported by {{name}}",
+    "waitedMinutes": "{{n}} min ago",
+    "waitedHours": "{{n}} h ago",
+    "waitedDays": "{{n}} d ago",
+    "assign": "Assign",
+    "assigned": "{{number}} assigned to {{name}}",
+    "createRepair": "Create repair request",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved": "{{number}} approved",
+    "rejected": "{{number}} rejected",
+    "acknowledge": "Acknowledge",
+    "acknowledged": "{{number}} acknowledged",
+    "openField": "Open field screen"
   }
 }

@@ -20,7 +20,6 @@ import {
   Bell,
   MonitorCog,
   CalendarDays,
-  CalendarRange,
   FileText,
   DatabaseZap,
   Boxes,
@@ -29,6 +28,8 @@ import {
   RadioTower,
   Tags,
   Library,
+  Smartphone,
+  Inbox,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -355,6 +356,10 @@ function getMroGroup(): NavGroup {
   };
 }
 
+/**
+ * MRO2 — 관리자 메뉴는 데스크톱, 현장 점검은 휴대폰에서만. 휴대폰 폭은 레이아웃이
+ * 현장 모드로 리다이렉트하므로 관리자 메뉴를 보여 줘도 갈 수 없다.
+ */
 function getMro2Group(): NavGroup {
   return {
     title: i18n.t('mro2:nav.group'),
@@ -363,42 +368,56 @@ function getMro2Group(): NavGroup {
         label: i18n.t('mro2:nav.overview'),
         path: '/mro2',
         icon: LayoutDashboard,
+        viewport: 'desktop',
         end: true,
+      },
+      {
+        label: i18n.t('mro2:nav.triage'),
+        path: '/mro2/triage',
+        icon: Inbox,
+        viewport: 'desktop',
       },
       {
         label: i18n.t('mro2:nav.assets'),
         path: '/mro2/assets',
         icon: Layers,
+        viewport: 'desktop',
       },
       {
         label: i18n.t('mro2:nav.serviceRequests'),
         path: '/mro2/service-requests',
         icon: ClipboardCheck,
+        viewport: 'desktop',
       },
       {
         label: i18n.t('mro2:nav.serviceCalendar'),
         path: '/mro2/calendar',
         icon: CalendarDays,
-      },
-      {
-        label: i18n.t('mro2:nav.servicePlan'),
-        path: '/mro2/service-plan',
-        icon: CalendarRange,
+        viewport: 'desktop',
       },
       {
         label: i18n.t('mro2:nav.spend'),
         path: '/mro2/spend',
         icon: TrendingUp,
+        viewport: 'desktop',
       },
       {
         label: i18n.t('mro2:nav.inventory'),
         path: '/mro2/inventory',
         icon: Package,
+        viewport: 'desktop',
       },
       {
         label: i18n.t('mro2:nav.documents'),
         path: '/mro2/documents',
         icon: FileText,
+        viewport: 'desktop',
+      },
+      {
+        label: i18n.t('mro2:nav.field'),
+        path: '/mro2/field',
+        icon: Smartphone,
+        viewport: 'mobile',
       },
     ],
   };

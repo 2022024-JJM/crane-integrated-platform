@@ -1,3 +1,4 @@
+import type { FieldReport } from '@crane/domain/shared';
 import { useCallback } from 'react';
 import { addInspectionWO, getDefaultChecklist } from '@crane/domain/inspection';
 import type { InspectionWO } from '@crane/domain/inspection';
@@ -17,6 +18,10 @@ export interface InspectionTicketDraft {
   findings?: string;
   /** 반복 주기 — 완료 시 다음 회차 WO 자동 생성 */
   recurrence?: InspectionWO['recurrence'];
+  /** 현장에서 판정을 채워 보낸 체크리스트 — 없으면 종류별 기본 체크리스트(미판정). */
+  checklistItems?: InspectionWO['checklistItems'];
+  /** 현장(모바일) 보고 표식 — 접수함이 본다. */
+  fieldReport?: FieldReport;
 }
 
 export function useCreateInspectionTicket() {
@@ -31,7 +36,8 @@ export function useCreateInspectionTicket() {
         status: 'scheduled',
         actualDate: null,
         result: null,
-        checklistItems: getDefaultChecklist(draft.woType),
+        checklistItems:
+          draft.checklistItems ?? getDefaultChecklist(draft.woType),
       };
 
       addInspectionWO(wo);

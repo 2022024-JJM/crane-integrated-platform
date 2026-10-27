@@ -13,7 +13,11 @@ export interface RepairTemplate {
   draft: Partial<
     Pick<
       RepairTicketDraft,
-      'failureType' | 'repairLevel' | 'sourceType' | 'priority' | 'performerType'
+      | 'failureType'
+      | 'repairLevel'
+      | 'sourceType'
+      | 'priority'
+      | 'performerType'
     >
   >;
 }
@@ -24,34 +28,54 @@ export const REPAIR_TEMPLATES: RepairTemplate[] = [
     labelKey: 'templates.hoistBrake.label',
     descKey: 'templates.hoistBrake.desc',
     componentName: 'Hoist Brake',
-    draft: { failureType: 'mechanical', repairLevel: 'minor', sourceType: 'preventive' },
+    draft: {
+      failureType: 'mechanical',
+      repairLevel: 'minor',
+      sourceType: 'preventive',
+    },
   },
   {
     id: 'wireRope',
     labelKey: 'templates.wireRope.label',
     descKey: 'templates.wireRope.desc',
     componentName: 'Wire Rope',
-    draft: { failureType: 'mechanical', repairLevel: 'major', sourceType: 'preventive' },
+    draft: {
+      failureType: 'mechanical',
+      repairLevel: 'major',
+      sourceType: 'preventive',
+    },
   },
   {
     id: 'dcmFan',
     labelKey: 'templates.dcmFan.label',
     descKey: 'templates.dcmFan.desc',
     componentName: 'SINAMICS DCM Drive (Hoist)',
-    draft: { failureType: 'electrical', repairLevel: 'minor', sourceType: 'preventive' },
+    draft: {
+      failureType: 'electrical',
+      repairLevel: 'minor',
+      sourceType: 'preventive',
+    },
   },
   {
     id: 'panelFilter',
     labelKey: 'templates.panelFilter.label',
     descKey: 'templates.panelFilter.desc',
     componentName: 'Panel Fan / Filter Unit',
-    draft: { failureType: 'electrical', repairLevel: 'minor', sourceType: 'preventive' },
+    draft: {
+      failureType: 'electrical',
+      repairLevel: 'minor',
+      sourceType: 'preventive',
+    },
   },
   {
     id: 'limitSwitch',
     labelKey: 'templates.limitSwitch.label',
     descKey: 'templates.limitSwitch.desc',
     componentName: 'Limit Switch',
-    draft: { failureType: 'control', repairLevel: 'minor', sourceType: 'inspection' },
+    draft: {
+      failureType: 'control',
+      repairLevel: 'minor',
+      sourceType: 'inspection',
+    },
   },
 ];

@@ -20,6 +20,7 @@ import {
 import type { CraneType } from '@crane/domain/asset';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import {
+  ASPECT_ESTIMATE,
   computeFrontalView,
   computeFrontalViewFromBox,
   computeFrontalViewFromObjects,
@@ -329,6 +330,26 @@ export function Crane3dViewer({
   const [framedPreset, setFramedPreset] = useState<
     typeof cfg.cameraPreset | null
   >(null);
+  // 캔버스 종횡비 — 프레이밍은 실제 비율로 잰다. 크기가 바뀌면 다시 잡는다.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const aspectRef = useRef<number>(ASPECT_ESTIMATE);
+  const [aspectTick, setAspectTick] = useState(0);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        const next = width / height;
+        if (Math.abs(next - aspectRef.current) > 0.01) {
+          aspectRef.current = next;
+          setAspectTick((n) => n + 1);
+        }
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!hoveredZoneKey) return;
@@ -354,12 +375,21 @@ export function Crane3dViewer({
     if (zoneConfig.strategy === 'parts') {
       const parts = [...zoneObjectsRef.current.values()];
       if (parts.length === 0) return;
-      applyWholeView(computeFrontalViewFromObjects(parts));
+      applyWholeView(computeFrontalViewFromObjects(parts, aspectRef.current));
       return;
     }
     if (!wholeObjectRef.current) return;
-    applyWholeView(computeFrontalView(wholeObjectRef.current));
+    applyWholeView(
+      computeFrontalView(wholeObjectRef.current, aspectRef.current),
+    );
   }, [applyWholeView, zoneConfig.strategy]);
+
+  // 캔버스 비율이 바뀌면(탭 높이·창 크기) 전체 뷰를 다시 잡는다 — 구역 선택 중엔 건드리지 않는다
+  useEffect(() => {
+    if (aspectTick === 0 || selectedZoneKey) return;
+    frameWhole();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aspectTick]);
 
   const handleControllerReady = useCallback(
     (controller: SceneController | null) => {
@@ -402,13 +432,13 @@ export function Crane3dViewer({
         for (const region of zone.regions ?? []) {
           regionBox.union(regionToWorldBox(hostBox, region));
         }
-        const view = computeFrontalViewFromBox(regionBox);
+        const view = computeFrontalViewFromBox(regionBox, aspectRef.current);
         if (view) controller.moveTo(view.position, view.target);
         return;
       }
       const object = zoneObjectsRef.current.get(selectedZoneKey);
       if (!object) return;
-      const view = computeFrontalView(object);
+      const view = computeFrontalView(object, aspectRef.current);
       if (view) controller.moveTo(view.position, view.target);
     } else {
       controller.reset();
@@ -417,6 +447,7 @@ export function Crane3dViewer({
 
   return (
     <div
+      ref={containerRef}
       className={`overflow-hidden rounded-[4px] border ${className ?? ''}`}
       style={{
         borderColor: 'var(--kc-border)',

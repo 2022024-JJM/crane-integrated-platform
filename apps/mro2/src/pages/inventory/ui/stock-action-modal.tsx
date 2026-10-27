@@ -32,12 +32,20 @@ function saveLastActor(name: string): void {
 }
 
 const inputBase =
-  'w-full rounded-[4px] border px-2.5 py-1.5 text-[12.5px] outline-none focus:ring-2';
+  'w-full rounded-[4px] border px-2.5 py-1.5 text-[13px] outline-none focus:ring-2';
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-semibold" style={{ color: KC.ink }}>
+      <span className="text-[12px] font-semibold" style={{ color: KC.ink }}>
         {label}
         {required ? <span style={{ color: KC.safety }}> *</span> : null}
       </span>
@@ -80,7 +88,11 @@ export function StockActionModal({
   const exceeds = mode === 'issue' && qty > availableQty;
   const canSubmit = qty >= 1 && by.trim().length > 0 && !exceeds;
 
-  const fieldStyle = { borderColor: KC.border, color: KC.ink, background: KC.bg };
+  const fieldStyle = {
+    borderColor: KC.border,
+    color: KC.ink,
+    background: KC.bg,
+  };
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -104,10 +116,15 @@ export function StockActionModal({
     if (outcome.success) {
       saveLastActor(by);
       toast.success(
-        t(mode === 'issue' ? 'inventory.actions.toastIssued' : 'inventory.actions.toastReceived', {
-          part: partName,
-          n: qty,
-        }),
+        t(
+          mode === 'issue'
+            ? 'inventory.actions.toastIssued'
+            : 'inventory.actions.toastReceived',
+          {
+            part: partName,
+            n: qty,
+          },
+        ),
       );
       onClose();
       return;
@@ -124,16 +141,31 @@ export function StockActionModal({
   return (
     <KcModal onClose={onClose} maxWidth={400}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: KC.hairline }}>
+      <div
+        className="flex items-center justify-between border-b px-4 py-3"
+        style={{ borderColor: KC.hairline }}
+      >
         <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold tracking-wide" style={{ color: KC.ink }}>
-            {t(mode === 'issue' ? 'inventory.actions.issueTitle' : 'inventory.actions.receiptTitle')}
+          <h2
+            className="text-[15px] font-semibold tracking-wide"
+            style={{ color: KC.ink }}
+          >
+            {t(
+              mode === 'issue'
+                ? 'inventory.actions.issueTitle'
+                : 'inventory.actions.receiptTitle',
+            )}
           </h2>
-          <div className="truncate text-[11px]" style={{ color: KC.muted }}>
+          <div className="truncate text-[12px]" style={{ color: KC.muted }}>
             {partName}
           </div>
         </div>
-        <button type="button" aria-label="Close" onClick={onClose} className="cursor-pointer">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="cursor-pointer"
+        >
           <X size={16} style={{ color: KC.ink }} />
         </button>
       </div>
@@ -146,15 +178,18 @@ export function StockActionModal({
             value={qty}
             onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
             className={inputBase}
-            style={{ ...fieldStyle, borderColor: exceeds ? KC.safety : KC.border }}
+            style={{
+              ...fieldStyle,
+              borderColor: exceeds ? KC.safety : KC.border,
+            }}
             autoFocus
           />
           {exceeds ? (
-            <span className="text-[10.5px]" style={{ color: KC.safety }}>
+            <span className="text-[12px]" style={{ color: KC.safety }}>
               {t('inventory.actions.exceedsStock', { n: availableQty })}
             </span>
           ) : mode === 'issue' ? (
-            <span className="text-[10.5px]" style={{ color: KC.muted }}>
+            <span className="text-[12px]" style={{ color: KC.muted }}>
               {t('inventory.actions.availableBadge', { n: availableQty })}
             </span>
           ) : null}
@@ -191,7 +226,9 @@ export function StockActionModal({
                   }
                   setPoRef(e.target.value);
                   // PO 라인을 고르면 발주 수량을 입고 수량 기본값으로 — 대부분 전량 입고
-                  const line = openPoLines.find((l) => l.poNumber === e.target.value);
+                  const line = openPoLines.find(
+                    (l) => l.poNumber === e.target.value,
+                  );
                   if (line) setQty(line.qty);
                 }}
                 className={inputBase}
@@ -200,10 +237,13 @@ export function StockActionModal({
                 <option value="">{t('inventory.actions.poNone')}</option>
                 {openPoLines.map((l) => (
                   <option key={l.poId} value={l.poNumber}>
-                    {l.poNumber} — {l.vendor} · {t('inventory.actions.poLineQty', { n: l.qty })}
+                    {l.poNumber} — {l.vendor} ·{' '}
+                    {t('inventory.actions.poLineQty', { n: l.qty })}
                   </option>
                 ))}
-                <option value={PO_CUSTOM}>{t('inventory.actions.poCustom')}</option>
+                <option value={PO_CUSTOM}>
+                  {t('inventory.actions.poCustom')}
+                </option>
               </select>
             ) : (
               <input
@@ -218,7 +258,12 @@ export function StockActionModal({
         )}
 
         <Field label={t('inventory.actions.by')} required>
-          <input value={by} onChange={(e) => setBy(e.target.value)} className={inputBase} style={fieldStyle} />
+          <input
+            value={by}
+            onChange={(e) => setBy(e.target.value)}
+            className={inputBase}
+            style={fieldStyle}
+          />
         </Field>
 
         <Field label={t('inventory.actions.note')}>
@@ -233,12 +278,19 @@ export function StockActionModal({
       </div>
 
       {/* 푸터 */}
-      <div className="flex items-center justify-end gap-2 border-t px-4 py-3" style={{ borderColor: KC.hairline }}>
+      <div
+        className="flex items-center justify-end gap-2 border-t px-4 py-3"
+        style={{ borderColor: KC.hairline }}
+      >
         <KcButton variant="ghost" onClick={onClose}>
           {t('inventory.actions.cancel')}
         </KcButton>
         <KcButton variant="teal" onClick={handleSubmit} disabled={!canSubmit}>
-          {t(mode === 'issue' ? 'inventory.actions.submitIssue' : 'inventory.actions.submitReceipt')}
+          {t(
+            mode === 'issue'
+              ? 'inventory.actions.submitIssue'
+              : 'inventory.actions.submitReceipt',
+          )}
         </KcButton>
       </div>
     </KcModal>

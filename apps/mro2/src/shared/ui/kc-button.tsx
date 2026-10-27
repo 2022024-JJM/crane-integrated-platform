@@ -21,7 +21,7 @@ export function KcButton({
   style?: CSSProperties;
 }) {
   const base =
-    'inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-[12px] font-bold transition-colors disabled:cursor-not-allowed';
+    'inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-[13px] font-bold transition-colors disabled:cursor-not-allowed';
   const styles: CSSProperties =
     variant === 'teal'
       ? { background: KC.tealFill, color: KC.onTeal }

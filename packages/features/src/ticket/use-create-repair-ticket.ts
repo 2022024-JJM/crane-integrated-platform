@@ -1,3 +1,4 @@
+import type { FieldReport } from '@crane/domain/shared';
 import { useCallback } from 'react';
 import { addRepairWO } from '@crane/domain/maintenance';
 import type { RepairWO } from '@crane/domain/maintenance';
@@ -21,6 +22,8 @@ export interface RepairTicketDraft {
   assignedTo: string;
   scheduledStart: string;
   scheduledEnd: string;
+  /** 현장(모바일) 보고 표식 — 접수함이 본다. */
+  fieldReport?: FieldReport;
 }
 
 export function useCreateRepairTicket() {

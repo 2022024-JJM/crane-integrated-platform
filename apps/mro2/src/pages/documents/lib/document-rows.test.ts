@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Certification, OshaReport, UploadedDocument } from '@crane/domain/compliance';
+import type {
+  Certification,
+  OshaReport,
+  UploadedDocument,
+} from '@crane/domain/compliance';
 import {
   buildDocumentRows,
   filterDocumentRows,
@@ -75,7 +79,9 @@ describe('buildDocumentRows', () => {
   });
 
   it('빈 입력은 빈 목록', () => {
-    expect(buildDocumentRows({ oshaReports: [], certifications: [], uploads: [] })).toEqual([]);
+    expect(
+      buildDocumentRows({ oshaReports: [], certifications: [], uploads: [] }),
+    ).toEqual([]);
   });
 });
 
@@ -92,7 +98,10 @@ describe('filterDocumentRows', () => {
   });
 
   it('선택한 유형만 남긴다', () => {
-    const out = filterDocumentRows(rows, filter({ types: new Set(['manual'] as const) }));
+    const out = filterDocumentRows(
+      rows,
+      filter({ types: new Set(['manual'] as const) }),
+    );
     expect(out.map((r) => r.name)).toEqual(['Manual-Rev3.pdf']);
   });
 

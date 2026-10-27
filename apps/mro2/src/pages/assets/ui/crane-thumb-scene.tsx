@@ -8,23 +8,45 @@ import {
   withBaseUrl,
 } from '@crane/domain/3d';
 import type { CraneType } from '@crane/domain/asset';
+import { publishSnapshot } from '../model/thumb-snapshot-store';
+
+/** 스냅샷 해상도 — 가장 큰 썸네일(112px) 의 2배 */
+export const THUMB_SNAPSHOT_PX = 256;
 
 const THUMB_FOV_DEG = 30;
 // 바운딩 스피어 대비 여백 배수 (1 = 원에 딱 접함)
 const THUMB_MARGIN = 1.18;
 
-/** 썸네일용 크레인 모델 — 원점 기준 자동 프레이밍, 정면 고정(회전 없음) */
+/**
+ * 썸네일용 크레인 모델 — 원점 기준 자동 프레이밍, 정면 고정(회전 없음).
+ * 프레이밍이 끝난 다음 프레임에 캔버스를 이미지로 떠서 캐시에 올린다.
+ */
 function ThumbModel({ craneType }: { craneType: CraneType }) {
   const cfg = getCraneModel(craneType);
   // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(@crane/domain/3d).
-  const gltf = useGLTF(withBaseUrl(cfg.url), true, true, extendGltfLoaderWithKtx2);
+  const gltf = useGLTF(
+    withBaseUrl(cfg.url),
+    true,
+    true,
+    extendGltfLoaderWithKtx2,
+  );
   const clone = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   const innerRef = useRef<Group>(null);
   const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
   const fitted = useRef(false);
+  const captured = useRef(false);
 
   useFrame(() => {
+    if (fitted.current && !captured.current) {
+      // 맞춰진 카메라로 직접 한 번 그린 직후 떠야 버퍼가 남아 있다
+      gl.render(scene, camera);
+      captured.current = true;
+      publishSnapshot(craneType, gl.domElement.toDataURL('image/png'));
+      return;
+    }
     if (fitted.current || !innerRef.current) return;
     innerRef.current.updateWorldMatrix(true, true);
     const box = new Box3().setFromObject(innerRef.current);
@@ -55,13 +77,26 @@ function ThumbModel({ craneType }: { craneType: CraneType }) {
   );
 }
 
-export default function CraneThumbScene({ craneType }: { craneType: CraneType }) {
+export default function CraneThumbScene({
+  craneType,
+}: {
+  craneType: CraneType;
+}) {
   return (
     <Canvas
-      camera={{ fov: THUMB_FOV_DEG, position: [1, 1, 3], near: 0.01, far: 1000 }}
-      gl={{ alpha: true, antialias: true }}
-      style={{ pointerEvents: 'none' }}
-      dpr={[1, 2]}
+      camera={{
+        fov: THUMB_FOV_DEG,
+        position: [1, 1, 3],
+        near: 0.01,
+        far: 1000,
+      }}
+      gl={{ alpha: true, antialias: true, preserveDrawingBuffer: true }}
+      style={{
+        pointerEvents: 'none',
+        width: THUMB_SNAPSHOT_PX,
+        height: THUMB_SNAPSHOT_PX,
+      }}
+      dpr={1}
       frameloop="demand"
     >
       <ambientLight intensity={2.2} />
