@@ -17,6 +17,7 @@ function scene(): SavedSceneInfo {
       {
         id: 'm1',
         equipName: 'GC',
+        craneId: 'GC_04',
         path: '/x.glb',
         opacity: 1,
         position: [0, 0, 0],
@@ -25,7 +26,7 @@ function scene(): SavedSceneInfo {
         tagMappings: [
           {
             id: 't1',
-            realtimeTagKey: 'GC_04:gantry',
+            code: 'gantry',
             target: { kind: 'node', node: '', channel: 'position', axis: 'x' },
           },
         ],
@@ -40,7 +41,7 @@ function scene(): SavedSceneInfo {
         scale: [1, 1, 1],
       },
     ],
-  } as unknown as SavedSceneInfo;
+  };
 }
 
 beforeEach(() => {
@@ -55,13 +56,11 @@ afterEach(() => {
 
 describe('useModelRuntimeStatuses', () => {
   it('맵핑 없음은 unknown, 값이 오면 running → 멈추면 unknown(운전 전원 모름)', () => {
-    const { result } = renderHook(() =>
-      useModelRuntimeStatuses(scene(), 'realtime'),
-    );
+    const { result } = renderHook(() => useModelRuntimeStatuses(scene()));
     expect(result.current).toEqual({ m1: 'unknown', m2: 'unknown' });
 
     act(() => {
-      publishTagValue('GC_04:gantry', 1);
+      publishTagValue('GC_04.gantry', 1);
       vi.advanceTimersByTime(RUNTIME_STATUS_POLL_MS);
     });
     expect(result.current.m1).toBe('running');
@@ -71,7 +70,7 @@ describe('useModelRuntimeStatuses', () => {
     act(() => {
       for (let i = 0; i < 12; i += 1) {
         vi.advanceTimersByTime(RUNTIME_STATUS_POLL_MS);
-        publishTagValue('GC_04:gantry', 1);
+        publishTagValue('GC_04.gantry', 1);
       }
     });
     expect(vi.getMockedSystemTime()!.getTime() - 1_000_000).toBeGreaterThan(
@@ -82,9 +81,7 @@ describe('useModelRuntimeStatuses', () => {
   });
 
   it('상태가 그대로면 참조를 유지한다', () => {
-    const { result } = renderHook(() =>
-      useModelRuntimeStatuses(scene(), 'realtime'),
-    );
+    const { result } = renderHook(() => useModelRuntimeStatuses(scene()));
     const before = result.current;
     act(() => {
       vi.advanceTimersByTime(RUNTIME_STATUS_POLL_MS * 3);
@@ -93,9 +90,7 @@ describe('useModelRuntimeStatuses', () => {
   });
 
   it('언마운트 뒤에는 타이머가 돌지 않는다', () => {
-    const { unmount } = renderHook(() =>
-      useModelRuntimeStatuses(scene(), 'realtime'),
-    );
+    const { unmount } = renderHook(() => useModelRuntimeStatuses(scene()));
     unmount();
     expect(() =>
       vi.advanceTimersByTime(RUNTIME_STATUS_POLL_MS * 2),
@@ -111,6 +106,7 @@ function statusScene(): SavedSceneInfo {
       {
         id: 'm1',
         equipName: 'GC',
+        craneId: 'GC_04',
         path: '/x.glb',
         opacity: 1,
         position: [0, 0, 0],
@@ -119,22 +115,22 @@ function statusScene(): SavedSceneInfo {
         tagMappings: [
           {
             id: 't1',
-            realtimeTagKey: 'GC_04:gantry',
+            code: 'gantry',
             target: { kind: 'node', node: '', channel: 'position', axis: 'x' },
           },
         ],
         statusTags: {
-          controlOn: { realtimeTagKey: 'GC_04:on' },
-          fault: { realtimeTagKey: 'GC_04:fault' },
-          bypass: { realtimeTagKey: 'GC_04:bypass' },
-          freeSwing: { realtimeTagKey: 'GC_04:swing' },
-          commError: { realtimeTagKey: 'GC_04:comm' },
-          slowdown: { realtimeTagKey: 'GC_04:slow' },
-          endstop: { realtimeTagKey: 'GC_04:end' },
+          controlOn: 'on',
+          fault: 'fault',
+          bypass: 'bypass',
+          freeSwing: 'swing',
+          commError: 'comm',
+          slowdown: 'slow',
+          endstop: 'end',
         },
       },
     ],
-  } as unknown as SavedSceneInfo;
+  };
 }
 
 function poll(times = 1) {
@@ -145,9 +141,7 @@ function poll(times = 1) {
 
 describe('useModelStatusRecords', () => {
   it('씬이 없으면 네 기록 모두 빈다', () => {
-    const { result } = renderHook(() =>
-      useModelStatusRecords(null, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(null));
     expect(result.current).toEqual({
       runtime: {},
       labels: {},
@@ -158,9 +152,7 @@ describe('useModelStatusRecords', () => {
 
   it('아무것도 못 받았으면 unknown — 아이콘도 없다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     expect(result.current.runtime).toEqual({ m1: 'unknown' });
     expect(result.current.labels.m1).toEqual({
       tone: 'unknown',
@@ -171,13 +163,11 @@ describe('useModelStatusRecords', () => {
 
   it('운전 전원·움직임·고장에 따라 라벨이 바뀌고 운전 상태가 같이 간다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
 
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:gantry', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.gantry', 1);
     });
     poll();
     expect(result.current.labels.m1.tone).toBe('running');
@@ -187,21 +177,21 @@ describe('useModelStatusRecords', () => {
     act(() => {
       for (let i = 0; i < 12; i += 1) {
         vi.advanceTimersByTime(RUNTIME_STATUS_POLL_MS);
-        publishTagValue('GC_04:gantry', 1);
-        publishTagValue('GC_04:on', 1);
+        publishTagValue('GC_04.gantry', 1);
+        publishTagValue('GC_04.on', 1);
       }
     });
     expect(result.current.labels.m1.tone).toBe('standby');
     expect(result.current.runtime.m1).toBe('standby');
 
-    act(() => publishTagValue('GC_04:fault', 1));
+    act(() => publishTagValue('GC_04.fault', 1));
     poll();
     expect(result.current.labels.m1.tone).toBe('fault');
     expect(result.current.runtime.m1).toBe('fault');
 
     act(() => {
-      publishTagValue('GC_04:fault', 0);
-      publishTagValue('GC_04:on', 0);
+      publishTagValue('GC_04.fault', 0);
+      publishTagValue('GC_04.on', 0);
     });
     poll();
     expect(result.current.labels.m1.tone).toBe('off');
@@ -210,10 +200,8 @@ describe('useModelStatusRecords', () => {
 
   it('상태 태그가 없는 모델 — 움직일 때만 가동, 멈추면 unknown', () => {
     const plain = scene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(plain, 'realtime'),
-    );
-    act(() => publishTagValue('GC_04:gantry', 1));
+    const { result } = renderHook(() => useModelStatusRecords(plain));
+    act(() => publishTagValue('GC_04.gantry', 1));
     poll();
     expect(result.current.labels.m1.tone).toBe('running');
     expect(result.current.runtime.m1).toBe('running');
@@ -221,7 +209,7 @@ describe('useModelStatusRecords', () => {
     act(() => {
       for (let i = 0; i < 12; i += 1) {
         vi.advanceTimersByTime(RUNTIME_STATUS_POLL_MS);
-        publishTagValue('GC_04:gantry', 1);
+        publishTagValue('GC_04.gantry', 1);
       }
     });
     expect(result.current.labels.m1.tone).toBe('unknown');
@@ -233,12 +221,10 @@ describe('useModelStatusRecords', () => {
 
   it('운전 전원이 꺼져 있으면 축 값이 흔들려도 가동으로 세지 않는다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 0);
-      publishTagValue('GC_04:gantry', 5);
+      publishTagValue('GC_04.on', 0);
+      publishTagValue('GC_04.gantry', 5);
     });
     poll();
     expect(result.current.labels.m1.tone).toBe('off');
@@ -247,19 +233,17 @@ describe('useModelStatusRecords', () => {
 
   it('운전 상태는 언제나 라벨의 tone 과 같다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     const expectSame = () =>
       expect(result.current.runtime.m1).toBe(result.current.labels.m1.tone);
     expectSame();
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:gantry', 3);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.gantry', 3);
     });
     poll();
     expectSame();
-    act(() => publishTagValue('GC_04:fault', 1));
+    act(() => publishTagValue('GC_04.fault', 1));
     poll();
     expectSame();
     poll(60);
@@ -269,10 +253,8 @@ describe('useModelStatusRecords', () => {
 
   it('우회·자유선회가 바뀌면 라벨 기록만 바뀐다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
-    act(() => publishTagValue('GC_04:on', 1));
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => publishTagValue('GC_04.on', 1));
     poll();
     const before = result.current;
     // 운전 전원 비트가 바뀐 것은 움직임이 아니다 — 운전 전원 On(정지).
@@ -283,8 +265,8 @@ describe('useModelStatusRecords', () => {
     });
 
     act(() => {
-      publishTagValue('GC_04:bypass', 1);
-      publishTagValue('GC_04:swing', 1);
+      publishTagValue('GC_04.bypass', 1);
+      publishTagValue('GC_04.swing', 1);
     });
     poll();
     expect(result.current.labels.m1).toMatchObject({
@@ -297,18 +279,16 @@ describe('useModelStatusRecords', () => {
 
   it('상태가 그대로면 두 기록과 묶음의 참조를 모두 유지한다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:bypass', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.bypass', 1);
     });
     poll(10);
     const before = result.current;
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:bypass', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.bypass', 1);
     });
     poll(3);
     expect(result.current).toBe(before);
@@ -318,10 +298,10 @@ describe('useModelStatusRecords', () => {
   it('paused 면 재판정하지 않아 수신이 끊겨도 마지막 기록을 유지한다', () => {
     const scene = statusScene();
     const { result, rerender } = renderHook(
-      ({ paused }) => useModelStatusRecords(scene, 'realtime', { paused }),
+      ({ paused }) => useModelStatusRecords(scene, { paused }),
       { initialProps: { paused: false } },
     );
-    act(() => publishTagValue('GC_04:on', 1));
+    act(() => publishTagValue('GC_04.on', 1));
     poll();
     const before = result.current;
     rerender({ paused: true });
@@ -336,12 +316,10 @@ describe('useModelStatusRecords', () => {
 
   it('값 캐시가 비워지면 다음 판정에서 unknown 으로 돌아간다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:bypass', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.bypass', 1);
     });
     poll();
     expect(result.current.labels.m1.bypass).toBe(true);
@@ -356,9 +334,7 @@ describe('useModelStatusRecords', () => {
 
   it('언마운트 뒤에는 타이머가 돌지 않는다', () => {
     const scene = statusScene();
-    const { unmount } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { unmount } = renderHook(() => useModelStatusRecords(scene));
     unmount();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -367,31 +343,27 @@ describe('useModelStatusRecords', () => {
 describe('useModelStatusRecords — 외곽선', () => {
   it('아무것도 못 받았으면 외곽선이 없다 — 상태 태그가 없는 모델도', () => {
     const plain = scene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(plain, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(plain));
     expect(result.current.outlines).toEqual({ m1: 'none', m2: 'none' });
   });
 
   it('Slowdown → Endstop → 해제', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:slow', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.slow', 1);
     });
     poll();
     expect(result.current.outlines.m1).toBe('slowdown');
 
-    act(() => publishTagValue('GC_04:end', 1));
+    act(() => publishTagValue('GC_04.end', 1));
     poll();
     expect(result.current.outlines.m1).toBe('endstop');
 
     act(() => {
-      publishTagValue('GC_04:end', 0);
-      publishTagValue('GC_04:slow', 0);
+      publishTagValue('GC_04.end', 0);
+      publishTagValue('GC_04.slow', 0);
     });
     poll();
     expect(result.current.outlines.m1).toBe('none');
@@ -399,13 +371,11 @@ describe('useModelStatusRecords — 외곽선', () => {
 
   it('통신불량 비트는 Endstop 보다 앞서고 라벨의 색은 바꾸지 않는다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:end', 1);
-      publishTagValue('GC_04:comm', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.end', 1);
+      publishTagValue('GC_04.comm', 1);
     });
     poll();
     expect(result.current.outlines.m1).toBe('commError');
@@ -415,12 +385,10 @@ describe('useModelStatusRecords — 외곽선', () => {
 
   it('수신이 끊기면 회색 — 낡은 Endstop 은 표시하지 않는다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:end', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.end', 1);
     });
     poll();
     expect(result.current.outlines.m1).toBe('endstop');
@@ -431,13 +399,11 @@ describe('useModelStatusRecords — 외곽선', () => {
 
   it('외곽선만 바뀌면 외곽선 기록만 바뀐다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
-    act(() => publishTagValue('GC_04:on', 1));
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => publishTagValue('GC_04.on', 1));
     poll();
     const before = result.current;
-    act(() => publishTagValue('GC_04:slow', 1));
+    act(() => publishTagValue('GC_04.slow', 1));
     poll();
     expect(result.current.outlines).not.toBe(before.outlines);
     expect(result.current.labels).toBe(before.labels);
@@ -446,18 +412,16 @@ describe('useModelStatusRecords — 외곽선', () => {
 
   it('외곽선이 그대로면 기록의 참조를 유지한다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:slow', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.slow', 1);
     });
     poll(10);
     const before = result.current;
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:slow', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.slow', 1);
     });
     poll(3);
     expect(result.current).toBe(before);
@@ -465,12 +429,10 @@ describe('useModelStatusRecords — 외곽선', () => {
 
   it('외곽선 비트가 바뀐 것은 움직임이 아니다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:slow', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.slow', 1);
     });
     poll();
     expect(result.current.labels.m1.tone).toBe('standby');
@@ -479,12 +441,12 @@ describe('useModelStatusRecords — 외곽선', () => {
   it('paused 면 외곽선도 마지막 기록을 유지한다', () => {
     const scene = statusScene();
     const { result, rerender } = renderHook(
-      ({ paused }) => useModelStatusRecords(scene, 'realtime', { paused }),
+      ({ paused }) => useModelStatusRecords(scene, { paused }),
       { initialProps: { paused: false } },
     );
     act(() => {
-      publishTagValue('GC_04:on', 1);
-      publishTagValue('GC_04:end', 1);
+      publishTagValue('GC_04.on', 1);
+      publishTagValue('GC_04.end', 1);
     });
     poll();
     rerender({ paused: true });
@@ -496,10 +458,8 @@ describe('useModelStatusRecords — 외곽선', () => {
 
   it('값 캐시가 비워지면 외곽선이 사라진다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
-    act(() => publishTagValue('GC_04:end', 1));
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => publishTagValue('GC_04.end', 1));
     poll();
     expect(result.current.outlines.m1).toBe('endstop');
     act(() => tagLiveValues.clear());
@@ -511,9 +471,7 @@ describe('useModelStatusRecords — 외곽선', () => {
 describe('useModelStatusRecords — 전이 시각', () => {
   it('첫 판정 시각이 모든 모델의 tone 시각이고 Bypass 는 비어 있다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     expect(result.current.since).toEqual({
       tone: { m1: 1_000_000 },
       bypass: {},
@@ -522,13 +480,11 @@ describe('useModelStatusRecords — 전이 시각', () => {
 
   it('상태가 그대로면 시각·참조를 유지하고, 바뀌면 그 판정 시각으로 리셋된다', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
+    const { result } = renderHook(() => useModelStatusRecords(scene));
     const first = result.current.since;
     poll(3);
     expect(result.current.since).toBe(first);
-    act(() => publishTagValue('GC_04:fault', 1));
+    act(() => publishTagValue('GC_04.fault', 1));
     poll();
     expect(result.current.runtime.m1).toBe('fault');
     expect(result.current.since.tone.m1).toBe(
@@ -538,19 +494,17 @@ describe('useModelStatusRecords — 전이 시각', () => {
 
   it('Bypass 가 켜지면 그 시각이 들어오고 꺼지면 빠진다 — tone 시각은 그대로', () => {
     const scene = statusScene();
-    const { result } = renderHook(() =>
-      useModelStatusRecords(scene, 'realtime'),
-    );
-    act(() => publishTagValue('GC_04:on', 1));
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => publishTagValue('GC_04.on', 1));
     poll();
     const toneSince = result.current.since.tone;
-    act(() => publishTagValue('GC_04:bypass', 1));
+    act(() => publishTagValue('GC_04.bypass', 1));
     poll();
     expect(result.current.since.bypass).toEqual({
       m1: 1_000_000 + RUNTIME_STATUS_POLL_MS * 2,
     });
     expect(result.current.since.tone).toBe(toneSince);
-    act(() => publishTagValue('GC_04:bypass', 0));
+    act(() => publishTagValue('GC_04.bypass', 0));
     poll();
     expect(result.current.since.bypass).toEqual({});
     expect(result.current.since.tone).toBe(toneSince);
@@ -559,10 +513,10 @@ describe('useModelStatusRecords — 전이 시각', () => {
   it('paused 면 전이 시각도 그대로다', () => {
     const scene = statusScene();
     const { result, rerender } = renderHook(
-      ({ paused }) => useModelStatusRecords(scene, 'realtime', { paused }),
+      ({ paused }) => useModelStatusRecords(scene, { paused }),
       { initialProps: { paused: false } },
     );
-    act(() => publishTagValue('GC_04:on', 1));
+    act(() => publishTagValue('GC_04.on', 1));
     poll();
     const before = result.current.since;
     rerender({ paused: true });

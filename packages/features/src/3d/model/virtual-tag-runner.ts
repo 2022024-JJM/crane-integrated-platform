@@ -1,43 +1,37 @@
 import {
-  clampToTag,
-  evaluateScenarioTrack,
-  hasRateLimits,
-  rateLimitStep,
   initVirtualTagState,
-  isScenarioFinished,
-  scenarioDurationMs,
-  scenarioTimeMs,
   setVirtualTagManualValue,
   stepVirtualTag,
-  type ScenarioTrack,
-  type VirtualScenario,
   type VirtualTagDefinition,
   type VirtualTagRuntimeState,
 } from '@crane/domain/virtual-tag';
+import type { VirtualTagEntry } from '../lib/scenario-entries';
 import { notifySceneSeek } from './scene-seek-signal';
 import {
   publishTagValue,
   type TagPublish,
   type TagPublishOptions,
-  type TagValueSource,
 } from './tag-value-bus';
 
 /**
- * 가상 태그 값 러너 — 모듈 전역 `setInterval` 하나로 돈다.
+ * 시나리오 값 러너 — 모듈 전역 `setInterval` 하나로 돈다.
  *
- * R3F useFrame 이 아닌 이유: 관리 페이지(Canvas 없음)에서도 값이 흘러야 표에
- * 현재값이 보이고, 캔버스 유무와 무관하게 "재생" 이 한 의미여야 한다. 값은
- * Object3D 를 직접 만지지 않고 버스 → 값 저장소(스무딩) 로만 가므로 프레임과
- * 어긋나도 튀지 않는다 — 예전 setInterval 생성기가 문제였던 건 Object3D 를
- * 프레임 밖에서 mutate 했기 때문이다.
+ * R3F useFrame 이 아닌 이유: 캔버스 유무와 무관하게 "재생" 이 한 의미여야
+ * 한다. 값은 Object3D 를 직접 만지지 않고 버스 → 값 저장소(스무딩) 로만
+ * 가므로 프레임과 어긋나도 튀지 않는다 — 예전 setInterval 생성기가 문제였던
+ * 건 Object3D 를 프레임 밖에서 mutate 했기 때문이다.
+ *
+ * 정의는 활성 시나리오를 씬으로 편 항목(`VirtualTagEntry`, lib/scenario-
+ * entries.ts)으로 받고 상태는 **키** 기준이다 — 키는 모델 크레인과 코드의
+ * 조립값이라 전역에서 유일하고, 모델의 크레인이 바뀌면 새 키로 상태가 다시
+ * 잡힌다(범위를 바꿨을 때와 같은 규칙). 모든 publish 는 `source:
+ * 'simulation'` 을 실어 버스 게이트가 실시간·리플레이 화면에서 버린다.
  *
  * 시뮬레이션 시계: 벽시계 dt 에 `speed` 를 곱해 씬 시간 `elapsedMs` 를 누적한다
- * (트랜스포트 위치). 값은 **씬 시간의 함수**다 — `tickMs` 의 고정 스텝으로만
- * 적분하고(`advanceTo`), 재생·seek 가 같은 적분기를 쓴다. 속도·가속 한계가
- * 있는 태그는 값이 경로 의존(값·속도 상태)이라 seek 에서 목표값을 바로 넣으면
- * 재생 때 그 시각에 보이던 자세와 어긋난다. 그래서 `seek(ms)` 는 0 초 상태에서
- * ms 까지 다시 적분한다(재시뮬레이션). 비용은 스텝 수에 선형이다 — 90 초
- * 시나리오는 태그당 900 스텝.
+ * (트랜스포트 위치). 값은 **씬 시간의 함수**다 — `tickMs` 의 고정 스텝 경계
+ * 에서만 계산하고(`advanceTo`), 재생·seek 가 같은 함수를 쓴다. 파형은 경로
+ * 의존이 없어 스텝을 하나씩 밟지 않고 목표 시각 직전의 스텝 경계로 바로 간다.
+ * 저장본의 시간 단위는 초이고 러너 시계는 ms 다 — 스토어가 경계에서 바꾼다.
  *
  * 벽시계 타이머 간격은 `tickMs / speed`(하한 TIMER_MIN_MS)다 — 배속이 높아도
  * 스텝마다 내보내 화면 보간 지연이 씬 시간으로 한 스텝에 머문다. 틱이 밀리면
@@ -45,21 +39,17 @@ import {
  *
  * 내보내기: 정상 전진은 스무딩(publish 간격만큼 — 스텝 계단을 숨긴다), seek·
  * 리셋은 즉시(`smoothTime: 0`) — 위치 불연속에서 자세가 미끄러지지 않는다.
- *
- * 활성 시나리오가 있으면 트랙이 있는 태그는 키프레임 보간값이 파형을 대신하고,
- * loop 가 아닌 시나리오가 끝에 닿으면 `onFinished` 를 한 번 부른다(스토어가
- * 일시정지한다). 테스트는 vi.useFakeTimers 로 Date 와 interval 을 함께 고정한다.
+ * 테스트는 vi.useFakeTimers 로 Date 와 interval 을 함께 고정한다.
  */
 
 export interface VirtualTagRunnerConfig {
-  tags: VirtualTagDefinition[];
-  /** 적분 스텝(씬 시간 ms) = 값 갱신 주기. */
+  /** 활성 시나리오를 씬으로 편 항목 전부. */
+  entries: readonly VirtualTagEntry[];
+  /** 스텝(씬 시간 ms) = 값 갱신 주기. 저장본의 `tickSec` 을 스토어가 ms 로 바꿔 넘긴다. */
   tickMs: number;
   isRunning: boolean;
   /** 배속. 기본 1. */
   speed: number;
-  /** 활성 시나리오. 없으면 null. */
-  scenario: VirtualScenario | null;
 }
 
 type GetConfig = () => VirtualTagRunnerConfig;
@@ -70,6 +60,10 @@ const TIMER_MIN_MS = 16;
 /** seek·리셋 — 위치 불연속. 화면에 즉시 대입. */
 const PUBLISH_IMMEDIATE: TagPublishOptions = { smoothTime: 0 };
 
+/** 버스로 내보내는 기본 publish — 소스를 합성한다. 테스트·어댑터가 바꿀 수 있다. */
+const publishSimulation: TagPublish = (key, value, options) =>
+  publishTagValue(key, value, { ...options, source: 'simulation' });
+
 function speedOf(config: VirtualTagRunnerConfig): number {
   return Number.isFinite(config.speed) && config.speed > 0 ? config.speed : 1;
 }
@@ -79,51 +73,53 @@ function timerIntervalMs(config: VirtualTagRunnerConfig): number {
   return Math.max(TIMER_MIN_MS, config.tickMs / speedOf(config));
 }
 
+/** 상태를 다시 잡아야 하는 정의 변경 — 옛 값이 새 범위·패턴 밖일 수 있다. */
+function isDefinitionChanged(
+  prev: VirtualTagDefinition,
+  next: VirtualTagDefinition,
+): boolean {
+  return (
+    prev.min !== next.min ||
+    prev.max !== next.max ||
+    prev.initial !== next.initial ||
+    prev.dataType !== next.dataType ||
+    JSON.stringify(prev.pattern) !== JSON.stringify(next.pattern)
+  );
+}
+
 class VirtualTagRuntime {
   private states = new Map<string, VirtualTagRuntimeState>();
-  private defs = new Map<string, VirtualTagDefinition>();
+  private entries = new Map<string, VirtualTagEntry>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private timerMs = 0;
   /** 씬 시간(ms) — 트랜스포트 위치. 벽시계 dt × 배속의 누적. */
   private elapsedMs = 0;
-  /** 적분이 도달한 씬 시간 — 항상 `tickMs` 의 배수이고 `elapsedMs` 이하. */
+  /** 값을 계산한 씬 시간 — 항상 `tickMs` 의 배수이고 `elapsedMs` 이하. */
   private integratedMs = 0;
   private lastTickAt = 0;
   private getConfig: GetConfig | null = null;
-  private onFinished: (() => void) | null = null;
-  private publish: TagPublish = publishTagValue;
-  /** 시나리오 참조별 트랙 인덱스 캐시 — 같은 시나리오면 틱마다 다시 만들지 않는다. */
-  private trackCacheFor: VirtualScenario | null = null;
-  private trackByKey = new Map<string, ScenarioTrack>();
-  private finishedNotified = false;
+  private publish: TagPublish = publishSimulation;
 
-  /**
-   * 스토어가 재생을 켤 때 부른다. 설정은 매 틱 getter 로 다시 읽는다.
-   * `onFinished` 는 loop 아닌 시나리오가 끝에 닿은 틱에 한 번.
-   */
-  start(getConfig: GetConfig, onFinished: (() => void) | null = null): void {
+  /** 스토어가 재생을 켤 때 부른다. 설정은 매 틱 getter 로 다시 읽는다. */
+  start(getConfig: GetConfig): void {
     this.getConfig = getConfig;
-    this.onFinished = onFinished;
     this.lastTickAt = Date.now();
-    this.finishedNotified = false;
     this.ensureTimer();
     // 재생 즉시 **현재 상태값**을 한 번 내보내 첫 틱 전에도 노드가 값을 받는다.
-    // 시각 기준 재계산을 하지 않는다 — 한계로 목표보다 뒤처져 있던 값이 재개
-    // 순간 목표로 점프해 모델이 미끄러진다. 재계산은 seek·리셋·시나리오 전환만.
     this.publishAll(this.publishSmoothing());
   }
 
   /**
-   * 설정 getter 만 붙인다(타이머 없음) — 정지 상태에서 seek·시나리오 전환이
-   * 값을 계산하려면 설정이 필요하다. 이미 있으면 교체.
+   * 설정 getter 만 붙인다(타이머 없음) — 정지 상태에서 seek 가 값을 계산하려면
+   * 설정이 필요하다. 이미 있으면 교체.
    */
   attachConfig(getConfig: GetConfig): void {
     this.getConfig = getConfig;
   }
 
-  /** 값이 나갈 곳을 바꾼다(테스트·어댑터). 기본은 태그 값 버스. */
+  /** 값이 나갈 곳을 바꾼다(테스트). 기본은 소스를 실은 태그 값 버스. */
   setPublish(publish: TagPublish | null): void {
-    this.publish = publish ?? publishTagValue;
+    this.publish = publish ?? publishSimulation;
   }
 
   pause(): void {
@@ -133,62 +129,46 @@ class VirtualTagRuntime {
     }
   }
 
-  /** 정의 목록 동기화 — 새 태그는 초기 상태, 사라진 태그는 상태 제거. */
-  syncDefinitions(tags: VirtualTagDefinition[]): void {
-    const nextDefs = new Map(tags.map((t) => [t.id, t]));
-    for (const id of this.states.keys()) {
-      if (!nextDefs.has(id)) this.states.delete(id);
+  /** 정의 목록 동기화 — 새 키는 초기 상태, 사라진 키는 상태 제거. */
+  syncDefinitions(entries: readonly VirtualTagEntry[]): void {
+    const next = new Map(entries.map((entry) => [entry.key, entry]));
+    for (const key of this.states.keys()) {
+      if (!next.has(key)) this.states.delete(key);
     }
-    for (const def of tags) {
-      const prev = this.defs.get(def.id);
-      const state = this.states.get(def.id);
-      // 범위·패턴·초기값이 바뀌면 상태를 다시 잡는다 — 옛 값이 새 범위 밖일 수 있다.
-      const changed =
-        !prev ||
-        prev.min !== def.min ||
-        prev.max !== def.max ||
-        prev.initial !== def.initial ||
-        JSON.stringify(prev.pattern) !== JSON.stringify(def.pattern) ||
-        JSON.stringify(prev.limits ?? null) !==
-          JSON.stringify(def.limits ?? null);
-      if (!state || changed) this.states.set(def.id, initVirtualTagState(def));
+    for (const entry of entries) {
+      const prev = this.entries.get(entry.key);
+      const state = this.states.get(entry.key);
+      if (!state || !prev || isDefinitionChanged(prev.tag, entry.tag)) {
+        this.states.set(entry.key, initVirtualTagState(entry.tag));
+      }
     }
-    this.defs = nextDefs;
+    this.entries = next;
   }
 
-  getValue(id: string): number | undefined {
-    return this.states.get(id)?.value;
+  getValue(key: string): number | undefined {
+    return this.states.get(key)?.value;
   }
 
-  getValueByKey(key: string): number | undefined {
-    for (const def of this.defs.values()) {
-      if (def.key === key) return this.states.get(def.id)?.value;
-    }
-    return undefined;
-  }
-
-  /** 슬라이더 — 재생 여부와 무관하게 즉시 내보낸다(정지 상태에서 자세 확인용). */
-  setManualValue(id: string, value: number): void {
-    const def = this.defs.get(id);
-    const state = this.states.get(id);
-    if (!def || !state) return;
-    const next = setVirtualTagManualValue(def, state, value);
-    this.states.set(id, next);
-    if (def.enabled) this.publish(def.key, next.value);
+  /** 슬라이더·토글 — 재생 여부와 무관하게 즉시 내보낸다(정지 상태에서 자세 확인용). */
+  setManualValue(key: string, value: number): void {
+    const entry = this.entries.get(key);
+    const state = this.states.get(key);
+    if (!entry || !state) return;
+    const next = setVirtualTagManualValue(entry.tag, state, value);
+    this.states.set(key, next);
+    this.publish(key, next.value);
   }
 
   /**
-   * 시간을 0 으로 되돌리고 모든 상태를 0 초 상태로 잡는다(재생 중이면 파형
+   * 시간을 0 으로 되돌리고 모든 상태를 initial 로 잡는다(재생 중이면 파형
    * 위상도 0 부터). `publish=false` 면 버스에 내보내지 않는다 — 시뮬레이션
-   * 종료(관제 복귀)처럼 모델을 rest 로 두고 싶을 때. 이 경로는 시나리오와
-   * 무관하게 initial 이다(종료가 시나리오도 해제하므로).
+   * 종료(관제 복귀)처럼 모델을 rest 로 두고 싶을 때.
    */
   resetValues(publish = true): void {
     this.elapsedMs = 0;
     this.integratedMs = 0;
     this.lastTickAt = Date.now();
-    this.finishedNotified = false;
-    this.initStates(publish ? this.activeScenario() : null, false);
+    this.initStates(false);
     // 시각 불연속 — 스토어를 거치지 않는 호출(시뮬레이션 패널 리셋)도 여기로 온다.
     notifySceneSeek();
     if (!publish) return;
@@ -196,15 +176,14 @@ class VirtualTagRuntime {
   }
 
   /**
-   * 경과 시간을 옮기고 0 초부터 그 시각까지 다시 적분해 내보낸다 — 재생해서
-   * 그 시각에 닿았을 때와 같은 값·속도 상태. 재생 여부와 무관(정지 상태에서
-   * 타임라인을 훑는 용도). 음수·NaN 은 0. 화면에는 즉시 대입한다.
+   * 경과 시간을 옮기고 0 초 상태에서 그 시각의 값을 계산해 내보낸다 — 재생해서
+   * 그 시각에 닿았을 때와 같은 값. 재생 여부와 무관(정지 상태에서 타임라인을
+   * 훑는 용도). 음수·NaN 은 0. 화면에는 즉시 대입한다.
    */
   seek(elapsedMs: number): void {
     this.elapsedMs =
       Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
     this.lastTickAt = Date.now();
-    this.finishedNotified = false;
     notifySceneSeek();
     this.resimulate();
     this.publishAll(PUBLISH_IMMEDIATE);
@@ -214,109 +193,51 @@ class VirtualTagRuntime {
     return this.elapsedMs;
   }
 
-  /** 활성 시나리오 기준 현재 시나리오 시각(ms). 시나리오가 없으면 elapsed. */
-  get scenarioTime(): number {
-    const scenario = this.activeScenario();
-    if (!scenario) return this.elapsedMs;
-    return scenarioTimeMs(
-      this.elapsedMs,
-      scenarioDurationMs(scenario),
-      scenario.loop,
-    );
-  }
-
-  private activeScenario(): VirtualScenario | null {
-    return this.getConfig?.().scenario ?? null;
-  }
-
-  private tracksOf(scenario: VirtualScenario): Map<string, ScenarioTrack> {
-    if (this.trackCacheFor !== scenario) {
-      this.trackCacheFor = scenario;
-      this.trackByKey = new Map(scenario.tracks.map((t) => [t.key, t]));
-    }
-    return this.trackByKey;
-  }
-
   /**
-   * 0 초 상태 — 트랙이 있는 태그는 첫 키프레임 값(재생 시작 자세), 나머지는
-   * initial. 속도는 0. `keepManual` 이면 트랙 없는 manual 태그는 슬라이더 값을
+   * 0 초 상태 — 전부 initial. `keepManual` 이면 manual 태그는 슬라이더 값을
    * 유지한다(seek — 파형이 없으니 시각과 무관).
    */
-  private initStates(
-    scenario: VirtualScenario | null,
-    keepManual: boolean,
-  ): void {
-    const tracks = scenario ? this.tracksOf(scenario) : null;
-    for (const def of this.defs.values()) {
-      const track = tracks?.get(def.key);
-      const first = track ? evaluateScenarioTrack(track, 0) : undefined;
-      if (first !== undefined) {
-        this.states.set(def.id, { value: clampToTag(def, first) });
-        continue;
-      }
+  private initStates(keepManual: boolean): void {
+    for (const entry of this.entries.values()) {
       if (
         keepManual &&
-        def.pattern.kind === 'manual' &&
-        this.states.has(def.id)
+        entry.tag.pattern.kind === 'manual' &&
+        this.states.has(entry.key)
       ) {
         continue;
       }
-      this.states.set(def.id, initVirtualTagState(def));
+      this.states.set(entry.key, initVirtualTagState(entry.tag));
     }
   }
 
-  /** 0 초 상태에서 현재 `elapsedMs` 까지 다시 적분한다. 설정이 없으면 no-op. */
+  /** 0 초 상태에서 현재 `elapsedMs` 의 값을 다시 계산한다. 설정이 없으면 no-op. */
   private resimulate(): void {
     const config = this.getConfig?.();
     if (!config) return;
     this.integratedMs = 0;
-    this.initStates(config.scenario, true);
+    this.initStates(true);
     this.advanceTo(config, this.elapsedMs);
   }
 
   /**
-   * 고정 스텝 적분 — `integratedMs` 가 `targetMs` 를 넘지 않는 마지막 스텝
-   * 경계까지 `tickMs` 씩 전진한다. 스텝마다 목표(스텝 끝 시각의 시나리오 값 또는
-   * 파형)를 한계로 램프한다. 재생 tick 과 seek 재시뮬레이션이 같은 함수를 쓰므로
-   * 같은 씬 시각의 값이 경로와 무관하게 같다.
+   * 고정 스텝 — `targetMs` 를 넘지 않는 마지막 `tickMs` 경계로 `integratedMs`
+   * 를 옮기고 그 시각의 파형 값을 상태로 둔다. 값이 씬 시간의 순수 함수라
+   * 사이 스텝을 밟을 필요가 없고, 재생 tick 과 seek 가 같은 함수를 쓰므로 같은
+   * 씬 시각의 값이 경로와 무관하게 같다.
    */
   private advanceTo(config: VirtualTagRunnerConfig, targetMs: number): void {
     const stepMs = config.tickMs;
     if (!(stepMs > 0)) return;
-    const scenario = config.scenario;
-    const tracks = scenario ? this.tracksOf(scenario) : null;
-    const durationMs = scenario ? scenarioDurationMs(scenario) : 0;
-    const dtSec = stepMs / 1000;
-    while (this.integratedMs + stepMs <= targetMs) {
-      this.integratedMs += stepMs;
-      const tMs = scenario
-        ? scenarioTimeMs(this.integratedMs, durationMs, scenario.loop)
-        : 0;
-      for (const def of config.tags) {
-        if (!def.enabled) continue;
-        const state = this.states.get(def.id) ?? initVirtualTagState(def);
-        const track = tracks?.get(def.key);
-        // 목표값 — 시나리오 트랙이 있으면 키프레임, 없으면 파형(manual 은 현재값).
-        const scenarioValue = track
-          ? evaluateScenarioTrack(track, tMs)
-          : undefined;
-        const target =
-          scenarioValue !== undefined
-            ? clampToTag(def, scenarioValue)
-            : stepVirtualTag(def, this.integratedMs, state).value;
-        this.states.set(
-          def.id,
-          hasRateLimits(def.limits)
-            ? rateLimitStep(
-                state.value,
-                state.velocity ?? 0,
-                target,
-                dtSec,
-                def.limits,
-              )
-            : { value: target },
-        );
-      }
+    const reachedMs = Math.floor(targetMs / stepMs) * stepMs;
+    if (reachedMs <= this.integratedMs) return;
+    this.integratedMs = reachedMs;
+    for (const entry of config.entries) {
+      const state =
+        this.states.get(entry.key) ?? initVirtualTagState(entry.tag);
+      this.states.set(
+        entry.key,
+        stepVirtualTag(entry.tag, this.integratedMs, state),
+      );
     }
   }
 
@@ -338,10 +259,9 @@ class VirtualTagRuntime {
   }
 
   private publishAll(options: TagPublishOptions | undefined): void {
-    for (const def of this.defs.values()) {
-      if (!def.enabled) continue;
-      const state = this.states.get(def.id);
-      if (state) this.publish(def.key, state.value, options);
+    for (const entry of this.entries.values()) {
+      const state = this.states.get(entry.key);
+      if (state) this.publish(entry.key, state.value, options);
     }
   }
 
@@ -361,36 +281,7 @@ class VirtualTagRuntime {
     this.elapsedMs += dt * speedOf(config);
     this.advanceTo(config, this.elapsedMs);
     this.publishAll(this.publishSmoothing());
-
-    const scenario = config.scenario;
-    if (
-      scenario &&
-      !this.finishedNotified &&
-      isScenarioFinished(
-        this.elapsedMs,
-        scenarioDurationMs(scenario),
-        scenario.loop,
-      )
-    ) {
-      this.finishedNotified = true;
-      this.onFinished?.();
-    }
   }
 }
 
 export const virtualTagRuntime = new VirtualTagRuntime();
-
-/**
- * TagValueSource 모양의 어댑터 — 생산자 교체 지점을 한 인터페이스로 맞춘다.
- * start 에 받은 publish 로 값을 내보내고 stop 에서 버스 기본값으로 돌린다.
- * 재생 자체(타이머)는 useVirtualTagStore.start/pause 가 관리한다.
- */
-export const virtualTagSource: TagValueSource = {
-  id: 'virtual',
-  start(publish) {
-    virtualTagRuntime.setPublish(publish);
-  },
-  stop() {
-    virtualTagRuntime.setPublish(null);
-  },
-};

@@ -381,6 +381,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
   const mapped = (overrides: Partial<SavedModelInfo> = {}): SavedModelInfo =>
     model({
       rigId: undefined,
+      craneId: 'C_1',
       position: [10, 0, -5],
       rotation: [0, 90, 0],
       scale: [2, 2, 2],
@@ -388,7 +389,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
         {
           id: 'root-z',
           target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-          realtimeTagKey: 'C_1:z',
+          code: 'z',
         },
         {
           id: 'arm-rot',
@@ -398,7 +399,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
             channel: 'rotation',
             axis: 'z',
           },
-          realtimeTagKey: 'C_1:arm',
+          code: 'arm',
         },
         {
           id: 'hand-scale',
@@ -408,7 +409,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
             channel: 'scale',
             axis: 'y',
           },
-          realtimeTagKey: 'C_1:hand',
+          code: 'hand',
         },
       ],
       ...overrides,
@@ -455,7 +456,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
                   channel: 'position',
                   axis: 'x',
                 },
-                realtimeTagKey: 'k',
+                code: 'k',
               },
             ],
           }),
@@ -489,7 +490,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
             channel: 'position',
             axis: 'x',
           },
-          realtimeTagKey: 'k',
+          code: 'k',
         },
       ],
     });
@@ -626,7 +627,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
                     channel: 'rotation',
                     axis: 'z',
                   },
-                  realtimeTagKey: 'C_1:arm',
+                  code: 'arm',
                 },
               ],
             }),

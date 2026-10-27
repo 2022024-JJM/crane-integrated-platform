@@ -10,7 +10,6 @@ import {
   type Alarm,
   type AlarmSeverity,
 } from '@crane/domain/alarm';
-import { getRegionById } from '@crane/domain/region';
 import { getFormatLocale } from '@crane/core/config/i18n';
 import { cn } from '@crane/core/lib/utils';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
@@ -230,23 +229,10 @@ export function HeaderAlarmButton() {
   };
 
   const navigate = useProgressNavigate();
-  const latestRegionId = history[0]?.regionId;
-  const historyHref = useMemo(() => {
-    if (!latestRegionId) return null;
-    const region = getRegionById(latestRegionId);
-    return region ? `${region.navigateTo}/alarm-history` : null;
-  }, [latestRegionId]);
-
   /* 외부 알람 줄 클릭 — 그 사정이 보이는 화면으로. 모달은 닫는다(새 화면 위에 남으면 걸린다) */
   const handleOpenRow = (href: string) => {
     setOpen(false);
     navigate(href);
-  };
-
-  const handleNavigateHistory = () => {
-    if (!historyHref) return;
-    setOpen(false);
-    navigate(historyHref);
   };
 
   useEffect(() => {
@@ -441,20 +427,6 @@ export function HeaderAlarmButton() {
               </table>
             )}
           </ScrollArea>
-
-          <div className="shrink-0 border-t px-4 py-2.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNavigateHistory}
-              disabled={!historyHref}
-              className="w-full"
-            >
-              {t('common:alarms.viewAllHistory', {
-                defaultValue: '알람 이력 전체 보기',
-              })}
-            </Button>
-          </div>
         </div>
       )}
     </>

@@ -14,7 +14,7 @@ import { useActiveTransformStore } from '../model/use-active-transform-store';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
-import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { useScenarioStore } from '../model/use-scenario-store';
 
 /** 애니메이션 소스 상태를 다시 읽는 주기(ms). 유예(1.5s)보다 충분히 짧다. */
 const POLL_MS = 250;
@@ -90,7 +90,7 @@ export function SceneFrameGovernor({
       const realtime = useRealtimeStore.getState();
       const active =
         animating ||
-        useVirtualTagStore.getState().isRunning ||
+        useScenarioStore.getState().isRunning ||
         (realtime.isRunning &&
           now - realtime.activity.lastMessageAt < REALTIME_ACTIVE_MS) ||
         useReplayPlayerStore.getState().isPlaying ||

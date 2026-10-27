@@ -260,6 +260,37 @@ describe('StompClient — 구독', () => {
     expect(c.transport.unsubscribeLog).toEqual(['/topic/cranes']);
   });
 
+  it('같은 핸들러 함수를 두 화면이 넘겨도 한 쪽이 빠진 뒤 브로커 구독이 남고, 메시지는 핸들러당 한 번이다', () => {
+    // 모니터링 → 태그 전환: 브리지가 붙어 있는 채로 태그 페이지가 같은
+    // applyBatch 로 구독하고, Canvas 안 브리지 정리는 그 뒤에 돈다.
+    const c = createClient();
+    c.client.connect();
+    c.transport.simulateConnect();
+    const applyBatch = vi.fn();
+    const offBridge = c.client.subscribe('/topic/cranes', applyBatch);
+    const offTags = c.client.subscribe('/topic/cranes', applyBatch);
+    offBridge();
+    expect(c.transport.unsubscribeLog).toEqual([]);
+    c.transport.deliver('/topic/cranes', '1');
+    expect(applyBatch).toHaveBeenCalledTimes(1);
+    offTags();
+    expect(c.transport.unsubscribeLog).toEqual(['/topic/cranes']);
+  });
+
+  it('같은 핸들러의 해제 함수를 두 번 불러도 다른 호출자의 등록은 빼지 않는다', () => {
+    const c = createClient();
+    c.client.connect();
+    c.transport.simulateConnect();
+    const applyBatch = vi.fn();
+    const offA = c.client.subscribe('/topic/cranes', applyBatch);
+    c.client.subscribe('/topic/cranes', applyBatch);
+    offA();
+    offA();
+    expect(c.transport.unsubscribeLog).toEqual([]);
+    c.transport.deliver('/topic/cranes', '1');
+    expect(applyBatch).toHaveBeenCalledTimes(1);
+  });
+
   it('끊겼다 다시 붙으면 남아 있는 구독만 전부 다시 건다', () => {
     const c = createClient();
     const handler = vi.fn();

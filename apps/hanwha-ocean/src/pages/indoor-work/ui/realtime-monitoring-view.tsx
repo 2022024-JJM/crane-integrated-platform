@@ -36,7 +36,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         alarmHighlightMesh
         mode="realtime"
         onLoadingChange={setIs3dViewLoading}
-        toolbarLayout="dock"
       />
     </div>
   );

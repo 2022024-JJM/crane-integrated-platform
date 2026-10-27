@@ -1,106 +1,95 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeModelStatusTags } from '../sanitize-status-tags';
+import { sanitizeStatusTagEntries } from '../sanitize-status-tags';
 
-const rt = (key: string) => ({ realtimeTagKey: key });
-
-describe('sanitizeModelStatusTags', () => {
-  it('유효한 역할은 두 슬롯 객체 그대로 싣는다', () => {
+describe('sanitizeStatusTagEntries', () => {
+  it('코드 문자열은 그대로(trim), 레거시 키는 코드와 크레인 접두어로 나눈다', () => {
     expect(
-      sanitizeModelStatusTags({
-        controlOn: { realtimeTagKey: 'C_171.crane_control_on' },
-        fault: {
-          realtimeTagKey: 'C_171.crane_system_error',
-          virtualTagKey: 'GC_04.fault',
-        },
-        bypass: { virtualTagKey: 'GC_04.accs_bypass_on' },
-        freeSwing: rt('GC_04.free_swing_on'),
-        commError: rt('GC_04.plc_comm_error'),
-        slowdown: rt('GC_04.accs_slowdown'),
-        endstop: rt('GC_04.accs_endstop'),
+      sanitizeStatusTagEntries({
+        controlOn: ' crane_control_on ',
+        fault: 'C_171.crane_system_error',
+        bypass: 'GC_04:accs_bypass_on',
       }),
     ).toEqual({
-      controlOn: { realtimeTagKey: 'C_171.crane_control_on' },
-      fault: {
-        realtimeTagKey: 'C_171.crane_system_error',
-        virtualTagKey: 'GC_04.fault',
-      },
-      bypass: { virtualTagKey: 'GC_04.accs_bypass_on' },
-      freeSwing: rt('GC_04.free_swing_on'),
-      commError: rt('GC_04.plc_comm_error'),
-      slowdown: rt('GC_04.accs_slowdown'),
-      endstop: rt('GC_04.accs_endstop'),
+      controlOn: { code: 'crane_control_on' },
+      fault: { code: 'crane_system_error', craneKey: 'C_171' },
+      bypass: { code: 'accs_bypass_on', craneKey: 'GC_04' },
     });
   });
 
-  it('단일 키 시절의 문자열은 실시간 슬롯으로 받는다(trim)', () => {
+  it('두 슬롯 객체(레거시)는 실시간 › 가상 › 단일 tagKey 순으로 첫 키를 쓴다', () => {
     expect(
-      sanitizeModelStatusTags({ slowdown: ' A.slow ', endstop: 'A.end' }),
-    ).toEqual({ slowdown: rt('A.slow'), endstop: rt('A.end') });
+      sanitizeStatusTagEntries({
+        controlOn: { realtimeTagKey: 'C_171.crane_control_on' },
+        fault: {
+          realtimeTagKey: 'C_171.crane_system_error',
+          virtualTagKey: 'GC_04:fault',
+        },
+        bypass: { virtualTagKey: 'GC_04:accs_bypass_on' },
+        freeSwing: { tagKey: 'A:free_swing_on' },
+      }),
+    ).toEqual({
+      controlOn: { code: 'crane_control_on', craneKey: 'C_171' },
+      fault: { code: 'crane_system_error', craneKey: 'C_171' },
+      bypass: { code: 'accs_bypass_on', craneKey: 'GC_04' },
+      freeSwing: { code: 'free_swing_on', craneKey: 'A' },
+    });
   });
 
   it('외곽선 역할만 있어도 된다 — 라벨 역할과 독립', () => {
     expect(
-      sanitizeModelStatusTags({
-        slowdown: { virtualTagKey: 'A.slow' },
-        endstop: rt('A.end'),
-      }),
-    ).toEqual({ slowdown: { virtualTagKey: 'A.slow' }, endstop: rt('A.end') });
+      sanitizeStatusTagEntries({ slowdown: 'accs_slowdown', endstop: 'A.end' }),
+    ).toEqual({
+      slowdown: { code: 'accs_slowdown' },
+      endstop: { code: 'end', craneKey: 'A' },
+    });
   });
 
-  it('문자열·객체가 아니거나 두 키 다 비면 그 역할만 버린다', () => {
+  it('문자열·객체가 아니거나 코드가 비거나 금지 글자가 있으면 그 역할만 버린다', () => {
     expect(
-      sanitizeModelStatusTags({
+      sanitizeStatusTagEntries({
         commError: true,
         slowdown: ['A.slow'],
         endstop: '  ',
         controlOn: { realtimeTagKey: '', virtualTagKey: '   ' },
         bypass: { realtimeTagKey: 1 },
         freeSwing: null,
-        fault: 'A.fault',
+        fault: 'A fault',
       }),
-    ).toEqual({ fault: rt('A.fault') });
-  });
-
-  it('슬롯 값이 문자열이 아니면 그 슬롯만 버린다', () => {
+    ).toBeUndefined();
     expect(
-      sanitizeModelStatusTags({
-        bypass: { realtimeTagKey: 1, virtualTagKey: ' A.b ' },
-      }),
-    ).toEqual({ bypass: { virtualTagKey: 'A.b' } });
+      sanitizeStatusTagEntries({ bypass: { code: 'ok' }, fault: 'bad code' }),
+    ).toEqual({ bypass: { code: 'ok' } });
   });
 
   it('객체가 아니면 undefined — null·배열·문자열·숫자', () => {
-    expect(sanitizeModelStatusTags(undefined)).toBeUndefined();
-    expect(sanitizeModelStatusTags(null)).toBeUndefined();
-    expect(sanitizeModelStatusTags([])).toBeUndefined();
-    expect(sanitizeModelStatusTags(['A.b'])).toBeUndefined();
-    expect(sanitizeModelStatusTags('A.b')).toBeUndefined();
-    expect(sanitizeModelStatusTags(1)).toBeUndefined();
+    expect(sanitizeStatusTagEntries(undefined)).toBeUndefined();
+    expect(sanitizeStatusTagEntries(null)).toBeUndefined();
+    expect(sanitizeStatusTagEntries([])).toBeUndefined();
+    expect(sanitizeStatusTagEntries(['A.b'])).toBeUndefined();
+    expect(sanitizeStatusTagEntries('A.b')).toBeUndefined();
+    expect(sanitizeStatusTagEntries(1)).toBeUndefined();
   });
 
-  it('모르는 역할은 싣지 않는다', () => {
+  it('모르는 역할은 싣지 않고, 남는 역할이 없으면 undefined', () => {
     expect(
-      sanitizeModelStatusTags({ notOperator: 'A.op', fault: 'A.fault' }),
-    ).toEqual({ fault: rt('A.fault') });
-  });
-
-  it('남는 역할이 없으면 undefined — 빈 객체·전부 무효', () => {
-    expect(sanitizeModelStatusTags({})).toBeUndefined();
+      sanitizeStatusTagEntries({ notOperator: 'op', fault: 'fault' }),
+    ).toEqual({ fault: { code: 'fault' } });
+    expect(sanitizeStatusTagEntries({})).toBeUndefined();
     expect(
-      sanitizeModelStatusTags({ controlOn: '', unknownRole: 'A.b' }),
+      sanitizeStatusTagEntries({ controlOn: '', unknownRole: 'b' }),
     ).toBeUndefined();
-    expect(sanitizeModelStatusTags({ controlOn: {} })).toBeUndefined();
+    expect(sanitizeStatusTagEntries({ controlOn: {} })).toBeUndefined();
   });
 
   it('출력의 역할 순서는 입력 순서와 무관하게 고정이다', () => {
-    const out = sanitizeModelStatusTags({
-      endstop: 'A.e',
-      slowdown: 'A.sd',
-      commError: 'A.ce',
-      freeSwing: 'A.s',
-      bypass: 'A.b',
-      fault: 'A.f',
-      controlOn: 'A.c',
+    const out = sanitizeStatusTagEntries({
+      endstop: 'e',
+      slowdown: 'sd',
+      commError: 'ce',
+      freeSwing: 's',
+      bypass: 'b',
+      fault: 'f',
+      controlOn: 'c',
     });
     expect(Object.keys(out ?? {})).toEqual([
       'controlOn',
@@ -115,7 +104,7 @@ describe('sanitizeModelStatusTags', () => {
 
   it('입력 객체를 바꾸지 않는다', () => {
     const input = { bypass: '  A.b  ', fault: { realtimeTagKey: ' x ' } };
-    sanitizeModelStatusTags(input);
+    sanitizeStatusTagEntries(input);
     expect(input).toEqual({
       bypass: '  A.b  ',
       fault: { realtimeTagKey: ' x ' },

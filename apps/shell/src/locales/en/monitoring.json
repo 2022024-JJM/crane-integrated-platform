@@ -89,7 +89,6 @@
       "axis": "Axis",
       "joint": "Joint",
       "tagSearch": "Search key or name",
-      "tagEmpty": "No virtual tags. Create them on the Virtual Tags page.",
       "tagUnknown": "Unknown tag",
       "tagMissing": "Select a tag. Mappings without a tag are dropped on save.",
       "scale": "scale",
@@ -142,27 +141,31 @@
         "endstop": "Endstop"
       }
     },
+    "crane": {
+      "label": "Crane",
+      "placeholder": "Select a crane…",
+      "search": "Search by crane no. or ID",
+      "empty": "No registered cranes.",
+      "unregistered": "unregistered",
+      "missing": "No crane — tag keys cannot be built",
+      "clear": "Clear crane"
+    },
     "tagPick": {
       "title": "Link tag",
       "tag": "Tag",
-      "slots": {
-        "realtime": "Realtime",
-        "virtual": "Simulation"
-      },
       "pick": "Pick a tag…",
       "clear": "Unlink",
       "search": "Search by crane ID or tag name (e.g. C_171, tl_distance)",
       "currentValue": "Current value",
-      "craneList": "Cranes",
       "preview": "Preview",
       "recent": "Last 60 s · updated every second",
       "dataType": "Data type",
       "category": "Category",
       "bay": "Bay",
-      "unit": "Unit",
-      "range": "Range",
       "noSelection": "Pick a tag from the list to see its current value here.",
-      "noCranes": "No cranes received from the server. Check the connection.",
+      "craneMissing": "This model has no crane, so tags cannot be linked. Pick a crane first.",
+      "noServerTags": "No tags received for {{craneId}} from the server. Check the connection or type the code.",
+      "draftNotOnServer": "\"{{code}}\" is not in the server tag list. It can still be linked.",
       "emptyTags": "No matches.",
       "cancel": "Cancel",
       "apply": "Link"
@@ -381,9 +384,6 @@
     "expandNodes": "Expand nodes",
     "collapseNodes": "Collapse nodes",
     "jointNode": "Joint node",
-    "virtualTags": {
-      "unregistered": "unregistered"
-    },
     "drawRuler": "Draw ruler",
     "rulerName": "Ruler {{index}}",
     "rulerDrawStartHint": "Click the start point",
@@ -434,88 +434,7 @@
       "stopHint": "Entering a zone with level 'Stop' pauses simulation and 3D Play. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
     }
   },
-  "craneList": {
-    "countAll": "{{count}} units",
-    "countFiltered": "{{visible}} / {{total}} units",
-    "emptyForFilter": "No cranes match the selected status."
-  },
-  "virtualTags": {
-    "play": "Play all",
-    "pause": "Pause",
-    "resetValues": "Reset values",
-    "tick": "Tick (ms)",
-    "add": "New tag",
-    "columns": {
-      "enabled": "On",
-      "key": "Key",
-      "name": "Name",
-      "unit": "Unit",
-      "min": "Min",
-      "max": "Max",
-      "pattern": "Pattern",
-      "period": "Period (ms)",
-      "maxSpeed": "Max speed",
-      "maxAccel": "Max accel",
-      "value": "Value",
-      "actions": ""
-    },
-    "patterns": {
-      "manual": "Manual",
-      "triangle": "Triangle",
-      "sine": "Sine",
-      "sawtooth": "Sawtooth",
-      "square": "Square"
-    },
-    "duplicate": "Duplicate",
-    "remove": "Remove",
-    "empty": "No virtual tags. Create one with \"New tag\".",
-    "errors": {
-      "invalid-key": "Key must be non-empty and at most 64 characters.",
-      "duplicate-key": "A tag with the same key already exists.",
-      "limit": "At most {{max}} tags can be created."
-    },
-    "newKey": "C_1:tag",
-    "count": "{{count}} / {{max}}",
-    "keyHint": "Use the same format as real server tags (craneId:tagCode).",
-    "periodHint": "Time (ms) for one cycle (min→max→min)",
-    "save": "Save",
-    "saveFailed": "Failed to save virtual tags.",
-    "scenarios": {
-      "title": "Scenarios",
-      "newName": "New scenario",
-      "add": "New scenario",
-      "duplicate": "Duplicate",
-      "remove": "Delete",
-      "run": "Run",
-      "name": "Name",
-      "loop": "Loop",
-      "duration": "Length {{seconds}}s",
-      "selectTag": "Select tag",
-      "noMoreTags": "No tags left to add",
-      "addTrack": "Add track",
-      "removeTrack": "Remove track",
-      "noTracks": "No tracks. Pick a tag and add a track.",
-      "time": "Time",
-      "value": "Value",
-      "ease": "Ease",
-      "eases": {
-        "linear": "Linear",
-        "hold": "Hold",
-        "smooth": "Smooth"
-      },
-      "addKeyframe": "Add keyframe",
-      "removeKeyframe": "Remove keyframe",
-      "empty": "No scenarios",
-      "hint": "A scenario is a keyframe timeline per tag key. Create one with \"New scenario\" and add tracks and keyframes. Tracks of the active scenario replace the waveform."
-    },
-    "maxSpeedHint": "Max speed (unit/s). Empty = no limit — the value follows waveform/scenario targets at or below this speed.",
-    "maxAccelHint": "Max acceleration (unit/s²). Empty = no limit."
-  },
   "tags": {
-    "tabs": {
-      "realtime": "Realtime Tags",
-      "virtual": "Virtual Tags"
-    },
     "searchCrane": "Search crane ID (e.g. 867)",
     "allBays": "All",
     "online": "Online",
@@ -747,16 +666,88 @@
     "pause": "Pause",
     "reset": "Reset values & time",
     "speed": "Speed",
-    "scenario": "Scenario",
-    "none": "None (waveforms only)",
-    "unnamed": "Untitled",
-    "loop": "Loop",
     "time": "Elapsed",
-    "finished": "Scenario finished. Reset or move the playback position back to play again.",
     "stop": "Stop simulation",
-    "stopHint": "Stop simulation — clear scenario, time 0, models back to rest (realtime view resumes live values)",
+    "stopHint": "Stop simulation — time 0, models back to rest (realtime view resumes live values)",
     "badgeRunning": "Simulating",
-    "badgePaused": "Simulation paused"
+    "badgePaused": "Simulation paused",
+    "scenario": "Scenario",
+    "noScenario": "No scenario",
+    "noScenarioHint": "Create one in the Scenario tab on the right from the models and tags mapped in the scene."
+  },
+  "scenario": {
+    "tab": "Scenario",
+    "sideTabs": "Side panel",
+    "select": "Select scenario",
+    "none": "No scenario",
+    "noneHint": "This scene has no scenarios. Pick mapped models and tags to create one.",
+    "noScene": "This region has no scene file, so no scenario can be created.",
+    "add": "New scenario",
+    "name": "Name",
+    "namePlaceholder": "Scenario name",
+    "duplicate": "Duplicate",
+    "remove": "Delete",
+    "removeTitle": "Delete scenario",
+    "removeDescription": "Delete scenario \"{{name}}\" ({{count}} tags). This cannot be undone once saved.",
+    "confirmRemove": "Delete",
+    "save": "Save",
+    "saveFailed": "Failed to save scenarios.",
+    "addTags": "Add tags",
+    "removeModel": "Remove model group",
+    "emptyTags": "No tags. Pick tags from the models mapped in the scene.",
+    "count": "{{tags}} tags · {{models}} models",
+    "tick": "Tick (s)",
+    "hint": "Values go only to the tags in the scenario.",
+    "errors": {
+      "invalid-name": "The name is empty or too long.",
+      "limit": "Scenario limit reached."
+    },
+    "issue": {
+      "model-missing": "This model is not in the scene — it was removed or its id changed.",
+      "crane-missing": "The model has no crane. Pick one in the editor.",
+      "duplicate-key": "An earlier tag uses the same key.",
+      "model-missing-short": "not in scene"
+    },
+    "row": {
+      "dataType": "Type",
+      "unit": "Unit",
+      "min": "Min",
+      "max": "Max",
+      "initial": "Initial",
+      "pattern": "Pattern",
+      "period": "Period (s)",
+      "periodHint": "One period in seconds",
+      "remove": "Remove tag",
+      "noValue": "No value",
+      "targetMissing": "No mapping"
+    },
+    "dataTypes": {
+      "number": "Number",
+      "bool": "Boolean"
+    },
+    "patterns": {
+      "manual": "Manual",
+      "triangle": "Triangle",
+      "sine": "Sine",
+      "sawtooth": "Sawtooth",
+      "square": "Square"
+    },
+    "pick": {
+      "createTitle": "New scenario",
+      "addTitle": "Add tags",
+      "search": "Search models, cranes, tag codes",
+      "selected": "{{selected}} / {{total}} selected",
+      "selectAll": "Select all",
+      "selectNone": "Clear",
+      "tagCount": "{{count}} tags",
+      "alreadyAdded": "already added",
+      "noMappedModels": "No model in the scene has mapped tags. Link tags in the editor first.",
+      "emptyFiltered": "No matches.",
+      "summary": "{{models}} models · {{tags}} tags selected",
+      "cancel": "Cancel",
+      "create": "Create",
+      "add": "Add"
+    }
   },
   "play3d": {
     "report": "Run report",
@@ -767,7 +758,6 @@
     "openEnded": "open",
     "window": "Window",
     "scanned": "Scanned",
-    "iteration": "loop #{{n}}",
     "detectionOff": "Collision detection was off for part of the run — collision counts are incomplete.",
     "noTagMappings": "This scene has no tag mappings — detection and the report will not work.",
     "holdsSummary": "holds {{count}} · {{time}}",
@@ -797,9 +787,7 @@
       "dwellTotal": "dwell total {{time}}",
       "equipmentCount": "{{count}} equipment",
       "offline": "Offline",
-      "offlineTotal": "total {{time}}",
-      "saturation": "Speed-limit saturation",
-      "noSpeedLimit": "no speed limit defined"
+      "offlineTotal": "total {{time}}"
     },
     "col": {
       "equipment": "Equipment",
@@ -815,8 +803,7 @@
       "tag": "Axis",
       "range": "Range",
       "mean": "Mean",
-      "travel": "Travel",
-      "saturation": "Limit saturation"
+      "travel": "Travel"
     },
     "timeline": {
       "title": "Timeline",

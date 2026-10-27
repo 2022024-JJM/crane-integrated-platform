@@ -46,7 +46,6 @@ export {
   ASSET_LIBRARY_STATS_PATH,
   ASSET_MODEL_EXTENSIONS,
   ASSET_UPLOAD_EXTENSIONS,
-  getAssetThumbnailPath,
   getFileExtension,
   isRemovableLegacyAssetPath,
   sanitizeAssetFileName,

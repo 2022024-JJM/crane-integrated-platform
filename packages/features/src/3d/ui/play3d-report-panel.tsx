@@ -14,6 +14,7 @@ import {
   tagRowLabel,
   timelineAxisMs,
   timelineRows,
+  toPlay3dTagDefs,
 } from '../lib/play3d-format';
 import {
   lastEventAtMs,
@@ -22,7 +23,6 @@ import {
 } from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
-import { tagSlotOfPlay3dSource } from '../lib/tag-slot';
 import { usePlay3dTransport } from '../model/play3d-transport';
 import {
   usePlay3dStats,
@@ -30,7 +30,7 @@ import {
 } from '../model/use-play3d-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
-import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { useScenarioStore } from '../model/use-scenario-store';
 import { Play3dKpiCard } from './play3d-report-kpi';
 import {
   EquipmentTable,
@@ -57,7 +57,8 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   const transport = usePlay3dTransport();
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
-  const tagDefs = useVirtualTagStore((s) => s.tags);
+  const tagEntries = useScenarioStore((s) => s.entries);
+  const tagDefs = useMemo(() => toPlay3dTagDefs(tagEntries), [tagEntries]);
   const sceneInfo = useSceneInfoStore(
     (s) => s.sceneInfoByRegion[meta.regionId] ?? null,
   );
@@ -73,13 +74,10 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   );
   const isReplay = meta.source === 'replay';
 
-  // 소스 슬롯 기준 — 가상 키만 있는 씬은 리플레이 소스에서 "맵핑 없음" 이다.
+  // 씬에 키를 만들 수 있는 맵핑(모델 craneId + 코드)이 하나도 없으면 "맵핑 없음".
   const noTagMappings = useMemo(
-    () =>
-      sceneInfo !== null &&
-      collectSceneTagKeys(sceneInfo, tagSlotOfPlay3dSource(meta.source))
-        .length === 0,
-    [sceneInfo, meta.source],
+    () => sceneInfo !== null && collectSceneTagKeys(sceneInfo).length === 0,
+    [sceneInfo],
   );
 
   const derived = useMemo(() => {
@@ -103,9 +101,6 @@ export function Play3dReportPanel({ className }: { className?: string }) {
         eventTimeLabel(e, replayFrames),
       ),
       tagRows,
-      saturationLabel:
-        tagRows.find((r) => r.stat.key === stats.summary.saturation.key)
-          ?.label ?? null,
     };
   }, [stats, meta.source, tagDefs, sceneInfo, replayFrames]);
 
@@ -128,7 +123,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
       ]
         .filter(Boolean)
         .join(' ~ ') || t('common:replay.noData')
-    : (meta.scenarioName ?? t('monitoring:simulation.none'));
+    : t('monitoring:play3d.openEnded');
 
   const coverage = coverageRatio(stats.scannedMs, stats.windowEndMs);
   const topPair = stats.collisions.byPair[0];
@@ -175,9 +170,6 @@ export function Play3dReportPanel({ className }: { className?: string }) {
           {formatSimClock(stats.windowEndMs)} · {t('monitoring:play3d.scanned')}{' '}
           {formatSimClock(stats.scannedMs)}
           {coverage !== null ? ` (${formatRatio(coverage)})` : null}
-          {stats.loopIteration !== null && meta.scenarioLoop
-            ? ` · ${t('monitoring:play3d.iteration', { n: stats.loopIteration + 1 })}`
-            : null}
           {stats.holds.count > 0
             ? ` · ${t('monitoring:play3d.holdsSummary', {
                 count: stats.holds.count,
@@ -197,8 +189,13 @@ export function Play3dReportPanel({ className }: { className?: string }) {
         </p>
       ) : null}
 
-      {/* KPI */}
-      <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
+      {/* KPI — 리플레이 4장(통신 두절 포함), 시뮬레이션 3장. */}
+      <div
+        className={cn(
+          'grid grid-cols-2 gap-2',
+          isReplay ? '@lg:grid-cols-4' : '@lg:grid-cols-3',
+        )}
+      >
         <Play3dKpiCard
           label={t('monitoring:play3d.tile.collisions')}
           value={String(stats.collisions.count)}
@@ -234,22 +231,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
               time: formatSimClock(summary.offlineMs),
             })}
           />
-        ) : (
-          <Play3dKpiCard
-            label={t('monitoring:play3d.tile.saturation')}
-            value={formatRatio(summary.saturation.maxRatio)}
-            tone={
-              summary.saturation.maxRatio !== null &&
-              summary.saturation.maxRatio > 0
-                ? 'warn'
-                : 'neutral'
-            }
-            hint={
-              derived.saturationLabel ??
-              t('monitoring:play3d.tile.noSpeedLimit')
-            }
-          />
-        )}
+        ) : null}
       </div>
 
       {/* 타임라인 */}
@@ -343,7 +325,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
         {derived.tagRows.length === 0 ? (
           <Empty>{t('monitoring:play3d.noData')}</Empty>
         ) : (
-          <TagTable rows={derived.tagRows} showSaturation={!isReplay} />
+          <TagTable rows={derived.tagRows} />
         )}
       </Disclosure>
     </div>

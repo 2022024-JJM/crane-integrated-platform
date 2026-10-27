@@ -13,7 +13,6 @@ import {
   emptyStatusMs,
   hasEventNear,
   lastEventAtMs,
-  loopIterationOf,
   openZoneSubjectsAt,
   statusBands,
   sumScanned,
@@ -50,7 +49,6 @@ function input(patch: Partial<Play3dStatsInput> = {}): Play3dStatsInput {
     tags: {},
     scanned: [],
     windowEndMs: 60_000,
-    scenarioDurationMs: null,
     holdWallMs: 0,
     detectionOffSeen: false,
     ...patch,
@@ -85,49 +83,31 @@ describe('addScannedInterval / sumScanned', () => {
   });
 });
 
-describe('loopIterationOf', () => {
-  it('경계: 길이 정확값에서 다음 회차', () => {
-    expect(loopIterationOf(0, 90_000)).toBe(0);
-    expect(loopIterationOf(89_999, 90_000)).toBe(0);
-    expect(loopIterationOf(90_000, 90_000)).toBe(1);
-    expect(loopIterationOf(-5, 90_000)).toBe(0);
-  });
-  it('열린 구간(null·0)은 null', () => {
-    expect(loopIterationOf(1000, null)).toBeNull();
-    expect(loopIterationOf(1000, 0)).toBeNull();
-  });
-});
-
 describe('accumulateTagValue', () => {
   it('min/max/합/이동량을 누적하고 NaN 은 무시한다', () => {
-    const agg = createTagAggregate('k', false);
-    accumulateTagValue(agg, 10, 0, null);
-    accumulateTagValue(agg, Number.NaN, 100, null);
-    accumulateTagValue(agg, 4, 1000, null);
-    accumulateTagValue(agg, 12, 2000, null);
+    const agg = createTagAggregate('k');
+    accumulateTagValue(agg, 10, 0);
+    accumulateTagValue(agg, Number.NaN, 100);
+    accumulateTagValue(agg, 4, 1000);
+    accumulateTagValue(agg, 12, 2000);
     expect(agg.min).toBe(4);
     expect(agg.max).toBe(12);
     expect(agg.count).toBe(3);
     expect(agg.sum).toBe(26);
     expect(agg.travel).toBe(6 + 8);
-    expect(agg.saturatedMs).toBe(0);
+    expect(agg.last).toBe(12);
+    expect(agg.lastAtMs).toBe(2000);
   });
 
-  it('한계 속도의 98% 이상으로 움직인 구간만 포화로 센다', () => {
-    const agg = createTagAggregate('k', true);
-    accumulateTagValue(agg, 0, 0, 10);
-    accumulateTagValue(agg, 10, 1000, 10); // 10/s = 한계 → 포화
-    accumulateTagValue(agg, 15, 2000, 10); // 5/s → 아님
-    accumulateTagValue(agg, 24.9, 3000, 10); // 9.9/s ≥ 9.8 → 포화
-    expect(agg.saturatedMs).toBe(2000);
-  });
-
-  it('dt 가 0 이거나 한계가 없으면 포화를 세지 않는다', () => {
-    const agg = createTagAggregate('k', true);
-    accumulateTagValue(agg, 0, 0, 10);
-    accumulateTagValue(agg, 100, 0, 10);
-    accumulateTagValue(agg, 200, 1000, null);
-    expect(agg.saturatedMs).toBe(0);
+  it('NaN 시각은 마지막 시각을 유지하고, 첫 값은 이동량에 들어가지 않는다', () => {
+    const agg = createTagAggregate('k');
+    accumulateTagValue(agg, 5, Number.NaN);
+    expect(agg.travel).toBe(0);
+    expect(agg.lastAtMs).toBeNull();
+    accumulateTagValue(agg, 7, 500);
+    accumulateTagValue(agg, 9, Number.NaN);
+    expect(agg.travel).toBe(4);
+    expect(agg.lastAtMs).toBe(500);
   });
 });
 
@@ -146,13 +126,11 @@ describe('computePlay3dStats', () => {
     expect(stats.holds).toEqual({ count: 0, wallMs: 0 });
     expect(stats.equipment).toEqual([]);
     expect(stats.tags).toEqual([]);
-    expect(stats.loopIteration).toBeNull();
     expect(stats.summary).toEqual({
       equipmentCount: 0,
       runningRatio: null,
       offlineEpisodes: 0,
       offlineMs: 0,
-      saturation: { maxRatio: null, key: null },
     });
   });
 
@@ -287,31 +265,6 @@ describe('computePlay3dStats', () => {
     );
     expect(stats.summary.offlineEpisodes).toBe(3);
     expect(stats.summary.offlineMs).toBe(5000);
-  });
-
-  it('summary: 포화 최대는 한계 있는 태그 중 최댓값, 동률은 키 순서 앞, 없으면 null', () => {
-    const a = createTagAggregate('a', true);
-    a.saturatedMs = 2000;
-    const b = createTagAggregate('b', true);
-    b.saturatedMs = 4000;
-    const c = createTagAggregate('c', false);
-    c.saturatedMs = 9000;
-    const scanned = [{ fromMs: 0, toMs: 4000 }];
-    expect(
-      computePlay3dStats(input({ tags: { a, b, c }, scanned })).summary
-        .saturation,
-    ).toEqual({ maxRatio: 1, key: 'b' });
-    b.saturatedMs = 2000;
-    expect(
-      computePlay3dStats(input({ tags: { b, a }, scanned })).summary.saturation,
-    ).toEqual({ maxRatio: 0.5, key: 'a' });
-    expect(
-      computePlay3dStats(input({ tags: { c }, scanned })).summary.saturation,
-    ).toEqual({ maxRatio: null, key: null });
-    expect(
-      computePlay3dStats(input({ tags: { a }, scanned: [] })).summary
-        .saturation,
-    ).toEqual({ maxRatio: null, key: null });
   });
 
   it('장비 행은 statuses ∪ statusTransitions — 전이만 있는 장비는 0ms·이름=id, 이름순', () => {
@@ -456,35 +409,27 @@ describe('computePlay3dStats', () => {
     ]);
   });
 
-  it('태그: 평균과 포화 비율(검사 시간 대비, 1 상한, 한계 없으면 null)', () => {
-    const a = createTagAggregate('a', true);
+  it('태그: 평균(값이 없으면 null)과 키 순 정렬', () => {
+    const a = createTagAggregate('a');
     a.sum = 30;
     a.count = 3;
-    a.saturatedMs = 5000;
-    const b = createTagAggregate('b', false);
+    const b = createTagAggregate('b');
     const stats = computePlay3dStats(
       input({
-        tags: { a, b },
+        tags: { b, a },
         scanned: [{ fromMs: 0, toMs: 4000 }],
       }),
     );
     expect(stats.scannedMs).toBe(4000);
+    expect(stats.tags.map((t) => t.key)).toEqual(['a', 'b']);
     expect(stats.tags[0].mean).toBe(10);
-    expect(stats.tags[0].saturationRatio).toBe(1);
     expect(stats.tags[1].mean).toBeNull();
-    expect(stats.tags[1].saturationRatio).toBeNull();
   });
 
-  it('회차·검사 시간·NaN 창 방어', () => {
-    const stats = computePlay3dStats(
-      input({ windowEndMs: Number.NaN, scenarioDurationMs: 1000 }),
-    );
+  it('NaN 창 방어 — 창 끝은 0 으로', () => {
+    const stats = computePlay3dStats(input({ windowEndMs: Number.NaN }));
     expect(stats.windowEndMs).toBe(0);
-    expect(stats.loopIteration).toBe(0);
-    expect(
-      computePlay3dStats(input({ windowEndMs: 2500, scenarioDurationMs: 1000 }))
-        .loopIteration,
-    ).toBe(2);
+    expect(stats.reachedMs).toBe(0);
   });
 });
 

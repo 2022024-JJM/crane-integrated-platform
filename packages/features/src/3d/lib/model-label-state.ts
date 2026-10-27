@@ -8,7 +8,6 @@ import {
   type ResolvedStatusTagKeys,
   type SavedModelInfo,
   type StatusTagRole,
-  type TagSlot,
 } from '@crane/domain/3d';
 import {
   DEFAULT_STATUS_WINDOWS,
@@ -21,7 +20,7 @@ import {
 /**
  * 장비의 운전 상태 판정 — 태그 활동(lib/model-runtime-status.ts)에 모델의 상태
  * 태그(`statusTags`)를 더해 여섯 가지 중 하나를 낸다. 라벨의 상자 색(tone)이
- * 곧 운전 상태라, 라벨·HUD·리포트·저널이 같은 값을 본다. 적용은
+ * 곧 운전 상태라, 라벨·HUD·리포트가 같은 값을 본다. 적용은
  * model/use-model-runtime-statuses.ts.
  *
  * 우선순위(위에서부터 먼저 맞는 것):
@@ -52,19 +51,18 @@ export interface ModelStatusKeys {
   motion: string[];
   /** 수신 판정 키 — 움직임 키 + 상태 태그 키. */
   liveness: string[];
-  /** 역할 → 활성 슬롯의 키. */
+  /** 역할 → 키. */
   status: ResolvedStatusTagKeys;
 }
 
-/** 모델의 판정 키를 활성 슬롯(lib/tag-slot.ts)으로 푼다. */
+/** 모델의 판정 키 — 맵핑·상태 태그 코드를 모델 craneId 로 조립한다. */
 export function collectModelStatusKeys(
-  model: Pick<SavedModelInfo, 'tagMappings' | 'statusTags'>,
-  slot: TagSlot,
+  model: Pick<SavedModelInfo, 'craneId' | 'tagMappings' | 'statusTags'>,
 ): ModelStatusKeys {
-  const motion = collectModelTagKeys(model, slot);
+  const motion = collectModelTagKeys(model);
   const liveness = [...motion];
   const seen = new Set(motion);
-  const resolved = resolveStatusTagKeys(model.statusTags, slot);
+  const resolved = resolveStatusTagKeys(model);
   const status: ResolvedStatusTagKeys = {};
   for (const role of STATUS_TAG_ROLES) {
     const key = resolved[role];

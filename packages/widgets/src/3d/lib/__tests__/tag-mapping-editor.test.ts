@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  hasAnyTagKey,
-  type RigDefinition,
-  type TagMapping,
-} from '@crane/domain/3d';
+import type { RigDefinition, TagMapping } from '@crane/domain/3d';
 import {
   computeAppliedValue,
   createTagMapping,
@@ -31,7 +27,7 @@ const node = (
 ): TagMapping => ({
   id,
   target: { kind: 'node', node, channel, axis },
-  realtimeTagKey: 'k',
+  code: 'k',
 });
 
 describe('findTagMappingConflicts', () => {
@@ -67,7 +63,7 @@ describe('findTagMappingConflicts', () => {
     const j = (id: string): TagMapping => ({
       id,
       target: { kind: 'joint', jointId: 'luff' },
-      realtimeTagKey: 'k',
+      code: 'k',
     });
     const out = findTagMappingConflicts([j('a'), j('b')], rig);
     expect(out.get('b')).toBe('duplicate');
@@ -92,7 +88,8 @@ describe('createTagMapping / switchTargetKind', () => {
       channel: 'position',
       axis: 'x',
     });
-    expect(hasAnyTagKey(m)).toBe(false);
+    expect(m.code).toBe('');
+    expect(m.craneId).toBeUndefined();
     expect(createTagMapping().id).not.toBe(m.id);
   });
 

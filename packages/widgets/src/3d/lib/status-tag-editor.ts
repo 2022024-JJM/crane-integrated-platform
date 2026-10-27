@@ -3,13 +3,9 @@ import type {
   EquipmentOutlineState,
 } from '@crane/core/types/status';
 import {
-  hasAnyTagKey,
-  isTagKeySlotsEqual,
-  setSlotTagKey,
+  normalizeTagCode,
   type ModelStatusTags,
-  type StatusTagBinding,
   type StatusTagRole,
-  type TagSlot,
 } from '@crane/domain/3d';
 
 /**
@@ -17,41 +13,23 @@ import {
  * (AGENTS.md) 대로 여기서 만들고 컴포넌트는 그리기만 한다.
  */
 
-const EMPTY_BINDING: StatusTagBinding = {};
-
 /**
- * 역할 하나의 연결(두 슬롯)을 통째로 바꾼 새 목록. 키는 trim 하고 빈 슬롯은
- * 떼며, 두 슬롯 다 비면 그 역할을 뗀다. 바뀌는 것이 없으면 **같은 참조**를
- * 돌려준다 — 편집 채널이 참조로 no-op 을 가려 히스토리·dirty 에 남기지
- * 않는다(tagMappings updater 와 같은 규칙).
+ * 역할 하나의 코드를 바꾼 새 목록. 코드는 trim 하고 비면(또는 금지 글자면)
+ * 그 역할을 뗀다. 바뀌는 것이 없으면 **같은 참조**를 돌려준다 — 편집 채널이
+ * 참조로 no-op 을 가려 히스토리·dirty 에 남기지 않는다(tagMappings updater 와
+ * 같은 규칙).
  */
-export function setStatusTagBinding(
+export function setStatusTagCode(
   tags: ModelStatusTags,
   role: StatusTagRole,
-  binding: StatusTagBinding,
+  code: string,
 ): ModelStatusTags {
-  const current = tags[role] ?? EMPTY_BINDING;
-  // 두 슬롯을 setSlotTagKey 로 정규화(trim·빈 슬롯 제거)한다.
-  const next = setSlotTagKey(
-    setSlotTagKey(current, 'realtime', binding.realtimeTagKey ?? ''),
-    'virtual',
-    binding.virtualTagKey ?? '',
-  );
-  if (isTagKeySlotsEqual(current, next)) return tags;
+  const next = normalizeTagCode(code) ?? '';
+  const current = tags[role] ?? '';
+  if (current === next) return tags;
   const rest = { ...tags };
   delete rest[role];
-  return hasAnyTagKey(next) ? { ...rest, [role]: next } : rest;
-}
-
-/** 역할 하나의 한 슬롯 키만 바꾼다. 규칙은 `setStatusTagBinding` 과 같다. */
-export function setStatusTag(
-  tags: ModelStatusTags,
-  role: StatusTagRole,
-  slot: TagSlot,
-  key: string,
-): ModelStatusTags {
-  const current = tags[role] ?? EMPTY_BINDING;
-  return setStatusTagBinding(tags, role, setSlotTagKey(current, slot, key));
+  return next ? { ...rest, [role]: next } : rest;
 }
 
 /** 미리보기 값 선택지 — none 은 "고르지 않음"(그 항목의 미리보기를 뗀다). */

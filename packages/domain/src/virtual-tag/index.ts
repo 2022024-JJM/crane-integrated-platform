@@ -1,43 +1,32 @@
 export type {
-  ScenarioEase,
-  ScenarioKeyframe,
-  ScenarioTrack,
-  VirtualScenario,
+  ScenarioSet,
+  ScenarioTag,
+  SimulationScenario,
+  VirtualTagDataType,
   VirtualTagDefinition,
-  VirtualTagLimits,
   VirtualTagPattern,
   VirtualTagPatternKind,
-  VirtualTagSet,
 } from './model/types';
 export {
-  SCENARIO_EASES,
-  SCENARIO_KEYFRAMES_MAX,
   SCENARIO_NAME_MAX,
-  SCENARIO_TIME_MAX_MS,
-  SCENARIO_TRACKS_MAX,
+  SCENARIO_TAGS_MAX,
   SCENARIOS_MAX,
   SIMULATION_SPEED_OPTIONS,
-} from './model/types';
-export {
-  evaluateScenarioTrack,
-  isScenarioFinished,
-  normalizeKeyframes,
-  scenarioDurationMs,
-  scenarioTimeMs,
-} from './lib/scenario';
-export {
-  VIRTUAL_TAG_KEY_MAX,
+  VIRTUAL_TAG_BOOL_PATTERN_KINDS,
+  VIRTUAL_TAG_CODE_MAX,
+  VIRTUAL_TAG_DATA_TYPES,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAG_PERIOD_MAX,
   VIRTUAL_TAG_PERIOD_MIN,
+  VIRTUAL_TAG_SECONDS_DECIMALS,
   VIRTUAL_TAG_TICK_DEFAULT,
   VIRTUAL_TAG_TICK_MAX,
   VIRTUAL_TAG_TICK_MIN,
   VIRTUAL_TAG_UNIT_MAX,
-  VIRTUAL_TAGS_MAX,
 } from './model/types';
+export { normalizeVirtualTagCode } from './lib/tag-code';
 export {
   clampToTag,
   initVirtualTagState,
@@ -48,28 +37,20 @@ export {
 export {
   clampVirtualTagPeriod,
   clampVirtualTagTick,
-  createEmptyVirtualTagSet,
-  normalizeVirtualTagKey,
-  sanitizeVirtualTag,
-  sanitizeVirtualTagLimits,
-  sanitizeVirtualTagList,
-  sanitizeVirtualTagPattern,
-  sanitizeVirtualTagSet,
+  createEmptyScenarioSet,
   sanitizeScenario,
-  sanitizeScenarioKeyframe,
   sanitizeScenarioList,
-  sanitizeScenarioTrack,
-} from './lib/sanitize-virtual-tags';
+  sanitizeScenarioSet,
+  sanitizeScenarioTag,
+  sanitizeScenarioTagList,
+  sanitizeVirtualTag,
+  sanitizeVirtualTagPattern,
+  scenarioTagKey,
+} from './lib/sanitize-scenarios';
 export {
-  isVirtualTagSetStoredLocallyOnly,
-  loadVirtualTagSet,
-  saveVirtualTagSet,
-  VIRTUAL_TAGS_PUBLIC_PATH,
-  VIRTUAL_TAGS_STORAGE_KEY,
-} from './lib/virtual-tag-storage';
-export {
-  hasRateLimits,
-  rateLimitStep,
-  rateLimitSteps,
-  type RateLimitState,
-} from './lib/rate-limit';
+  isScenarioSetStoredLocallyOnly,
+  loadScenarioSet,
+  saveScenarioSet,
+  SCENARIOS_PUBLIC_PATH,
+  SCENARIOS_STORAGE_KEY,
+} from './lib/scenario-storage';

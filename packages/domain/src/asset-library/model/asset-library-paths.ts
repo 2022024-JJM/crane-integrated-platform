@@ -134,11 +134,6 @@ export function toAssetLibraryPublicPath(key: string): string {
   return `/${ASSET_LIBRARY_DIR}/${key}`;
 }
 
-/** 자산 썸네일의 public 절대 경로(`/asset-library/thumbnails/<id>.png`). */
-export function getAssetThumbnailPath(assetId: string): string {
-  return toAssetLibraryPublicPath(buildAssetThumbnailKey(assetId));
-}
-
 /**
  * 라이브러리 디렉터리가 생기기 전부터 배포돼 있던 자산 파일이 놓인 곳. 그
  * 파일들은 `/models/x.glb` 같은 옛 경로에 그대로 있다(버전 1). 새 버전은

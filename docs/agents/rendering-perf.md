@@ -37,7 +37,7 @@
 
 세 캔버스 모두 `frameloop='demand'` 다. 프레임은 `SceneFrameGovernor` 가 만든다.
 
-- 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 가상 태그 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 바다가 켜진 씬(`resolveSeaVisible`), 영역 침범 활성.
+- 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 시나리오(시뮬레이션) 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 바다가 켜진 씬(`resolveSeaVisible`), 영역 침범 활성.
 - 소스가 멈춘 뒤 `ANIMATION_GRACE_MS` 동안은 계속 틱을 돌려 스무딩이 정착하게 한다. 유예보다 긴 스무딩(실시간 수신 간격, 상한 `REALTIME_SMOOTH_MAX_S`)의 꼬리는 아래 드라이버 체인이 잇는다.
 - solar 태양만 있으면 `SLOW_FPS` 로 드물게 그린다. 정지 씬은 틱이 없다.
 - 조작(OrbitControls·표면 카메라)은 스스로 `invalidate` 해 주사율로 그려진다. drei `OrbitControls`·`TransformControls`·`Text` 와 R3F 리컨실러(prop 변경·마운트)도 스스로 invalidate 한다.

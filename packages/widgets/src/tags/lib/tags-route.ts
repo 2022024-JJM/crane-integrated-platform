@@ -22,3 +22,8 @@ export function matchTagsSubRoute(
   }
   return null;
 }
+
+/** 실시간 목록(`basePath`) 또는 상세. */
+export function realtimeTagsPath(basePath: string, craneId?: string): string {
+  return craneId ? `${basePath}/${encodeURIComponent(craneId)}` : basePath;
+}

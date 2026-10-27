@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { TagMapping } from '@crane/domain/3d';
 import {
   OFFLINE_WINDOW_MS,
   RUNNING_WINDOW_MS,
@@ -19,25 +20,37 @@ function activities(map: Record<string, TagActivity>) {
   return (key: string) => map[key];
 }
 
+/** node 맵핑 하나 — 키 조립에는 코드만 쓰인다. */
+const m = (code: string): TagMapping => ({
+  id: code,
+  target: { kind: 'node', node: '', channel: 'position', axis: 'x' },
+  code,
+});
+
 describe('collectModelTagKeys', () => {
-  it('맵핑의 활성 슬롯 키를 순서대로, 중복·빈 키 제거', () => {
+  it('맵핑 코드를 모델 craneId 로 조립해 순서대로, 중복·빈 코드 제거', () => {
     const model = {
-      tagMappings: [
-        { realtimeTagKey: 'A:x', virtualTagKey: 'V:x' },
-        { realtimeTagKey: 'A:y' },
-        { realtimeTagKey: 'A:x' },
-        { realtimeTagKey: '' },
-        { realtimeTagKey: 42 },
-        { virtualTagKey: 'V:only' },
-      ],
-    } as unknown as Parameters<typeof collectModelTagKeys>[0];
-    expect(collectModelTagKeys(model, 'realtime')).toEqual(['A:x', 'A:y']);
-    expect(collectModelTagKeys(model, 'virtual')).toEqual(['V:x', 'V:only']);
+      craneId: 'A',
+      tagMappings: [m('x'), m('y'), m('x'), m('')],
+    };
+    expect(collectModelTagKeys(model)).toEqual(['A.x', 'A.y']);
+  });
+
+  it('모델에 craneId 가 없으면 빈 배열', () => {
+    expect(collectModelTagKeys({ tagMappings: [m('x'), m('y')] })).toEqual([]);
+  });
+
+  it('맵핑 자체의 craneId 는 모델 craneId 보다 앞선다', () => {
+    const model = {
+      craneId: 'A',
+      tagMappings: [m('x'), { ...m('y'), craneId: 'B' }],
+    };
+    expect(collectModelTagKeys(model)).toEqual(['A.x', 'B.y']);
   });
 
   it('맵핑 없음은 빈 배열', () => {
-    expect(collectModelTagKeys({}, 'realtime')).toEqual([]);
-    expect(collectModelTagKeys({ tagMappings: [] }, 'virtual')).toEqual([]);
+    expect(collectModelTagKeys({})).toEqual([]);
+    expect(collectModelTagKeys({ craneId: 'A', tagMappings: [] })).toEqual([]);
   });
 });
 

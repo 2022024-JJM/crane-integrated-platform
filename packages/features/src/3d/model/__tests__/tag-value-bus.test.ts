@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  getActiveTagSource,
   hasTagIngest,
   publishTagValue,
   readTagLiveValue,
+  setActiveTagSource,
   setTagIngest,
   subscribeTagValues,
   tagLiveValues,
@@ -11,10 +13,12 @@ import {
 beforeEach(() => {
   tagLiveValues.clear();
   setTagIngest(null);
+  setActiveTagSource(null);
 });
 
 afterEach(() => {
   setTagIngest(null);
+  setActiveTagSource(null);
 });
 
 describe('publishTagValue', () => {
@@ -117,5 +121,48 @@ describe('readTagLiveValue', () => {
     expect(hasTagIngest()).toBe(false);
     publishTagValue('k', 9);
     expect(readTagLiveValue('k')).toBe(9);
+  });
+});
+
+describe('활성 소스 게이트', () => {
+  it('활성 소스가 없으면(null) 소스 유무와 무관하게 전부 통과한다', () => {
+    expect(getActiveTagSource()).toBeNull();
+    publishTagValue('k', 1);
+    publishTagValue('k2', 2, { source: 'simulation' });
+    expect(readTagLiveValue('k')).toBe(1);
+    expect(readTagLiveValue('k2')).toBe(2);
+  });
+
+  it('활성 소스가 있으면 같은 소스만 통과 — 다른 소스·소스 없음은 캐시·소비자·관찰자 어디에도 닿지 않는다', () => {
+    const ingest = vi.fn();
+    const listener = vi.fn();
+    setTagIngest(ingest);
+    const unsubscribe = subscribeTagValues(listener);
+    setActiveTagSource('simulation');
+    publishTagValue('k', 1, { source: 'replay' });
+    publishTagValue('k', 2, { source: 'realtime' });
+    publishTagValue('k', 3);
+    expect(tagLiveValues.has('k')).toBe(false);
+    expect(ingest).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+    publishTagValue('k', 4, { source: 'simulation', smoothTime: 0 });
+    expect(readTagLiveValue('k')).toBe(4);
+    expect(ingest).toHaveBeenCalledWith('k', 4, {
+      source: 'simulation',
+      smoothTime: 0,
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('소스를 바꾸면 live 캐시를 비우고, 같은 값 재설정은 비우지 않는다', () => {
+    setActiveTagSource('replay');
+    publishTagValue('k', 1, { source: 'replay' });
+    setActiveTagSource('replay');
+    expect(readTagLiveValue('k')).toBe(1);
+    setActiveTagSource('simulation');
+    expect(tagLiveValues.size).toBe(0);
+    setActiveTagSource(null);
+    expect(getActiveTagSource()).toBeNull();
   });
 });

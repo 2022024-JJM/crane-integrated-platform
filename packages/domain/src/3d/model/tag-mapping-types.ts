@@ -1,3 +1,4 @@
+import { buildCraneTagKey } from '@crane/core/lib/crane-tag-key';
 import type { RigAxis, RigDefinition, RigNodePath } from './rig-types';
 
 /**
@@ -16,26 +17,12 @@ import type { RigAxis, RigDefinition, RigNodePath } from './rig-types';
  * 적용 공식은 `applied = offset + value × scale`. 단위는 채널이 정한다 —
  * rotation deg, position m, scale 은 rest 에 더하는 무차원 Δ.
  *
- * 태그는 키 문자열로만 참조하고, 슬롯이 둘이다 — 실시간(서버) 키는 모니터링
- * 실시간·3D 플레이 리플레이가, 가상 키는 시뮬레이션이 읽는다. 어느 슬롯을
- * 읽을지는 features 의 `resolveActiveTagSlot` 한 곳이 정한다. 둘 다 비면
- * sanitize 가 맵핑을 버린다.
+ * 태그는 **코드**(`tl_distance`)로만 참조한다. 크레인은 모델의 `craneId` 가
+ * 들고, 값 버스 키 `크레인ID.코드` 는 런타임이 `resolveMappingTagKey` 로
+ * 조립한다. 실시간·리플레이·시나리오 러너가 모두 같은 키로 값을 내보내므로
+ * 맵핑은 소스를 모른다 — 어느 소스가 흐를지는 버스의 활성 소스 게이트가
+ * 정한다(features `setActiveTagSource`).
  */
-
-/** 맵핑이 드는 두 태그 슬롯. */
-export type TagSlot = 'realtime' | 'virtual';
-export const TAG_SLOTS = [
-  'realtime',
-  'virtual',
-] as const satisfies readonly TagSlot[];
-
-/** 슬롯별 태그 키 — 맵핑과 상태 태그 역할이 같은 모양을 쓴다. */
-export interface TagKeySlots {
-  /** 실시간(서버) 태그 키 `${craneId}.${tagCode}`. */
-  realtimeTagKey?: string;
-  /** 가상 태그 키 — 시뮬레이션. */
-  virtualTagKey?: string;
-}
 export type TagMappingChannel = 'position' | 'rotation' | 'scale';
 export const TAG_MAPPING_CHANNELS = [
   'position',
@@ -57,10 +44,18 @@ export interface TagMappingJointTarget {
 
 export type TagMappingTarget = TagMappingNodeTarget | TagMappingJointTarget;
 
-export interface TagMapping extends TagKeySlots {
+export interface TagMapping {
   /** 모델 안에서 고유. 값 저장소 주소(`${modelId}/${id}`)로도 쓰인다. */
   id: string;
   target: TagMappingTarget;
+  /** 태그 코드 — 키의 뒷부분. 공백·점·콜론 없음(`normalizeTagCode`). */
+  code: string;
+  /**
+   * 이 맵핑만 다른 크레인을 읽을 때의 크레인 ID. 편집 UI 가 쓰지 않는 보존용
+   * 필드다 — 레거시 키의 크레인이 모델 craneId 와 달랐을 때 sanitize 가
+   * 남긴다. 모델 craneId 와 같으면 sanitize 가 뗀다.
+   */
+  craneId?: string;
   /** 단위 변환 계수. 생략 시 1. */
   scale?: number;
   /** 태그 값 0 에 대응하는 Δ. 생략 시 0. */
@@ -80,63 +75,34 @@ export interface TagMapping extends TagKeySlots {
 /** 라벨 값 이름의 최대 길이 — 라벨이 모델을 가리지 않을 만큼만. */
 export const TAG_MAPPING_CAPTION_MAX = 12;
 
-/** 슬롯의 키. 비어 있으면 undefined. */
-export function getSlotTagKey(
-  slots: TagKeySlots | undefined,
-  slot: TagSlot,
-): string | undefined {
-  const key =
-    slot === 'realtime' ? slots?.realtimeTagKey : slots?.virtualTagKey;
-  return key ? key : undefined;
+/** 코드에 올 수 없는 글자 — 키 구분자(점)·옛 구분자(콜론)·공백. */
+const TAG_CODE_FORBIDDEN = /[\s.:]/;
+
+/** 태그 코드 정규화 — trim 뒤 비었거나 금지 글자가 있으면 null. */
+export function normalizeTagCode(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const code = raw.trim();
+  if (code.length === 0 || TAG_CODE_FORBIDDEN.test(code)) return null;
+  return code;
 }
 
-/** 두 슬롯 중 하나라도 키가 있는가. */
-export function hasAnyTagKey(slots: TagKeySlots | undefined): boolean {
-  return Boolean(slots?.realtimeTagKey || slots?.virtualTagKey);
-}
-
-/**
- * 표시용 대표 키 — 실시간 우선, 없으면 가상. 어느 소스가 활성인지와 무관한
- * 곳(관절 배지·대시보드 목록)에서만 쓴다. 런타임 바인딩은 `getSlotTagKey`.
- */
-export function getPrimaryTagKey(
-  slots: TagKeySlots | undefined,
-): string | undefined {
-  return getSlotTagKey(slots, 'realtime') ?? getSlotTagKey(slots, 'virtual');
-}
-
-/** 슬롯 필드명 — 편집 UI 가 패치를 만들 때 쓴다. */
-export function getSlotField(slot: TagSlot): keyof TagKeySlots {
-  return slot === 'realtime' ? 'realtimeTagKey' : 'virtualTagKey';
+/** 맵핑·상태 태그가 키를 조립하는 데 필요한 모델 필드. */
+export interface TagKeyModel {
+  craneId?: string;
 }
 
 /**
- * 한 슬롯의 키를 바꾼 새 객체. 빈 키(공백 포함)는 그 슬롯 필드를 뗀다. 바뀌는
- * 것이 없으면 **같은 참조**를 돌려준다 — 편집 채널이 참조로 no-op 을 가려
- * 히스토리·dirty 에 남기지 않는다.
+ * 맵핑의 값 버스 키 `크레인ID.코드`. 맵핑에 `craneId` 가 있으면 그것, 아니면
+ * 모델 craneId. 둘 다 없으면 undefined — 그 맵핑은 어느 소스에서도 값을 받지
+ * 않는다(인덱스·라벨·상태 판정이 전부 이 함수를 쓴다).
  */
-export function setSlotTagKey(
-  slots: TagKeySlots,
-  slot: TagSlot,
-  key: string,
-): TagKeySlots {
-  const next = key.trim();
-  const field = getSlotField(slot);
-  if ((slots[field] ?? '') === next) return slots;
-  const rest: TagKeySlots = { ...slots };
-  delete rest[field];
-  return next.length > 0 ? { ...rest, [field]: next } : rest;
-}
-
-/** 두 슬롯 키가 같은가 — 없음과 빈 문자열은 같다(sanitize 가 둘 다 필드를 생략). */
-export function isTagKeySlotsEqual(
-  a: TagKeySlots | undefined,
-  b: TagKeySlots | undefined,
-): boolean {
-  return (
-    (a?.realtimeTagKey ?? '') === (b?.realtimeTagKey ?? '') &&
-    (a?.virtualTagKey ?? '') === (b?.virtualTagKey ?? '')
-  );
+export function resolveMappingTagKey(
+  model: TagKeyModel,
+  mapping: Pick<TagMapping, 'code' | 'craneId'>,
+): string | undefined {
+  const craneId = mapping.craneId ?? model.craneId;
+  if (!craneId || !mapping.code) return undefined;
+  return buildCraneTagKey(craneId, mapping.code);
 }
 
 /**

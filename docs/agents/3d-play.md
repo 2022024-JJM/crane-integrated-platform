@@ -2,7 +2,7 @@
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
-라우트 구분: `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이(분석)** 페이지다. 3D 플레이는 리플레이 | 시뮬레이션 소스를 한 3D 뷰에서 재생하고 우측에 실행 리포트를 둔다. 메뉴 라벨은 "3D 플레이"(`MonitorPlay` 아이콘).
+라우트 구분: `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이(분석)** 페이지다. 3D 플레이는 리플레이 | 시뮬레이션 소스를 한 3D 뷰에서 재생하고 우측에 실행 리포트(시뮬레이션 소스에서는 시나리오 탭도)를 둔다. 메뉴 라벨은 "3D 플레이"(`MonitorPlay` 아이콘).
 
 ## 진입점
 
@@ -15,11 +15,12 @@
 | 실행 통계 집계(순수) | `packages/features/src/3d/lib/play3d-stats.ts` (`computePlay3dStats`, `assignZoneBandsToRows`, `assignCollisionsToRows`), 시간 축·눈금·표식 조립·표시 보조 `lib/play3d-format.ts` (`timelineAxisMs`, `timelineRows`, `transportMarks`, `tagRowLabel`), 집계 범위 `lib/play3d-scope.ts` |
 | 통계 스토어 / 기록기 | `packages/features/src/3d/model/use-play3d-stats-store.ts`, `model/use-play3d-stats-recorder.ts` |
 | 리포트 패널 | `packages/features/src/3d/ui/play3d-report-panel.tsx` (+ `play3d-report-kpi.tsx`, `play3d-report-timeline.tsx`, `play3d-report-tables.tsx`) |
+| 우측 패널(리포트 | 시나리오 탭) | `packages/widgets/src/scenario/ui/play3d-side-panel.tsx` (`Play3dSidePanel`), 시나리오 탭의 내용은 `docs/agents/tag-mapping-rig.md` |
 | 타임라인·재생바 공용 | 눈금 행 `ui/play3d-tick-row.tsx`, hover 요약 `ui/play3d-hover-summary.tsx`, 분리 트리거 핸들 `@crane/ui/molecules/tooltip-handle` |
 | 장비 운전 상태 · 라벨 표시 상태 · 외곽선 | 타입 `packages/core/src/types/status.ts` (`EquipmentRuntimeStatus`, `EquipmentLabelState`, `EquipmentOutlineState`), 판정 `packages/features/src/3d/lib/{model-runtime-status,model-label-state,model-outline-state}.ts`, 훅 `model/use-model-runtime-statuses.ts`, 외곽선 모양 `packages/domain/src/3d/lib/status-outline-style.ts` |
 | 리플레이 프레임 시각 | `packages/features/src/3d/model/scene-time-source.ts`, `@crane/domain/monitoring` 의 `parseReplayTimestamp` |
 | 리플레이 데이터(크레인 스냅샷 서버 이력) | `packages/domain/src/monitoring/api/get-monitoring-replay-lite.ts`(크레인별 `GET /api/cranes/{id}/history` → `lib/crane-history.ts` 로 합침), 기본 구간·step·폼 값 변환 `config/replay-defaults.ts`, 구간 검색 `packages/features/src/monitoring/model/use-monitoring-replay-{search,player,ui-state}.ts` |
-| 앱 배치 | `apps/{hanwha-ocean,goliath-crane}/src/pages/*/ui/replay-monitoring-view.tsx` (`ResizablePanelGroup` 우측에 리포트) |
+| 앱 배치 | `apps/hanwha-ocean/src/pages/*/ui/replay-monitoring-view.tsx` (`ResizablePanelGroup` 우측에 `Play3dSidePanel`) |
 
 i18n 은 `monitoring:play3d.*`.
 
@@ -27,17 +28,17 @@ i18n 은 `monitoring:play3d.*`.
 
 ### 레이아웃
 
-- `Play3dView` 는 `Monitoring3dView mode='play3d' toolbarLayout='dock'` 위에 소스 탭(리플레이 | 시뮬레이션)과 트랜스포트 바를 **캔버스 위 별도 행**으로 둔다. 오버레이가 아니라 좌상단 열과 겹치지 않는다.
+- `Play3dView` 는 `Monitoring3dView mode='play3d'` 위에 소스 탭(리플레이 | 시뮬레이션)과 트랜스포트 바를 **캔버스 위 별도 행**으로 둔다. 오버레이가 아니라 좌상단 열과 겹치지 않는다.
 - 소스 탭은 role=tablist 버튼이다(공용 Tabs 컴포넌트 없음).
 - 트랜스포트 바 구성: 시간 눈금 → 사건 표식 띠 → 스크럽(아래 "시간 축과 표식") · 소스 슬롯(리플레이 = 구간 검색 팝오버 `ReplaySearchForm`, 시뮬레이션 = `SceneSimulationPanel` 팝오버) · 이동/▶ · 배속(소스별 선택지) · 위치.
-- 스크럽은 재생할 내용이 있으면(`hasContent`) 열린 구간(시나리오 없음)에서도 활성이고 범위는 축 전체다. 열린 구간은 재생 중 손잡이가 오른쪽 끝(닿은 지점)에 붙고, 왼쪽으로 끌면 그 시점부터 이어서 재생된다. 열린 구간에는 ⏭(끝으로)이 없다.
-- 세 앱의 `replay-monitoring-view.tsx` 가 `ResizablePanelGroup` 우측에 리포트 패널을 둔다.
+- 스크럽은 재생할 내용이 있으면(`hasContent`) 열린 구간(시뮬레이션은 항상 열린 구간)에서도 활성이고 범위는 축 전체다. 열린 구간은 재생 중 손잡이가 오른쪽 끝(닿은 지점)에 붙고, 왼쪽으로 끌면 그 시점부터 이어서 재생된다. 열린 구간에는 ⏭(끝으로)이 없다.
+- `replay-monitoring-view.tsx` 가 `ResizablePanelGroup` 우측에 `Play3dSidePanel`(리포트 | 시나리오 탭, role=tablist 버튼)을 둔다. 시나리오 탭은 시뮬레이션 소스에서만 보이고 리플레이로 바꾸면 리포트로 돌아간다.
 
 ### 소스 전환
 
 - `usePlay3dStore.source` 는 `'replay' | 'simulation'`, 세션 전용.
-- 전환은 **리마운트가 아니라 상태 전환**이다. 씬·GLB·카메라·검색 상태·프레임이 유지되고, `Play3dView` 의 effect 가 떠나는 소스만 정리한다 — 시뮬레이션을 떠나면 `stopSimulation`, 리플레이를 떠나면 pause + seekTo(0).
-- `useSceneData(mode='play3d')` 는 진입에 resetReplay + 가상 태그 로드만 한다. 자동 재생은 없다 — 시뮬레이션 소스도 트랜스포트 바 ▶ 가 켠다.
+- 전환은 **리마운트가 아니라 상태 전환**이다. 씬·GLB·카메라·검색 상태·프레임이 유지되고, `Play3dView` 의 effect 가 떠나는 소스만 정리한다 — 시뮬레이션을 떠나면 `stopSimulation`, 리플레이를 떠나면 pause + seekTo(0). 값 버스는 `Monitoring3dView` 의 `useActiveTagSource(resolveActiveTagSource(mode, source))` 가 소스별 게이트를 걸어 떠나는 소스의 마지막 publish(seekTo(0) 의 프레임 0)는 버려진다(`docs/agents/tag-mapping-rig.md`).
+- `useSceneData(mode='play3d')` 는 진입에 resetReplay + 시나리오 로드만 한다. `Play3dView` 가 씬을 `attachScene(sceneInfo, sceneFile)` 로 시나리오 스토어에 붙이고 언마운트에 뗀다. 자동 재생은 없다 — 시뮬레이션 소스도 트랜스포트 바 ▶ 가 켠다(활성 시나리오가 없으면 켜지지 않는다).
 - 리플레이 소스는 `timeSource='replay'` 로 현장 시각·조명이 프레임 시각을 따르고(`docs/agents/rendering-perf.md`), `SceneClockMenu` 는 숨긴다.
 - 리플레이 데이터는 크레인 스냅샷 서버의 이력이다. 구간 검색마다 region 레지스트리의 크레인별 `GET /api/cranes/{id}/history` 를 같은 `step`(`getDefaultReplayInterval`, 서버 최소값인 1초)으로 받아 `buildReplayFromCraneHistories` 가 한 시간 축으로 합친다 — 같은 격자의 프레임을 한 장으로 묶고, 값이 없는 크레인은 프레임에서 빠진다. 서버가 모르는 크레인(404)은 빠지고 다른 실패는 조회 오류로 보인다.
 - 구간 검색 폼(`ReplaySearchForm`, 트랜스포트 바 팝오버)은 **시작 시각 하나 + 길이**(`REPLAY_DURATION_KEYS`: 10분·30분·1시간)다. 종료는 `resolveReplayRange` 가 시작 + 길이를 **지금(초 단위)으로 잘라** 계산하므로 순서·길이 오류가 없다. 검증 `validateReplayStart` 는 비었거나(missing) 못 읽거나(invalid) 지금 이후(future)를 거부하고, 달력은 `max`(`getReplayStartMax`)로 오늘 뒤 날짜를 막는다. 팝업이 폼을 덮으므로 고르는 동안의 경고는 시간 입력 오른쪽 말풍선(`DateTimePicker` 의 `timeHint`)으로도 띄운다. 서버는 저장 행이 없는 미래 구간도 직전 값으로 프레임을 채워 200 을 주므로 이 클램프가 미래를 "데이터 있음" 으로 보이지 않게 하는 경계다. 구간은 불러오기를 누른 순간 계산해 굳히고(`use-monitoring-replay-search.ts`), 잘린 구간을 같은 입력으로 다시 누르면 늘어난 종료로 다시 받는다. 폼 아래 "조회 시간" 줄은 잘린 시작~종료를 시각만 보인다. 조회가 끝났는데 프레임이 하나도 없으면(`isEmpty`) 폼에 "데이터 없음" 줄을 보이고 트랜스포트 바 오른쪽도 같은 문구다. 시작 입력은 `DateTimePicker` 의 달력 월·연 드롭다운(`captionLayout="dropdown"`, 연 범위는 DayPicker 기본) + 오전/오후·시·분·초 스크롤(`timeInput="scroll"`, `@crane/ui/molecules/time-scroll-picker`, 외부 라이브러리 없음)이며 값은 브라우저 로컬 시간이고 서버에는 UTC ISO 로 보낸다. 기본 시작은 직전 정각에서 한 시간 전(`buildDefaultReplayStart`, 11:39 이면 10:00:00), 길이는 `DEFAULT_REPLAY_DURATION`. "시작 시각" 줄 오른쪽 초기화 버튼(`resetDraftStart`)은 시작 입력만 누르는 순간 기준의 기본값으로 되돌린다. 가장 긴 길이 1h 는 서버 `cis.query.max-range` 와 같다.
@@ -48,10 +49,10 @@ i18n 은 `monitoring:play3d.*`.
 - `Play3dTransport` 는 isPlaying · durationMs(null = 열린 구간) · speed · play / pause / seek(ms) / stepFrames 를 갖는다. `readPlay3dTransport()` 가 스냅샷, `usePlay3dTransport()` 가 훅이다.
 - **위치는 트랜스포트에 포함하지 않는다** — `readPlay3dPositionMs()` 를 폴링한다.
 - 리플레이는 프레임 누적 ms ↔ index 를 `lib/replay-position.ts` 로 변환한다. seek 는 충돌 스토어 `clearActive` 를 불러 옛 자세를 가리키는 pinned 박스가 남지 않게 한다.
-- 리플레이 정상 전진(`tick`)의 publish 스무딩 시간은 들어가는 프레임이 화면에 머무는 벽시계 시간(프레임 길이 ÷ 배속, `lib/replay-smoothing.ts` 의 `resolveReplaySmoothTime`)이다 — 다음 프레임 값이 올 때 정확히 닿아 1초 이력이 연속 운동으로 보인다(가상 태그 러너의 `tickMs / speed` 와 같은 규칙). 마지막 프레임(길이 0)·깨진 길이는 직전 프레임 길이, 그것도 없으면 기본 길이를 쓴다. seek 는 즉시 대입(`smoothTime: 0`)으로 그대로다.
+- 리플레이 정상 전진(`tick`)의 publish 스무딩 시간은 들어가는 프레임이 화면에 머무는 벽시계 시간(프레임 길이 ÷ 배속, `lib/replay-smoothing.ts` 의 `resolveReplaySmoothTime`)이다 — 다음 프레임 값이 올 때 정확히 닿아 1초 이력이 연속 운동으로 보인다(시나리오 러너의 `tickMs / speed` 와 같은 규칙). 마지막 프레임(길이 0)·깨진 길이는 직전 프레임 길이, 그것도 없으면 기본 길이를 쓴다. seek 는 즉시 대입(`smoothTime: 0`)으로 그대로다.
 - 시간 축은 **씬 시간**(리플레이 = 프레임 누적 ms, 시뮬레이션 = 러너 경과 ms)이다.
 - 시뮬레이션 seek 는 러너의 재시뮬레이션이라(`docs/agents/tag-mapping-rig.md`) 타임라인 사건 시각으로 옮기면 재생 때 그 시각에 보이던 자세가 나온다. 잔여 오차는 적분 스텝 한 개(`tickMs`)와 정상 전진의 publish 간격 스무딩 한 스텝뿐이다. seek UI 는 트랜스포트 바의 스크럽 하나다 — 시뮬레이션 패널에는 없다.
-- 트랜스포트 바·마커 seek·통계·`scene-collision-hold` 가 전부 이 어댑터 하나만 본다. 충돌·영역 정지 시 어느 러너를 멈추는지(`'play3d'` 러너 = 활성 소스에 따라 리플레이 러너 또는 가상 태그 러너)는 `docs/agents/3d-collision.md`.
+- 트랜스포트 바·마커 seek·통계·`scene-collision-hold` 가 전부 이 어댑터 하나만 본다. 충돌·영역 정지 시 어느 러너를 멈추는지(`'play3d'` 러너 = 활성 소스에 따라 리플레이 러너 또는 시나리오 러너)는 `docs/agents/3d-collision.md`.
 
 ### 실행 통계
 
@@ -61,20 +62,18 @@ i18n 은 `monitoring:play3d.*`.
 - 장비 상태·태그 누적은 단조 누적. 정지(hold) 시간만 벽시계다 — 씬 시간은 정지 중 흐르지 않는다.
 - 영역 체류는 진입~이탈, 미이탈은 창 끝까지, 진입 없는 이탈은 무시. 영역별 `byIntruder` 는 횟수 내림차순이라 첫 항목이 주 침범자다. 영역↔영역 침범은 양쪽 소유자에 거울상으로 기록되어 체류 합에 두 번 들어간다(현재 동작).
 - 장비 행은 상태 누적이 있는 모델 ∪ 상태 전이가 있는 모델. 행마다 두절 횟수 외에 **노출**을 가진다 — 충돌 관여 횟수(사건의 `modelIds`)와 영역 체류(`assignZoneBandsToRows`: 침범자가 행이면 침범자 행, 아니면 소유 모델 행, 둘 다 없으면 버림). 타임라인의 체류 띠가 같은 배정을 쓴다.
-- `summary` 는 KPI 카드용 전체 값 — 가동 비율(분모는 unknown 을 뺀 시간), 두절 횟수·시간 합, 속도 한계 도달 비율이 가장 큰 태그.
-- 회차 = floor(경과 / 시나리오 길이).
-- 태그 `saturatedMs` = 연속 publish 속도가 `limits.maxSpeed` 근처(계수는 파일 상수) 이상인 씬 시간. 시뮬레이션만 — 러너가 한계로 자르므로 "최고 속도" 는 정보가 없다.
+- `summary` 는 KPI 카드용 전체 값 — 가동 비율(분모는 unknown 을 뺀 시간), 두절 횟수·시간 합.
 
 스토어 `use-play3d-stats-store.ts`(세션 전용, 영속화 없음):
 
 - `data` 는 기록기가 **제자리 갱신**하고 `version` 을 낮은 빈도로 bump 한다. publish 마다 setState 하지 않는다.
-- `reset(meta)` 가 실행의 시작점이다 — 마운트, 소스 전환, 새 구간 조회(프레임 참조 교체), 시나리오 변경, 시뮬레이션 종료(hasSession true→false). resetValues·seek(0) 은 뒤로 seek 일 뿐 reset 이 아니다.
+- `reset(meta)` 가 실행의 시작점이다 — 마운트, 소스 전환, 새 구간 조회(프레임 참조 교체), 시뮬레이션 종료(hasSession true→false). resetValues·seek(0) 은 뒤로 seek 일 뿐 reset 이 아니다.
 
 기록기 `use-play3d-stats-recorder.ts` (`Play3dView` 가 Canvas 밖에서 한 번 마운트):
 
 - 사건 = 충돌 기록, 영역 diff, 정지(충돌 pinned ∪ 영역 held) 전이, 두절 전이. 사건 시각은 스토어의 벽시계 `at` 이 아니라 **구독 콜백 안에서 읽은 트랜스포트 위치**(같은 틱, 동기)다. 충돌 사건은 양쪽 `modelIds`·`modelNames`(같은 순서), 영역 사건은 소유 모델 `ownerId` 를 싣는다.
 - 짧은 주기 폴링으로 재생 중 지나간 구간을 `scanned`(합집합)·장비 상태 ms 에 더한다. 한 폴링에 배속 기준 기대치를 크게 넘게 뛰면 seek 로 보고 제외한다. `reachedMs`(위치가 닿은 가장 먼 지점)는 재생 여부·seek 와 무관하게 폴링마다 최댓값으로 갱신한다 — 시간 축의 앵커.
-- **seek 는 로그를 바꾸지 않는다.** seek 신호(`model/scene-seek-signal.ts` — 발신처는 리플레이 스토어 `seekTo` 와 가상 태그 러너 `seek`/`resetValues` 뿐, 러너의 정상 전진은 알리지 않는다)와 reset 뒤 `SEEK_SETTLE_MS`(벽시계) 동안 영역·충돌 전이를 사건으로 남기지 않는다 — seek 값은 화면에 즉시 대입되므로 창은 스캔 지연(영역·충돌 스캔 주기와 예산 분할 프레임)만 덮고, 순간이동한 자세를 감지기가 새로 보며 내는 전이는 seek 목표 시각의 사건이 아니다. 정착하면 런타임(영역 스토어 `intrusions`)과 로그를 화해한다: 런타임이 안인데 로그가 밖이면 진입, 로그가 안인데 런타임이 밖이면 이탈을 **잠정**(`provisional`)으로 넣는다. 정착 뒤의 전이와 화해는 모두 로그 기준 결정 `decideZoneEvent`(`lib/play3d-stats.ts`)를 거친다 — 로그에 이미 있는 시각의 재통과 전이는 넣지 않고(`REPASS_JITTER_MS` 안의 이른 관측은 그 사건을 앞당김), 잠정 사건은 실제 전이가 교체한다(제자리 수정이라 id·타임라인 key 유지). 충돌은 같은 쌍 ±`REPASS_JITTER_MS` 안의 중복을 넣지 않는다(`hasEventNear`). 정지·두절·상태 전이는 정착과 무관.
+- **seek 는 로그를 바꾸지 않는다.** seek 신호(`model/scene-seek-signal.ts` — 발신처는 리플레이 스토어 `seekTo` 와 시나리오 러너 `seek`/`resetValues` 뿐, 러너의 정상 전진은 알리지 않는다)와 reset 뒤 `SEEK_SETTLE_MS`(벽시계) 동안 영역·충돌 전이를 사건으로 남기지 않는다 — seek 값은 화면에 즉시 대입되므로 창은 스캔 지연(영역·충돌 스캔 주기와 예산 분할 프레임)만 덮고, 순간이동한 자세를 감지기가 새로 보며 내는 전이는 seek 목표 시각의 사건이 아니다. 정착하면 런타임(영역 스토어 `intrusions`)과 로그를 화해한다: 런타임이 안인데 로그가 밖이면 진입, 로그가 안인데 런타임이 밖이면 이탈을 **잠정**(`provisional`)으로 넣는다. 정착 뒤의 전이와 화해는 모두 로그 기준 결정 `decideZoneEvent`(`lib/play3d-stats.ts`)를 거친다 — 로그에 이미 있는 시각의 재통과 전이는 넣지 않고(`REPASS_JITTER_MS` 안의 이른 관측은 그 사건을 앞당김), 잠정 사건은 실제 전이가 교체한다(제자리 수정이라 id·타임라인 key 유지). 충돌은 같은 쌍 ±`REPASS_JITTER_MS` 안의 중복을 넣지 않는다(`hasEventNear`). 정지·두절·상태 전이는 정착과 무관.
   - 정착 창 안(`SEEK_SETTLE_MS` × 배속, 시뮬레이션 재생 중 seek 에서만 — 리플레이 seek 는 항상 정지)의 실제 전이는 남지 않는다(짧은 체류·짧은 이탈). 정착 중 순간이동한 자세가 충돌 검출기(재기준선 없음)에서 hit 를 내면 스토어 기록·정지는 그대로 일어나고 리포트에는 `holdStart` 만 남는다. 폴링의 seek 휴리스틱(`maxStep`)은 1·2배속 리플레이의 긴 프레임 전진을 seek 로 오판해 `scanned` 가 비는 기존 문제가 있다 — seek 신호로 대체하는 것이 후속.
 - 충돌 감지 off 는 `detectionOffSeen` 으로 남긴다.
 - 태그는 버스 관찰자 `subscribeTagValues`(`tag-value-bus.ts`, 소비자 슬롯과 별개·다중 가능)로 publish 마다 집계한다 — 맵핑된 키만.
@@ -85,21 +84,21 @@ i18n 은 `monitoring:play3d.*`.
 
 `play3d-report-panel.tsx` 가 조립한다. 개요 → 상세 순이고, 같은 사실은 한 자리에서만 보인다.
 
-1. 헤더 — 소스·구간, 창·검사된 구간(창 대비 비율)·회차, 정지가 있었을 때만 정지 횟수·벽시계. 감지가 꺼져 있던 구간 안내와, 씬에 `tagMappings` 가 없을 때의 안내(`collectSceneTagKeys`).
-2. KPI 카드 4장 `play3d-report-kpi.tsx` — 충돌(첫 충돌·최다 쌍) · 영역 침범(정지 등급 수·체류 합) · 가동률(장비 수) · 소스별 4번째: 리플레이는 통신 두절(횟수·합계), 시뮬레이션은 속도 한계 도달(최대 축). 색은 문제일 때만(충돌·정지 등급 침범은 빨강, 경고 침범·두절·포화는 호박). 스파크라인 없음. 패널 루트가 컨테이너 쿼리 기준이라 넓으면 한 줄 4장, 좁으면 2×2.
+1. 헤더 — 소스·구간(시뮬레이션은 열린 구간), 창·검사된 구간(창 대비 비율), 정지가 있었을 때만 정지 횟수·벽시계. 감지가 꺼져 있던 구간 안내와, 씬에 `tagMappings` 가 없을 때의 안내(`collectSceneTagKeys`).
+2. KPI 카드 `play3d-report-kpi.tsx` — 충돌(첫 충돌·최다 쌍) · 영역 침범(정지 등급 수·체류 합) · 가동률(장비 수), 리플레이만 4번째로 통신 두절(횟수·합계). 색은 문제일 때만(충돌·정지 등급 침범은 빨강, 경고 침범·두절은 호박). 스파크라인 없음. 패널 루트가 컨테이너 쿼리 기준이라 넓으면 한 줄(리플레이 4장·시뮬레이션 3장), 좁으면 2열.
 3. 스윔레인 타임라인 `play3d-report-timeline.tsx` — 장비마다 한 행이고 **사건은 그 행에 겹쳐 그린다**(별도 사건 행 없음). 행 조립은 `timelineRows`.
    - 아래부터 상태 막대(`statusBands`, 색 `PLAY3D_STATUS_FILL`, 창 끝까지) → 영역 체류 = **상태 막대와 같은 높이·위치의 노란 박스**(`zoneBands` → `assignZoneBandsToRows`, 등급 무관, 체류 중엔 상태 색을 덮는다, 미이탈은 오른쪽 어두운 점선 가장자리) → 충돌 = 빨간 각진 세로 선(`assignCollisionsToRows`, 부딪힌 두 장비 행 모두) → 현재 위치 세로선. 이 DOM 순서가 hover 우선순위(충돌 > 체류 > 상태)다. 사건(체류·충돌)은 실행 전체(`allEvents`)를 그리고 현재 위치 뒤에서 시작한 것은 흐리게(고스트) — 재생바와 같다. 열린 띠는 `runEndMs`(창 끝·마지막 사건·닿은 지점의 최대)까지. 검사 안 된 구간은 트랙 바탕색 그대로, 검사된 구간만 밝게 덮는다. 축 클릭 = `msAtFraction` 으로 seek. HTML 절대 배치 % 라 SVG 늘림이 없다.
    - 장비 이름 열은 고정이고 오른쪽 트랙 영역만 가로 스크롤러다(스크롤바가 이름 열 아래로 뻗지 않는다). 시간 눈금 행은 트랙 위. 안쪽 세로 스크롤은 없고 패널이 세로로 스크롤한다. 장비가 없으면 "데이터 없음".
    - 축이 `TIMELINE_FIT_MS` 를 넘으면 트랙이 `timelineTrackScale` 배로 넓어진다(`timelineContentWidth`). 확대된 뒤에는 px/ms 가 일정해 축이 자라도 표식은 제자리다.
    - 재생 위치 따라가기는 `timelineFollowScroll` 이 판단한다. 재생 중에는 보이던 커서가 벗어날 때만 넘기고(오른쪽 이탈은 한 페이지, 뒤로 점프는 가운데) 사용자가 직접 스크롤해 둔 위치는 되돌리지 않는다(`onScroll` 이 `timelineCursorInView` 로 갱신, ▶ 전이가 다시 무장). 일시정지 중에는 화면 밖 커서를 가운데로 보인다. 자라는 축은 오른쪽 끝에 붙어 따라간다.
    - 범례는 운전 상태·영역 체류(노란 박스 견본)·충돌. 운전 상태는 가동을 항상 올리고 나머지는 이번 실행에서 시간이 쌓인 것만 올린다(`legendStatuses`, 두절은 리플레이만). 상태 색은 `PLAY3D_STATUS_FILL` 을, 박스는 `PLAY3D_DWELL_BOX_CLASS` 를 그대로 읽는다.
-4. 접이식 상세 — 네이티브 `details` 네 개(사건만 기본 펼침), 제목 옆에 요약 한 줄. 사건 목록(종류 필터 칩 `PLAY3D_EVENT_FILTERS`, 클릭 = seek — 리플레이는 한 프레임·시뮬레이션은 조금 앞, `markerSeekLeadMs`) · 장비 표(적층 비율 막대·가동%·두절·영역 체류·충돌 관여) · 영역 표(체류 막대·진입·주 침범자, 영역 사건이 없으면 섹션 생략) · 축 표(`tagRowLabel` 로 이름·단위, range bar `tagRangeBar` — 시뮬레이션은 가상 태그 정의 min~max 기준·리플레이는 관측 범위, 이동량, 포화는 시뮬레이션만). 표마다 헤더 행이 있다.
+4. 접이식 상세 — 네이티브 `details` 네 개(사건만 기본 펼침), 제목 옆에 요약 한 줄. 사건 목록(종류 필터 칩 `PLAY3D_EVENT_FILTERS`, 클릭 = seek — 리플레이는 한 프레임·시뮬레이션은 조금 앞, `markerSeekLeadMs`) · 장비 표(적층 비율 막대·가동%·두절·영역 체류·충돌 관여) · 영역 표(체류 막대·진입·주 침범자, 영역 사건이 없으면 섹션 생략) · 축 표(`tagRowLabel` 로 이름·단위, range bar `tagRangeBar` — 시뮬레이션은 시나리오 태그 정의 min~max 기준·리플레이는 관측 범위, 이동량). 표마다 헤더 행이 있다.
 
 표·목록 컴포넌트는 `play3d-report-tables.tsx`(컴포넌트만). 행 변환·비율/위치 환산·라벨 해석은 `lib/play3d-format.ts` 에 둔다(react-refresh 규칙, ui 수치 계산 금지). 차트는 전부 인라인 SVG/DIV 다.
 
 ### 시간 축과 표식 (리포트 타임라인 · 재생바 공용)
 
-- **축은 하나**: `timelineAxisMs(길이, 위치, 마지막 사건, 위치가 닿은 가장 먼 지점)` 의 최대(길이가 없으면 바닥값). 반복 시나리오는 경과가 되감기지 않아(회차 = 경과 ÷ 길이) 길이에 고정하면 첫 회차 뒤의 커서·표식이 전부 축 끝에 쌓인다. 닿은 지점(`reachedMs`, seek·정지 중 포함)을 넣어 **실행 중 축이 줄지 않는다** — 위치만 따라가면 재생바 손잡이를 뒤로 끌 때 축이 같이 줄어 값이 무너진다. 검사 구간(`scanned`) 끝이 아닌 이유는 정지 중 ⏩ 로 뛴 곳은 검사되지 않아 열린 구간에서 같은 붕괴가 나기 때문이다. 재생바는 원시 사건(기록 순, 뒤로 seek 하면 시각순이 아니다)을 읽으므로 마지막 사건은 `lastEventAtMs`(최댓값)다.
+- **축은 하나**: `timelineAxisMs(길이, 위치, 마지막 사건, 위치가 닿은 가장 먼 지점)` 의 최대(길이가 없으면 바닥값). 시뮬레이션은 길이가 없는 열린 구간이라 길이에 고정할 수 없다. 닿은 지점(`reachedMs`, seek·정지 중 포함)을 넣어 **실행 중 축이 줄지 않는다** — 위치만 따라가면 재생바 손잡이를 뒤로 끌 때 축이 같이 줄어 값이 무너진다. 검사 구간(`scanned`) 끝이 아닌 이유는 정지 중 ⏩ 로 뛴 곳은 검사되지 않아 열린 구간에서 같은 붕괴가 나기 때문이다. 재생바는 원시 사건(기록 순, 뒤로 seek 하면 시각순이 아니다)을 읽으므로 마지막 사건은 `lastEventAtMs`(최댓값)다.
 - **눈금은 둥근 간격**: `niceTickStepMs` 가 후보 목록에서 칸 수 상한에 맞는 가장 작은 간격을 고르고 `tickTimes` 가 그 배수를 낸다(끝 반 칸 안은 빼고 축 끝과 같은 배수는 넣음). 간격이 고정이라 축이 자라도 앞 눈금이 움직이지 않는다. 타임라인은 한 화면 구간 기준(`timelineViewTicks`), 재생바는 축 전체 기준(`transportTicks`). 그리기는 `Play3dTickRow`.
 - **재생바 표식 띠**(`transportMarks`): 영역은 체류 구간 전체를 타임라인과 같은 노란 박스(선보다 낮게)로, 충돌·정지·두절(`PLAY3D_MARKER_KINDS`)은 각진 세로 선으로. 실행 전체를 그리고 현재 위치 뒤의 표식은 흐리게. 열린 띠는 `runEndMs` 까지(`reachedMs` 를 넘겨 뒤로 seek 해도 꼬리로 무너지지 않는다). 클릭 = 그 시각으로 이동(`markerSeekTargetMs`, 누르는 순간의 `readPlay3dTransport` 스냅샷). 바는 위치 폴링으로 계속 리렌더되므로 띠는 memo 자식이다.
 - **노란 박스 = 영역 체류**: 채움·링과 미이탈 가장자리는 `PLAY3D_DWELL_BOX_CLASS`·`PLAY3D_DWELL_OPEN_CLASS`, hover 요약의 영역 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS` 한 곳이고 타임라인·재생바·범례·툴팁이 함께 읽는다. 등급은 hover 요약·KPI·영역 표에서 본다. 빨강은 충돌 선에만.
@@ -107,8 +106,8 @@ i18n 은 `monitoring:play3d.*`.
 
 ### 장비 운전 상태 · 라벨 표시 상태 · 외곽선
 
-- `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트·저널이 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
-- 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 활성 슬롯 키들(리플레이 소스는 실시간 키, 시뮬레이션 소스는 가상 키 — `resolveActiveTagSlot`, `docs/agents/tag-mapping-rig.md`)로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
+- `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트가 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
+- 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 키들(`collectModelTagKeys(model)` — 모델 `craneId` + 코드, 소스와 무관 — `docs/agents/tag-mapping-rig.md`)로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
 - **라벨 표시 상태** `EquipmentLabelState` = tone(fault · running · standby · off · offline · unknown) + 아이콘 둘(bypass · freeSwing). 앞의 넷은 ACMS 의 Crane ID Box 네 가지이고, 모델의 상태 태그(`statusTags` — `docs/agents/tag-mapping-rig.md`)로 가른다. 판정·우선순위는 `model-label-state.ts`(`resolveLabelState`, 비트 문턱 `STATUS_BIT_ON_THRESHOLD`, 테스트 대상). tone 이 곧 운전 상태다.
   - 수신 판정에는 상태 태그 키도 들어가고, 움직임 판정에는 축 태그(`tagMappings`)만 들어간다.
   - 운전 전원 off 가 움직임보다 앞선다. 받은 적이 없거나 수신이 끊기면 아이콘을 끈다(낡은 값).
@@ -124,7 +123,7 @@ i18n 은 `monitoring:play3d.*`.
 
 ### 전제
 
-감지·리포트는 씬에 `tagMappings` 가 있어야 의미가 있다. 맵핑이 있는 씬은 philly-2dock(가상 태그만)·dock-in(서버 리플레이만)이고, 옥포 실외·골리앗 씬은 맵핑이 없어 재생해도 아무것도 움직이지 않는다.
+감지·리포트는 씬에 `tagMappings` 가 있어야 의미가 있다. 맵핑이 있는 씬은 philly-2dock(시나리오 "기본" 으로 시뮬레이션 — 서버 리플레이에는 그 크레인이 없다)·dock-in(서버 리플레이)이고, 옥포 실외·골리앗 씬은 맵핑이 없어 재생해도 아무것도 움직이지 않는다.
 
 ## 불변식
 
@@ -134,19 +133,19 @@ i18n 은 `monitoring:play3d.*`.
 - `RUNTIME_STATUS_COLORS`(hex, `model-runtime-status.ts`)의 가동 색과 `ModelLabel` 의 가동 색 클래스는 **두 곳을 함께 바꾼다** — 3D 플레이에서 라벨과 리포트가 한 화면에 있다. `PLAY3D_STATUS_FILL` 은 리포트 전용 팔레트다 — 가동만 라벨 색을 공유한다. 운전 전원 On·고장은 라벨의 황·적을 쓰지 않는다(타임라인에서 노랑은 영역 체류 박스, 빨강은 충돌 선). 타임라인 밴드·장비 표 적층 막대·범례가 이 상수 하나를 읽는다.
 - 통계 스토어 `data` 는 제자리 갱신 + `version` bump 만. publish 마다 setState 금지.
 - 사건 시각은 트랜스포트 위치를 구독 콜백 안에서 동기로 읽는다. 스토어의 벽시계 `at` 을 쓰지 않는다.
-- 시간을 바꾸는 코드(바·마커·리포트 seek·정지 재개)는 `Play3dTransport` 하나만 통한다. 리플레이 러너·가상 태그 러너를 직접 부르지 않는다.
+- 시간을 바꾸는 코드(바·마커·리포트 seek·정지 재개)는 `Play3dTransport` 하나만 통한다. 리플레이 러너·시나리오 러너를 직접 부르지 않는다.
 - 소스 전환은 상태 전환으로 유지한다. `key={source}` 리마운트는 `useSceneData` 진입의 resetReplay 로 프레임을 잃고 loadFrames effect 가 다시 돌지 않는다.
 - `RUNNING_WINDOW_MS` 는 리플레이 프레임 간격보다 넓어야 한다. 좁으면 프레임 사이마다 멈춘 것으로 떨어진다.
-- 두절 진입·복귀를 거를 때 직전 상태가 unknown 인 것만으로 빼지 않는다. 직전 기록에 없던 모델의 첫 판정만 뺀다 — 운전 전원을 모르는 멈춘 장비도 unknown 이라 그 장비의 unknown → offline 은 실제 두절이다(기록기·`status-journal-map.ts` 같은 규칙).
+- 두절 진입·복귀를 거를 때 직전 상태가 unknown 인 것만으로 빼지 않는다. 직전 기록에 없던 모델의 첫 판정만 뺀다 — 운전 전원을 모르는 멈춘 장비도 unknown 이라 그 장비의 unknown → offline 은 실제 두절이다(기록기의 규칙).
 - 새 실행의 시작은 `reset(meta)` 한 곳. 뒤로 seek·resetValues 에서 reset 하지 않는다.
 - 리포트 행 변환·상수는 `lib/play3d-format.ts` 에, `ui/*.tsx` 에는 컴포넌트만.
 - 새 사건 종류를 추가하면 `PLAY3D_EVENT_FILTERS`·`PLAY3D_EVENT_COLORS`·`Play3dHoverPayload`·`computePlay3dStats` 창 필터를 함께 고치고, 재생바에 선으로 그릴 것이면 `PLAY3D_MARKER_KINDS` 에 넣는다.
 - 장비 표의 영역 체류값과 타임라인 체류 박스는 `assignZoneBandsToRows`, 장비 표의 충돌 값과 타임라인 충돌 선은 `assignCollisionsToRows` — 표와 그림이 한 규칙을 쓴다.
 - 접이식 상세의 `details` 는 `open` 에 리터럴 초기값만 넘긴다. 데이터에서 파생하면 통계 리렌더가 사용자의 접기·펼치기를 되돌린다.
 - 리포트 타임라인은 정지·두절 사건을 그리지 않지만 재생바 표식(`PLAY3D_MARKER_KINDS`)은 그린다.
-- 시간 축은 `timelineAxisMs` 하나를 타임라인과 재생바가 함께 쓰고, 실행 중 줄지 않는다(가장 먼 지점 입력을 빼지 않는다). 회차로 접지(`% 길이`) 않는다 — 체류 구간이 회차 경계에서 끊기고 통계 창이 줄어든다.
+- 시간 축은 `timelineAxisMs` 하나를 타임라인과 재생바가 함께 쓰고, 실행 중 줄지 않는다(가장 먼 지점 입력을 빼지 않는다). 경과를 길이로 접지(`% 길이`) 않는다 — 체류 구간이 경계에서 끊기고 통계 창이 줄어든다.
 - 사건 기록은 seek 정착 뒤·로그 상태 기준이다 — seek 는 로그를 바꾸지 않는다. 화해 사건은 잠정이고 실제 전이가 교체한다(`decideZoneEvent`). seek 로 로그를 자르지 않는다 — 현재 위치 뒤 사건은 고스트로 남긴다.
-- seek 신호 발신처는 리플레이 스토어 `seekTo` 와 가상 태그 러너 `seek`·`resetValues` 뿐이다. 러너의 정상 전진(리플레이 `tick`·가상 태그 틱)에서 알리지 않는다 — 알리면 정착 창이 끊이지 않아 아무 사건도 남지 않는다.
+- seek 신호 발신처는 리플레이 스토어 `seekTo` 와 시나리오 러너 `seek`·`resetValues` 뿐이다. 러너의 정상 전진(리플레이 `tick`·시나리오 러너 틱)에서 알리지 않는다 — 알리면 정착 창이 끊이지 않아 아무 사건도 남지 않는다.
 - 타임라인 눈금 행과 이름 열 스페이서는 같은 높이 상수를 쓴다 — 다르면 이름과 트랙이 어긋난다. 트랙·눈금 행의 `overflow-hidden` 은 지우지 않는다 — 축 끝의 표식·라벨이 스크롤 폭을 넓혀 확대가 없을 때도 가로 스크롤바가 생긴다.
 - 확대 배율·눈금·따라가기 판단·행과 표식 조립은 `lib/play3d-format.ts` 에 두고 ui 는 DOM 치수만 읽어 넘긴다. 따라가기 판정의 허용오차를 없애지 않는다 — 스크롤 치수가 정수로 반올림돼 프로그램 스크롤 직후 따라가기가 꺼진다. 스크롤러에 smooth scroll 을 걸지 않는다(중간 scroll 이벤트가 같은 문제를 만든다).
 - 분리 트리거 툴팁은 Root 를 트리거보다 먼저 렌더하고, 핸들은 컴포넌트 인스턴스당 하나(`useState` 초기화)로 만든다. `@crane/features` 는 `@base-ui/react` 를 직접 import 하지 않는다 — `@crane/ui` 의 래퍼와 `tooltip-handle` 을 쓴다.
@@ -168,11 +167,11 @@ i18n 은 `monitoring:play3d.*`.
 - `scanned` 를 재통과 중복 판정 기준으로 — 리플레이는 프레임 간격이 폴링의 seek 임계보다 크면 검사 구간이 비어 있다.
 - 화해 사건을 잠정 없이 boolean 판정으로만 넣기 — 앞으로 점프 뒤 되돌아가 재통과하면 띠가 다시 쪼개진다.
 - `hasPendingSmoothing` 으로 seek 정착 판정 — 정상 전진의 스무딩이 남아 있어 끝나지 않는다.
-- 시뮬레이션 패널의 스크럽 — 회차를 접은 시나리오 시각으로 seek 해 트랜스포트 바·타임라인(경과 시각)과 어긋난다.
+- 시뮬레이션 패널의 스크럽 — 재생 위치의 기준이 둘이 되어 트랜스포트 바·타임라인(경과 시각)과 어긋난다.
 - 타임라인 안쪽 세로 스크롤·sticky 이름 열 — 가로 스크롤바가 이름 열 아래까지 뻗는다. 이름 열을 스크롤러 밖에 둔다.
-- 재생바 축을 길이에 고정하기 — 반복 시나리오에서 표식이 끝에 쌓인다.
+- 재생바 축을 길이에 고정하기 — 열린 구간(시뮬레이션)에는 길이가 없고, 되감기지 않는 경과에서 표식이 끝에 쌓인다.
 - 시간 축 앵커를 검사 구간(`scanned`) 끝으로 — 정지 중 seek 로 뛴 곳이 빠져 뒤로 끌 때 축이 손잡이 밑에서 무너진다.
-- 열린 구간(시나리오 없음)에서 스크럽 비활성 — 길이 대신 닿은 지점이 축이라 범위가 정해지고, ⏪·표식 클릭과 어긋난다.
+- 열린 구간(시뮬레이션)에서 스크럽 비활성 — 길이 대신 닿은 지점이 축이라 범위가 정해지고, ⏪·표식 클릭과 어긋난다.
 - 클릭 가능한 표식의 툴팁에 `closeOnClick=false` — 클릭 seek 로 표식이 사라지면 팝업이 떠돈다.
 - 표식 요약을 브라우저 기본 `title` 로 — 지연이 있어 사건을 훑어볼 수 없다.
 - 재생 중 사용자가 스크롤해 둔 타임라인 위치를 커서로 되돌리기 — 지난 구간을 살펴보는 중에 화면이 튄다.
@@ -182,9 +181,9 @@ i18n 은 `monitoring:play3d.*`.
 - 고장·Bypass 라벨을 거리 축소에서 빼는 것 — 그 라벨만 커 보인다. 상태는 색과 아이콘으로만 나타낸다.
 - Bypass 아이콘의 흐려졌다 밝아지는 애니메이션(`animate-pulse`) — 그라데이션처럼 보인다.
 - Bypass·Free Swing 아이콘을 상자 밖에 두는 것 — 상자 안의 흰 칩이 더 잘 읽힌다.
-- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트·저널 어디에도 두지 않는다. 그 장비는 unknown 이다. 관제 HUD 의 "대기" 는 standby(운전 전원 On, 멈춤)의 짧은 라벨이지 이 상태가 아니다.
+- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트 어디에도 두지 않는다. 그 장비는 unknown 이다. 관제 HUD 의 "대기" 는 standby(운전 전원 On, 멈춤)의 짧은 라벨이지 이 상태가 아니다.
 - 화면마다 다른 상태 목록 — 라벨은 여섯 가지인데 리포트는 네 가지인 식으로 나누면 같은 장비가 화면마다 다른 이름으로 불린다.
 
 ## 미룬 것
 
-두 실행 비교, 리플레이 구간 서버 알람, 서버 timeline 가동 구간, 태그 시계열 차트, 검사 구간의 기준선·감지 off 정밀 차감, 프레임 전체 헤드리스 스캔, PDF·대시보드 위젯, 패널 리사이즈 시 타임라인이 보던 시각 유지.
+두 실행 비교, 리플레이 구간 서버 알람, 서버 timeline 가동 구간, 태그 시계열 차트, 검사 구간의 기준선·감지 off 정밀 차감, 프레임 전체 헤드리스 스캔, PDF, 패널 리사이즈 시 타임라인이 보던 시각 유지.

@@ -144,25 +144,29 @@ export {
 export {
   convertLegacyRigBindings,
   convertLegacyValueMapList,
+  finalizeModelTagKeys,
+  parseTagKeyRef,
   resolveModelTagMappings,
-  sanitizeTagKeySlots,
+  resolveTagRef,
   sanitizeTagMappings,
 } from './lib/sanitize-tag-mappings';
+export type {
+  FinalizedModelTagKeys,
+  StatusTagEntries,
+  TagCodeRef,
+} from './lib/sanitize-tag-mappings';
 export {
-  getPrimaryTagKey,
   getRigOccupiedTargetKeys,
-  getSlotField,
-  getSlotTagKey,
   getTagMappingTargetKey,
   getTagMappingUnit,
-  hasAnyTagKey,
-  isTagKeySlotsEqual,
-  setSlotTagKey,
+  normalizeTagCode,
+  resolveMappingTagKey,
   TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
-  TAG_SLOTS,
 } from './model/tag-mapping-types';
-export { sanitizeModelStatusTags } from './lib/sanitize-status-tags';
+export { collectModelTagCodes } from './lib/model-tag-codes';
+export type { ModelTagCode } from './lib/model-tag-codes';
+export { sanitizeStatusTagEntries } from './lib/sanitize-status-tags';
 export {
   LABEL_STATUS_TAG_ROLES,
   OUTLINE_STATUS_TAG_ROLES,
@@ -173,18 +177,16 @@ export type {
   ModelStatusTags,
   OutlineStatusTagRole,
   ResolvedStatusTagKeys,
-  StatusTagBinding,
   StatusTagRole,
 } from './model/status-tag-types';
 export type {
-  TagKeySlots,
+  TagKeyModel,
   TagMapping,
   TagMappingChannel,
   TagMappingJointTarget,
   TagMappingNodeTarget,
   TagMappingTarget,
   TagMappingUnit,
-  TagSlot,
 } from './model/tag-mapping-types';
 export {
   getDrivenJointIds,
@@ -362,6 +364,7 @@ export {
   getKnownRegionIds,
   isKnownRegionId,
 } from './model/scene-file-registry';
+export { getSceneFileNameByRegionId } from './model/scene-file-map';
 export { resolveEnvironmentFileUrl } from './lib/scene-environment';
 export { withSceneAssetVersion } from './lib/scene-asset-update';
 export {

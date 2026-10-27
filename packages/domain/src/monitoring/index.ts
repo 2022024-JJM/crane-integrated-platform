@@ -50,14 +50,15 @@ export {
 } from './lib/crane-history';
 export { getMonitoringTagMetadata } from './model/tag-catalog';
 export { toTagNumber } from './lib/tag-number';
+// 키 조립 규칙은 core 에 있다(3d·virtual-tag 슬라이스도 같은 규칙을 쓴다).
 export {
   buildCraneTagKey,
   CRANE_TAG_KEY_SEPARATOR,
   normalizeCraneKey,
   normalizeLegacyCraneTagKey,
   parseCraneTagKey,
-} from './lib/crane-tag-key';
-export type { CraneTagKeyParts } from './lib/crane-tag-key';
+} from '@crane/core/lib/crane-tag-key';
+export type { CraneTagKeyParts } from '@crane/core/lib/crane-tag-key';
 export { formatReplayTimestamp } from './lib/format-replay-timestamp';
 export { parseReplayTimestamp } from './lib/parse-replay-timestamp';
 export { getReplayFrameDurationsMs } from './lib/parse-interval';

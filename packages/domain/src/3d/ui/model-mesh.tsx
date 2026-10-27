@@ -375,9 +375,9 @@ export function ModelMesh({
     { shading },
   );
   // 아래 effect 들은 리컨실러 밖에서 머티리얼·노드를 직접 변조한다 — R3F 의
-  // auto-invalidate 가 걸리지 않아 frameloop='demand' 캔버스(대시보드 3D
-  // 미리보기 모달)에서 알람 색·잠김 안개·오버라이드가 다음 조작까지 화면에
-  // 안 나타난다. 변조 후 invalidate 로 프레임을 깨운다('always' 에선 무해).
+  // auto-invalidate 가 걸리지 않아 frameloop='demand' 캔버스에서 알람 색·
+  // 잠김 안개·오버라이드가 다음 조작까지 화면에 안 나타난다. 변조 후
+  // invalidate 로 프레임을 깨운다('always' 에선 무해).
   const invalidate = useThree((s) => s.invalidate);
   const modelRef = useRef<Object3D | null>(null);
   // 이전 effect에서 override가 적용된 적이 있는 target들. 다음 effect 실행 시

@@ -5,7 +5,6 @@ import {
   PLAY3D_EVENT_FILTERS,
   PLAY3D_STATUS_FILL,
   formatPercent,
-  formatRatio,
   formatTagNumber,
   percentOf,
   rangeBarPercent,
@@ -236,13 +235,7 @@ export interface TagTableRow {
   unit: string;
 }
 
-export function TagTable({
-  rows,
-  showSaturation,
-}: {
-  rows: readonly TagTableRow[];
-  showSaturation: boolean;
-}) {
+export function TagTable({ rows }: { rows: readonly TagTableRow[] }) {
   const { t } = useTranslation();
   const header: HeaderCell[] = [
     { label: t('monitoring:play3d.col.tag'), className: 'w-28 shrink-0' },
@@ -252,12 +245,6 @@ export function TagTable({
       className: 'w-12 shrink-0 text-right',
     },
   ];
-  if (showSaturation) {
-    header.push({
-      label: t('monitoring:play3d.col.saturation'),
-      className: 'w-10 shrink-0',
-    });
-  }
   return (
     <div className="space-y-1">
       <HeaderRow cells={header} />
@@ -298,21 +285,6 @@ export function TagTable({
               <span className="w-12 shrink-0 text-right tabular-nums">
                 {formatTagNumber(stat.travel)}
               </span>
-              {showSaturation ? (
-                <span
-                  className="bg-muted relative h-2.5 w-10 shrink-0 overflow-hidden rounded-sm"
-                  title={`${t('monitoring:play3d.col.saturation')} ${formatRatio(stat.saturationRatio)}`}
-                >
-                  {stat.saturationRatio !== null ? (
-                    <span
-                      className="absolute inset-y-0 left-0 bg-red-500/70"
-                      style={{
-                        width: `${percentOf(stat.saturationRatio, 1)}%`,
-                      }}
-                    />
-                  ) : null}
-                </span>
-              ) : null}
             </li>
           );
         })}

@@ -42,7 +42,7 @@ export function AppHeader() {
       <AppLink
         to="/"
         className="focus-visible:ring-ring flex shrink-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
-        aria-label={t('common:nav.dashboard')}
+        aria-label={t('common:nav.dockStatus')}
       >
         <HanwhaIcon />
         <span className="text-lg font-semibold">

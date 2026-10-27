@@ -150,6 +150,8 @@ export interface InspectorTagMappingHandlers {
   rigs: RigDefinition[];
   onUpdate: (updater: TagMappingsUpdater) => void;
   onUpdateStatusTags: (updater: StatusTagsUpdater) => void;
+  /** 모델 크레인 ID(탭 맨 위 크레인 칸). undefined 면 비운다. */
+  onUpdateCraneId: (craneId: string | undefined) => void;
 }
 
 interface SceneObjectInspectorProps {
@@ -459,6 +461,7 @@ function ModelInspectorContent({
           rigs={tagMapping.rigs}
           onUpdate={tagMapping.onUpdate}
           onUpdateStatusTags={tagMapping.onUpdateStatusTags}
+          onUpdateCraneId={tagMapping.onUpdateCraneId}
           t={t}
         />
       ) : null}

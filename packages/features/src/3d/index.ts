@@ -143,14 +143,11 @@ export {
 } from './ui/scene-simulation-badge';
 export { SceneZoneAlertOverlay } from './ui/scene-zone-alert-overlay';
 export { SceneAlertNotifier } from './ui/scene-alert-notifier';
-export { ZoneJournalSync } from './ui/zone-journal-sync';
-export { useZoneJournalStore } from './model/use-zone-journal-store';
-export { useStatusJournalStore } from './model/use-status-journal-store';
 export {
   diffZoneIntrusions,
   filterAcceptedZoneTransitions,
   findRegionOfModel,
-} from './lib/zone-journal-map';
+} from './lib/zone-transitions';
 export { useHudConditions } from './model/use-hud-conditions';
 export {
   buildHudConditions,
@@ -262,9 +259,6 @@ export {
   type ZoneTransition,
 } from './model/scene-zone-runtime';
 export { zoneKey } from './lib/scene-zones';
-export { CollisionJournalSync } from './ui/collision-journal-sync';
-export { useCollisionJournalStore } from './model/use-collision-journal-store';
-export { toCollisionJournalEntries } from './lib/collision-journal-map';
 export { SceneLoadingOverlay } from './ui/scene-loading-overlay';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
 export {
@@ -347,8 +341,11 @@ export {
   type TagLiveValue,
   type TagPublish,
   type TagPublishOptions,
-  type TagValueSource,
+  getActiveTagSource,
+  setActiveTagSource,
+  type TagSourceId,
 } from './model/tag-value-bus';
+export { useActiveTagSource } from './model/use-active-tag-source';
 export { useTagBindingSource } from './model/use-tag-binding-source';
 export { useRealtimeStore } from './model/use-realtime-store';
 export { useCraneSnapshotStore } from './model/use-crane-snapshot-store';
@@ -401,25 +398,31 @@ export {
   collectSceneTagKeys,
   type TagMappingIndex,
 } from './lib/tag-mapping-index';
+export { EDITOR_TAG_SOURCE, resolveActiveTagSource } from './lib/tag-source';
 export {
-  EDITOR_TAG_SLOT,
-  resolveActiveTagSlot,
-  tagSlotOfPlay3dSource,
-} from './lib/tag-slot';
-export {
-  resetVirtualTagLoadState,
-  useVirtualTagStore,
-  serializeVirtualTagSet,
+  resetScenarioLoadState,
+  scenariosOfSceneFile,
+  serializeScenarioSet,
   SIMULATION_SPEED_MAX,
   SIMULATION_SPEED_MIN,
-  type VirtualTagAddResult,
-  type VirtualTagDraft,
-} from './model/use-virtual-tag-store';
+  useScenarioStore,
+  type ScenarioAddResult,
+  type ScenarioDraft,
+  type ScenarioTagAddResult,
+} from './model/use-scenario-store';
+export { virtualTagRuntime } from './model/virtual-tag-runner';
 export {
-  virtualTagRuntime,
-  virtualTagSource,
-} from './model/virtual-tag-runner';
-export { useTagCatalog, type TagCatalogEntry } from './model/use-tag-catalog';
+  collectScenarioEntries,
+  type ScenarioEntryResult,
+  type ScenarioTagIssue,
+  type ScenarioTagIssueReason,
+  type VirtualTagEntry,
+} from './lib/scenario-entries';
+export {
+  createScenarioTagDefaults,
+  SCENARIO_NUMBER_DEFAULT_RANGE,
+  type ScenarioTagDefaults,
+} from './lib/scenario-defaults';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export {
   useSceneDock,

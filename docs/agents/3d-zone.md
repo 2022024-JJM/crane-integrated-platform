@@ -1,6 +1,6 @@
-# 모델 영역(zone) 침범 감지 · 알람 브릿지 · 저널 · 씬 unit 스케일
+# 모델 영역(zone) 침범 감지 · 알람 브릿지 · 씬 unit 스케일
 
-모델마다 붙는 수직 원기둥 영역에 다른 모델(메쉬 또는 영역)이 들어오는지를 **상태 기반**으로 감지하고, 링·배지·비네트·HUD·알람 목록·저널로 알리는 계통. 충돌 감지(`docs/agents/3d-collision.md`)와 별도 스토어이며 기준선·억제·자세 복원이 없다.
+모델마다 붙는 수직 원기둥 영역에 다른 모델(메쉬 또는 영역)이 들어오는지를 **상태 기반**으로 감지하고, 링·배지·비네트·HUD·알람 목록으로 알리는 계통. 충돌 감지(`docs/agents/3d-collision.md`)와 별도 스토어이며 기준선·억제·자세 복원이 없다.
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -21,9 +21,7 @@
 | 편집 채널·dirty 판정 | `updateSelectedZones` (`packages/features/src/3d/model/use-selected-scene-object-editor.ts`), `isZoneListEqual` (`packages/widgets/src/scene-editor/model/scene-snapshot.ts`) |
 | 로컬 알람 / 알람 메타 | `packages/domain/src/alarm/lib/local-alarm.ts`, `lib/zone-alarm-meta.ts` |
 | 침범 → 알람 브릿지(앱 셸) | `apps/shell/src/runtime/zone-alarm-bridge.tsx` |
-| 저널 타입·키 | `packages/domain/src/journal/model/types.ts` |
-| 저널 diff·동기화 | `packages/features/src/3d/lib/zone-journal-map.ts`, `lib/status-journal-map.ts`, `ui/zone-journal-sync.tsx`, `model/use-status-journal-sync.ts` |
-| 저널 스토어 | `packages/features/src/3d/model/use-zone-journal-store.ts`, `model/use-status-journal-store.ts` |
+| 침범 사건 diff·승인 규칙·region 판정 | `packages/features/src/3d/lib/zone-transitions.ts` |
 | 씬 unit 스케일 | `packages/domain/src/3d/model/scene-unit-scale.ts` (`getSceneMetersPerUnit`) |
 
 ## 동작
@@ -77,10 +75,10 @@
 ### 화면 경보·알람 목록·HUD·미니맵
 
 - `scene-zone-alert-overlay.tsx` 는 가장자리 비네트만(amber/red). 충돌 경보가 떠 있으면 아무것도 그리지 않는다.
-- [영역 보기]는 관제 HUD 펼침 목록의 영역 행 [보기]다(`docs/agents/monitoring-ui.md`). 영역 행은 영역 스토어에서 직접 만들어 **들어간 쪽** 크레인에 붙고 소유 모델·영역 이름과 정지 여부("자동정지됨")를 보인다 — stop 은 위험, warn 은 주의. 알람 스토어의 `zone_intrusion` 로컬 알람은 HUD 에서 거른다(알람 이력·헤더 배지·저널은 그대로 그 알람을 쓴다). 카메라 포즈는 충돌의 `computeCollisionViewPose` 재사용.
+- [영역 보기]는 관제 HUD 펼침 목록의 영역 행 [보기]다(`docs/agents/monitoring-ui.md`). 영역 행은 영역 스토어에서 직접 만들어 **들어간 쪽** 크레인에 붙고 소유 모델·영역 이름과 정지 여부("자동정지됨")를 보인다 — stop 은 위험, warn 은 주의. 알람 스토어의 `zone_intrusion` 로컬 알람은 HUD 에서 거른다(헤더 배지는 그대로 그 알람을 쓴다). 카메라 포즈는 충돌의 `computeCollisionViewPose` 재사용.
 - HUD 에 침범 칸은 없다 — 침범은 펼침 목록의 행과 "경고 n · 주의 m" 요약 수로 보인다. HUD 자체는 `docs/agents/monitoring-ui.md`.
 - 미니맵은 영역 원을 그리지 않는다 — 3D 링과 HUD 가 담당하고 미니맵에선 마커를 가린다. 미니맵 자체는 `docs/agents/monitoring-ui.md`.
-- 마운트 범위: 모니터링은 전 모드(실시간·3D 플레이·미리보기), 에디터는 `scene-objects-edit-canvas.tsx`.
+- 마운트 범위: 모니터링은 전 모드(실시간·3D 플레이), 에디터는 `scene-objects-edit-canvas.tsx`.
 
 ### 인스펙터 "영역" 탭(zone-section)
 
@@ -93,18 +91,16 @@
 
 - 로컬 알람은 `@crane/domain/alarm` 의 `createLocalAlarm`/`localAlarmActiveKey`(id `local:<type>:<subject>:<at>`(+`:clear`), `eventType 'zone_intrusion'`), 스토어 `useRealtimeAlarmStore.upsertLocalAlarm(alarm, key)`.
 - 브릿지는 **앱 셸** `apps/shell/src/runtime/zone-alarm-bridge.tsx` 다. 침범 쌍 생성 = 발생(`stop` → high, `warn` → medium), 소멸 = 해제. `eventData` 는 `zoneKey`·`intruder`·`color`.
-- 실시간 화면의 침범만 알람이 된다(`filterAcceptedZoneTransitions`, 아래 저널과 같은 규칙).
-- 사건의 regionId 는 `findRegionOfModel` 이 `useSceneInfoStore.activeRegionId`(실시간·플레이 화면의 region)를 우선해 정한다 — 한 씬 파일을 공유하는 region 들은 같은 모델 id 를 가지므로 순회만으로는 구분할 수 없다. 충돌 저널의 `toCollisionJournalEntries` 도 같은 규칙.
+- 실시간 화면의 침범만 알람이 된다(`filterAcceptedZoneTransitions`, 아래 "실시간 화면의 사건" 규칙).
+- 사건의 regionId 는 `findRegionOfModel` 이 `useSceneInfoStore.activeRegionId`(실시간·플레이 화면의 region)를 우선해 정한다 — 한 씬 파일을 공유하는 region 들은 같은 모델 id 를 가지므로 순회만으로는 구분할 수 없다.
 - craneId 는 소유 모델의 craneId, 없으면 모델 id 다. 그래서 지역 필터는 `isAlarmInRegion`(레지스트리 craneId **또는** `alarm.regionId === regionId`)으로 통과시키며, 알람 슬라이스의 모든 필터 지점이 이 헬퍼를 쓴다.
 - 영역 침범 로컬 알람은 critical·high 알람 알림(`useCriticalAlarmNotifier`)과 HUD 의 알람 조건에서 제외한다(`eventType 'zone_intrusion'`) — 3D 화면 경보·HUD 영역 행과 겹침 방지. 경보 소리·브라우저 알림은 `docs/agents/monitoring-ui.md`.
 
-### 영역·운전 상태 저널
+### 실시간 화면의 사건
 
-- `@crane/domain/journal` 의 `ZoneJournalEntry`(진입·이탈 각 항목, 이탈에 `durationMs`)·`StatusJournalEntry`(**통신두절 진입·복귀만** — 그 밖의 전환은 제외, 직전 기록에 없던 모델의 첫 판정도 제외. 예전 저장본의 `idle` 은 sanitize 가 `unknown` 으로 읽는다). 키는 `ZONE_JOURNAL_STORAGE_KEY`·`STATUS_JOURNAL_STORAGE_KEY`.
-- 순수 diff `diffZoneIntrusions`(두 스냅샷의 쌍 차이로 사건 복원 — 경보 알림·알람 브릿지도 같은 함수)·`diffOfflineTransitions`(`status-journal-map.ts`). 동기화는 `zone-journal-sync.tsx`(앱 셸 runtime effects)와 `use-status-journal-sync.ts`(`Monitoring3dView`, `enabled` = 실시간만).
-- **실시간 화면의 사건만 남긴다.** `useSceneInfoStore.activeMode`(`useSceneData` 가 진입 set·이탈 null)와 `isRealtimeSceneActive()` 로 충돌 기록·영역 진입·두절 진입을 받고, 영역 이탈은 `filterAcceptedZoneTransitions` 로 **진입을 승인했던 쌍만** 받는다 — 언마운트 cleanup 은 부모(`useSceneData`)가 자식(검출기 clear)보다 먼저라 `activeMode` 만 보면 실시간을 떠날 때의 이탈이 버려진다.
-- 3D 플레이·에디터·미리보기의 사건은 저널·로컬 알람·경보 소리 어디에도 가지 않는다(3D 플레이는 실행 리포트가 대신, `docs/agents/3d-play.md`).
-- 대시보드 소비는 아직 없다.
+- 침범 사건은 순수 diff `diffZoneIntrusions`(두 스냅샷의 쌍 차이로 진입·이탈 복원)로 만든다. 알람 브릿지·경보 알림·3D 플레이 기록기가 같은 함수를 쓴다.
+- **실시간 화면의 사건만 알람·경보로 내보낸다.** `useSceneInfoStore.activeMode`(`useSceneData` 가 진입 set·이탈 null)와 `isRealtimeSceneActive()` 로 영역 진입을 받고, 영역 이탈은 `filterAcceptedZoneTransitions` 로 **진입을 승인했던 쌍만** 받는다 — 언마운트 cleanup 은 부모(`useSceneData`)가 자식(검출기 clear)보다 먼저라 `activeMode` 만 보면 실시간을 떠날 때의 이탈이 버려진다.
+- 3D 플레이·에디터의 사건은 로컬 알람·경보 소리 어디에도 가지 않는다(3D 플레이는 실행 리포트가 대신, `docs/agents/3d-play.md`).
 
 ### 씬 unit 스케일
 
@@ -115,7 +111,7 @@
 ## 불변식
 
 - `SavedModelZone` 에 필드를 추가하면 `sanitize-model-zones.ts` 와 `scene-snapshot.ts` 의 `isZoneListEqual` 을 함께 고친다 — 비교에서 빠지면 편집이 동등 단락에 먹혀 저장되지 않는다.
-- 저널·로컬 알람·경보 소리는 **실시간 화면의 사건만** 받는다: 진입은 `isRealtimeSceneActive()`, 이탈은 `filterAcceptedZoneTransitions`. 3D 플레이·에디터·미리보기 사건을 이 경로에 넣지 않는다.
+- 로컬 알람·경보 소리는 **실시간 화면의 사건만** 받는다: 진입은 `isRealtimeSceneActive()`, 이탈은 `filterAcceptedZoneTransitions`. 3D 플레이·에디터 사건을 이 경로에 넣지 않는다.
 - `features/3d` 와 `features/alarm` 은 같은 레이어라 서로 import 하지 않는다. 둘을 잇는 코드는 앱 셸 runtime(`zone-alarm-bridge.tsx`) 또는 페이지의 콜백 배선(`onViewZone` ↔ `actionsRef.viewZone`)에 둔다.
 - Canvas 마운트 순서: `RigDriver` → 충돌 검출기 → `SceneCollisionHighlight` → `SceneZoneDetector` → `SceneZoneRings`(검출기 바로 다음).
 - 실시간 모니터링은 `applyTransitions(…, allowHold=false)` — 어떤 영역 등급에서도 멈추지 않는다.
@@ -127,7 +123,7 @@
 
 ## 하지 않기로 한 것
 
-- 영역 침범 기록(history)은 두지 않는다 — 상태(`intrusions`)만. 이력은 저널(실시간)과 실행 리포트(3D 플레이)가 맡는다.
+- 영역 침범 기록(history)은 두지 않는다 — 상태(`intrusions`)만. 3D 플레이의 사건 기록은 실행 리포트가 맡는다.
 - 침범 목록 패널·독 팝업·에디터 팔레트 "영역" 탭·패널 안 재개 버튼은 두지 않는다 — 현재 침범은 HUD 펼침 목록 행·링·비네트가 보이고 설정은 감지 설정 페이지, 재개는 러너 ▶ 다.
 - 상단 배너는 두지 않는다 — 비네트만.
 - 침범 시 링을 빨강으로 바꾸지 않는다 — 색은 어느 영역인지 식별하는 값이다.
@@ -140,6 +136,5 @@
 
 ## 미룬 것
 
-- 높이 제한, 무시 목록, 저널 영속화 정책, 링·배지의 m 단위 표시, yaw 기준 오프셋(`zoneCenterWorld` 한 곳만 고치면 된다).
+- 높이 제한, 무시 목록, 링·배지의 m 단위 표시, yaw 기준 오프셋(`zoneCenterWorld` 한 곳만 고치면 된다).
 - 트랜스폼 위치 필드의 m 환산.
-- 저널의 대시보드 소비.

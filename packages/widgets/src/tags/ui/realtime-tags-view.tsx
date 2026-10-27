@@ -5,6 +5,7 @@ import {
   useCraneSnapshotStore,
 } from '@crane/features/3d';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
+import { realtimeTagsPath } from '../lib/tags-route';
 import { CraneDetail } from './crane-detail';
 import { CraneList } from './crane-list';
 import { FeedBanner } from './feed-banner';
@@ -35,14 +36,14 @@ export function RealtimeTagsView({
         <CraneDetail
           craneId={craneId}
           connected={connected}
-          onBack={() => navigate(basePath)}
+          onBack={() => navigate(realtimeTagsPath(basePath))}
         />
       ) : (
         <CraneList
           connection={connection}
           enabled={enabled}
           onToggleConnection={() => setEnabled((value) => !value)}
-          onOpen={(id) => navigate(`${basePath}/${encodeURIComponent(id)}`)}
+          onOpen={(id) => navigate(realtimeTagsPath(basePath, id))}
         />
       )}
     </div>

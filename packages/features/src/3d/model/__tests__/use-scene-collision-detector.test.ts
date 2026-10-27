@@ -26,7 +26,7 @@ import { useActiveTransformStore } from '../use-active-transform-store';
 import { useSceneCollisionDetector } from '../use-scene-collision-detector';
 import { useSceneCollisionStore } from '../use-scene-collision-store';
 import { useRealtimeStore } from '../use-realtime-store';
-import { useVirtualTagStore } from '../use-virtual-tag-store';
+import { useScenarioStore } from '../use-scenario-store';
 
 /** R3F 프레임 루프를 가로챈다(use-rig-driver.test 와 같은 방식). */
 const captured = vi.hoisted(() => ({
@@ -112,7 +112,7 @@ beforeEach(() => {
     activeMode: null,
     baselinePending: false,
   });
-  useVirtualTagStore.setState({ isRunning: true });
+  useScenarioStore.setState({ isRunning: true });
   useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
   useActiveTransformStore.getState().end();
   captured.frameCallback = null;
@@ -124,7 +124,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   modelObjectRegistry.clear();
   sceneCollisionRuntime.disarm();
-  useVirtualTagStore.setState({ isRunning: false });
+  useScenarioStore.setState({ isRunning: false });
 });
 
 describe('useSceneCollisionDetector — 스캔 게이트', () => {
@@ -174,7 +174,7 @@ describe('useSceneCollisionDetector — 스캔 게이트', () => {
   it('러너가 정지 중이면 스캔하지 않고, 재생 전이 첫 프레임에 재기준선 뒤 스캔한다', () => {
     const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
     const rebaseline = vi.spyOn(sceneCollisionRuntime, 'rebaseline');
-    useVirtualTagStore.setState({ isRunning: false });
+    useScenarioStore.setState({ isRunning: false });
     renderHook(() =>
       useSceneCollisionDetector({
         sceneInfo: scene([]),
@@ -186,18 +186,18 @@ describe('useSceneCollisionDetector — 스캔 게이트', () => {
     scan();
     expect(tick).not.toHaveBeenCalled();
     expect(rebaseline).not.toHaveBeenCalled();
-    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    act(() => useScenarioStore.setState({ isRunning: true }));
     scan();
     expect(rebaseline).toHaveBeenCalledTimes(1);
     expect(tick).toHaveBeenCalledTimes(1);
-    act(() => useVirtualTagStore.setState({ isRunning: false }));
+    act(() => useScenarioStore.setState({ isRunning: false }));
     scan();
     expect(tick).toHaveBeenCalledTimes(1);
   });
 
   it("runner='realtime' 은 실시간 러너의 isRunning 만 보고, 보류(held) 중에도 스캔한다", () => {
     const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
-    useVirtualTagStore.setState({ isRunning: false });
+    useScenarioStore.setState({ isRunning: false });
     useRealtimeStore.setState({ isRunning: true, held: true });
     renderHook(() =>
       useSceneCollisionDetector({
@@ -215,7 +215,7 @@ describe('useSceneCollisionDetector — 스캔 게이트', () => {
 
   it("runner='simulation' 은 실시간 러너가 돌아도 가상 태그가 정지면 스캔하지 않는다", () => {
     const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
-    useVirtualTagStore.setState({ isRunning: false });
+    useScenarioStore.setState({ isRunning: false });
     useRealtimeStore.setState({ isRunning: true });
     renderHook(() =>
       useSceneCollisionDetector({
@@ -264,10 +264,8 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
   it('기록 → 쌍 억제 → 러너 정지 → freeze → pin, 감시는 계속되며 같은 자세면 조용하다', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
-    const pause = vi.fn(() =>
-      useVirtualTagStore.setState({ isRunning: false }),
-    );
-    useVirtualTagStore.setState({ pause });
+    const pause = vi.fn(() => useScenarioStore.setState({ isRunning: false }));
+    useScenarioStore.setState({ pause });
     rigValueStore.set('a/j', 10, { smooth: true, smoothTime: 0.2 });
     rigValueStore.step(1 / 60);
     const midway = rigValueStore.get('a/j');
@@ -310,8 +308,8 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
   it('정지 중 기즈모로 떼었다 붙여도 기록되지 않고, ▶ 뒤 겹친 채면 억제되며 시뮬레이션이 떼었다 붙여야 두 번째 기록', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
-    useVirtualTagStore.setState({
-      pause: () => useVirtualTagStore.setState({ isRunning: false }),
+    useScenarioStore.setState({
+      pause: () => useScenarioStore.setState({ isRunning: false }),
     });
     renderHook(() =>
       useSceneCollisionDetector({
@@ -325,7 +323,7 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     scan();
     const first = useSceneCollisionStore.getState().history[0];
     expect(useSceneCollisionStore.getState().activeRecordId).toBe(first.id);
-    expect(useVirtualTagStore.getState().isRunning).toBe(false);
+    expect(useScenarioStore.getState().isRunning).toBe(false);
 
     moveX(a, 0); // 정지 중 떼어 놓음 — 스캔이 없어 억제도 그대로
     scan();
@@ -335,7 +333,7 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     expect(useSceneCollisionStore.getState().history).toHaveLength(1);
 
     // ▶ — 고정은 풀리고, 겹친 채 재개된 쌍은 재기준선이 조용히 넘긴다.
-    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    act(() => useScenarioStore.setState({ isRunning: true }));
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
     scan();
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
@@ -363,8 +361,8 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
   it('▶ 재생(isRunning false→true)이 resume 을 불러 고정을 풀고, 같은 방향이 아닌 전이는 무시한다', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
-    useVirtualTagStore.setState({
-      pause: () => useVirtualTagStore.setState({ isRunning: false }),
+    useScenarioStore.setState({
+      pause: () => useScenarioStore.setState({ isRunning: false }),
     });
     renderHook(() =>
       useSceneCollisionDetector({
@@ -380,9 +378,9 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     const resume = vi.spyOn(useSceneCollisionStore.getState(), 'resume');
     useSceneCollisionStore.setState({ resume });
 
-    act(() => useVirtualTagStore.setState({ isRunning: false })); // false→false
+    act(() => useScenarioStore.setState({ isRunning: false })); // false→false
     expect(resume).not.toHaveBeenCalled();
-    act(() => useVirtualTagStore.setState({ isRunning: true })); // false→true
+    act(() => useScenarioStore.setState({ isRunning: true })); // false→true
     expect(resume).toHaveBeenCalledTimes(1);
     // 런타임은 멈춘 적이 없어 resume 은 arm 하지 않고 고정만 푼다. 재기준선은
     // 다음 프레임에 검사기가 잡는다.
@@ -390,7 +388,7 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
     frame();
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
-    act(() => useVirtualTagStore.setState({ isRunning: true })); // true→true
+    act(() => useScenarioStore.setState({ isRunning: true })); // true→true
     expect(resume).toHaveBeenCalledTimes(1);
   });
 });
@@ -401,7 +399,7 @@ describe('useSceneCollisionDetector — 정지 안 함 모드', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
     const pause = vi.fn();
-    useVirtualTagStore.setState({ pause });
+    useScenarioStore.setState({ pause });
     renderHook(() =>
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
@@ -511,8 +509,8 @@ describe('useSceneCollisionDetector — 수명', () => {
     unmount();
     const resume = vi.fn();
     useSceneCollisionStore.setState({ resume });
-    act(() => useVirtualTagStore.setState({ isRunning: false }));
-    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    act(() => useScenarioStore.setState({ isRunning: false }));
+    act(() => useScenarioStore.setState({ isRunning: true }));
     expect(resume).not.toHaveBeenCalled();
   });
 
@@ -540,7 +538,7 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
   it('러너 정지 중엔 무장해도 false, 재생 첫 스캔에 true, 안정화 창이 끝나면 false', () => {
     mountModel('a', 0);
     mountModel('b', 5);
-    useVirtualTagStore.setState({ isRunning: false });
+    useScenarioStore.setState({ isRunning: false });
     renderHook(() =>
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
@@ -552,7 +550,7 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
     scan();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
-    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    act(() => useScenarioStore.setState({ isRunning: true }));
     scan();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
     // 창 안의 스캔은 값이 같아 스토어 참조를 흔들지 않는다.
@@ -577,7 +575,7 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
     );
     scan();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
-    act(() => useVirtualTagStore.setState({ isRunning: false }));
+    act(() => useScenarioStore.setState({ isRunning: false }));
     frame();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
@@ -585,7 +583,7 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
     frame();
     expect(useSceneCollisionStore.getState()).toBe(before);
 
-    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    act(() => useScenarioStore.setState({ isRunning: true }));
     scan();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
     useActiveTransformStore.getState().begin();

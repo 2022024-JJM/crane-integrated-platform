@@ -64,25 +64,18 @@ interface ThreeSceneViewerProps {
   // 전체화면일 때 우측 상단에 떠있는 플로팅 슬롯. 도메인 무관.
   fullscreenTopRightOverlay?: ReactNode;
   // 외부 버튼을 주입하는 슬롯. 도메인 무관. 'bottom-left' 배치에서는 툴바 맨 앞,
-  // 'top-right' 배치에서는 카메라 버튼 줄 아래(다음 줄)에 놓인다 —
-  // 상시 버튼이 아닌 것이 카메라 조작 줄을 밀지 않게 하려는 것.
+  // 'dock' 배치에서는 레일의 카메라 버튼 묶음 아래에 놓인다.
   toolbarExtras?: ReactNode;
-  // 툴바 카메라 버튼들 앞(왼쪽)에 붙는 슬롯. 씬 뷰 북마크 바 등 —
-  // 툴바 버튼과 같은 스타일(SCENE_TOOLBAR_BUTTON_CLASS)로 맞추면 한 줄로 이어진다.
-  toolbarTrailing?: ReactNode;
   /**
-   * 조작 툴바 위치. 기본은 좌측 하단 한 줄. 'top-right' 는 우측 상단에
-   * 세로 스택으로 놓고, toolbarExtras 와 전체화면 우측 상단 슬롯을 그 아래
-   * 줄에 차례로 쌓는다 (대시보드 미리보기 등). 'dock' 은 툴바를 그리지 않고
-   * 카메라 버튼·toolbarExtras·toolbarTrailing 을 우측 독 레일(dockRight)에
-   * 세로로 넣는다 (실시간 3D 모니터링 화면). 'none' 은 툴바를 아예 그리지
-   * 않는다 (대시보드 미리보기처럼 조작 없이 보기만 하는 작은 뷰).
+   * 조작 툴바 위치. 기본은 좌측 하단 한 줄. 'dock' 은 툴바를 그리지 않고
+   * 카메라 버튼·toolbarExtras 를 우측 독 레일(dockRight)에 세로로 넣는다
+   * (3D 모니터링·3D 플레이 화면).
    */
-  toolbarPlacement?: 'bottom-left' | 'top-right' | 'dock' | 'none';
+  toolbarPlacement?: 'bottom-left' | 'dock';
   /**
    * 우측 독 레일 상태 ('dock' 배치에서만). 내용은 카메라 버튼 + toolbarExtras
-   * + toolbarTrailing 을 뷰어가 조립한다. 상태는 features 의 useSceneDock 이
-   * 소유하고 여기서는 그대로 넘긴다.
+   * 를 뷰어가 조립한다. 상태는 features 의 useSceneDock 이 소유하고 여기서는
+   * 그대로 넘긴다.
    */
   dockRight?: SceneDockState;
   /**
@@ -302,7 +295,6 @@ export function ThreeSceneViewer({
   overlay,
   fullscreenTopRightOverlay,
   toolbarExtras,
-  toolbarTrailing,
   toolbarPlacement = 'bottom-left',
   dockRight,
   cameraControlsDisabledLabel,
@@ -339,7 +331,6 @@ export function ThreeSceneViewer({
     [onControllerReady],
   );
 
-  const isTopRightToolbar = toolbarPlacement === 'top-right';
   const isDock = toolbarPlacement === 'dock';
   const webglSupported = isWebGLSupported();
 
@@ -365,20 +356,11 @@ export function ThreeSceneViewer({
     );
   }
 
-  // 툴바 아이콘 순서: 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면.
-  // 가로 툴바에서는 앞(왼쪽)에 toolbarTrailing(씬 뷰 북마크 — 저장된 뷰 칩 +
-  // 저장 버튼)이 붙어 "추가한 뷰들 / 현재 뷰 저장 / 원래위치 / 탑뷰 / 확대 /
-  // 축소 / 전체화면"이 된다. 독 레일(세로)에서는 북마크가 카메라 묶음 안,
-  // 탑뷰 바로 아래에 들어간다(저장한 뷰도 곧 카메라 이동이라 시선 조작끼리
-  // 모아 둔 것) — 그래서 버튼을 앞/뒤 두 조각으로 나눠 둔다. 레일에서는
+  // 툴바 아이콘 순서: 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면. 레일에서는
   // 툴팁을 왼쪽으로 연다.
-  const tooltipSide: SceneToolbarTooltipSide = isDock
-    ? 'left'
-    : isTopRightToolbar
-      ? 'bottom'
-      : 'top';
+  const tooltipSide: SceneToolbarTooltipSide = isDock ? 'left' : 'top';
   const cameraDisabled = cameraControlsDisabledLabel !== undefined;
-  const cameraToolbarButtonsHead = (
+  const cameraToolbarButtons = (
     <>
       <SceneToolbarButton
         label={t('common:viewer3d.resetView')}
@@ -411,10 +393,6 @@ export function ThreeSceneViewer({
       >
         <Binoculars />
       </SceneToolbarButton>
-    </>
-  );
-  const cameraToolbarButtonsTail = (
-    <>
       <SceneToolbarButton
         label={t('common:viewer3d.zoomIn')}
         side={tooltipSide}
@@ -452,12 +430,6 @@ export function ThreeSceneViewer({
       ) : null}
     </>
   );
-  const cameraToolbarButtons = (
-    <>
-      {cameraToolbarButtonsHead}
-      {cameraToolbarButtonsTail}
-    </>
-  );
 
   // 독 배치의 기하. 미고정 독은 핸들만큼 캔버스 가장자리를 덮으므로 캔버스
   // 영역의 오버레이(충돌 도움말·고정 뷰 줄 등)가 그만큼 안쪽으로 비켜야 한다
@@ -483,8 +455,8 @@ export function ThreeSceneViewer({
       }
     >
       {/* 툴팁·팝오버·컨텍스트 메뉴·셀렉트를 루트 안에 렌더한다 — overflow-hidden
-          에 잘리지 않고 floating-ui가 루트 안쪽으로 밀어준다(프리뷰 모달 180px
-          높이에서도 팝오버가 들어간다). 컨테이너를 도중에 바꾸면(body↔root)
+          에 잘리지 않고 floating-ui가 루트 안쪽으로 밀어준다. 컨테이너를
+          도중에 바꾸면(body↔root)
           안 된다 — 닫히는 중인 팝업이 새 컨테이너로 리마운트되는데, base-ui는
           리마운트되지 않는 Root에서 옛 요소의 퇴장 애니메이션 완료를
           기다리다(useAnimationsFinished, abort를 완료로 안 침) unmount를 영영
@@ -571,16 +543,12 @@ export function ThreeSceneViewer({
         </div>
 
         {/* 화면 조작 툴바.
-            'dock': 우측 독 레일 안에 세로로 — 카메라 버튼(원래위치·탑뷰 →
-            toolbarTrailing → 확대·축소·전체화면), 그 아래 toolbarExtras.
-            'top-right': 우측 상단 세로 스택 — 1줄 카메라 조작, 2줄 toolbarExtras
-            (페이지 버튼), 그 아래 전체화면 우측 상단 슬롯.
-            좌우 여백을 함께 잡아 두어 북마크 칩이 많아도 왼쪽 화면 밖으로
-            나가지 않고 toolbarTrailing 안쪽 스크롤이 흡수한다.
+            'dock': 우측 독 레일 안에 세로로 — 카메라 버튼(원래위치·탑뷰·
+            확대·축소·전체화면), 그 아래 toolbarExtras.
             'bottom-left': 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의
             좌측 하단은 곧 3D 캔버스의 좌측 하단이라 캔버스 밖으로 나가지 않는다. */}
         <TooltipProvider delay={150}>
-          {toolbarPlacement === 'none' ? null : isDock ? (
+          {isDock ? (
             <>
               {dockRight ? (
                 <SceneDockRail
@@ -590,10 +558,7 @@ export function ThreeSceneViewer({
                   onPinnedChange={dockRight.onPinnedChange}
                   handlers={dockRight.handlers}
                 >
-                  {cameraToolbarButtonsHead}
-                  {/* 저장한 뷰 — 탑뷰 바로 아래(위 주석). */}
-                  {toolbarTrailing}
-                  {cameraToolbarButtonsTail}
+                  {cameraToolbarButtons}
                   {toolbarExtras ? (
                     <>
                       <SceneDockRailSeparator />
@@ -603,23 +568,6 @@ export function ThreeSceneViewer({
                 </SceneDockRail>
               ) : null}
             </>
-          ) : isTopRightToolbar ? (
-            <div className="pointer-events-none absolute top-1.5 right-1.5 left-1.5 z-1 flex flex-col items-end gap-2">
-              <div className="pointer-events-auto flex max-w-full items-center gap-2">
-                {toolbarTrailing}
-                {cameraToolbarButtons}
-              </div>
-              {toolbarExtras ? (
-                <div className="pointer-events-auto flex max-w-full items-center gap-2">
-                  {toolbarExtras}
-                </div>
-              ) : null}
-              {isFullscreen && fullscreenTopRightOverlay ? (
-                <div className="pointer-events-auto">
-                  {fullscreenTopRightOverlay}
-                </div>
-              ) : null}
-            </div>
           ) : (
             <>
               {isFullscreen && fullscreenTopRightOverlay ? (
@@ -630,7 +578,6 @@ export function ThreeSceneViewer({
               <div className="pointer-events-none absolute inset-x-1.5 bottom-1.5 z-1 flex items-end">
                 <div className="pointer-events-auto flex max-w-full items-center gap-2">
                   {toolbarExtras}
-                  {toolbarTrailing}
                   {cameraToolbarButtons}
                 </div>
               </div>

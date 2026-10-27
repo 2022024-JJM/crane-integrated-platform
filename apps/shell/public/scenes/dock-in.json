@@ -143,7 +143,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_171.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -151.475
         },
@@ -155,7 +155,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_171.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -12.04
         },
@@ -167,7 +167,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_171.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -21.37
         },
@@ -179,7 +179,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_171.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -21.48
         },
@@ -191,7 +191,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_171.ts2_distance",
+          "code": "ts2_distance",
           "scale": -0.001,
           "offset": 11.88
         },
@@ -203,7 +203,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_171.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -21.37
         },
@@ -215,21 +215,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_171.ah2_height",
+          "code": "ah2_height",
           "scale": 0.01,
           "offset": -21.48
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_171.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_171.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_171.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -266,7 +260,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_172.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -90.475
         },
@@ -278,7 +272,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_172.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -20.58
         },
@@ -290,7 +284,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_172.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -14.01
         },
@@ -302,21 +296,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_172.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -13
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_172.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_172.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_172.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -353,7 +341,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_173.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -120.475
         },
@@ -365,7 +353,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_173.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -20.58
         },
@@ -377,7 +365,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_173.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -14.01
         },
@@ -389,21 +377,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_173.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -13
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_173.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_173.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_173.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -440,7 +422,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_800.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -60.474999999999994
         },
@@ -452,7 +434,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_800.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -12.04
         },
@@ -464,7 +446,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_800.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -20.37
         },
@@ -476,7 +458,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_800.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -20.47
         },
@@ -488,7 +470,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_800.ts2_distance",
+          "code": "ts2_distance",
           "scale": -0.001,
           "offset": 11.88
         },
@@ -500,7 +482,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_800.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -20.37
         },
@@ -512,21 +494,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_800.ah2_height",
+          "code": "ah2_height",
           "scale": 0.01,
           "offset": -20.47
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_800.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_800.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_800.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -563,7 +539,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_801.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -30.474999999999994
         },
@@ -575,7 +551,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_801.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -15.65
         },
@@ -587,7 +563,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_801.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -15.08
         },
@@ -599,21 +575,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_801.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -15.01
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_801.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_801.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_801.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -650,7 +620,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_810.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -169.091
         },
@@ -662,7 +632,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_810.ts1_distance",
+          "code": "ts1_distance",
           "scale": -0.001,
           "offset": 17.2
         },
@@ -674,7 +644,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_810.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -25.61
         },
@@ -686,7 +656,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_810.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -25.61
         },
@@ -698,7 +668,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_810.ts2_distance",
+          "code": "ts2_distance",
           "scale": 0.001,
           "offset": -15.61
         },
@@ -710,7 +680,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_810.mh3_height",
+          "code": "mh3_height",
           "scale": 0.01,
           "offset": -25.61
         },
@@ -722,21 +692,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_810.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -25.71
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_810.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_810.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_810.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -773,7 +737,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_811.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -109.09100000000001
         },
@@ -785,7 +749,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_811.ts1_distance",
+          "code": "ts1_distance",
           "scale": -0.001,
           "offset": 14.12
         },
@@ -797,7 +761,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_811.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -16.98
         },
@@ -809,7 +773,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_811.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -17.09
         },
@@ -821,7 +785,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_811.ts2_distance",
+          "code": "ts2_distance",
           "scale": 0.001,
           "offset": -15.74
         },
@@ -833,7 +797,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_811.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -16.98
         },
@@ -845,21 +809,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_811.ah2_height",
+          "code": "ah2_height",
           "scale": 0.01,
           "offset": -17.09
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_811.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_811.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_811.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -896,7 +854,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_812.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -49.090999999999994
         },
@@ -908,7 +866,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_812.ts1_distance",
+          "code": "ts1_distance",
           "scale": -0.001,
           "offset": 14.12
         },
@@ -920,7 +878,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_812.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -17.98
         },
@@ -932,7 +890,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_812.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -18.09
         },
@@ -944,7 +902,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_812.ts2_distance",
+          "code": "ts2_distance",
           "scale": 0.001,
           "offset": -15.74
         },
@@ -956,7 +914,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_812.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -17.98
         },
@@ -968,21 +926,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_812.ah2_height",
+          "code": "ah2_height",
           "scale": 0.01,
           "offset": -18.09
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_812.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_812.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_812.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1019,7 +971,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_1806.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -223.826
         },
@@ -1031,7 +983,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_1806.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -15.99
         },
@@ -1043,7 +995,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_1806.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -7.99
         },
@@ -1055,21 +1007,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_1806.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -9.04
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_1806.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_1806.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_1806.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1106,7 +1052,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_865.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -193.826
         },
@@ -1118,7 +1064,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_865.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -20.05
         },
@@ -1130,7 +1076,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_865.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -7.78
         },
@@ -1142,21 +1088,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_865.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -8.84
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_865.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_865.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_865.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1193,7 +1133,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_866.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -153.826
         },
@@ -1205,7 +1145,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_866.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -20.07
         },
@@ -1217,7 +1157,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_866.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -7.73
         },
@@ -1229,21 +1169,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_866.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -8.78
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_866.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_866.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_866.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1280,7 +1214,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_863.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -103.826
         },
@@ -1292,7 +1226,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_863.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -7.55
         },
@@ -1304,21 +1238,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_863.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -7.54
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_863.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_863.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_863.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1355,7 +1283,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_867.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -63.826
         },
@@ -1367,7 +1295,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_867.ts1_distance",
+          "code": "ts1_distance",
           "scale": -0.001,
           "offset": 13.86
         },
@@ -1379,7 +1307,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_867.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -16.26
         },
@@ -1391,7 +1319,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_867.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -16.34
         },
@@ -1403,7 +1331,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_867.ts2_distance",
+          "code": "ts2_distance",
           "scale": 0.001,
           "offset": -14.73
         },
@@ -1415,21 +1343,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_867.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -15.9
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_867.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_867.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_867.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1466,7 +1388,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_864.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -23.826
         },
@@ -1478,7 +1400,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_864.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -7.96
         },
@@ -1490,21 +1412,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_864.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -7.56
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_864.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_864.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_864.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1541,7 +1457,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_870.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -223.939
         },
@@ -1553,7 +1469,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_870.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -15.48
         },
@@ -1565,7 +1481,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_870.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -20.94
         },
@@ -1577,7 +1493,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_870.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -20.94
         },
@@ -1589,7 +1505,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_870.ts2_distance",
+          "code": "ts2_distance",
           "scale": -0.001,
           "offset": 14.27
         },
@@ -1601,7 +1517,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_870.mh3_height",
+          "code": "mh3_height",
           "scale": 0.01,
           "offset": -20.94
         },
@@ -1613,21 +1529,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_870.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -21.05
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_870.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_870.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_870.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1664,7 +1574,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_869.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -163.939
         },
@@ -1676,7 +1586,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_869.ts1_distance",
+          "code": "ts1_distance",
           "scale": -0.001,
           "offset": 14.58
         },
@@ -1688,7 +1598,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_869.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -13.93
         },
@@ -1700,7 +1610,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_869.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -14.01
         },
@@ -1712,7 +1622,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_869.ts2_distance",
+          "code": "ts2_distance",
           "scale": 0.001,
           "offset": -14.99
         },
@@ -1724,21 +1634,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_869.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -13.57
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_869.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_869.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_869.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1775,7 +1679,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_868.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -123.939
         },
@@ -1787,7 +1691,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_868.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -9.77
         },
@@ -1799,21 +1703,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_868.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -10.27
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_868.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_868.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_868.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1850,7 +1748,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_871.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -83.939
         },
@@ -1862,7 +1760,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_871.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -15.43
         },
@@ -1874,7 +1772,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_871.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -21.23
         },
@@ -1886,7 +1784,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_871.mh2_height",
+          "code": "mh2_height",
           "scale": 0.01,
           "offset": -21.23
         },
@@ -1898,7 +1796,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_871.ts2_distance",
+          "code": "ts2_distance",
           "scale": -0.001,
           "offset": 14.14
         },
@@ -1910,7 +1808,7 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_871.mh3_height",
+          "code": "mh3_height",
           "scale": 0.01,
           "offset": -21.23
         },
@@ -1922,21 +1820,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_871.ah1_height",
+          "code": "ah1_height",
           "scale": 0.01,
           "offset": -21.34
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_871.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_871.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_871.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     },
     {
@@ -1973,7 +1865,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_862.tl_distance",
+          "code": "tl_distance",
           "scale": 0.1,
           "offset": -33.939
         },
@@ -1985,7 +1877,7 @@
             "channel": "position",
             "axis": "z"
           },
-          "realtimeTagKey": "C_862.ts1_distance",
+          "code": "ts1_distance",
           "scale": 0.001,
           "offset": -7.83
         },
@@ -1997,21 +1889,15 @@
             "channel": "position",
             "axis": "y"
           },
-          "realtimeTagKey": "C_862.mh1_height",
+          "code": "mh1_height",
           "scale": 0.01,
           "offset": -6.86
         }
       ],
       "statusTags": {
-        "controlOn": {
-          "realtimeTagKey": "C_862.crane_control_on"
-        },
-        "fault": {
-          "realtimeTagKey": "C_862.crane_system_error"
-        },
-        "bypass": {
-          "realtimeTagKey": "C_862.accs_bypass_on"
-        }
+        "controlOn": "crane_control_on",
+        "fault": "crane_system_error",
+        "bypass": "accs_bypass_on"
       }
     }
   ],

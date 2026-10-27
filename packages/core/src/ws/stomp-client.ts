@@ -66,6 +66,9 @@ function parseBody(body: string): unknown {
  *
  * - 구독은 연결 전에 걸어도 된다 — 목적지별 핸들러 집합을 들고 있다가
  *   CONNECTED 프레임마다 다시 건다(stompjs 는 끊기면 구독을 버린다).
+ * - 같은 핸들러 함수를 여러 호출자가 넘길 수 있다(피드 훅이 모듈 전역
+ *   함수 하나를 넘긴다). 등록 횟수를 세어 마지막 등록이 빠질 때만 핸들러를
+ *   지우고, 메시지는 등록 횟수와 무관하게 핸들러당 한 번 전달한다.
  * - 재연결은 stompjs 가 한다(`reconnectDelay`, 지수 백오프). 사용자가 끊은
  *   것(`disconnect`)과 서버 쪽에서 끊긴 것은 `isActive()` 로 가른다 — 끊겼는데
  *   active 면 재연결을 기다리는 중이다.
@@ -84,7 +87,11 @@ export class StompClient {
   private isManualDisconnect = false;
   private referenceCount = 0;
   private pendingReleaseScheduled = false;
-  private readonly handlers = new Map<string, Set<StompMessageHandler>>();
+  /** 목적지 → (핸들러 → 등록 횟수). */
+  private readonly handlers = new Map<
+    string,
+    Map<StompMessageHandler, number>
+  >();
   private readonly live = new Map<string, { unsubscribe(): void }>();
   private readonly stateListeners = new Set<WebSocketStateListener>();
 
@@ -164,23 +171,33 @@ export class StompClient {
   }
 
   /**
-   * 목적지 구독. 연결 전이면 보관했다가 연결되면 건다. 반환된 함수로 해제하며,
-   * 같은 목적지의 마지막 핸들러가 빠지면 브로커 구독도 끊는다.
+   * 목적지 구독. 연결 전이면 보관했다가 연결되면 건다. 반환된 함수로 해제하며
+   * (한 번만 먹는다 — 두 번 불러도 다른 호출자의 등록을 빼지 않는다), 같은
+   * 목적지의 마지막 핸들러가 빠지면 브로커 구독도 끊는다.
    */
   subscribe<TBody = unknown>(
     destination: string,
     handler: StompMessageHandler<TBody>,
   ): () => void {
-    const set = this.handlers.get(destination) ?? new Set();
-    set.add(handler as StompMessageHandler);
-    this.handlers.set(destination, set);
+    const key = handler as StompMessageHandler;
+    const counts = this.handlers.get(destination) ?? new Map();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    this.handlers.set(destination, counts);
     if (this.transport?.connected && !this.live.has(destination)) {
       this.attach(destination);
     }
+    let released = false;
     return () => {
+      if (released) return;
+      released = true;
       const current = this.handlers.get(destination);
-      if (!current) return;
-      current.delete(handler as StompMessageHandler);
+      const count = current?.get(key);
+      if (!current || count === undefined) return;
+      if (count > 1) {
+        current.set(key, count - 1);
+        return;
+      }
+      current.delete(key);
       if (current.size > 0) return;
       this.handlers.delete(destination);
       const sub = this.live.get(destination);
@@ -222,9 +239,9 @@ export class StompClient {
     if (!this.transport) return;
     const sub = this.transport.subscribe(destination, (message) => {
       const body = parseBody(message.body);
-      const set = this.handlers.get(destination);
-      if (!set) return;
-      for (const handler of set) handler(body);
+      const counts = this.handlers.get(destination);
+      if (!counts) return;
+      for (const handler of counts.keys()) handler(body);
     });
     this.live.set(destination, sub);
   }

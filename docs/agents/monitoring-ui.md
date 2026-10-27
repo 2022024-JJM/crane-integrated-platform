@@ -2,7 +2,7 @@
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
-조립은 `packages/features/src/3d/ui/monitoring-3d-view.tsx`(`Monitoring3dView`)다. `toolbarLayout='dock'` 이 실시간 관제 화면 배치이고, HUD·미니맵은 그 배치에서 `mode !== 'play3d'` 일 때만 마운트된다. 좌측 상단 열은 시뮬레이션 배지(`ui/scene-simulation-badge.tsx`) → 워밍업 표시 순의 세로 스택이다. 모니터링·3D 플레이·대시보드 미리보기는 모델·라벨 클릭을 받지 않는다 — `OutdoorWorkModelSimulation` 이 `onSelect` 를 넘기지 않는다.
+조립은 `packages/features/src/3d/ui/monitoring-3d-view.tsx`(`Monitoring3dView`)다. 실시간·3D 플레이 모두 독 배치이고, HUD·미니맵은 `mode !== 'play3d'`(실시간 관제 화면)일 때만 마운트된다. 좌측 상단 열은 시뮬레이션 배지(`ui/scene-simulation-badge.tsx`) → 워밍업 표시 순의 세로 스택이다. 모니터링·3D 플레이는 모델·라벨 클릭을 받지 않는다 — `OutdoorWorkModelSimulation` 이 `onSelect` 를 넘기지 않는다.
 
 ## 진입점
 
@@ -101,7 +101,7 @@
 - `scene-alert-notifier.tsx` — 앱 셸 runtime effects 에 마운트. 충돌 새 기록·영역 새 침범 쌍. **toast 없음**, 소리·브라우저 알림만 — 비네트·HUD·헤더 배지와 겹친다.
 - `use-critical-alarm-notifier.ts` — critical·high 새 알람(실시간 페이지가 부른다). 화면 표시는 관제 HUD 가 맡아 toast·배너 없이 소리·브라우저만. 영역 침범 로컬 알람(`eventType 'zone_intrusion'`)은 제외한다 — 3D 화면 경보와 겹침 방지.
 
-실시간 화면의 사건만 알림으로 나간다(`docs/agents/3d-zone.md` 의 저널 규칙과 같은 게이트).
+실시간 화면의 사건만 알림으로 나간다(`docs/agents/3d-zone.md` 의 "실시간 화면의 사건" 과 같은 게이트).
 
 ### 미니맵 (기본 좌하단)
 
@@ -117,10 +117,9 @@
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
-- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
+- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 충돌 감지 표시 토글·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
 - 레일 토글의 켜짐은 배경 채움이고, 탑뷰만 에디터 도구 모음처럼 아이콘 아래 점이다(`SceneToolbarButton` 의 `pressedDot`, 점 클래스 `TOOLBAR_PRESSED_DOT_CLASS` 를 에디터와 공유). 2D/3D 는 레일이 아니라 우상단 토글이다(`docs/agents/rendering-perf.md` "평면도 룩").
 - 우상단 슬롯(`fullscreenTopRightOverlay`)은 위에서부터 고정 뷰 줄(`SceneViewBar`) → 방위 표시(`SceneCompass`) → 탑뷰 중 2D/3D 전환(`ScenePlanLookToggle`)이다. 고정 뷰 줄이 비면 `null` 이라 간격 없이 방위 표시가 맨 위다. 토글이 방위 표시 아래라 탑뷰를 켜고 꺼도 방위 표시 자리는 그대로다. 슬롯 래퍼는 포인터를 받지 않고 누를 것만 `pointer-events-auto` 다 — 폭이 다른 줄 사이 빈 곳이 캔버스 조작을 먹지 않게. 탑뷰 상태는 뷰어의 `onTopViewActiveChange` 로 받는다.
-- `toolbarTrailing` 을 카메라 묶음 안에 끼우는 것은 dock 배치뿐이다. 가로 툴바는 앞에 붙는다.
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
 
 ### 방위 표시·축척·북쪽 위로 (독 배치)
@@ -158,7 +157,7 @@
 - 미니맵 핀과 고정 줄은 같은 `pinnedViews` 를 받는다. 따로 거르거나 정렬하면 핀 번호가 고정 줄 순서와 어긋난다.
 - 전체화면 주인이 언마운트되면 전체화면을 끝낸다. 한 시점에 주인은 하나다.
 - `notifyAlert` 호출자가 제목·본문을 번역한다. 채널에 i18n 을 넣지 않는다.
-- HUD·미니맵은 독 배치의 실시간 화면(`toolbarLayout='dock'` 이고 `mode !== 'play3d'`)에만 마운트한다.
+- HUD·미니맵은 실시간 화면(`mode !== 'play3d'`)에만 마운트한다.
 - 실시간 화면의 알람 목록은 관제 HUD 의 펼침 목록 하나다. 알람·고장·통신두절·Bypass·영역 침범·충돌은 `useHudConditions` 한 결과를 읽고 위험 비네트도 같은 결과를 본다 — 같은 사건을 다른 곳에서 따로 세지 않는다.
 - 비네트는 한 번에 하나다. 위험 비네트는 충돌·영역 침범 비네트가 떠 있으면 그리지 않는다.
 - 독 레일 순서는 카메라 묶음 → 화면 표시 묶음. 감지 스위치·시뮬레이션 ▶ 는 독에 두지 않는다(감지 설정 페이지·3D 플레이 트랜스포트 바가 담당).

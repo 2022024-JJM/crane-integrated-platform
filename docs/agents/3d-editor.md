@@ -36,7 +36,7 @@
 ### 저장 경로 (dev 미들웨어)
 
 - 씬 편집 결과는 dev 서버 경유로 `apps/shell/public/scenes/*.json` 에 저장된다. 미들웨어는 `apps/shell/vite.config.ts` 의 `POST /__dev/scene`. 관련 수정 시 scene registry 와 public asset 경로를 함께 확인한다.
-- 가상 태그도 같은 방식이다 — `POST /__dev/virtual-tags` → `apps/shell/public/simulation/virtual-tags.json`. 경로 문자열이 `vite.config.ts` 와 `packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts` 두 곳에 있으니 함께 바꾼다(가상 태그 자체는 `docs/agents/tag-mapping-rig.md`).
+- 시뮬레이션 시나리오도 같은 방식이다 — `POST /__dev/scenarios` → `apps/shell/public/simulation/scenarios.json`. 경로 문자열이 `vite.config.ts`(`DEV_SCENARIOS_API_PATH`·`SCENARIOS_PUBLIC_FILE`)와 `packages/domain/src/virtual-tag/lib/scenario-storage.ts` 두 곳에 있으니 함께 바꾼다(시나리오 자체는 `docs/agents/tag-mapping-rig.md`).
 - 저장 미들웨어의 region → 파일 결정은 브라우저와 **같은 표**(`scene-file-map.ts`)를 읽는다. 아래 "region → 씬 파일 매핑".
 - `scene-dev-storage.ts` 는 fetch 성공 뒤에만 로컬 사본을 지운다(실패 경로 테스트의 선례).
 

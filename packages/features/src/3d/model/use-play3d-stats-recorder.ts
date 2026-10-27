@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { scenarioDurationMs } from '@crane/domain/virtual-tag';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
@@ -19,13 +18,12 @@ import {
   reportExcludedModelIds,
 } from '../lib/play3d-scope';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
-import { tagSlotOfPlay3dSource } from '../lib/tag-slot';
 import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
 import {
   diffZoneIntrusions,
   pairKeyOf,
   type ZonePairRef,
-} from '../lib/zone-journal-map';
+} from '../lib/zone-transitions';
 import {
   readPlay3dFrameIndex,
   readPlay3dPositionMs,
@@ -44,7 +42,7 @@ import { useReplayPlayerStore } from './use-replay-player-store';
 import { useSceneCollisionStore } from './use-scene-collision-store';
 import { useSceneInfoStore } from './use-scene-info-store';
 import { useSceneZoneStore } from './use-scene-zone-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
+import { useScenarioStore } from './use-scenario-store';
 
 /** 위치·검사 구간·상태 누적 폴링 주기. */
 export const PLAY3D_STATS_POLL_MS = 250;
@@ -65,9 +63,6 @@ const SEEK_SETTLE_MS = 300;
 
 function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
   const replay = useReplayPlayerStore.getState();
-  const sim = useVirtualTagStore.getState();
-  const scenario =
-    sim.scenarios.find((s) => s.id === sim.activeScenarioId) ?? null;
   return {
     source,
     regionId,
@@ -77,18 +72,8 @@ function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
       source === 'replay'
         ? (replay.frames[replay.frames.length - 1]?.timestamp ?? null)
         : null,
-    scenarioName:
-      source === 'simulation' && scenario ? scenario.name || scenario.id : null,
-    scenarioLoop: source === 'simulation' ? (scenario?.loop ?? false) : false,
     startedAt: Date.now(),
   };
-}
-
-function activeScenarioDurationMs(source: Play3dSource): number | null {
-  if (source !== 'simulation') return null;
-  const sim = useVirtualTagStore.getState();
-  const scenario = sim.scenarios.find((s) => s.id === sim.activeScenarioId);
-  return scenario ? scenarioDurationMs(scenario) : null;
 }
 
 function pushEvent(
@@ -270,14 +255,10 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   );
   const source = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
-  const rawStatuses = useModelRuntimeStatuses(
-    sceneInfo,
-    tagSlotOfPlay3dSource(source),
-    {
-      paused: !transport.isPlaying,
-      timeScale: transport.speed,
-    },
-  );
+  const rawStatuses = useModelRuntimeStatuses(sceneInfo, {
+    paused: !transport.isPlaying,
+    timeScale: transport.speed,
+  });
   const excluded = useMemo(
     () => reportExcludedModelIds(sceneInfo),
     [sceneInfo],
@@ -332,9 +313,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   // 있던 쌍의 진입을 심는다.
   useEffect(() => {
     const restart = () => {
-      usePlay3dStatsStore
-        .getState()
-        .reset(buildMeta(source, regionId), activeScenarioDurationMs(source));
+      usePlay3dStatsStore.getState().reset(buildMeta(source, regionId));
       const { data } = usePlay3dStatsStore.getState();
       const atMs = readPlay3dPositionMs();
       for (const [modelId, to] of Object.entries(statusesRef.current)) {
@@ -347,10 +326,9 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     const unsubReplay = useReplayPlayerStore.subscribe((state, prev) => {
       if (source === 'replay' && state.frames !== prev.frames) restart();
     });
-    const unsubSim = useVirtualTagStore.subscribe((state, prev) => {
+    const unsubSim = useScenarioStore.subscribe((state, prev) => {
       if (source !== 'simulation') return;
-      if (state.activeScenarioId !== prev.activeScenarioId) restart();
-      else if (!state.hasSession && prev.hasSession) restart();
+      if (!state.hasSession && prev.hasSession) restart();
     });
     return () => {
       unsubReplay();
@@ -537,29 +515,20 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     return () => window.clearInterval(timer);
   }, []);
 
-  // 태그 집계 — 버스 publish 마다(소스 슬롯으로 맵핑된 키만). 한계 포화는
-  // 시뮬레이션만. 소스가 바뀌면 키 집합도 바뀌므로 의존성에 둔다.
+  // 태그 집계 — 버스 publish 마다(씬이 맵핑한 키만). 게이트가 소스를 거르므로
+  // 키 집합은 씬만 본다. 소스 전환은 reset 이 새 실행을 연다.
   useEffect(() => {
-    const keys = new Set(
-      collectSceneTagKeys(sceneInfo, tagSlotOfPlay3dSource(source)),
-    );
+    const keys = new Set(collectSceneTagKeys(sceneInfo));
     if (keys.size === 0) return;
     return subscribeTagValues((key, value) => {
       if (!keys.has(key)) return;
       const { data } = usePlay3dStatsStore.getState();
       let agg = data.tags[key];
-      let maxSpeed: number | null = null;
-      if (sourceRef.current === 'simulation') {
-        const def = useVirtualTagStore
-          .getState()
-          .tags.find((t) => t.key === key);
-        maxSpeed = def?.limits?.maxSpeed ?? null;
-      }
       if (!agg) {
-        agg = createTagAggregate(key, maxSpeed !== null);
+        agg = createTagAggregate(key);
         data.tags[key] = agg;
       }
-      accumulateTagValue(agg, value, readPlay3dPositionMs(), maxSpeed);
+      accumulateTagValue(agg, value, readPlay3dPositionMs());
     });
-  }, [sceneInfo, source]);
+  }, [sceneInfo]);
 }

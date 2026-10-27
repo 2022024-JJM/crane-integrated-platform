@@ -16,12 +16,12 @@ function tag(
 ): VirtualTagDefinition {
   return {
     id: 't1',
-    key: 'C_1:x',
+    code: 'x',
     name: 'x',
+    dataType: 'number',
     min: 0,
     max: 100,
     initial: 0,
-    enabled: true,
     pattern,
     ...overrides,
   };
@@ -41,7 +41,7 @@ describe('clampToTag / initVirtualTagState', () => {
 
 describe('stepVirtualTag — 시간 파형', () => {
   it('triangle: 0 → max(반주기) → 0(한 주기), initial 이 시작점', () => {
-    const def = tag({ kind: 'triangle', periodMs: 1000 });
+    const def = tag({ kind: 'triangle', periodSec: 1 });
     const s = initVirtualTagState(def);
     expect(stepVirtualTag(def, 0, s).value).toBe(0);
     expect(stepVirtualTag(def, 250, s).value).toBeCloseTo(50);
@@ -49,7 +49,7 @@ describe('stepVirtualTag — 시간 파형', () => {
     expect(stepVirtualTag(def, 750, s).value).toBeCloseTo(50);
     expect(stepVirtualTag(def, 1000, s).value).toBeCloseTo(0);
 
-    const fromMid = tag({ kind: 'triangle', periodMs: 1000 }, { initial: 50 });
+    const fromMid = tag({ kind: 'triangle', periodSec: 1 }, { initial: 50 });
     expect(
       stepVirtualTag(fromMid, 0, initVirtualTagState(fromMid)).value,
     ).toBeCloseTo(50);
@@ -60,7 +60,7 @@ describe('stepVirtualTag — 시간 파형', () => {
   });
 
   it('sine: initial 에서 시작해 부드럽게 max 까지, 범위를 벗어나지 않는다', () => {
-    const def = tag({ kind: 'sine', periodMs: 1000 }, { initial: 25 });
+    const def = tag({ kind: 'sine', periodSec: 1 }, { initial: 25 });
     const s = initVirtualTagState(def);
     expect(stepVirtualTag(def, 0, s).value).toBeCloseTo(25);
     for (let ms = 0; ms <= 2000; ms += 37) {
@@ -74,7 +74,7 @@ describe('stepVirtualTag — 시간 파형', () => {
   });
 
   it('sawtooth: 선형 상승 후 주기 끝에서 min 으로 되돌아간다', () => {
-    const def = tag({ kind: 'sawtooth', periodMs: 1000 });
+    const def = tag({ kind: 'sawtooth', periodSec: 1 });
     const s = initVirtualTagState(def);
     expect(stepVirtualTag(def, 500, s).value).toBeCloseTo(50);
     expect(stepVirtualTag(def, 999, s).value).toBeCloseTo(99.9);
@@ -82,18 +82,18 @@ describe('stepVirtualTag — 시간 파형', () => {
   });
 
   it('square: duty 구간은 max, 나머지는 min. 기본 duty 50', () => {
-    const def = tag({ kind: 'square', periodMs: 1000 });
+    const def = tag({ kind: 'square', periodSec: 1 });
     const s = initVirtualTagState(def);
     expect(stepVirtualTag(def, 0, s).value).toBe(100);
     expect(stepVirtualTag(def, 499, s).value).toBe(100);
     expect(stepVirtualTag(def, 500, s).value).toBe(0);
-    const narrow = tag({ kind: 'square', periodMs: 1000, dutyPct: 10 });
+    const narrow = tag({ kind: 'square', periodSec: 1, dutyPct: 10 });
     expect(stepVirtualTag(narrow, 99, s).value).toBe(100);
     expect(stepVirtualTag(narrow, 100, s).value).toBe(0);
   });
 
   it('음수·NaN elapsed 는 0 으로 본다', () => {
-    const def = tag({ kind: 'sawtooth', periodMs: 1000 });
+    const def = tag({ kind: 'sawtooth', periodSec: 1 });
     const s = initVirtualTagState(def);
     expect(stepVirtualTag(def, -500, s).value).toBe(0);
     expect(stepVirtualTag(def, NaN, s).value).toBe(0);

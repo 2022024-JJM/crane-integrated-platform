@@ -47,13 +47,6 @@
       "critical": "Critical"
     }
   },
-  "cmms": {
-    "title": "CMMS",
-    "description": "Review crane status by region at a glance.",
-    "allCollapsed": "All collapsed",
-    "allExpanded": "All expanded",
-    "toggleAria": "Toggle expand / collapse all"
-  },
   "status": {
     "normal": "Normal",
     "warning": "Warning",

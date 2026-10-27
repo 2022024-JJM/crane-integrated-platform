@@ -8,8 +8,6 @@ import type { VirtualTagDefinition, VirtualTagPattern } from '../model/types';
  */
 export interface VirtualTagRuntimeState {
   value: number;
-  /** 속도·가속 한계가 있는 태그의 현재 속도(단위/초). 없으면 생략. */
-  velocity?: number;
 }
 
 export function clampToTag(def: VirtualTagDefinition, value: number): number {
@@ -53,8 +51,11 @@ function normalizedInitial(def: VirtualTagDefinition): number {
   return (clampToTag(def, def.initial) - def.min) / range;
 }
 
+/** 파형 주기를 ms 로 — 저장본은 초, 러너 시계는 ms. 0 이하는 1ms(폭주 방지). */
 function periodOf(pattern: VirtualTagPattern): number {
-  return 'periodMs' in pattern && pattern.periodMs > 0 ? pattern.periodMs : 1;
+  return 'periodSec' in pattern && pattern.periodSec > 0
+    ? pattern.periodSec * 1000
+    : 1;
 }
 
 /**

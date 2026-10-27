@@ -89,7 +89,6 @@
       "axis": "축",
       "joint": "관절",
       "tagSearch": "키·이름 검색",
-      "tagEmpty": "가상 태그가 없습니다. 가상 태그 페이지에서 만드세요.",
       "tagUnknown": "미등록 태그",
       "tagMissing": "태그를 선택하세요. 저장 시 태그 없는 맵핑은 버려집니다.",
       "scale": "scale",
@@ -142,27 +141,31 @@
         "endstop": "Endstop"
       }
     },
+    "crane": {
+      "label": "크레인",
+      "placeholder": "크레인 선택…",
+      "search": "크레인 번호·ID 검색",
+      "empty": "등록된 크레인이 없습니다.",
+      "unregistered": "미등록",
+      "missing": "크레인 없음 — 태그 키를 만들 수 없습니다",
+      "clear": "크레인 해제"
+    },
     "tagPick": {
       "title": "태그 연결",
       "tag": "태그",
-      "slots": {
-        "realtime": "실시간",
-        "virtual": "시뮬레이션"
-      },
       "pick": "태그 선택…",
       "clear": "연결 해제",
       "search": "크레인 번호나 태그 이름으로 검색 (예: C_171, tl_distance)",
       "currentValue": "현재 값",
-      "craneList": "크레인 목록",
       "preview": "미리보기",
       "recent": "최근 60초 · 1초마다 갱신",
       "dataType": "데이터 형식",
       "category": "분류",
       "bay": "구역",
-      "unit": "단위",
-      "range": "범위",
       "noSelection": "목록에서 태그를 고르면 여기에 현재 값이 보입니다.",
-      "noCranes": "서버에서 받은 크레인이 없습니다. 연결 상태를 확인하세요.",
+      "craneMissing": "모델에 크레인이 없어 태그를 연결할 수 없습니다. 먼저 크레인을 고르세요.",
+      "noServerTags": "서버에서 받은 {{craneId}} 태그가 없습니다. 연결 상태를 확인하거나 코드를 직접 입력하세요.",
+      "draftNotOnServer": "\"{{code}}\" 는 서버 태그 목록에 없습니다. 그대로 연결할 수 있습니다.",
       "emptyTags": "검색 결과가 없습니다.",
       "cancel": "취소",
       "apply": "연결"
@@ -381,9 +384,6 @@
     "expandNodes": "노드 펼치기",
     "collapseNodes": "노드 접기",
     "jointNode": "관절 노드",
-    "virtualTags": {
-      "unregistered": "미등록"
-    },
     "drawRuler": "눈금 그리기",
     "rulerName": "눈금 {{index}}",
     "rulerDrawStartHint": "시작점을 클릭하세요",
@@ -434,88 +434,7 @@
       "stopHint": "등급이 '정지'인 영역에 들어오면 시뮬레이션·3D 플레이를 멈춥니다. 이어서 재생하면 그 침범은 이탈 전까지 다시 멈추지 않습니다.\n실시간 모니터링은 정지하지 않습니다."
     }
   },
-  "craneList": {
-    "countAll": "{{count}}기",
-    "countFiltered": "{{visible}} / {{total}}기",
-    "emptyForFilter": "해당 상태의 크레인이 없습니다."
-  },
-  "virtualTags": {
-    "play": "전체 재생",
-    "pause": "일시정지",
-    "resetValues": "값 초기화",
-    "tick": "갱신 주기(ms)",
-    "add": "새 태그",
-    "columns": {
-      "enabled": "사용",
-      "key": "키",
-      "name": "이름",
-      "unit": "단위",
-      "min": "최소",
-      "max": "최대",
-      "pattern": "패턴",
-      "period": "주기(ms)",
-      "maxSpeed": "최대속도",
-      "maxAccel": "최대가속",
-      "value": "현재값",
-      "actions": ""
-    },
-    "patterns": {
-      "manual": "수동",
-      "triangle": "삼각파",
-      "sine": "사인파",
-      "sawtooth": "톱니파",
-      "square": "구형파"
-    },
-    "duplicate": "복제",
-    "remove": "삭제",
-    "empty": "가상 태그가 없습니다. \"새 태그\"로 만드세요.",
-    "errors": {
-      "invalid-key": "키는 비울 수 없고 64자 이하여야 합니다.",
-      "duplicate-key": "같은 키의 태그가 이미 있습니다.",
-      "limit": "태그는 최대 {{max}}개까지 만들 수 있습니다."
-    },
-    "newKey": "C_1:tag",
-    "count": "{{count}} / {{max}}",
-    "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다.",
-    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
-    "save": "저장",
-    "saveFailed": "가상 태그를 저장하지 못했습니다.",
-    "scenarios": {
-      "title": "시나리오",
-      "newName": "새 시나리오",
-      "add": "새 시나리오",
-      "duplicate": "복제",
-      "remove": "삭제",
-      "run": "실행",
-      "name": "이름",
-      "loop": "반복",
-      "duration": "길이 {{seconds}}s",
-      "selectTag": "태그 선택",
-      "noMoreTags": "추가할 태그가 없습니다",
-      "addTrack": "트랙 추가",
-      "removeTrack": "트랙 삭제",
-      "noTracks": "트랙이 없습니다. 태그를 골라 트랙을 추가하세요.",
-      "time": "시각",
-      "value": "값",
-      "ease": "보간",
-      "eases": {
-        "linear": "직선",
-        "hold": "유지",
-        "smooth": "부드럽게"
-      },
-      "addKeyframe": "키프레임 추가",
-      "removeKeyframe": "키프레임 삭제",
-      "empty": "시나리오 없음",
-      "hint": "시나리오는 태그 키별 키프레임 타임라인입니다. \"새 시나리오\"로 만들고 트랙과 키프레임을 추가하세요. 활성 시나리오의 트랙은 파형 대신 키프레임 값으로 움직입니다."
-    },
-    "maxSpeedHint": "최대 속도(단위/초). 비우면 제한 없음 — 파형·시나리오 목표값을 이 속도 이하로 따라갑니다.",
-    "maxAccelHint": "최대 가속(단위/초²). 비우면 제한 없음."
-  },
   "tags": {
-    "tabs": {
-      "realtime": "실시간 태그",
-      "virtual": "가상 태그"
-    },
     "searchCrane": "크레인 ID 검색 (예: 867)",
     "allBays": "전체",
     "online": "온라인",
@@ -747,16 +666,88 @@
     "pause": "일시정지",
     "reset": "값·시간 초기화",
     "speed": "배속",
-    "scenario": "시나리오",
-    "none": "없음(파형만)",
-    "unnamed": "이름 없음",
-    "loop": "반복",
     "time": "경과",
-    "finished": "시나리오가 끝났습니다. 다시 재생하려면 초기화하거나 재생 위치를 앞으로 옮기세요.",
     "stop": "시뮬레이션 종료",
-    "stopHint": "시뮬레이션 종료 — 시나리오 해제, 시간 0, 모델을 원래 자세로(실시간 화면이면 실제 값 반영 재개)",
+    "stopHint": "시뮬레이션 종료 — 시간 0, 모델을 원래 자세로(실시간 화면이면 실제 값 반영 재개)",
     "badgeRunning": "시뮬레이션 중",
-    "badgePaused": "시뮬레이션 일시정지"
+    "badgePaused": "시뮬레이션 일시정지",
+    "scenario": "시나리오",
+    "noScenario": "시나리오 없음",
+    "noScenarioHint": "우측 시나리오 탭에서 씬에 맵핑된 모델·태그를 골라 만드세요."
+  },
+  "scenario": {
+    "tab": "시나리오",
+    "sideTabs": "우측 패널",
+    "select": "시나리오 선택",
+    "none": "시나리오 없음",
+    "noneHint": "이 씬의 시나리오가 없습니다. 씬에 맵핑된 모델·태그를 골라 만드세요.",
+    "noScene": "이 구역에는 씬 파일이 없어 시나리오를 만들 수 없습니다.",
+    "add": "새 시나리오",
+    "name": "이름",
+    "namePlaceholder": "시나리오 이름",
+    "duplicate": "복제",
+    "remove": "삭제",
+    "removeTitle": "시나리오 삭제",
+    "removeDescription": "\"{{name}}\" 시나리오(태그 {{count}}개)를 삭제합니다. 저장하면 되돌릴 수 없습니다.",
+    "confirmRemove": "삭제",
+    "save": "저장",
+    "saveFailed": "시나리오를 저장하지 못했습니다.",
+    "addTags": "태그 추가",
+    "removeModel": "모델 묶음 제거",
+    "emptyTags": "태그가 없습니다. 씬에 맵핑된 모델에서 태그를 고르세요.",
+    "count": "태그 {{tags}} · 모델 {{models}}",
+    "tick": "갱신 주기(s)",
+    "hint": "값은 시나리오에 있는 태그에만 나갑니다.",
+    "errors": {
+      "invalid-name": "이름이 비었거나 너무 깁니다.",
+      "limit": "시나리오 개수 상한에 닿았습니다."
+    },
+    "issue": {
+      "model-missing": "씬에 이 모델이 없습니다 — 지워졌거나 id 가 바뀌었습니다.",
+      "crane-missing": "모델에 크레인이 없습니다. 에디터에서 크레인을 고르세요.",
+      "duplicate-key": "같은 키를 쓰는 태그가 앞에 있습니다.",
+      "model-missing-short": "씬에 없음"
+    },
+    "row": {
+      "dataType": "형식",
+      "unit": "단위",
+      "min": "최소",
+      "max": "최대",
+      "initial": "초기값",
+      "pattern": "패턴",
+      "period": "주기(s)",
+      "periodHint": "한 주기(초)",
+      "remove": "태그 제거",
+      "noValue": "값 없음",
+      "targetMissing": "맵핑 없음"
+    },
+    "dataTypes": {
+      "number": "숫자",
+      "bool": "불리언"
+    },
+    "patterns": {
+      "manual": "수동",
+      "triangle": "삼각파",
+      "sine": "사인파",
+      "sawtooth": "톱니파",
+      "square": "구형파"
+    },
+    "pick": {
+      "createTitle": "새 시나리오",
+      "addTitle": "태그 추가",
+      "search": "모델·크레인·태그 코드 검색",
+      "selected": "{{selected}} / {{total}} 선택",
+      "selectAll": "전체 선택",
+      "selectNone": "전체 해제",
+      "tagCount": "태그 {{count}}개",
+      "alreadyAdded": "이미 있음",
+      "noMappedModels": "씬에 태그가 맵핑된 모델이 없습니다. 에디터에서 먼저 태그를 연결하세요.",
+      "emptyFiltered": "검색 결과가 없습니다.",
+      "summary": "모델 {{models}} · 태그 {{tags}} 선택",
+      "cancel": "취소",
+      "create": "만들기",
+      "add": "추가"
+    }
   },
   "play3d": {
     "report": "실행 리포트",
@@ -767,7 +758,6 @@
     "openEnded": "열린 구간",
     "window": "창",
     "scanned": "검사된 구간",
-    "iteration": "{{n}}회째 반복",
     "detectionOff": "재생 중 충돌 감지가 꺼져 있던 구간이 있어 충돌 수가 불완전합니다.",
     "noTagMappings": "이 씬에는 태그 맵핑이 없어 감지·리포트가 동작하지 않습니다.",
     "holdsSummary": "정지 {{count}}회 · {{time}}",
@@ -797,9 +787,7 @@
       "dwellTotal": "체류 합계 {{time}}",
       "equipmentCount": "장비 {{count}}대",
       "offline": "통신 두절",
-      "offlineTotal": "합계 {{time}}",
-      "saturation": "속도 한계 도달",
-      "noSpeedLimit": "속도 한계 미정의"
+      "offlineTotal": "합계 {{time}}"
     },
     "col": {
       "equipment": "장비",
@@ -815,8 +803,7 @@
       "tag": "축",
       "range": "범위",
       "mean": "평균",
-      "travel": "이동량",
-      "saturation": "한계 포화"
+      "travel": "이동량"
     },
     "timeline": {
       "title": "타임라인",

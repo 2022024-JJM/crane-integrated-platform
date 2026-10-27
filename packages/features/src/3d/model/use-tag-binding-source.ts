@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import type { SavedSceneInfo, TagSlot } from '@crane/domain/3d';
+import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
   buildTagMappingIndex,
   resolveFromIndex,
@@ -12,8 +12,9 @@ import { setTagIngest } from './tag-value-bus';
  * 태그 값 버스 → 값 저장소 연결의 수명 관리.
  *
  * enabled 인 동안 씬의 tagMappings 로 만든 인덱스가 버스 값을 관절·node 맵핑
- * 주소로 흘려보낸다. 인덱스는 활성 슬롯(`slot`, lib/tag-slot.ts)의 키로만
- * 만든다 — 씬이나 슬롯이 바뀌면 인덱스만 갈아 끼우고(재시작 없음), 꺼지면
+ * 주소로 흘려보낸다. 키는 모델 craneId 와 코드로 조립한다 — 어느 생산자의
+ * 값이 오는지는 버스 게이트(`useActiveTagSource`)가 정한다. 씬이 바뀌면
+ * 인덱스만 갈아 끼우고(재시작 없음), 꺼지면
  * 버스에서 떨어지고 값 저장소를 비워 노드가 rest 로 돌아간다. 모니터링 뷰와
  * 에디터 모두 화면이 떠 있는 동안 항상 켜 두고(언마운트가 곧 off), 재생
  * 일시정지는 러너 틱만 멈춰 노드가 마지막 값에 머문다 — 정지를 여기 off 에
@@ -25,12 +26,8 @@ import { setTagIngest } from './tag-value-bus';
 export function useTagBindingSource(
   sceneInfo: SavedSceneInfo | null,
   enabled: boolean,
-  slot: TagSlot,
 ): void {
-  const index = useMemo(
-    () => buildTagMappingIndex(sceneInfo, slot),
-    [sceneInfo, slot],
-  );
+  const index = useMemo(() => buildTagMappingIndex(sceneInfo), [sceneInfo]);
   // resolve 가 최신 인덱스를 보도록 ref 에 두되, 갱신은 effect 에서만
   // (react-hooks/refs — 렌더 중 ref 접근 금지). 소스는 effect 안에서 만들어
   // 렌더 시점에 ref 를 읽는 클로저가 생기지 않게 한다.

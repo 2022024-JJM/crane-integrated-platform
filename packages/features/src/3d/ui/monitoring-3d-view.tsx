@@ -41,7 +41,8 @@ import {
   computeCollisionViewPose,
   computeObjectViewPose,
 } from '../lib/scene-collision-pairs';
-import { resolveActiveTagSlot } from '../lib/tag-slot';
+import { resolveActiveTagSource } from '../lib/tag-source';
+import { useActiveTagSource } from '../model/use-active-tag-source';
 import { RigDriver } from './rig-driver';
 import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
@@ -84,7 +85,6 @@ import {
 import { northUpPose } from '../lib/north-up';
 import { resolveCompassViewForPose } from '../lib/compass';
 import { useModelStatusRecords } from '../model/use-model-runtime-statuses';
-import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
@@ -129,15 +129,9 @@ interface Monitoring3dViewProps {
   /**
    * 화면 종류(model/types MonitoringViewMode). 'realtime' 은 WebSocket 만,
    * 'play3d' 은 리플레이|시뮬레이션(소스는 usePlay3dStore, 재생 조작은
-   * Play3dView 의 상단 트랜스포트 바), 'simulation' 은 대시보드 미리보기.
+   * Play3dView 의 상단 트랜스포트 바).
    */
-  mode?: MonitoringViewMode;
-  /**
-   * `mode='simulation'` 일 때 진입 즉시 가상 태그 재생을 켤지. 기본 true.
-   * 독 ▶ 토글이 없는 뷰(대시보드 3D 미리보기 모달)는 false 로 두어 정지
-   * 상태로 연다. 3D 플레이는 이 값과 무관하게 정지로 연다.
-   */
-  autoStartSimulation?: boolean;
+  mode: MonitoringViewMode;
   onLoadingChange?: (isLoading: boolean) => void;
   toolbarExtras?: ReactNode;
   /**
@@ -157,16 +151,6 @@ interface Monitoring3dViewProps {
    * 상태에 따라 바꿔야 안정적으로 반영된다. undefined면 기기 기본값.
    */
   canvasDpr?: number | [number, number];
-  /**
-   * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
-   * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 위에서부터
-   * 카메라 버튼(원래위치·탑뷰·저장한 뷰·확대·축소·전체화면), 그 아래 화면
-   * 표시(toolbarExtras 로 받은 페이지 버튼·미니맵·현장 시각). 충돌·영역
-   * 감지 팝업은 2026-09-17 에 감지 설정 페이지로 옮겨 독에서 뺐다. 독은
-   * 전체화면 루트 안이라 전체화면에서도 같은 구성이 유지된다 (실시간 모니터링
-   * 화면). 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
-   */
-  toolbarLayout?: 'top-right' | 'dock' | 'none';
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -177,32 +161,28 @@ export function Monitoring3dView({
   alarmsByCraneId,
   alarms,
   alarmHighlightMesh = false,
-  mode = 'simulation',
-  autoStartSimulation = true,
+  mode,
   onLoadingChange,
   toolbarExtras,
   sceneExtras,
   overlayExtras,
   canvasDpr,
-  toolbarLayout = 'top-right',
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const sceneAlarms = alarmsByCraneId ?? EMPTY_ALARMS;
-  const isDock = toolbarLayout === 'dock';
   const play3dSource = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
   const isPlay3d = mode === 'play3d';
   const isReplaySource = isPlay3d && play3dSource === 'replay';
-  // 시뮬레이션 조작·표시(독 ▶·시계 팝업·배지·테두리)는 시뮬레이션 값이 화면을
-  // 움직이는 화면에서만 — 실시간은 WebSocket 만 보여 준다(2026-09-16).
-  const simulationUiVisible =
-    mode === 'simulation' || (isPlay3d && play3dSource === 'simulation');
+  // 시뮬레이션 표시(배지·테두리)는 시뮬레이션 값이 화면을 움직이는 3D 플레이
+  // 시뮬레이션 소스에서만 — 실시간은 WebSocket 만 보여 준다(2026-09-16).
+  const simulationUiVisible = isPlay3d && play3dSource === 'simulation';
   // 조명·HUD 현장 시각의 출처 — 리플레이 소스는 프레임 타임스탬프를 따른다.
   const timeSource = isReplaySource ? 'replay' : 'clock';
   // 관제 HUD·미니맵은 실시간 관제 화면에서만 — 3D 플레이는 분석 화면이라
   // 트랜스포트 바·리포트가 그 자리를 대신한다(2026-09-16).
-  const showControlRoomWidgets = isDock && !isPlay3d;
-  // 방위 표시는 독 배치 전부(실시간·3D 플레이)의 우상단 열 — 고정 뷰 줄
+  const showControlRoomWidgets = !isPlay3d;
+  // 방위 표시는 실시간·3D 플레이 공통의 우상단 열 — 고정 뷰 줄
   // 아래, 2D/3D 전환 위. 자세는 Canvas 안 드라이버가 직접 쓴다.
   const compassRef = useRef<SceneCompassHandle | null>(null);
   const scaleBarRef = useRef<ScenePlanScaleBarHandle | null>(null);
@@ -213,9 +193,7 @@ export function Monitoring3dView({
   const toolsDock = useSceneDock('tools');
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
-  const { sceneInfo, isLoading } = useSceneData(regionId, mode, {
-    autoStartSimulation,
-  });
+  const { sceneInfo, isLoading } = useSceneData(regionId, mode);
   // 콜백(영역 보기)이 최신 씬을 읽도록 — 렌더 중 ref 쓰기 금지라 effect 로.
   const useSceneInfoStoreRef = useRef<SavedSceneInfo | null>(null);
   useEffect(() => {
@@ -225,24 +203,23 @@ export function Monitoring3dView({
   // 애니메이션 소스(재생·수신·기즈모)가 있을 때 30fps 로, 정지 씬은 조작
   // invalidate 만으로 만든다(2026-09-11, 유휴 발열 절감). 바다가 켜진 씬
   // (resolveSeaVisible — 판정은 이 한 곳)은 파도·미러 패스가 상시
-  // 애니메이션이라 거버너에 알려 30fps 를 유지한다 — 예전 demand 모달에서
-  // 파도가 얼어붙던 문제의 해법이다.
+  // 애니메이션이라 거버너에 알려 30fps 를 유지한다.
   const seaVisible = resolveSeaVisible(sceneInfo);
   const trueNorth = resolveTrueNorth(sceneInfo);
   const metersPerUnit = getSceneMetersPerUnit(regionId);
   const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
-  // 맵핑·상태 태그의 어느 슬롯(실시간|가상)을 읽을지 — 값 생산자와 짝이다.
-  const tagSlot = resolveActiveTagSlot(mode, play3dSource);
-  // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
-  // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
-  useTagBindingSource(sceneInfo, true, tagSlot);
+  // 버스가 통과시킬 값 생산자 — 모드·소스와 짝이다. 다른 생산자의 publish 는
+  // 게이트가 버린다(세 생산자가 같은 키 표기를 쓴다).
+  useActiveTagSource(resolveActiveTagSource(mode, play3dSource));
+  // 태그 값 버스(시나리오 러너·WebSocket·리플레이) → 씬 맵핑 → 값 저장소.
+  // 드라이버는 Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
+  useTagBindingSource(sceneInfo, true);
   // 모델별 운전 상태(HUD)·라벨 표시 상태(색·아이콘)·외곽선 — 같은 판정 한
   // 번에서 함께 나온다. 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D
   // 플레이는 정지 중 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면
   // 일시정지 뒤 전 장비가 두절이 된다.
   const statusRecords = useModelStatusRecords(
     sceneInfo,
-    tagSlot,
     isPlay3d
       ? { paused: !transport.isPlaying, timeScale: transport.speed }
       : undefined,
@@ -254,17 +231,10 @@ export function Monitoring3dView({
   } = statusRecords;
   // 관제 HUD 의 이상 조건 — 요약·펼침 목록·위험 비네트가 같은 결과를 읽는다.
   const hudConditions = useHudConditions(sceneInfo, statusRecords, alarms);
-  // 통신두절 진입·복귀를 저널에 남긴다(그 밖의 전환은 제외) — 실시간 화면만.
-  useStatusJournalSync(
-    regionId,
-    sceneInfo,
-    runtimeStatuses,
-    mode === 'realtime',
-  );
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   // 충돌 감지는 전 모드에서 켠다. 정지 방식은 러너가 정한다(scene-collision-
-  // hold) — 시뮬레이션·3D 플레이는 러너 pause, 실시간은 화면 반영 보류.
+  // hold) — 3D 플레이는 러너 pause, 실시간은 화면 반영 보류.
   const collisionRunner = mode;
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
   // 영역 침범은 상태 표시라 전 모드에서 돈다.
@@ -364,7 +334,7 @@ export function Monitoring3dView({
     [sceneViews],
   );
   // 분할 화면 — 씬의 viewSplit(뷰를 칸에 배정한 것)이 2칸 이상이고 에디터가
-  // 분할을 고정했을 때 실시간 독 배치의 우상단 고정 줄 버튼으로만 켠다(독
+  // 분할을 고정했을 때 실시간 화면의 우상단 고정 줄 버튼으로만 켠다(독
   // 레일에는 두지 않는다). 켜짐 여부는 세션 스토어(키 = regionId), 타일
   // 카메라·사각형·DOM 컨테이너는 오버레이가 뷰포트로 알리고 Provider 로
   // 캔버스에 넘긴다(라벨 포털·분할 렌더러가 읽는다). 분할 중에는 기본
@@ -377,7 +347,7 @@ export function Monitoring3dView({
   );
   const splitPinned = sceneInfo?.viewSplit?.pinned === true;
   const splitAvailable =
-    isDock && mode === 'realtime' && splitPinned && splitLayout !== null;
+    mode === 'realtime' && splitPinned && splitLayout !== null;
   const splitActiveKey = useSceneSplitStore((s) => s.activeKey);
   const enterSplit = useSceneSplitStore((s) => s.enter);
   const exitSplit = useSceneSplitStore((s) => s.exit);
@@ -460,9 +430,7 @@ export function Monitoring3dView({
     <div className="pointer-events-none absolute top-1.5 left-1.5 flex flex-col items-start gap-2">
       {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 시뮬레이션 값이 화면을
           움직이는 배치에서만. */}
-      {simulationUiVisible && toolbarLayout !== 'none' ? (
-        <SceneSimulationBadge />
-      ) : null}
+      {simulationUiVisible ? <SceneSimulationBadge /> : null}
       <SceneWarmupIndicator />
     </div>
   );
@@ -476,15 +444,13 @@ export function Monitoring3dView({
     );
   }
 
-  const dockRight = isDock
-    ? {
-        label: t('common:viewer3d.dockTools', { defaultValue: '화면 조작' }),
-        expanded: toolsDock.expanded,
-        pinned: toolsDock.pinned,
-        onPinnedChange: toolsDock.setPinned,
-        handlers: toolsDock.handlers,
-      }
-    : undefined;
+  const dockRight = {
+    label: t('common:viewer3d.dockTools', { defaultValue: '화면 조작' }),
+    expanded: toolsDock.expanded,
+    pinned: toolsDock.pinned,
+    onPinnedChange: toolsDock.setPinned,
+    handlers: toolsDock.handlers,
+  };
 
   // 우상단 고정 줄의 분할 버튼 — 분할을 켜는 유일한 곳.
   const splitBarProps = splitAvailable
@@ -518,9 +484,7 @@ export function Monitoring3dView({
               {topLeftOverlay}
               {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
               {/* 시뮬레이션 세션 테두리 — 오버레이 루트(캔버스 전체). */}
-              {simulationUiVisible && toolbarLayout !== 'none' ? (
-                <SceneSimulationFrame />
-              ) : null}
+              {simulationUiVisible ? <SceneSimulationFrame /> : null}
               {/* 충돌·영역 침범 경보 — 가장자리 비네트만. */}
               <SceneCollisionAlertOverlay runner={collisionRunner} />
               <SceneZoneAlertOverlay />
@@ -543,7 +507,7 @@ export function Monitoring3dView({
               {overlayExtras}
               {/* 평면도 축척(우하단) — 직교 탑뷰에서만 드라이버가 보이게 한다.
                 우측 독 레일 안쪽으로 들어오게 레일 여백 변수를 더한다. */}
-              {isDock && !splitActive ? (
+              {!splitActive ? (
                 <div
                   className="pointer-events-none absolute bottom-2 z-10"
                   style={{ right: 'calc(0.5rem + var(--dock-right-inset))' }}
@@ -584,74 +548,59 @@ export function Monitoring3dView({
             </>
           }
           fullscreenTopRightOverlay={
-            isDock ? (
-              // 우상단 슬롯 — 고정한 뷰 줄 → 방위 표시 → 탑뷰 중이면 2D/3D
-              // 전환. 고정 뷰 줄이 비면(null) 간격 없이 방위 표시가 맨 위다.
-              // 토글이 방위 아래라 탑뷰를 켜고 꺼도 방위 자리는 그대로다.
-              <div className="flex flex-col items-end gap-2">
-                <SceneViewBar
-                  views={pinnedViews}
-                  onSelectView={handleSelectView}
-                  split={splitBarProps}
-                />
-                {/* 누르면 북쪽 위로(탑뷰·원근 모두 타깃 축으로 돌린다). 분할
-                    중엔 우상단 모서리 타일의 정적 방위 표시가 이 자리에 온다
-                    — 조작이 없어 클릭이 타일로 간다. */}
-                {splitActive ? (
-                  splitCornerCompassView ? (
-                    <SceneCompass
-                      key="split-corner"
-                      ref={(handle: SceneCompassHandle | null) => {
-                        handle?.update(splitCornerCompassView);
-                      }}
-                    />
-                  ) : null
-                ) : (
-                  <SceneCompass
-                    key="live"
-                    ref={compassRef}
-                    onNorthUp={handleNorthUp}
-                  />
-                )}
-                {topViewActive ? <ScenePlanLookToggle /> : null}
-              </div>
-            ) : undefined
-          }
-          toolbarExtras={
-            isDock ? (
-              // 독 레일에서 카메라 묶음 아래 구성(실시간·3D 플레이 공통) — 화면
-              // 표시 계열만: 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·
-              // 현장 시각. 충돌·영역 감지 팝업은 감지 설정 페이지로 옮겼다
-              // (2026-09-17). 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
-              <>
-                {toolbarExtras}
-                {showControlRoomWidgets ? (
-                  <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
-                ) : null}
-                {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
-                  의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
-                  소스는 프레임 시각을 따르므로 숨긴다. */}
-                {isReplaySource ? null : (
-                  <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
-                )}
-              </>
-            ) : (
-              toolbarExtras
-            )
-          }
-          toolbarPlacement={toolbarLayout}
-          dockRight={dockRight}
-          cameraControlsDisabledLabel={splitDisabledLabel}
-          toolbarTrailing={
-            // 독 레일에는 뷰·분할 버튼을 두지 않는다 — 우상단 고정 줄이 전부다.
-            // 가로 툴바(작은 뷰)는 고정한 뷰만 칩으로.
-            toolbarLayout === 'none' || isDock ? undefined : (
+            // 우상단 슬롯 — 고정한 뷰 줄 → 방위 표시 → 탑뷰 중이면 2D/3D
+            // 전환. 고정 뷰 줄이 비면(null) 간격 없이 방위 표시가 맨 위다.
+            // 토글이 방위 아래라 탑뷰를 켜고 꺼도 방위 자리는 그대로다.
+            <div className="flex flex-col items-end gap-2">
               <SceneViewBar
                 views={pinnedViews}
                 onSelectView={handleSelectView}
+                split={splitBarProps}
               />
-            )
+              {/* 누르면 북쪽 위로(탑뷰·원근 모두 타깃 축으로 돌린다). 분할
+                  중엔 우상단 모서리 타일의 정적 방위 표시가 이 자리에 온다
+                  — 조작이 없어 클릭이 타일로 간다. */}
+              {splitActive ? (
+                splitCornerCompassView ? (
+                  <SceneCompass
+                    key="split-corner"
+                    ref={(handle: SceneCompassHandle | null) => {
+                      handle?.update(splitCornerCompassView);
+                    }}
+                  />
+                ) : null
+              ) : (
+                <SceneCompass
+                  key="live"
+                  ref={compassRef}
+                  onNorthUp={handleNorthUp}
+                />
+              )}
+              {topViewActive ? <ScenePlanLookToggle /> : null}
+            </div>
           }
+          toolbarExtras={
+            // 독 레일에서 카메라 묶음 아래 구성(실시간·3D 플레이 공통) — 화면
+            // 표시 계열만: 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·
+            // 현장 시각. 충돌·영역 감지 팝업은 감지 설정 페이지로 옮겼다
+            // (2026-09-17).
+            <>
+              {toolbarExtras}
+              {showControlRoomWidgets ? (
+                <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
+              ) : null}
+              {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
+                의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
+                소스는 프레임 시각을 따르므로 숨긴다. */}
+              {isReplaySource ? null : (
+                <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
+              )}
+            </>
+          }
+          // 독 레일에는 뷰·분할 버튼을 두지 않는다 — 우상단 고정 줄이 전부다.
+          toolbarPlacement="dock"
+          dockRight={dockRight}
+          cameraControlsDisabledLabel={splitDisabledLabel}
           onControllerReady={handleControllerReady}
         >
           {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
@@ -672,7 +621,7 @@ export function Monitoring3dView({
           <SceneTerrainLod />
           {/* 방위 표시 자세 — 카메라 확정 뒤 이 프레임의 최종 시점을 읽는다.
             분할 중엔 전역 방위 표시가 없다. */}
-          {isDock && !splitActive ? (
+          {!splitActive ? (
             <>
               <SceneCompassDriver
                 compassRef={compassRef}

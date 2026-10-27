@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   convertLegacyRigBindings,
   convertLegacyValueMapList,
+  finalizeModelTagKeys,
+  parseTagKeyRef,
   resolveModelTagMappings,
-  sanitizeTagKeySlots,
+  resolveTagRef,
   sanitizeTagMappings,
 } from '../sanitize-tag-mappings';
 import type { RigDefinition } from '../../model/rig-types';
@@ -36,47 +38,72 @@ function node(
   return {
     id,
     target: { kind: 'node', node: path, channel: 'position', axis },
-    realtimeTagKey: 'C_1.pos',
+    code: 'pos',
     ...rest,
   };
 }
 
-describe('sanitizeTagKeySlots', () => {
-  it('두 슬롯을 trim 해 싣고, 빈 슬롯은 필드를 생략한다', () => {
-    expect(
-      sanitizeTagKeySlots({ realtimeTagKey: ' C_1.z ', virtualTagKey: '' }),
-    ).toEqual({ realtimeTagKey: 'C_1.z' });
-    expect(sanitizeTagKeySlots({ virtualTagKey: ' GC_04.z ' })).toEqual({
-      virtualTagKey: 'GC_04.z',
-    });
-    expect(
-      sanitizeTagKeySlots({ realtimeTagKey: 'C_1.z', virtualTagKey: 'V.z' }),
-    ).toEqual({ realtimeTagKey: 'C_1.z', virtualTagKey: 'V.z' });
-  });
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-  it('레거시 단일 tagKey 는 실시간 슬롯으로 — 명시 realtimeTagKey 가 있으면 그것이 이긴다', () => {
-    expect(sanitizeTagKeySlots({ tagKey: ' C_1.z ' })).toEqual({
-      realtimeTagKey: 'C_1.z',
+describe('parseTagKeyRef', () => {
+  it('점 키는 크레인·코드로, 옛 콜론 키도 같은 규칙으로 나눈다(trim)', () => {
+    expect(parseTagKeyRef(' C_171.tl_distance ')).toEqual({
+      code: 'tl_distance',
+      craneKey: 'C_171',
     });
-    expect(
-      sanitizeTagKeySlots({ tagKey: 'old', realtimeTagKey: 'new' }),
-    ).toEqual({ realtimeTagKey: 'new' });
-    expect(sanitizeTagKeySlots({ tagKey: 'old', virtualTagKey: 'v' })).toEqual({
-      realtimeTagKey: 'old',
-      virtualTagKey: 'v',
+    expect(parseTagKeyRef('GC_04:gantry_position')).toEqual({
+      code: 'gantry_position',
+      craneKey: 'GC_04',
     });
   });
 
-  it('둘 다 비거나 문자열이 아니거나 객체가 아니면 null', () => {
-    expect(sanitizeTagKeySlots({})).toBeNull();
+  it('구분자가 없으면 통째로 코드다', () => {
+    expect(parseTagKeyRef(' luff ')).toEqual({ code: 'luff' });
+  });
+
+  it('비었거나 문자열이 아니거나 코드에 금지 글자가 남으면 null', () => {
+    expect(parseTagKeyRef('')).toBeNull();
+    expect(parseTagKeyRef('   ')).toBeNull();
+    expect(parseTagKeyRef(3)).toBeNull();
+    expect(parseTagKeyRef(null)).toBeNull();
+    expect(parseTagKeyRef('A.b.c')).toBeNull();
+    expect(parseTagKeyRef('A.b c')).toBeNull();
+    expect(parseTagKeyRef(':x')).toBeNull();
+    expect(parseTagKeyRef('x:')).toBeNull();
+  });
+});
+
+describe('resolveTagRef', () => {
+  it('새 포맷 code 가 있으면 그것(보존용 craneId 포함)이고 레거시 키는 무시한다', () => {
+    expect(resolveTagRef({ code: ' tl_distance ' })).toEqual({
+      code: 'tl_distance',
+    });
     expect(
-      sanitizeTagKeySlots({ realtimeTagKey: '  ', virtualTagKey: '' }),
-    ).toBeNull();
+      resolveTagRef({ code: 'x', craneId: ' C_172 ', realtimeTagKey: 'C_1.y' }),
+    ).toEqual({ code: 'x', craneKey: 'C_172' });
+  });
+
+  it('레거시는 realtimeTagKey › virtualTagKey › tagKey 순으로 첫 유효 키', () => {
     expect(
-      sanitizeTagKeySlots({ realtimeTagKey: 3, virtualTagKey: null }),
-    ).toBe(null);
-    expect(sanitizeTagKeySlots(null)).toBeNull();
-    expect(sanitizeTagKeySlots('C_1.z')).toBeNull();
+      resolveTagRef({ realtimeTagKey: 'C_1.a', virtualTagKey: 'V:b' }),
+    ).toEqual({ code: 'a', craneKey: 'C_1' });
+    expect(
+      resolveTagRef({ realtimeTagKey: '  ', virtualTagKey: 'V:b' }),
+    ).toEqual({ code: 'b', craneKey: 'V' });
+    expect(resolveTagRef({ tagKey: 'old' })).toEqual({ code: 'old' });
+    expect(
+      resolveTagRef({ code: 'bad code', realtimeTagKey: 'C_1.a' }),
+    ).toEqual({ code: 'a', craneKey: 'C_1' });
+  });
+
+  it('전부 비거나 문자열이 아니면 null', () => {
+    expect(resolveTagRef({})).toBeNull();
+    expect(resolveTagRef({ code: '', realtimeTagKey: '', tagKey: null })).toBe(
+      null,
+    );
+    expect(resolveTagRef({ realtimeTagKey: 3 })).toBeNull();
   });
 });
 
@@ -88,78 +115,74 @@ describe('sanitizeTagMappings', () => {
     expect(sanitizeTagMappings([null, 'x', {}])).toBeUndefined();
   });
 
-  it('유효 항목은 키 trim·scale/offset 유한수만 살려 통과한다', () => {
+  it('유효 항목은 코드 trim·scale/offset 유한수만 살려 통과한다', () => {
     expect(
       sanitizeTagMappings([
-        node('m1', { realtimeTagKey: ' C_1.z ', scale: 0.1, offset: NaN }),
+        node('m1', { code: ' z ', scale: 0.1, offset: NaN }),
       ]),
-    ).toEqual([node('m1', { realtimeTagKey: 'C_1.z', scale: 0.1 })]);
+    ).toEqual([node('m1', { code: 'z', scale: 0.1 })]);
   });
 
-  it('가상 키만 있는 맵핑도 유효하다(philly 형태)', () => {
+  it('레거시 키(두 슬롯·단일 tagKey)는 코드와 크레인 접두어로 나뉘어 craneId 로 실린다', () => {
     expect(
       sanitizeTagMappings([
         {
           ...node('m1'),
-          realtimeTagKey: undefined,
-          virtualTagKey: 'GC_04.gantry_position',
+          code: undefined,
+          virtualTagKey: 'GC_04:gantry_position',
         },
+        {
+          ...node('m2', { axis: 'x' }),
+          code: undefined,
+          realtimeTagKey: 'C_171.tl_distance',
+        },
+        { ...node('m3', { axis: 'y' }), code: undefined, tagKey: 'bare' },
       ]),
     ).toEqual([
-      {
-        id: 'm1',
-        target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        virtualTagKey: 'GC_04.gantry_position',
-      },
+      node('m1', { code: 'gantry_position', craneId: 'GC_04' }),
+      node('m2', { axis: 'x', code: 'tl_distance', craneId: 'C_171' }),
+      node('m3', { axis: 'y', code: 'bare' }),
     ]);
-  });
-
-  it('레거시 단일 tagKey 는 실시간 슬롯으로 옮기고 저장본에서 사라진다', () => {
     const out = sanitizeTagMappings([
-      { ...node('m1'), realtimeTagKey: undefined, tagKey: 'C_171.tl_distance' },
-    ]);
-    expect(out).toEqual([
-      {
-        id: 'm1',
-        target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        realtimeTagKey: 'C_171.tl_distance',
-      },
+      { ...node('m1'), code: undefined, tagKey: 'C_171.tl_distance' },
     ]);
     expect(out?.[0]).not.toHaveProperty('tagKey');
+    expect(out?.[0]).not.toHaveProperty('realtimeTagKey');
   });
 
-  it('id 없음·중복, 두 키 모두 빈 항목, 깨진 target 은 개별로 버린다', () => {
+  it('id 없음·중복, 코드 없음·금지 글자, 깨진 target 은 개별로 버린다', () => {
     const out = sanitizeTagMappings([
       node('m1'),
       node('m1', { axis: 'x' }), // id 중복
       { ...node('m2', { axis: 'y' }), id: '' },
-      node('m3', { axis: 'x', realtimeTagKey: '   ', virtualTagKey: ' ' }),
+      node('m3', { axis: 'x', code: '   ' }),
+      node('m9', { axis: 'y', code: 'a b' }),
       {
         id: 'm4',
         target: { kind: 'node', node: '', channel: 'spin', axis: 'x' },
-        realtimeTagKey: 'k',
+        code: 'k',
       },
       {
         id: 'm5',
         target: { kind: 'node', node: '', channel: 'scale', axis: 'w' },
-        realtimeTagKey: 'k',
+        code: 'k',
       },
       {
         id: 'm6',
         target: { kind: 'node', node: 3, channel: 'scale', axis: 'x' },
-        realtimeTagKey: 'k',
+        code: 'k',
       },
-      { id: 'm7', target: { kind: 'ghost' }, realtimeTagKey: 'k' },
-      { id: 'm8', target: null, realtimeTagKey: 'k' },
+      { id: 'm7', target: { kind: 'ghost' }, code: 'k' },
+      { id: 'm8', target: null, code: 'k' },
     ]);
     expect(out?.map((m) => m.id)).toEqual(['m1']);
   });
 
   it('같은 대상(노드·채널·축)은 첫 항목만 남긴다(first-wins), 다른 축은 공존', () => {
     const out = sanitizeTagMappings([
-      node('first', { realtimeTagKey: 'a' }),
-      node('second', { realtimeTagKey: 'b' }),
-      node('other-axis', { axis: 'x', realtimeTagKey: 'c' }),
+      node('first', { code: 'a' }),
+      node('second', { code: 'b' }),
+      node('other-axis', { axis: 'x', code: 'c' }),
     ]);
     expect(out?.map((m) => m.id)).toEqual(['first', 'other-axis']);
   });
@@ -173,10 +196,10 @@ describe('sanitizeTagMappings', () => {
   });
 
   it('joint 대상: 리그 없음·없는 관절·driven 관절은 버리고, 중복 관절은 첫 항목', () => {
-    const j = (id: string, jointId: string, key = 'k'): TagMapping => ({
+    const j = (id: string, jointId: string, code = 'k'): TagMapping => ({
       id,
       target: { kind: 'joint', jointId },
-      realtimeTagKey: key,
+      code,
     });
     expect(sanitizeTagMappings([j('a', 'luff')])).toBeUndefined();
     expect(
@@ -192,13 +215,7 @@ describe('sanitizeTagMappings', () => {
     ).toEqual([j('a', 'luff')]);
     expect(
       sanitizeTagMappings(
-        [
-          {
-            id: 'x',
-            target: { kind: 'joint', jointId: '' },
-            realtimeTagKey: 'k',
-          },
-        ],
+        [{ id: 'x', target: { kind: 'joint', jointId: '' }, code: 'k' }],
         { rig },
       ),
     ).toBeUndefined();
@@ -254,8 +271,8 @@ describe('sanitizeTagMappings — 라벨 표시(showOnLabel·caption)', () => {
   it('라벨 필드가 없는 맵핑은 저장본(JSON)에 새 키가 생기지 않는다', () => {
     const out = sanitizeTagMappings([node('m1')]);
     expect(Object.keys(JSON.parse(JSON.stringify(out))[0]).sort()).toEqual([
+      'code',
       'id',
-      'realtimeTagKey',
       'target',
     ]);
   });
@@ -268,7 +285,7 @@ describe('convertLegacyValueMapList', () => {
     scale: [2, 2, 2] as [number, number, number],
   };
 
-  it('PZ offset 은 배치 위치를 빼서 rest-Δ 로 옮기고 키는 실시간 슬롯 (dock-in 형태)', () => {
+  it('PZ offset 은 배치 위치를 빼서 rest-Δ 로 옮기고 키는 코드·크레인으로 나뉜다 (dock-in 형태)', () => {
     expect(
       convertLegacyValueMapList(
         [{ type: 'PZ', key: 'C_171.tl_distance', scale: 0.1, offset: 71 }],
@@ -278,7 +295,8 @@ describe('convertLegacyValueMapList', () => {
       {
         id: 'legacy-pz',
         target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        realtimeTagKey: 'C_171.tl_distance',
+        code: 'tl_distance',
+        craneId: 'C_171',
         scale: 0.1,
         offset: 66,
       },
@@ -311,18 +329,18 @@ describe('convertLegacyValueMapList', () => {
       {
         id: 'legacy-ry',
         target: { kind: 'node', node: '', channel: 'rotation', axis: 'y' },
-        realtimeTagKey: 'r',
+        code: 'r',
         offset: -30,
       },
       {
         id: 'legacy-rx',
         target: { kind: 'node', node: '', channel: 'rotation', axis: 'x' },
-        realtimeTagKey: 'rx',
+        code: 'rx',
       },
       {
         id: 'legacy-sx',
         target: { kind: 'node', node: '', channel: 'scale', axis: 'x' },
-        realtimeTagKey: 's',
+        code: 's',
         offset: -2,
       },
     ]);
@@ -352,7 +370,8 @@ describe('convertLegacyRigBindings', () => {
       {
         id: 'legacy-joint-luff',
         target: { kind: 'joint', jointId: 'luff' },
-        realtimeTagKey: 'C_1.luff',
+        code: 'luff',
+        craneId: 'C_1',
         scale: 0.5,
         offset: -1,
       },
@@ -400,14 +419,16 @@ describe('resolveModelTagMappings', () => {
       {
         id: 'legacy-pz',
         target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
-        realtimeTagKey: 'C_1.z',
+        code: 'z',
+        craneId: 'C_1',
         scale: 0.1,
         offset: 66,
       },
       {
         id: 'legacy-joint-luff',
         target: { kind: 'joint', jointId: 'luff' },
-        realtimeTagKey: 'C_1.luff',
+        code: 'luff',
+        craneId: 'C_1',
       },
     ]);
   });
@@ -427,5 +448,110 @@ describe('resolveModelTagMappings', () => {
     expect(resolveModelTagMappings(input, undefined)).toEqual(
       resolveModelTagMappings(input, undefined),
     );
+  });
+});
+
+describe('finalizeModelTagKeys', () => {
+  it('모델에 craneId 가 없고 접두어가 하나뿐이면 그것을 채우고 맵핑에서는 뗀다 (philly 형태)', () => {
+    const out = finalizeModelTagKeys(
+      undefined,
+      [
+        node('m1', { code: 'gantry_position', craneId: 'GC_04' }),
+        node('m2', { axis: 'x', code: 'trolley_position', craneId: 'GC_04' }),
+      ],
+      { fault: { code: 'fault', craneKey: 'GC_04' } },
+    );
+    expect(out).toEqual({
+      craneId: 'GC_04',
+      tagMappings: [
+        node('m1', { code: 'gantry_position' }),
+        node('m2', { axis: 'x', code: 'trolley_position' }),
+      ],
+      statusTags: { fault: 'fault' },
+    });
+    expect(out.tagMappings?.[0]).not.toHaveProperty('craneId');
+  });
+
+  it('상태 태그에만 접두어가 있어도 채운다', () => {
+    expect(
+      finalizeModelTagKeys(undefined, undefined, {
+        controlOn: { code: 'on', craneKey: 'C_171' },
+      }),
+    ).toEqual({
+      craneId: 'C_171',
+      tagMappings: undefined,
+      statusTags: { controlOn: 'on' },
+    });
+  });
+
+  it('접두어가 둘이면 채우지 않는다 — 맵핑은 craneId 를 들고 남고 상태 태그는 버린다', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = finalizeModelTagKeys(
+      undefined,
+      [
+        node('m1', { code: 'a', craneId: 'C_1' }),
+        node('m2', { axis: 'x', code: 'b', craneId: 'C_2' }),
+      ],
+      { fault: { code: 'f', craneKey: 'C_1' }, bypass: { code: 'bp' } },
+    );
+    expect(out.craneId).toBeUndefined();
+    expect(out.tagMappings).toEqual([
+      node('m1', { code: 'a', craneId: 'C_1' }),
+      node('m2', { axis: 'x', code: 'b', craneId: 'C_2' }),
+    ]);
+    expect(out.statusTags).toEqual({ bypass: 'bp' });
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('모델 craneId 와 같은 접두어는 정규화 기준으로 비교해 뗀다 (GC-04 ≡ GC_04)', () => {
+    const out = finalizeModelTagKeys(
+      'GC-04',
+      [node('m1', { code: 'a', craneId: 'GC_04' })],
+      { fault: { code: 'f', craneKey: 'GC_04' } },
+    );
+    expect(out).toEqual({
+      craneId: 'GC-04',
+      tagMappings: [node('m1', { code: 'a' })],
+      statusTags: { fault: 'f' },
+    });
+  });
+
+  it('모델 craneId 와 다른 접두어는 맵핑에 남기고, 상태 태그는 경고하고 버린다', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = finalizeModelTagKeys(
+      'C_171',
+      [node('m1', { code: 'a', craneId: 'C_172' })],
+      { fault: { code: 'f', craneKey: 'C_172' }, bypass: { code: 'bp' } },
+    );
+    expect(out.craneId).toBe('C_171');
+    expect(out.tagMappings).toEqual([
+      node('m1', { code: 'a', craneId: 'C_172' }),
+    ]);
+    expect(out.statusTags).toEqual({ bypass: 'bp' });
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('접두어가 없는 코드만 있으면 craneId 는 그대로고 필드도 생기지 않는다', () => {
+    const out = finalizeModelTagKeys(undefined, [node('m1')], {
+      fault: { code: 'f' },
+    });
+    expect(out).toEqual({
+      craneId: undefined,
+      tagMappings: [node('m1')],
+      statusTags: { fault: 'f' },
+    });
+  });
+
+  it('맵핑·상태 태그가 비면 둘 다 undefined', () => {
+    expect(finalizeModelTagKeys('C_1', undefined, undefined)).toEqual({
+      craneId: 'C_1',
+      tagMappings: undefined,
+      statusTags: undefined,
+    });
+    expect(finalizeModelTagKeys('C_1', [], {})).toEqual({
+      craneId: 'C_1',
+      tagMappings: undefined,
+      statusTags: undefined,
+    });
   });
 });

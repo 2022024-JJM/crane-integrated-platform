@@ -377,7 +377,7 @@ describe('sanitizeSceneInfo — 리그 통합', () => {
       {
         id: 'legacy-joint-slew',
         target: { kind: 'joint', jointId: 'slew' },
-        realtimeTagKey: 'k',
+        code: 'k',
       },
     ]);
   });

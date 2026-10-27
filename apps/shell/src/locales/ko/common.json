@@ -1,6 +1,5 @@
 {
   "language": "언어",
-  "comingSoon": "준비 중",
   "aria": {
     "goTo": "{{title}}(으)로 이동"
   },
@@ -55,19 +54,13 @@
     "themeChanged": "테마가 {{theme}} 모드로 변경되었습니다."
   },
   "nav": {
-    "overview": "Overview",
-    "dashboard": "대시보드",
     "monitoring": "모니터링",
     "dockStatus": "도크 현황",
     "map": "지도",
-    "cmms": "CMMS",
     "outdoorWork": "Outdoor Work",
     "indoorWork": "Indoor Work",
     "realTimeMonitoring": "실시간 3D 모니터링",
     "threeViewerEdit": "3D 화면 편집",
-    "craneStatus": "크레인 상태 목록",
-    "workHistory": "작업 이력",
-    "alarmHistory": "알람 이력",
     "replayMonitoring": "3D 플레이",
     "craneDetail": "상세 크레인",
     "mro": "MRO",
@@ -126,103 +119,11 @@
       "description": "법정 검사 및 인증 만료 관리"
     }
   },
-  "craneStatus": {
-    "latest": "최신",
-    "columns": {
-      "tagName": "태그 / 이름",
-      "value": "값",
-      "unit": "단위",
-      "category": "분류",
-      "dataType": "데이터 형식",
-      "snapshotAt": "수집 시각",
-      "status": "상태"
-    },
-    "statusBadges": {
-      "alarm": "알람",
-      "stale": "지연",
-      "changed": "변경",
-      "normal": "정상"
-    },
-    "viewing": "조회 구간",
-    "search": {
-      "startTime": "시작 시간",
-      "endTime": "종료 시간",
-      "submit": "조회",
-      "samplePreset": "샘플 구간",
-      "liveRange": "최근 실시간",
-      "resetRecent": "최근 3분",
-      "openStartPicker": "시작 시간 선택기 열기",
-      "openEndPicker": "종료 시간 선택기 열기",
-      "autoRefresh": "자동 갱신",
-      "autoRefreshOn": "켜짐",
-      "autoRefreshOff": "꺼짐",
-      "validation": {
-        "missing": "시작 시간과 종료 시간을 입력해 주세요.",
-        "invalid": "유효한 시간 범위를 입력해 주세요.",
-        "order": "시작 시간은 종료 시간보다 빨라야 합니다.",
-        "tooLarge": "조회 범위는 24시간 이내여야 합니다."
-      }
-    },
-    "name": "크레인명",
-    "status": "상태",
-    "load": "하중(t)",
-    "windSpeed": "풍속(m/s)",
-    "boomAngle": "붐각도(도)",
-    "hoistHeight": "호이스트(m)",
-    "slewAngle": "선회각도(도)",
-    "operating": "운행",
-    "idle": "대기",
-    "maintenance": "정비",
-    "warning": "경고",
-    "stopped": "정지"
-  },
   "alarms": {
     "title": "알람 현황",
-    "history": "알람 이력",
-    "alarmStatus": "알람 상태",
-    "filterAll": "전체",
     "critical": "위험",
     "warning": "경고",
     "info": "정보",
-    "page": {
-      "title": "알람 이력",
-      "severityFilter": "심각도",
-      "columns": {
-        "time": "발생 시각",
-        "crane": "크레인",
-        "severity": "심각도",
-        "message": "메시지",
-        "status": "상태"
-      },
-      "statusActive": "발생",
-      "statusCleared": "해제",
-      "empty": "표시할 알람이 없습니다.",
-      "emptyHint": "조건을 완화하거나 기간을 늘려 보세요.",
-      "rowsPerPage": "페이지당 행 수",
-      "of": "/ 전체",
-      "filters": {
-        "title": "조회 조건",
-        "from": "시작",
-        "to": "종료",
-        "preset1h": "최근 1시간",
-        "preset24h": "최근 24시간",
-        "preset7d": "최근 7일",
-        "crane": "크레인",
-        "craneAll": "전체 크레인",
-        "status": "상태",
-        "statusAll": "전체",
-        "statusActiveOnly": "발생",
-        "statusClearedOnly": "해제",
-        "search": "검색어",
-        "searchPlaceholder": "메시지 검색",
-        "apply": "조회",
-        "reset": "초기화",
-        "validationOrder": "시작 시간은 종료 시간보다 빨라야 합니다."
-      },
-      "totalCount": "총 {{count}}건",
-      "export": "CSV 내보내기",
-      "exportFileName": "알람이력"
-    },
     "windWarningExceeded": "풍속 경고: {{value}}m/s 초과",
     "loadWarningReached": "하중 경고: 최대 하중의 {{value}}% 도달",
     "maintenanceDue": "정기 정비 일정 D-{{days}}",
@@ -231,7 +132,6 @@
     "workAreaChanged": "작업 구역 변경 완료",
     "windStopExceeded": "풍속 초과로 운행 정지: {{value}}m/s",
     "workResumed": "작업 재개 완료",
-    "viewAllHistory": "알람 이력 전체 보기",
     "historyEmpty": "알람 이력이 없습니다",
     "historyColumns": {
       "severity": "단계",
@@ -307,7 +207,6 @@
     "fullscreen": "전체화면",
     "exitFullscreen": "전체화면 복원",
     "badge": "3D Viewer",
-    "resizePreview": "미리보기 크기 조절",
     "dockPin": "고정",
     "dockUnpin": "고정 해제",
     "dockExpand": "펼치기",

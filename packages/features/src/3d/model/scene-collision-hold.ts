@@ -1,7 +1,7 @@
 import { usePlay3dStore } from './use-play3d-store';
 import { useRealtimeStore } from './use-realtime-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
+import { useScenarioStore } from './use-scenario-store';
 
 /**
  * 충돌·영역 감지가 값 생산자(러너)를 멈추고, 돌고 있는지 묻고, 재개 전이를
@@ -15,7 +15,7 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /**
  * 감지 대상 값 생산자 — 스캔 게이트·정지 방식·안내 문구·재개 경로가 갈린다.
- * - 'simulation': 에디터·대시보드 미리보기(가상 태그 러너)
+ * - 'simulation': 에디터(가상 태그 러너)
  * - 'realtime': 실시간 모니터링(WebSocket)
  * - 'play3d': 3D 플레이 페이지 — 활성 소스(usePlay3dStore)가 리플레이면
  *   리플레이 러너, 시뮬레이션이면 가상 태그 러너
@@ -35,14 +35,14 @@ export function isRunnerRunning(runner: SceneCollisionRunner): boolean {
     case 'play3d':
       return usePlay3dStore.getState().source === 'replay'
         ? useReplayPlayerStore.getState().isPlaying
-        : useVirtualTagStore.getState().isRunning;
+        : useScenarioStore.getState().isRunning;
     default:
-      return useVirtualTagStore.getState().isRunning;
+      return useScenarioStore.getState().isRunning;
   }
 }
 
 export function holdRunners(): void {
-  useVirtualTagStore.getState().pause();
+  useScenarioStore.getState().pause();
   useReplayPlayerStore.getState().pause();
   useRealtimeStore.getState().hold();
 }
@@ -66,7 +66,7 @@ export function subscribeRunnerResume(
   onResume: () => void,
 ): () => void {
   if (runner === 'realtime') return () => {};
-  const unsubVirtual = useVirtualTagStore.subscribe((state, prev) => {
+  const unsubVirtual = useScenarioStore.subscribe((state, prev) => {
     if (state.isRunning && !prev.isRunning) onResume();
   });
   if (runner === 'simulation') return unsubVirtual;

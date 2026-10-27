@@ -7,11 +7,11 @@ import {
 import { usePlay3dStore } from '../use-play3d-store';
 import { useRealtimeStore } from '../use-realtime-store';
 import { useReplayPlayerStore } from '../use-replay-player-store';
-import { useVirtualTagStore } from '../use-virtual-tag-store';
+import { useScenarioStore } from '../use-scenario-store';
 
 beforeEach(() => {
   useReplayPlayerStore.getState().reset();
-  useVirtualTagStore.getState().stop();
+  useScenarioStore.getState().stop();
   useRealtimeStore.getState().stop();
   usePlay3dStore.setState({ source: 'replay' });
 });
@@ -19,16 +19,16 @@ beforeEach(() => {
 describe('isRunnerRunning', () => {
   it("'play3d' 은 활성 소스의 러너를 본다", () => {
     useReplayPlayerStore.setState({ isPlaying: true });
-    useVirtualTagStore.setState({ isRunning: false });
+    useScenarioStore.setState({ isRunning: false });
     expect(isRunnerRunning('play3d')).toBe(true);
     usePlay3dStore.setState({ source: 'simulation' });
     expect(isRunnerRunning('play3d')).toBe(false);
-    useVirtualTagStore.setState({ isRunning: true });
+    useScenarioStore.setState({ isRunning: true });
     expect(isRunnerRunning('play3d')).toBe(true);
   });
 
   it("'simulation' 은 가상 태그, 'realtime' 은 WebSocket 러너", () => {
-    useVirtualTagStore.setState({ isRunning: true });
+    useScenarioStore.setState({ isRunning: true });
     useRealtimeStore.setState({ isRunning: false });
     expect(isRunnerRunning('simulation')).toBe(true);
     expect(isRunnerRunning('realtime')).toBe(false);
@@ -53,7 +53,7 @@ describe('subscribeRunnerResume', () => {
     expect(cb).toHaveBeenCalledTimes(1);
     useReplayPlayerStore.setState({ isPlaying: true }); // 전이 아님
     expect(cb).toHaveBeenCalledTimes(1);
-    useVirtualTagStore.setState({ isRunning: true });
+    useScenarioStore.setState({ isRunning: true });
     expect(cb).toHaveBeenCalledTimes(2);
     unsub();
     useReplayPlayerStore.setState({ isPlaying: false });
@@ -68,7 +68,7 @@ describe('subscribeRunnerResume', () => {
     const unsubRt = subscribeRunnerResume('realtime', rt);
     useReplayPlayerStore.setState({ isPlaying: true });
     expect(sim).not.toHaveBeenCalled();
-    useVirtualTagStore.setState({ isRunning: true });
+    useScenarioStore.setState({ isRunning: true });
     expect(sim).toHaveBeenCalledTimes(1);
     useRealtimeStore.setState({ isRunning: true });
     expect(rt).not.toHaveBeenCalled();

@@ -25,9 +25,7 @@ import { isPlanLookCamera } from '../lib/plan-look';
 import { stopSimulation } from '../model/stop-simulation';
 import { readTagLiveValue } from '../model/tag-value-bus';
 import type { MonitoringViewMode } from '../model/types';
-import { usePlay3dStore } from '../model/use-play3d-store';
-import { resolveActiveTagSlot } from '../lib/tag-slot';
-import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { useScenarioStore } from '../model/use-scenario-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
@@ -39,20 +37,7 @@ import { SceneFloodlightFixture } from './scene-floodlight-fixture';
 import { SceneFloodlights } from './scene-floodlights';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
-export interface UseSceneDataOptions {
-  /**
-   * `mode='simulation'` 진입 시 가상 태그 재생을 바로 켤지. 기본 true(모니터링
-   * 화면). 대시보드 3D 미리보기처럼 ▶ 토글이 없는 작은 뷰는 false 로 두어
-   * 정지 상태로 열고, 화면을 떠날 때의 pause 는 값과 무관하게 수행한다.
-   */
-  autoStartSimulation?: boolean;
-}
-
-export function useSceneData(
-  regionId: string,
-  mode: MonitoringViewMode = 'simulation',
-  { autoStartSimulation = true }: UseSceneDataOptions = {},
-) {
+export function useSceneData(regionId: string, mode: MonitoringViewMode) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   /** 이 region이 로드한 GLB 경로. cleanup에서 캐시를 비울 때 쓴다. */
@@ -61,8 +46,7 @@ export function useSceneData(
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const setActiveMode = useSceneInfoStore((s) => s.setActiveMode);
   const setActiveRegionId = useSceneInfoStore((s) => s.setActiveRegionId);
-  const loadVirtualTags = useVirtualTagStore((s) => s.load);
-  const startSimulation = useVirtualTagStore((s) => s.start);
+  const loadScenarios = useScenarioStore((s) => s.load);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
   const startRealtime = useRealtimeStore((s) => s.start);
   const stopRealtime = useRealtimeStore((s) => s.stop);
@@ -73,7 +57,7 @@ export function useSceneData(
     // 서로 다른 컴포넌트라 언마운트/마운트로 전환되므로, 컴포넌트 ref로는
     // "같은 지역으로 이어졌다"를 알 수 없다(markSceneRegionActive 주석 참고).
     markSceneRegionActive(regionId);
-    // 저널·알람·알림 브릿지가 "실시간 화면의 사건인가" 를 판정하는 근거.
+    // 알람·알림 브릿지가 "실시간 화면의 사건인가" 를 판정하는 근거.
     setActiveMode(mode);
     setActiveRegionId(regionId);
 
@@ -121,23 +105,17 @@ export function useSceneData(
     // 러너는 모듈 싱글턴이라 이전 화면(에디터·다른 리전)의 시간·시나리오·
     // 자세가 남아 있다 — 화면에 들어올 때마다 처음 상태에서 시작한다.
     stopSimulation();
-    if (mode === 'simulation') {
-      // 시뮬레이션 = 가상 태그 재생. 정의는 배포 파일에서 한 번 읽는다.
-      void loadVirtualTags();
-      // 자동 재생을 끈 뷰(대시보드 3D 미리보기)는 정지 상태로 연다.
-      if (autoStartSimulation) startSimulation();
+    if (mode === 'realtime') {
+      startRealtime();
       // 다른 모드에서 남은 replay 재생 상태가 useReplayPlayerRunner를 통해
       // 이 mode에서도 계속 tick하지 않도록 진입 시 항상 정리.
-      resetReplay();
-    } else if (mode === 'realtime') {
-      startRealtime();
       resetReplay();
     } else {
       // 3D 플레이 — 소스(리플레이|시뮬레이션)는 usePlay3dStore 가 들고
       // Play3dView 가 전환을 정리한다. 여기서는 둘 다 깨끗이 시작하고
       // 정의만 읽어 둔다(자동 재생 없음 — ▶ 가 실행의 시작점이다).
       resetReplay();
-      void loadVirtualTags();
+      void loadScenarios();
     }
     void load();
 
@@ -148,7 +126,7 @@ export function useSceneData(
       stopRealtime();
       // unmount 시 replay 재생 상태도 함께 정리. 그렇지 않으면 다른 페이지로
       // 이동해도 store는 유지되어 useReplayPlayerRunner가 isPlaying=true일 때
-      // 매 프레임 tick → applyValue를 호출, realtime/simulation의 값과 충돌.
+      // 매 프레임 tick → applyValue를 호출, 실시간·시뮬레이션의 값과 충돌.
       resetReplay();
       // 가상 태그 재생은 이 화면이 켠 것이므로 떠날 때 **종료**한다(시간 0·
       // 시나리오 해제·배속 1) — 다음 화면이 남은 자세·시간을 이어받지 않는다.
@@ -157,8 +135,8 @@ export function useSceneData(
       // 이 region의 GLB 캐시를 비운다. 해제하지 않으면 지역을 오갈수록
       // 메모리가 단조 증가해 장시간 세션에서 탭이 죽는다.
       //
-      // 단, **region이 실제로 바뀔 때만** 비운다. 이 effect는 mode(시뮬레이션
-      // ↔ 실시간 ↔ 리플레이)에도 재실행되는데, 같은 지역에서 모드만 바꿨는데
+      // 단, **region이 실제로 바뀔 때만** 비운다. 이 effect는 mode(실시간 ↔
+      // 3D 플레이)에도 재실행되는데, 같은 지역에서 모드만 바꿨는데
       // 캐시를 버리면 수십 MB를 다시 받는다 — 모드 전환은 흔한 조작이라
       // 그때마다 로딩이 걸리면 오히려 퇴보다.
       const pathsToRelease = loadedAssetPathsRef.current;
@@ -166,9 +144,8 @@ export function useSceneData(
       releaseSceneRegionAssets(regionId, pathsToRelease);
     };
   }, [
-    autoStartSimulation,
     clearSceneInfoFromStore,
-    loadVirtualTags,
+    loadScenarios,
     mode,
     regionId,
     resetReplay,
@@ -176,7 +153,6 @@ export function useSceneData(
     setActiveRegionId,
     setSceneInfoInStore,
     startRealtime,
-    startSimulation,
     stopRealtime,
   ]);
 
@@ -188,7 +164,7 @@ interface OutdoorWorkModelSimulationProps {
   regionId: string;
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
-  mode?: MonitoringViewMode;
+  mode: MonitoringViewMode;
   onResetCamera?: () => void;
   /**
    * 모델의 실루엣 테두리 사본을 워밍업 큐에서 미리 만들지(GltfModel 로
@@ -216,7 +192,7 @@ export function OutdoorWorkModelSimulation({
   regionId,
   alarmsByCraneId,
   alarmHighlightMesh = false,
-  mode = 'simulation',
+  mode,
   onResetCamera,
   prepareOutline = false,
   labelStates = NO_LABEL_STATES,
@@ -250,7 +226,7 @@ export function OutdoorWorkModelSimulation({
   // 평면도 숨은선 대상 — 검출기(ScenePlanOverlapDetector)가 탑뷰에서 채운다.
   const planHiddenIndexById = usePlanOverlapStore((s) => s.hiddenIndexById);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
-  // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
+  // 시나리오는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
   useRealtimeRunner();
   useCraneSnapshotRealtimeBridge(mode === 'realtime');
@@ -262,20 +238,18 @@ export function OutdoorWorkModelSimulation({
   const floodlights = sceneInfo?.floodlights;
   const metersPerUnit = getSceneMetersPerUnit(regionId);
   // 라벨 위 태그 값 목록 — 모델마다 참조를 고정해야 memo 된 GltfModel 이
-  // 렌더마다 다시 그려지지 않는다. 키는 활성 슬롯의 것 — 3D 플레이의 소스
-  // 전환은 리마운트가 아니라 여기 의존성으로 따라간다.
-  const play3dSource = usePlay3dStore((s) => s.source);
-  const tagSlot = resolveActiveTagSlot(mode, play3dSource);
+  // 렌더마다 다시 그려지지 않는다. 키는 모델 craneId 로 조립한다 — 어느
+  // 생산자의 값인지는 버스 게이트가 정하므로 소스 전환에 무관하다.
   const sceneModels = sceneInfo?.models;
   const labelReadingsById = useMemo(
     () =>
       new Map(
         (sceneModels ?? []).map((model) => [
           model.id,
-          buildLabelReadings(model.tagMappings, tagSlot),
+          buildLabelReadings(model),
         ]),
       ),
-    [sceneModels, tagSlot],
+    [sceneModels],
   );
 
   const onResetCameraRef = useRef(onResetCamera);

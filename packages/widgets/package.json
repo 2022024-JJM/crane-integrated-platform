@@ -6,12 +6,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    "./alarm": "./src/alarm/index.ts",
-    "./crane": "./src/crane/index.ts",
     "./3d": "./src/3d/index.ts",
     "./layout": "./src/layout/index.ts",
     "./scene-editor": "./src/scene-editor/index.ts",
     "./tags": "./src/tags/index.ts",
+    "./scenario": "./src/scenario/index.ts",
     "./detection-settings": "./src/detection-settings/index.ts",
     "./asset-library": "./src/asset-library/index.ts"
   },

@@ -62,7 +62,6 @@ import {
   SCENE_GL_OPTIONS,
   SCENE_RAYCASTER_OPTIONS,
   CAMERA_MIN_SURFACE_DISTANCE,
-  EDITOR_TAG_SLOT,
   SceneEnvironment,
   SceneFloodlightFixture,
   SceneFloodlightPreview,
@@ -999,15 +998,15 @@ export function SceneObjectsEditCanvas({
   );
 
   const metersPerUnit = getSceneMetersPerUnit(regionId);
-  // 라벨 위 태그 값 목록 — 모델마다 참조를 고정한다(뷰어와 같은 이유). 에디터는
-  // 값 생산자가 없어 슬롯은 모드 없는 화면의 기본(실시간)이다.
+  // 라벨 위 태그 값 목록 — 모델마다 참조를 고정한다(뷰어와 같은 이유). 키는
+  // 모델 craneId 로 조립한다.
   const sceneModels = sceneInfo?.models;
   const labelReadingsById = useMemo(
     () =>
       new Map(
         (sceneModels ?? []).map((model) => [
           model.id,
-          buildLabelReadings(model.tagMappings, EDITOR_TAG_SLOT),
+          buildLabelReadings(model),
         ]),
       ),
     [sceneModels],
