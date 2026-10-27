@@ -84,10 +84,10 @@
     {
       "id": "85d60f80-146b-4870-8786-3839398931cd",
       "equipName": "GC-04",
-      "path": "/asset-library/files/okpo-goliath/v3/Okpo_Goliath.glb",
+      "path": "/asset-library/files/okpo-goliath/v4/Okpo_Goliath.glb",
       "asset": {
         "id": "okpo-goliath",
-        "version": 3
+        "version": 4
       },
       "opacity": 1,
       "position": [
@@ -185,10 +185,10 @@
     {
       "id": "f37f44b8-1a5e-41b1-8b6a-b5d776720846",
       "equipName": "GC-01",
-      "path": "/asset-library/files/okpo-goliath/v3/Okpo_Goliath.glb",
+      "path": "/asset-library/files/okpo-goliath/v4/Okpo_Goliath.glb",
       "asset": {
         "id": "okpo-goliath",
-        "version": 3
+        "version": 4
       },
       "opacity": 1,
       "position": [
@@ -714,10 +714,10 @@
     {
       "id": "4c4d4d0e-759a-4342-a3b1-9c7e637fc6fd",
       "equipName": "GC-03",
-      "path": "/models/goliath_crane.glb",
+      "path": "/asset-library/files/goliath-crane/v2/Philly_Goliath-add_rope.glb",
       "asset": {
         "id": "goliath-crane",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -739,10 +739,10 @@
     {
       "id": "6ed3c526-663e-4968-9e35-0f3175d5c943",
       "equipName": "GC-05",
-      "path": "/models/goliath_crane.glb",
+      "path": "/asset-library/files/goliath-crane/v2/Philly_Goliath-add_rope.glb",
       "asset": {
         "id": "goliath-crane",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -1766,14 +1766,14 @@
   "texts": [],
   "camera": {
     "position": [
-      487.301368970356,
-      187.24188773539342,
-      87.12094723263385
+      269.9396530513887,
+      223.15161380885368,
+      118.6518290900795
     ],
     "target": [
-      851.6375168545841,
-      5.209937895000319,
-      323.65097303548856
+      81.74926533450716,
+      -34.68377856281464,
+      -143.8498094550905
     ]
   },
   "rigs": [
@@ -2235,14 +2235,14 @@
   "cameraByRegion": {
     "dock-1": {
       "position": [
-        880.3124928812509,
-        352.3244460891614,
-        219.1131627109334
+        269.9396530513887,
+        223.15161380885368,
+        118.6518290900795
       ],
       "target": [
-        706.6537213820397,
-        27.95375900105159,
-        92.8561870152503
+        81.74926533450716,
+        -34.68377856281464,
+        -143.8498094550905
       ]
     },
     "dock-2": {

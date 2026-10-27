@@ -112,10 +112,10 @@
     {
       "id": "id-mt0rhrsw-icvq0ukr",
       "equipName": "GC-04",
-      "path": "/models/goliath_crane.glb",
+      "path": "/asset-library/files/goliath-crane/v2/Philly_Goliath-add_rope.glb",
       "asset": {
         "id": "goliath-crane",
-        "version": 1
+        "version": 2
       },
       "opacity": 1,
       "position": [
@@ -373,14 +373,14 @@
   "texts": [],
   "camera": {
     "position": [
-      -480.09873364566647,
-      189.61442621733158,
-      219.99582689239162
+      -524.6208836015995,
+      158.25246840247632,
+      223.78236653418435
     ],
     "target": [
-      -680.6963728499156,
-      -8.893928813127797,
-      57.585340349267625
+      -655.7510997216646,
+      -8.899319092613126,
+      64.98376476465636
     ]
   },
   "rigs": [

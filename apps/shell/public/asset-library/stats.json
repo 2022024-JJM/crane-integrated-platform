@@ -125,6 +125,27 @@
       "animations": 0
     }
   },
+  "/asset-library/files/goliath-crane/v2/Philly_Goliath-add_rope.glb": {
+    "hash": "7925cc65",
+    "bytes": 1193244,
+    "stats": {
+      "triangles": 76940,
+      "vertices": 136443,
+      "meshes": 12,
+      "materials": 6,
+      "textures": 1,
+      "drawCalls": 12,
+      "nodes": 9,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        129.991,
+        64.614,
+        43.738
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/llc-002/v2/LLC_Rigged_20260822.glb": {
     "hash": "8c09e973",
     "bytes": 984184,
@@ -304,6 +325,27 @@
       "textures": 1,
       "drawCalls": 11,
       "nodes": 4,
+      "textureMemoryBytes": 5578424,
+      "size": [
+        49.83,
+        111.368,
+        155.193
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/okpo-goliath/v4/Okpo_Goliath.glb": {
+    "hash": "75f95234",
+    "bytes": 836780,
+    "stats": {
+      "triangles": 99236,
+      "vertices": 129345,
+      "meshes": 15,
+      "materials": 8,
+      "textures": 1,
+      "drawCalls": 15,
+      "nodes": 9,
       "textureMemoryBytes": 5578424,
       "size": [
         49.83,
