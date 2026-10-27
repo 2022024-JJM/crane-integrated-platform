@@ -104,7 +104,7 @@
 
 crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 현재 상태를 받아 태그 페이지의 실시간 탭이 보여 주고, 3D 모니터링 실시간 모드(`mode='realtime'`)의 값 생산자이기도 하다.
 
-- 전송: `@crane/core/ws` 의 `StompClient`(`@stomp/stompjs` 래퍼). 엔드포인트는 `getStompWebSocketUrl()`(WebSocket 베이스 `/ws` 자체, SockJS 없음). `craneStompClient` 하나를 acquire/release 로 나눠 쓰고, 목적지 구독은 연결 전에 걸어도 CONNECTED 마다 다시 건다. 재연결은 stompjs 지수 백오프이고, 사용자가 끊은 것(`disconnect`)과 서버 쪽 끊김은 `isActive()` 로 가른다.
+- 전송: `@crane/core/ws` 의 `StompClient`(`@stomp/stompjs` 래퍼). 엔드포인트는 `getStompWebSocketUrl()`(WebSocket 베이스 `/ws` 자체, SockJS 없음). `craneStompClient` 하나를 acquire/release 로 나눠 쓰고, 목적지 구독은 연결 전에 걸어도 CONNECTED 마다 다시 건다. 같은 핸들러 함수를 여러 화면이 넘겨도 등록 횟수로 세어 마지막 등록이 빠질 때만 브로커 구독을 끊는다 — 피드 훅은 모듈 전역 `applyBatch` 하나를 넘기므로, 태그 페이지와 3D 실시간 브리지가 겹쳐 있다가 한쪽이 먼저 빠져도 남은 쪽의 수신이 끊기지 않는다. 재연결은 stompjs 지수 백오프이고, 사용자가 끊은 것(`disconnect`)과 서버 쪽 끊김은 `isActive()` 로 가른다.
 - 데이터: `CraneSnapshot`(`@crane/domain/monitoring`) — craneId · bay · online · `tags{code → {value, quality, timestamp}}`. `/topic/cranes` 봉투(`type: 'snapshot'`)에는 push 주기 동안 바뀐 크레인만 실리므로 피드를 켤 때 `GET /api/cranes`(`getCraneSnapshots`)로 전체를 받는다. stompjs 자동 재연결 뒤에는 다시 받지 않는다 — 살아 있는 크레인은 heartbeat 로 다음 묶음에 실려 오지만, 끊긴 동안 offline 으로 바뀐 크레인의 전이는 놓칠 수 있다. 모양이 깨진 태그 항목은 `sanitizeCraneSnapshot` 이 버린다.
 - 스토어: `useCraneSnapshotStore` — craneId → `CraneSnapshotEntry`(스냅샷 + 수신 시각 + heartbeat 가 마지막으로 뒤집힌 시각 + 태그별 변경 시각·횟수·관측 범위). 묶음마다 바뀐 크레인 항목만 새 참조라 카드는 자기 크레인만 구독한다. 연결이 끊겨도 값은 마지막 상태로 남는다.
 - 피드: `useCraneSnapshotFeed(enabled)` 가 구독·REST·참조를 맡고(마운트 = 구독), 연결 표시는 `useCraneFeedConnection()`(useSyncExternalStore). 실시간 탭의 연결 해제(툴바 톱니 → 연결 설정 팝업: 호스트 주소 `getCraneFeedUrl()` · 상태 · 연결 해제/연결 버튼)는 그 화면의 구독만 놓는다 — 같은 클라이언트를 다른 화면이 잡고 있으면 소켓은 열린 채다.
