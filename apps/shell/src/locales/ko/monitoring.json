@@ -436,11 +436,6 @@
       "stopHint": "등급이 '정지'인 영역에 들어오면 시뮬레이션·3D 플레이를 멈춥니다. 이어서 재생하면 그 침범은 이탈 전까지 다시 멈추지 않습니다.\n실시간 모니터링은 정지하지 않습니다."
     }
   },
-  "craneList": {
-    "countAll": "{{count}}기",
-    "countFiltered": "{{visible}} / {{total}}기",
-    "emptyForFilter": "해당 상태의 크레인이 없습니다."
-  },
   "virtualTags": {
     "play": "전체 재생",
     "pause": "일시정지",

@@ -5,9 +5,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 
 /**
  * 씬 툴바 버튼의 공통 외형(테마별 글래스 판). ThreeSceneViewer 의 카메라
- * 버튼과 독(SceneDock) 안의 버튼, toolbarExtras·toolbarTrailing 으로 주입되는
- * 외부 버튼(알람 토글·충돌 토글·북마크)이 모두 이 클래스를 써야 한 줄의
- * 툴바로 보인다.
+ * 버튼과 독(SceneDock) 안의 버튼, toolbarExtras 로 주입되는 외부 버튼(알람
+ * 토글·충돌 토글)과 고정 뷰 줄이 모두 이 클래스를 써야 한 줄의 툴바로
+ * 보인다.
  *
  * 동영상 플레이어 컨트롤 방식의 글래스 판을 테마에 맞는 색으로 깐다 —
  * 라이트는 반투명 흰 + 검정 아이콘, 다크는 반투명 검정 + 흰 아이콘. 테마

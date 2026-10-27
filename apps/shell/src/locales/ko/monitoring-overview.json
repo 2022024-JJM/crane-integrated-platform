@@ -47,13 +47,6 @@
       "critical": "이상"
     }
   },
-  "cmms": {
-    "title": "CMMS",
-    "description": "지역별 크레인 상태를 한눈에 확인합니다.",
-    "allCollapsed": "전체 접힘",
-    "allExpanded": "전체 펼침",
-    "toggleAria": "전체 접기 / 펼치기"
-  },
   "status": {
     "normal": "정상",
     "warning": "경고",

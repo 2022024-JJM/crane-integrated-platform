@@ -11,8 +11,8 @@ export type StatusLevel = 'normal' | 'warning' | 'critical';
 
 /**
  * 3D 관제 화면의 장비 운전 상태 — ACMS 의 Crane ID Box 네 가지(고장·가동·운전
- * 전원 On·운전 전원 Off)와 통신두절·미확인. 라벨·관제 HUD·3D 플레이 리포트·
- * 저널이 전부 이 여섯 가지를 쓴다. 판정은 features/3d
+ * 전원 On·운전 전원 Off)와 통신두절·미확인. 라벨·관제 HUD·3D 플레이 리포트가
+ * 전부 이 여섯 가지를 쓴다. 판정은 features/3d
  * lib/model-label-state.ts — 움직임·수신은 태그 값의 변화·수신 시각에서, 나머지는
  * 모델의 상태 태그(`statusTags`)에서 온다.
  * - fault: 고장 비트 on
@@ -53,9 +53,3 @@ export type EquipmentOutlineState =
   | 'commError'
   | 'slowdown'
   | 'endstop';
-
-// ─── CMMS 상태 타입 ──────────────────────────────────────────────
-export type OnOff = 'ON' | 'OFF';
-export type OkNg = 'OK' | 'NG';
-export type RunFaultStatus = 'STOP' | 'RUN' | 'FAULT';
-export type OpenClose = '열림' | '닫힘';

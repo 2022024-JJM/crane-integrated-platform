@@ -3,7 +3,6 @@ import {
   ASSET_ID_PATTERN,
   buildAssetThumbnailKey,
   buildAssetVersionFileKey,
-  getAssetThumbnailPath,
   getFileExtension,
   isRemovableLegacyAssetPath,
   parseAssetLibraryFileKey,
@@ -153,14 +152,6 @@ describe('hashAssetLibraryText', () => {
     for (const text of ['', 'a', '옥포조선소 크레인', 'x'.repeat(100_000)]) {
       expect(hashAssetLibraryText(text)).toMatch(/^[0-9a-f]{16}$/);
     }
-  });
-});
-
-describe('getAssetThumbnailPath', () => {
-  it('자산 id 로 썸네일의 public 절대 경로를 만든다', () => {
-    expect(getAssetThumbnailPath('okpo-ttc')).toBe(
-      '/asset-library/thumbnails/okpo-ttc.png',
-    );
   });
 });
 

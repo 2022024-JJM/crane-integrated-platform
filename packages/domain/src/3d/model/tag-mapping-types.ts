@@ -97,7 +97,7 @@ export function hasAnyTagKey(slots: TagKeySlots | undefined): boolean {
 
 /**
  * 표시용 대표 키 — 실시간 우선, 없으면 가상. 어느 소스가 활성인지와 무관한
- * 곳(관절 배지·대시보드 목록)에서만 쓴다. 런타임 바인딩은 `getSlotTagKey`.
+ * 곳(관절 배지)에서만 쓴다. 런타임 바인딩은 `getSlotTagKey`.
  */
 export function getPrimaryTagKey(
   slots: TagKeySlots | undefined,

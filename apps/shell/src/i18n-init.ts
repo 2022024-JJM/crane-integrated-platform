@@ -3,18 +3,12 @@ import { initI18n } from '@crane/core/config/i18n';
 import koCommon from './locales/ko/common.json';
 import enCommon from './locales/en/common.json';
 import laCommon from './locales/la/common.json';
-import koDashboard from './locales/ko/dashboard.json';
-import enDashboard from './locales/en/dashboard.json';
-import laDashboard from './locales/la/dashboard.json';
 import koMonitoring from './locales/ko/monitoring.json';
 import enMonitoring from './locales/en/monitoring.json';
 import laMonitoring from './locales/la/monitoring.json';
 import koMonitoringOverview from './locales/ko/monitoring-overview.json';
 import enMonitoringOverview from './locales/en/monitoring-overview.json';
 import laMonitoringOverview from './locales/la/monitoring-overview.json';
-import koCmms from './locales/ko/cmms.json';
-import enCmms from './locales/en/cmms.json';
-import laCmms from './locales/la/cmms.json';
 import koAssetManagement from './locales/ko/asset-management.json';
 import enAssetManagement from './locales/en/asset-management.json';
 import laAssetManagement from './locales/la/asset-management.json';
@@ -52,10 +46,8 @@ import laAssetLibrary from './locales/la/asset-library.json';
 const resources = {
   ko: {
     common: koCommon,
-    dashboard: koDashboard,
     monitoring: koMonitoring,
     'monitoring-overview': koMonitoringOverview,
-    cmms: koCmms,
     'asset-management': koAssetManagement,
     inspection: koInspection,
     maintenance: koMaintenance,
@@ -70,10 +62,8 @@ const resources = {
   },
   en: {
     common: enCommon,
-    dashboard: enDashboard,
     monitoring: enMonitoring,
     'monitoring-overview': enMonitoringOverview,
-    cmms: enCmms,
     'asset-management': enAssetManagement,
     inspection: enInspection,
     maintenance: enMaintenance,
@@ -88,10 +78,8 @@ const resources = {
   },
   la: {
     common: laCommon,
-    dashboard: laDashboard,
     monitoring: laMonitoring,
     'monitoring-overview': laMonitoringOverview,
-    cmms: laCmms,
     'asset-management': laAssetManagement,
     inspection: laInspection,
     maintenance: laMaintenance,
@@ -108,10 +96,8 @@ const resources = {
 
 initI18n(resources, [
   'common',
-  'dashboard',
   'monitoring',
   'monitoring-overview',
-  'cmms',
   'asset-management',
   'inspection',
   'maintenance',

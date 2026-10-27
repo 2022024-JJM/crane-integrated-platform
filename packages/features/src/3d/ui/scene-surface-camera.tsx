@@ -263,9 +263,9 @@ export function SceneSurfaceCamera({
         factor,
         controls.maxDistance,
       );
-      // frameloop='demand' 캔버스(대시보드 미리보기 모달)에서 첫 휠이
-      // 무반응이 되지 않게 프레임을 깨운다 — 이후 easing 은 useFrame 의
-      // controls.update() 가 발행하는 change → drei invalidate 체인이 잇는다.
+      // frameloop='demand' 캔버스에서 첫 휠이 무반응이 되지 않게 프레임을
+      // 깨운다 — 이후 easing 은 useFrame 의 controls.update() 가 발행하는
+      // change → drei invalidate 체인이 잇는다.
       // 'always' 캔버스에선 무해한 no-op 이다.
       invalidate();
     };

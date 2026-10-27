@@ -191,12 +191,6 @@ function LoginGuard() {
   return <LoginPage />;
 }
 
-const DashboardPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/dashboard').then((m) => ({
-    default: m.DashboardPage,
-  })),
-);
-
 const DockStatusPage = lazy(() =>
   import('@crane/hanwha-ocean/pages/monitoring').then((m) => ({
     default: m.DockStatusPage,
@@ -209,12 +203,6 @@ const RegionMapPage = lazy(() =>
   })),
 );
 
-const RegionCmmsPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/monitoring').then((m) => ({
-    default: m.RegionCmmsPage,
-  })),
-);
-
 const OutdoorWorkPage = lazy(() =>
   import('@crane/hanwha-ocean/pages/outdoor-work').then((m) => ({
     default: m.OutdoorWorkPage,
@@ -224,18 +212,6 @@ const OutdoorWorkPage = lazy(() =>
 const IndoorWorkPage = lazy(() =>
   import('@crane/hanwha-ocean/pages/indoor-work').then((m) => ({
     default: m.IndoorWorkPage,
-  })),
-);
-
-const CraneDetailListPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/crane-detail').then((m) => ({
-    default: m.CraneDetailListPage,
-  })),
-);
-
-const CraneDetailPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/crane-detail').then((m) => ({
-    default: m.CraneDetailPage,
   })),
 );
 
@@ -523,14 +499,8 @@ const craneRoutes = (
         </LazyRoute>
       }
     />
-    <Route
-      index
-      element={
-        <LazyRoute>
-          <DashboardPage />
-        </LazyRoute>
-      }
-    />
+    {/* 진입 화면은 도크 현황이다 — 로그인 직후·로고·404 의 '/' 가 모두 여기로 온다. */}
+    <Route index element={<Navigate to="/monitoring/dock-status" replace />} />
     <Route
       path="region-overview"
       element={<Navigate to="/monitoring/dock-status" replace />}
@@ -560,14 +530,6 @@ const craneRoutes = (
       }
     />
     <Route
-      path="monitoring/cmms"
-      element={
-        <LazyRoute>
-          <RegionCmmsPage />
-        </LazyRoute>
-      }
-    />
-    <Route
       path="outdoor-work/:regionId/*"
       element={
         <LazyRoute>
@@ -584,22 +546,6 @@ const craneRoutes = (
           <RegionGuard>
             <IndoorWorkPage />
           </RegionGuard>
-        </LazyRoute>
-      }
-    />
-    <Route
-      path="crane-detail"
-      element={
-        <LazyRoute>
-          <CraneDetailListPage />
-        </LazyRoute>
-      }
-    />
-    <Route
-      path="crane-detail/:craneId/*"
-      element={
-        <LazyRoute>
-          <CraneDetailPage />
         </LazyRoute>
       }
     />

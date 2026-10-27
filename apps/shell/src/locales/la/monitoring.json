@@ -436,11 +436,6 @@
       "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem et lusum sistit. Post resumptionem, ea invasio non iterum sistet donec exeat.\nObservatio temporis realis numquam sistit."
     }
   },
-  "craneList": {
-    "countAll": "{{count}} grues",
-    "countFiltered": "{{visible}} / {{total}} grues",
-    "emptyForFilter": "Nullae grues huic statui congruunt."
-  },
   "virtualTags": {
     "play": "Omnia age",
     "pause": "Siste",

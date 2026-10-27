@@ -21,10 +21,6 @@ export function getRegionLinkItems(regionId: Region['id']) {
       labelKey: 'common:nav.realTimeMonitoring',
       path: `${base}/3d-monitoring`,
     },
-    {
-      labelKey: 'common:nav.craneStatus',
-      path: `${base}/crane-status`,
-    },
   ];
 }
 

@@ -155,8 +155,9 @@ apps/{site}/src/pages/{page}/
 
 - 모든 route element 는 `lazy()` + `LazyRoute`(Suspense + `RouteErrorBoundary`) 로 감싼다.
 - `login` 을 제외한 전부가 `ProtectedRoute` 하위이고, 그 안에 `AppLayout` 이 있다.
+- crane 범위의 진입 화면(index)은 도크 현황(`monitoring/dock-status`)으로 redirect 된다. 로그인 직후·헤더 로고·404 의 홈 링크가 모두 `/` 를 가리키므로 진입 화면을 바꿀 때는 이 index 하나만 고친다.
 - 현장 작업 화면은 `outdoor-work` / `indoor-work` 두 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
-- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `tags`(`tags/{craneId}` 는 실시간 상세), `detection-settings`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다. 필리 조선소 region 의 `3d-monitoring` 에는 충돌 감지 표시(LiDAR 근접 존) 토글이 더 있다(`docs/agents/monitoring-ui.md`).
+- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `tags`(`tags/{craneId}` 는 실시간 상세), `detection-settings`, `3d-replay`. `3d-monitoring` 은 **실시간(WebSocket 만)**, `3d-replay` 는 **3D 플레이**(리플레이 | 시뮬레이션 소스 재생 + 실행 리포트, `docs/agents/3d-play.md`) 페이지다. 필리 조선소 region 의 `3d-monitoring` 에는 충돌 감지 표시(LiDAR 근접 존) 토글이 더 있다(`docs/agents/monitoring-ui.md`).
 - `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를, `tags` 는 `@crane/widgets/tags` 의 태그 페이지(실시간 태그 | 가상 태그 탭, 서브라우트 판정은 `matchTagsSubRoute`)를, `detection-settings` 는 `@crane/widgets/detection-settings` 의 감지 설정 페이지를 쓰며 세 화면이 공유한다. 가상 태그 목록·감지 설정 값·실시간 태그 피드는 region 무관 전역이다.
 - `asset-library`, `asset-library/:assetId` 는 3D 자산 라이브러리(`@crane/widgets/asset-library`)다. 조선소·region 과 무관한 전사 공용 화면이라 region 하위가 아닌 최상위 경로다 — `docs/agents/asset-library.md`.
 - `BrowserRouter` 의 basename 은 `@crane/core/config/app-scope` 의 `resolveAppScope` 가 주소로 정한다. `VITE_INDOOR_BASE_URL` 이 있으면 crane 주소(`BASE_URL`)와 indoor 주소로 나뉘어 각자 자기 라우트(`craneRoutes` · `indoorRoutes`)와 계정(`SCOPE_ROLES`)만 받고, 없으면 한 주소가 전부 받는다. crane · indoor · stage · dev 를 최상위 라우트 이름으로 쓰지 않는다(주소 접두어와 겹침).
@@ -205,7 +206,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
 | 감지 설정 페이지(메뉴 "설정", 충돌·영역 감지 스위치, localStorage 영속) | `packages/widgets/src/detection-settings/`, `packages/features/src/3d/lib/detection-settings-storage.ts` — 기본값·키는 `docs/agents/3d-collision.md` 가 단일 소스 |
 | 모델 영역(zone) 침범 감지 | 스키마 `SavedModelZone`(`types.ts`), 기하 `packages/domain/src/3d/lib/zone-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-zone-runtime.ts`, 스토어 `model/use-scene-zone-store.ts` — `docs/agents/3d-zone.md` |
-| 영역 침범 → 로컬 알람 / 영역·운전 상태 저널 / 씬 unit 스케일 | `apps/shell/src/runtime/zone-alarm-bridge.tsx`, `@crane/domain/journal`, `packages/domain/src/3d/model/scene-unit-scale.ts` — `docs/agents/3d-zone.md` |
+| 영역 침범 → 로컬 알람 / 씬 unit 스케일 | `apps/shell/src/runtime/zone-alarm-bridge.tsx`, `packages/domain/src/3d/model/scene-unit-scale.ts` — `docs/agents/3d-zone.md` |
 | 3D 플레이 페이지(리플레이 + 시뮬레이션, 실행 리포트) / 장비 운전 상태 | `packages/features/src/3d/ui/play3d-view.tsx`, `model/play3d-transport.ts`, `lib/play3d-stats.ts`, `lib/model-runtime-status.ts` — `docs/agents/3d-play.md` |
 | 수면 아래 잠김 안개 / 바다 도달 마스크 | `packages/domain/src/3d/lib/{sea-submersion,sea-reach-grid,sea-reach-mask,sea-reach-uniforms}.ts`, `packages/features/src/3d/model/sea-reach-controller.ts`, `ui/scene-sea-reach.tsx` — `docs/agents/rendering-perf.md` |
 | 프레임 거버너 / shadow map 온디맨드 / 바다 미러 반사·스텐실 / 낮·밤 태양 / 워밍업 큐 | `packages/features/src/3d/ui/scene-frame-governor.tsx`, `ui/scene-render-preset.tsx`(`SceneLighting`), `ui/scene-water.tsx`, `lib/ocean-water.ts`, `lib/sky-lighting.ts`, `packages/domain/src/3d/lib/{scene-stencil,bvh-build-queue}.ts` — `docs/agents/rendering-perf.md` |
@@ -265,7 +266,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 건드리는 것 | 먼저 읽을 문서 |
 |---|---|
 | 충돌 감지·정지/재개(hold)·감지 설정 페이지 | `docs/agents/3d-collision.md` |
-| 영역(zone) 침범·영역 알람·저널·unit 스케일 | `docs/agents/3d-zone.md` |
+| 영역(zone) 침범·영역 알람·unit 스케일 | `docs/agents/3d-zone.md` |
 | 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태 | `docs/agents/3d-play.md` |
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치 | `docs/agents/assets-glb.md` |
@@ -299,7 +300,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
 - 값 생산자의 정상 전진 스무딩 시간은 **다음 값이 올 때까지의 벽시계 시간**이다 — 가상 태그 `tickMs / speed`, 리플레이 프레임 길이 ÷ 배속(`lib/replay-smoothing.ts`), 실시간은 키별 값 변화 간격(`lib/realtime-smoothing.ts`, publish 간격이 아니다 — 브리지가 스냅샷의 태그 전부를 재발행한다). 바뀌지 않은 재발행은 마지막 스무딩 시간을 이어받는다 — 기본값으로 넘기면 진행 중 스무딩이 잘린다 (tag-mapping-rig, 3d-play).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
-- 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
+- 로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터 사건은 어디에도 가지 않는다 (3d-zone).
 - 가상 태그 키는 저장하지 않고 `buildVirtualTagKey`(`장비키:코드`, 콜론)로 조립한다. 구분자를 실시간 키의 점으로 바꾸지 않는다 — 한 버스에서 소스가 섞인다 (tag-mapping-rig).
 - 모델·지도·배경의 목록은 자산 라이브러리(`library.json`)가 유일한 원천이다. 코드에 자산 목록을 두지 않는다 (asset-library).
 - 씬에 놓인 모델·지도·배경은 파일 경로와 자산 참조(`asset: { id, version }`)를 함께 든다. 모니터링·3D 플레이는 라이브러리를 읽지 않는다 — 지도의 역할도 씬의 `role` 로 판정한다(`resolveGroundMaps`·`isContextMap`) (asset-library).

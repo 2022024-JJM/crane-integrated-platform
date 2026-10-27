@@ -29,7 +29,7 @@ import { tagLiveValues } from './tag-value-bus';
 export const RUNTIME_STATUS_POLL_MS = 1_000;
 
 export interface ModelStatusRecords {
-  /** 운전 상태 — HUD·실행 리포트·저널. 라벨의 tone 과 같은 값이다. */
+  /** 운전 상태 — HUD·실행 리포트. 라벨의 tone 과 같은 값이다. */
   runtime: RuntimeStatusRecord;
   /** 라벨 표시 상태 — 색과 아이콘. */
   labels: LabelStateRecord;

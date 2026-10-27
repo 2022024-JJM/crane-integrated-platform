@@ -95,7 +95,7 @@ function AppErrorFallback({
             }}
           >
             {t('common:errorBoundary.goHome', {
-              defaultValue: 'Go to Dashboard',
+              defaultValue: 'Go to Home',
             })}
           </Button>
         </div>

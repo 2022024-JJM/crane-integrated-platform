@@ -1,6 +1,5 @@
 {
   "language": "Lingua",
-  "comingSoon": "Mox aderit",
   "aria": {
     "goTo": "Ad {{title}}"
   },
@@ -55,19 +54,13 @@
     "themeChanged": "Thema ad modum {{theme}} mutatum est."
   },
   "nav": {
-    "overview": "Conspectus",
-    "dashboard": "Tabula",
     "monitoring": "Monitoratio",
     "dockStatus": "Status Docae",
     "map": "Tabula",
-    "cmms": "CMMS",
     "outdoorWork": "Opera Foris",
     "indoorWork": "Opera Intus",
     "realTimeMonitoring": "Monitoratio 3D Temporis Veri",
     "threeViewerEdit": "Editor Visoris 3D",
-    "craneStatus": "Status Gruium",
-    "workHistory": "Historia Operum",
-    "alarmHistory": "Historia Monitorum",
     "replayMonitoring": "Lusus 3D",
     "craneDetail": "Gruis Singulatim",
     "mro": "MRO",
@@ -126,103 +119,11 @@
       "description": "Inspectio legalis et administratio exspirationis certificationum"
     }
   },
-  "craneStatus": {
-    "latest": "Novissimum",
-    "columns": {
-      "tagName": "Tag / Nomen",
-      "value": "Valor",
-      "unit": "Unitas",
-      "category": "Categoria",
-      "dataType": "Genus Datorum",
-      "snapshotAt": "Tempus Exemplaris",
-      "status": "Status"
-    },
-    "statusBadges": {
-      "alarm": "Monitum",
-      "stale": "Vetustum",
-      "changed": "Mutatum",
-      "normal": "Normale"
-    },
-    "viewing": "Inspectio",
-    "search": {
-      "startTime": "Initium Temporis",
-      "endTime": "Finis Temporis",
-      "submit": "Quaere",
-      "samplePreset": "Tempus Exemplum",
-      "liveRange": "Spatium Vivum",
-      "resetRecent": "Spatium Vivum",
-      "openStartPicker": "Aperi initium temporis",
-      "openEndPicker": "Aperi finem temporis",
-      "autoRefresh": "Renovatio automatica",
-      "autoRefreshOn": "Activa",
-      "autoRefreshOff": "Inactiva",
-      "validation": {
-        "missing": "Tempus initii et finis requiruntur.",
-        "invalid": "Range temporis validum inserere debes.",
-        "order": "Tempus initii ante tempus finis esse debet.",
-        "tooLarge": "Range quaestionis intra XXIV horas esse debet."
-      }
-    },
-    "name": "Grus",
-    "status": "Status",
-    "load": "Onus (t)",
-    "windSpeed": "Ventus (m/s)",
-    "boomAngle": "Angulus Brachii (°)",
-    "hoistHeight": "Altitudo Trochleae (m)",
-    "slewAngle": "Angulus Rotationis (°)",
-    "operating": "Operans",
-    "idle": "Quiescens",
-    "maintenance": "Inspectio",
-    "warning": "Monitum",
-    "stopped": "Stat"
-  },
   "alarms": {
     "title": "Status Monitorum",
-    "history": "Historia Monitorum",
-    "alarmStatus": "Status Alarmae",
-    "filterAll": "Omnia",
     "critical": "Criticum",
     "warning": "Monitum",
     "info": "Notitia",
-    "page": {
-      "title": "Historia Monitorum",
-      "severityFilter": "Gravitas",
-      "columns": {
-        "time": "Tempus",
-        "crane": "Grus",
-        "severity": "Gravitas",
-        "message": "Nuntius",
-        "status": "Status"
-      },
-      "statusActive": "Activum",
-      "statusCleared": "Solutum",
-      "empty": "Nullae monitorae ostendendae.",
-      "emptyHint": "Tempus extende vel conditiones minue.",
-      "rowsPerPage": "Lineae per paginam",
-      "of": "ex",
-      "filters": {
-        "title": "Conditiones",
-        "from": "Initium",
-        "to": "Finis",
-        "preset1h": "Hora ultima",
-        "preset24h": "XXIV horae ultimae",
-        "preset7d": "VII dies ultimi",
-        "crane": "Grus",
-        "craneAll": "Omnes grues",
-        "status": "Status",
-        "statusAll": "Omnia",
-        "statusActiveOnly": "Activum",
-        "statusClearedOnly": "Solutum",
-        "search": "Quaere",
-        "searchPlaceholder": "Quaere nuntios",
-        "apply": "Applica",
-        "reset": "Restitue",
-        "validationOrder": "Tempus initii ante tempus finis esse debet."
-      },
-      "totalCount": "{{count}} omnino",
-      "export": "Exporta CSV",
-      "exportFileName": "historia-monitorum"
-    },
     "windWarningExceeded": "Monitum venti: {{value}}m/s superatum",
     "loadWarningReached": "Monitum oneris: {{value}}% oneris maximi attingit",
     "maintenanceDue": "Inspectio ordinaria D-{{days}}",
@@ -231,7 +132,6 @@
     "workAreaChanged": "Area operis mutata est",
     "windStopExceeded": "Operatio propter ventum intermissa: {{value}}m/s",
     "workResumed": "Operatio resumpta est",
-    "viewAllHistory": "Omnem historiam monitorum videre",
     "historyEmpty": "Nulla historia monitorum",
     "historyColumns": {
       "severity": "Gradus",
@@ -307,7 +207,6 @@
     "fullscreen": "Plenus modus",
     "exitFullscreen": "Restitue fenestram",
     "badge": "Visor 3D",
-    "resizePreview": "Muta magnitudinem",
     "dockPin": "Fige",
     "dockUnpin": "Solve",
     "dockExpand": "Explica",

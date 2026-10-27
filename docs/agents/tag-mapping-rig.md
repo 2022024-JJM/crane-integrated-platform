@@ -36,12 +36,12 @@
 모델 인스턴스 필드. "태그 값 하나 → 트랜스폼 채널 하나" 의 목록이다.
 
 - 대상은 두 종류다. `{kind:'node', node, channel:position|rotation|scale, axis}` — `node: ''` 는 모델 루트. `{kind:'joint', jointId}` — 할당된 리그의 관절.
-- 태그는 **슬롯 둘**(`TagKeySlots`)로 참조한다 — `realtimeTagKey`(서버 키 `${craneId}.${tagCode}`, 모니터링 실시간·3D 플레이 리플레이가 읽는다)와 `virtualTagKey`(가상 태그 키, 시뮬레이션이 읽는다). 둘 다 선택이고 둘 다 비면 sanitize 가 맵핑을 버린다. 어느 슬롯을 읽을지는 `lib/tag-slot.ts` 의 `resolveActiveTagSlot(mode, play3dSource)` 한 곳 — 실시간·리플레이 → realtime, 시뮬레이션(대시보드 미리보기·3D 플레이 시뮬레이션 소스) → virtual, 모드 없는 화면(에디터·대시보드)은 realtime. 소비자는 전부 슬롯을 인자로 받고 memo 의존성에 둔다(3D 플레이 소스 전환은 리마운트가 아니다).
+- 태그는 **슬롯 둘**(`TagKeySlots`)로 참조한다 — `realtimeTagKey`(서버 키 `${craneId}.${tagCode}`, 모니터링 실시간·3D 플레이 리플레이가 읽는다)와 `virtualTagKey`(가상 태그 키, 시뮬레이션이 읽는다). 둘 다 선택이고 둘 다 비면 sanitize 가 맵핑을 버린다. 어느 슬롯을 읽을지는 `lib/tag-slot.ts` 의 `resolveActiveTagSlot(mode, play3dSource)` 한 곳 — 실시간·리플레이 → realtime, 3D 플레이 시뮬레이션 소스 → virtual, 모드 없는 화면(에디터)은 realtime. 소비자는 전부 슬롯을 인자로 받고 memo 의존성에 둔다(3D 플레이 소스 전환은 리마운트가 아니다).
 - 적용 공식은 `offset + value × scale` 을 **rest 기준 Δ** 로 더하는 것. 루트의 rest 는 씬 배치 transform, 내부 노드는 GLTF rest 다.
 - 같은 대상 중복은 sanitize 가 첫 항목만 남기고(first-wins), 리그 관절이 점유한 노드·축은 드라이버가 관절을 우선한다. 편집 UI 는 둘 다 amber 로 경고한다(`tag-mapping-editor.ts`). 맵핑 카드 머리줄의 순번(# 1, # 2 …)은 배열 순서라 이 first-wins 순서와 같다. 순번은 저장하지 않는다.
 - 실시간 키의 구분자는 점(`C_171.tl_distance`, `buildCraneTagKey`) — ISL TagKey 표기와 같다. 단일 키 시절의 콜론 표기(`C_171:tl_distance`)는 레거시 변환 때 점으로 옮긴다(`sanitize-tag-mappings.ts` 의 `toDottedLegacyKey` = monitoring 의 `normalizeLegacyCraneTagKey`, 같은 레이어라 import 대신 같은 규칙을 둘이 든다). 가상 태그 키는 `장비키:코드`(`buildVirtualTagKey`, 콜론)로 조립한다 — 장비키는 장비 ID 의 하이픈을 밑줄로 바꾼 것이라 `GC-04` 장비의 `gantry_position` 은 `GC_04:gantry_position` 이다. 저장본에 키는 없다.
 - 레거시는 셋이다 — 단일 키 `tagKey` 는 `sanitizeTagKeySlots` 가 **실시간 슬롯**으로 옮긴다(그 시절 배포 씬 dock-in 의 키가 서버 키였고, 가상 키였던 philly-2dock 은 데이터를 `virtualTagKey` 로 옮겼다). `valueMapList`(루트 6칸 절대 대입)·`rigBindings`(관절 바인딩)는 로드 시 `sanitize-tag-mappings.ts` 가 실시간 슬롯 맵핑으로 변환한다. 셋 다 저장본에서 사라진다. 절대 좌표 → Δ 변환은 `offset' = offset − placement[axis]` 이며 테스트가 좌표 동일성을 고정한다. `valueMapList`·`rigBindings` 는 타입에 `@deprecated` 입력 전용으로만 남아 있고 `tagKey` 는 타입에 없다.
-- 표시용 대표 키는 `getPrimaryTagKey`(실시간 우선) — 관절 배지·대시보드 장비 목록처럼 소스와 무관한 곳만 쓴다.
+- 표시용 대표 키는 `getPrimaryTagKey`(실시간 우선) — 관절 배지처럼 소스와 무관한 곳만 쓴다.
 
 ### 라벨의 태그 값 줄
 
@@ -126,7 +126,7 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 전역 스토어 `useVirtualTagStore` 가 `equipments` 와 파생 `entries` 를 들고 있다. 편집은 전부 스토어 액션(장비·태그 CRUD, `importTags`)을 지나며 `commit` 한 곳에서 `entries` 를 다시 만들고 러너에 `syncDefinitions` 한다. 편집은 메모리에만 쌓이고 저장 버튼(`save()`)이 기록한다. dirty·미저장 이탈 경고는 씬 편집과 같은 훅을 재사용한다.
 - 영속화는 씬과 같은 규칙(`virtual-tag-storage.ts`). dev 는 `POST /__dev/virtual-tags` 로 배포 파일 `apps/shell/public/simulation/virtual-tags.json` 에 기록하며 이 파일이 클론·배포의 기준값이라 커밋한다. 운영은 localStorage `crane:virtual-tags` 에 배포 해시 도장(`baseVersion`)과 함께 봉투로 저장하고, 새 배포가 나오면 배포본이 이긴다. API 경로 문자열은 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있다 — `docs/agents/3d-editor.md`.
 - 러너 `virtualTagRuntime`(모듈 전역 `setInterval`, Canvas 불필요)은 상태를 **키** 기준으로 들고 틱마다 켜진 장비의 항목만 버스로 내보낸다. 정의의 범위·초기값·패턴·형식이 바뀌면 그 키의 상태를 initial 로 다시 잡고, 이름·단위만 바뀌면 유지한다.
-- 재생을 켜는 곳: 모니터링 `mode='simulation'` 은 `useSceneData` 의 `autoStartSimulation`(기본 true — 대시보드 3D 미리보기 모달은 ▶ 토글이 없는 뷰라 false 로 정지 상태로 연다). 3D 플레이(`mode='play3d'`, 소스 시뮬레이션)은 상단 트랜스포트 바 ▶ 가 켠다(자동 재생 없음). 실시간 페이지(`mode='realtime'`)에는 시뮬레이션 UI 가 없다. 태그 페이지 가상 탭의 공통 바(재생·값 초기화·갱신 주기)는 전역이다.
+- 재생을 켜는 곳: 3D 플레이(`mode='play3d'`, 소스 시뮬레이션)의 상단 트랜스포트 바 ▶ 다(자동 재생 없음). 실시간 페이지(`mode='realtime'`)에는 시뮬레이션 UI 가 없다. 태그 페이지 가상 탭의 공통 바(재생·값 초기화·갱신 주기)는 전역이다.
 - **실시간 복제**(`lib/virtual-tag-clone.ts` `cloneTagsFromSnapshot`, 순수)는 크레인 스냅샷 한 대분을 태그 정의로 바꾼다 — 코드·표시명·단위는 카탈로그 메타(`buildTagRows`), 불리언 값은 bool 형식, 초깃값은 현재값, 범위는 접속 후 관측 범위(한 점이면 `fallbackRange` 기본 폭), 패턴은 수동, 순서는 카탈로그 묶음 순(시각 › 계측값 › 상태). 1회 스냅샷이고 이후 실시간과 무관하다. 진입점은 장비 등록 다이얼로그의 복제 탭과 실시간 상세의 "가상 장비로 복제" 버튼이며 둘 다 `importTags` 로 넣는다(코드 중복·상한은 건너뛴다).
 - 카탈로그 `useTagCatalog`(평탄, 꺼진 장비 포함)·`useTagCatalogEquipments`(장비 › 태그)는 태그 연결 다이얼로그의 가상 탭과 카드 칩이 본다. 서버 태그는 여기 합치지 않는다 — 다이얼로그의 실시간 탭이 스냅샷 스토어에서 크레인별로 직접 고른다.
 
@@ -137,7 +137,7 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - **종료(관제 복귀)** 는 `stop-simulation.ts` 의 `stopSimulation()` 한 곳이다 — 패널 ■·화면 진입/이탈이 전부 이걸 부른다. 내용은 충돌 세션 기록·정지 상태 `clearHistory()` + 스토어 `stop()`(러너 정지·시간 0 — publish 없는 `resetValues(false)`·배속 1) + `rigValueStore.reset()`(rest 복귀) + `tagLiveValues.clear()`(운전 상태 unknown) + 실시간 `release()`. 일시정지(자세 유지)와 다른 경로다.
 - 모니터링 `useSceneData` 와 에디터 페이지는 **진입·이탈 모두** `stopSimulation()` 을 불러 화면마다 깨끗한 시뮬레이션으로 시작한다.
 - UI: 공용 패널 `scene-simulation-panel.tsx`(재생·리셋·종료·배속·경과 시각)를 3D 플레이 트랜스포트 바 팝오버가 쓴다. 재생 위치 이동은 트랜스포트 바의 스크럽 하나다. 경과 시각 문구는 `sim-clock.ts`.
-- **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·배속이 1 이 아니면 배속 — 표시 전용, 조작 버튼 없음). `Monitoring3dView` 좌측 상단 열 첫 항목이고 `toolbarLayout='none'` 은 제외.
+- **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·배속이 1 이 아니면 배속 — 표시 전용, 조작 버튼 없음). `Monitoring3dView` 좌측 상단 열 첫 항목이고 3D 플레이 시뮬레이션 소스에서만 보인다.
 
 ### 리깅(관절 연동)
 

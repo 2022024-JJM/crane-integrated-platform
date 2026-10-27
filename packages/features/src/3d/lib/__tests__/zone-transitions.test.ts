@@ -6,8 +6,7 @@ import {
   filterAcceptedZoneTransitions,
   findRegionOfModel,
   pairKeyOf,
-  toZoneJournalEntry,
-} from '../zone-journal-map';
+} from '../zone-transitions';
 
 function intrusion(
   zoneKey: string,
@@ -44,33 +43,6 @@ describe('diffZoneIntrusions', () => {
 
   it('빈 스냅샷끼리는 아무것도 없다', () => {
     expect(diffZoneIntrusions([], [])).toEqual({ entered: [], exited: [] });
-  });
-});
-
-describe('toZoneJournalEntry', () => {
-  const ref = {
-    intrusion: intrusion('a#z', ['b'], 'stop'),
-    intruderId: 'b',
-    intruderName: 'B',
-  };
-
-  it('진입은 durationMs null, 이탈은 진입 시각과의 차(음수 방지)', () => {
-    const enter = toZoneJournalEntry(ref, 'enter', 100, 'dock-1', null);
-    expect(enter).toMatchObject({
-      key: '100:enter:a#z|b',
-      kind: 'enter',
-      level: 'stop',
-      zoneName: 'z',
-      durationMs: null,
-      regionId: 'dock-1',
-    });
-    expect(toZoneJournalEntry(ref, 'exit', 400, null, 100).durationMs).toBe(
-      300,
-    );
-    expect(
-      toZoneJournalEntry(ref, 'exit', 400, null, null).durationMs,
-    ).toBeNull();
-    expect(toZoneJournalEntry(ref, 'exit', 50, null, 100).durationMs).toBe(0);
   });
 });
 

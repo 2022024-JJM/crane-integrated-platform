@@ -1,5 +1,4 @@
-import type { CSSProperties } from 'react';
-import type { AlarmSeverity, CraneStatus, StatusLevel, OnOff, OkNg, RunFaultStatus } from '../types/status';
+import type { AlarmSeverity, CraneStatus, StatusLevel } from '../types/status';
 
 export const severityBadgeClassName: Record<AlarmSeverity, string> = {
   critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
@@ -41,27 +40,4 @@ export const tableCategoryClassName: Record<string, string> = {
     'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
   status:
     'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-};
-
-// ─── CMMS 상태 배지 색상 맵 ──────────────────────────────────────
-export const onOffBadgeClassName: Record<OnOff, string> = {
-  ON:  'border-emerald-500 bg-emerald-500 text-white',
-  OFF: 'border-zinc-600 bg-zinc-600 text-zinc-300',
-};
-
-export const okNgBadgeClassName: Record<OkNg, string> = {
-  OK: 'border-emerald-500 text-emerald-400 bg-transparent',
-  NG: 'border-red-500 bg-red-600 text-white',
-};
-
-export const runFaultBadgeClassName: Record<RunFaultStatus, string> = {
-  STOP:  '',
-  RUN:   '',
-  FAULT: '',
-};
-
-export const runFaultBadgeStyle: Record<RunFaultStatus, CSSProperties> = {
-  STOP:  { background: '#eab308', borderColor: '#eab308', color: '#000' },
-  RUN:   { background: '#16a34a', borderColor: '#16a34a', color: '#fff' },
-  FAULT: { background: '#dc2626', borderColor: '#dc2626', color: '#fff' },
 };

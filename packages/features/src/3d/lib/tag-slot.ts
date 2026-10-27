@@ -11,14 +11,13 @@ import type { Play3dSource } from '../model/use-play3d-store';
  * 3D 플레이는 `mode` 만으로 부족하다 — 소스(리플레이|시뮬레이션) 전환은
  * 리마운트가 아니라 상태 변경이라 소비자가 이 값을 memo 의존성에 넣어야 한다.
  *
- * `mode` 가 null 인 화면(에디터·대시보드)은 실시간 — 값 생산자가 없어 어느
- * 쪽이든 결과는 같고, 관제 문맥이 기본이다.
+ * `mode` 가 null 인 화면(에디터)은 실시간 — 값 생산자가 없어 어느 쪽이든
+ * 결과는 같고, 관제 문맥이 기본이다.
  */
 export function resolveActiveTagSlot(
   mode: MonitoringViewMode | null | undefined,
   source: Play3dSource,
 ): TagSlot {
-  if (mode === 'simulation') return 'virtual';
   if (mode === 'play3d')
     return source === 'simulation' ? 'virtual' : 'realtime';
   return 'realtime';

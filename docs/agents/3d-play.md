@@ -27,7 +27,7 @@ i18n 은 `monitoring:play3d.*`.
 
 ### 레이아웃
 
-- `Play3dView` 는 `Monitoring3dView mode='play3d' toolbarLayout='dock'` 위에 소스 탭(리플레이 | 시뮬레이션)과 트랜스포트 바를 **캔버스 위 별도 행**으로 둔다. 오버레이가 아니라 좌상단 열과 겹치지 않는다.
+- `Play3dView` 는 `Monitoring3dView mode='play3d'` 위에 소스 탭(리플레이 | 시뮬레이션)과 트랜스포트 바를 **캔버스 위 별도 행**으로 둔다. 오버레이가 아니라 좌상단 열과 겹치지 않는다.
 - 소스 탭은 role=tablist 버튼이다(공용 Tabs 컴포넌트 없음).
 - 트랜스포트 바 구성: 시간 눈금 → 사건 표식 띠 → 스크럽(아래 "시간 축과 표식") · 소스 슬롯(리플레이 = 구간 검색 팝오버 `ReplaySearchForm`, 시뮬레이션 = `SceneSimulationPanel` 팝오버) · 이동/▶ · 배속(소스별 선택지) · 위치.
 - 스크럽은 재생할 내용이 있으면(`hasContent`) 열린 구간(시뮬레이션은 항상 열린 구간)에서도 활성이고 범위는 축 전체다. 열린 구간은 재생 중 손잡이가 오른쪽 끝(닿은 지점)에 붙고, 왼쪽으로 끌면 그 시점부터 이어서 재생된다. 열린 구간에는 ⏭(끝으로)이 없다.
@@ -105,7 +105,7 @@ i18n 은 `monitoring:play3d.*`.
 
 ### 장비 운전 상태 · 라벨 표시 상태 · 외곽선
 
-- `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트·저널이 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
+- `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트가 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
 - 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 활성 슬롯 키들(리플레이 소스는 실시간 키, 시뮬레이션 소스는 가상 키 — `resolveActiveTagSlot`, `docs/agents/tag-mapping-rig.md`)로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
 - **라벨 표시 상태** `EquipmentLabelState` = tone(fault · running · standby · off · offline · unknown) + 아이콘 둘(bypass · freeSwing). 앞의 넷은 ACMS 의 Crane ID Box 네 가지이고, 모델의 상태 태그(`statusTags` — `docs/agents/tag-mapping-rig.md`)로 가른다. 판정·우선순위는 `model-label-state.ts`(`resolveLabelState`, 비트 문턱 `STATUS_BIT_ON_THRESHOLD`, 테스트 대상). tone 이 곧 운전 상태다.
   - 수신 판정에는 상태 태그 키도 들어가고, 움직임 판정에는 축 태그(`tagMappings`)만 들어간다.
@@ -135,7 +135,7 @@ i18n 은 `monitoring:play3d.*`.
 - 시간을 바꾸는 코드(바·마커·리포트 seek·정지 재개)는 `Play3dTransport` 하나만 통한다. 리플레이 러너·가상 태그 러너를 직접 부르지 않는다.
 - 소스 전환은 상태 전환으로 유지한다. `key={source}` 리마운트는 `useSceneData` 진입의 resetReplay 로 프레임을 잃고 loadFrames effect 가 다시 돌지 않는다.
 - `RUNNING_WINDOW_MS` 는 리플레이 프레임 간격보다 넓어야 한다. 좁으면 프레임 사이마다 멈춘 것으로 떨어진다.
-- 두절 진입·복귀를 거를 때 직전 상태가 unknown 인 것만으로 빼지 않는다. 직전 기록에 없던 모델의 첫 판정만 뺀다 — 운전 전원을 모르는 멈춘 장비도 unknown 이라 그 장비의 unknown → offline 은 실제 두절이다(기록기·`status-journal-map.ts` 같은 규칙).
+- 두절 진입·복귀를 거를 때 직전 상태가 unknown 인 것만으로 빼지 않는다. 직전 기록에 없던 모델의 첫 판정만 뺀다 — 운전 전원을 모르는 멈춘 장비도 unknown 이라 그 장비의 unknown → offline 은 실제 두절이다(기록기의 규칙).
 - 새 실행의 시작은 `reset(meta)` 한 곳. 뒤로 seek·resetValues 에서 reset 하지 않는다.
 - 리포트 행 변환·상수는 `lib/play3d-format.ts` 에, `ui/*.tsx` 에는 컴포넌트만.
 - 새 사건 종류를 추가하면 `PLAY3D_EVENT_FILTERS`·`PLAY3D_EVENT_COLORS`·`Play3dHoverPayload`·`computePlay3dStats` 창 필터를 함께 고치고, 재생바에 선으로 그릴 것이면 `PLAY3D_MARKER_KINDS` 에 넣는다.
@@ -180,9 +180,9 @@ i18n 은 `monitoring:play3d.*`.
 - 고장·Bypass 라벨을 거리 축소에서 빼는 것 — 그 라벨만 커 보인다. 상태는 색과 아이콘으로만 나타낸다.
 - Bypass 아이콘의 흐려졌다 밝아지는 애니메이션(`animate-pulse`) — 그라데이션처럼 보인다.
 - Bypass·Free Swing 아이콘을 상자 밖에 두는 것 — 상자 안의 흰 칩이 더 잘 읽힌다.
-- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트·저널 어디에도 두지 않는다. 그 장비는 unknown 이다. 관제 HUD 의 "대기" 는 standby(운전 전원 On, 멈춤)의 짧은 라벨이지 이 상태가 아니다.
+- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트 어디에도 두지 않는다. 그 장비는 unknown 이다. 관제 HUD 의 "대기" 는 standby(운전 전원 On, 멈춤)의 짧은 라벨이지 이 상태가 아니다.
 - 화면마다 다른 상태 목록 — 라벨은 여섯 가지인데 리포트는 네 가지인 식으로 나누면 같은 장비가 화면마다 다른 이름으로 불린다.
 
 ## 미룬 것
 
-두 실행 비교, 리플레이 구간 서버 알람, 서버 timeline 가동 구간, 태그 시계열 차트, 검사 구간의 기준선·감지 off 정밀 차감, 프레임 전체 헤드리스 스캔, PDF·대시보드 위젯, 패널 리사이즈 시 타임라인이 보던 시각 유지.
+두 실행 비교, 리플레이 구간 서버 알람, 서버 timeline 가동 구간, 태그 시계열 차트, 검사 구간의 기준선·감지 off 정밀 차감, 프레임 전체 헤드리스 스캔, PDF, 패널 리사이즈 시 타임라인이 보던 시각 유지.

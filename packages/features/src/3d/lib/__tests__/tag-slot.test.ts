@@ -11,17 +11,12 @@ describe('resolveActiveTagSlot', () => {
     expect(resolveActiveTagSlot('realtime', 'simulation')).toBe('realtime');
   });
 
-  it('시뮬레이션 모드(대시보드 미리보기)는 가상 슬롯 — 소스와 무관', () => {
-    expect(resolveActiveTagSlot('simulation', 'replay')).toBe('virtual');
-    expect(resolveActiveTagSlot('simulation', 'simulation')).toBe('virtual');
-  });
-
   it('3D 플레이는 소스가 정한다 — 리플레이는 실시간, 시뮬레이션은 가상', () => {
     expect(resolveActiveTagSlot('play3d', 'replay')).toBe('realtime');
     expect(resolveActiveTagSlot('play3d', 'simulation')).toBe('virtual');
   });
 
-  it('모드 없는 화면(에디터·대시보드)은 실시간', () => {
+  it('모드 없는 화면(에디터)은 실시간', () => {
     expect(resolveActiveTagSlot(null, 'simulation')).toBe('realtime');
     expect(resolveActiveTagSlot(undefined, 'replay')).toBe('realtime');
     expect(EDITOR_TAG_SLOT).toBe('realtime');

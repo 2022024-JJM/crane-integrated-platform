@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { notifyAlert } from '@crane/core/lib/alert-notifications';
-import { diffZoneIntrusions } from '../lib/zone-journal-map';
+import { diffZoneIntrusions } from '../lib/zone-transitions';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { isRealtimeSceneActive } from '../model/use-scene-info-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';

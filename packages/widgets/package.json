@@ -6,8 +6,6 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    "./alarm": "./src/alarm/index.ts",
-    "./crane": "./src/crane/index.ts",
     "./3d": "./src/3d/index.ts",
     "./layout": "./src/layout/index.ts",
     "./scene-editor": "./src/scene-editor/index.ts",

@@ -37,7 +37,7 @@ describe('resolveAppScope', () => {
   });
 
   it('indoor 로 시작하는 crane 라우트는 crane 으로 남는다', () => {
-    expect(prod('/crane_rnd/indoor-work/dock-in/crane-status').scope).toBe(
+    expect(prod('/crane_rnd/indoor-work/dock-in/3d-monitoring').scope).toBe(
       'crane',
     );
     expect(prod('/crane_rnd/indoorX').scope).toBe('crane');

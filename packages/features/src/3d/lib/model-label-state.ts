@@ -21,7 +21,7 @@ import {
 /**
  * 장비의 운전 상태 판정 — 태그 활동(lib/model-runtime-status.ts)에 모델의 상태
  * 태그(`statusTags`)를 더해 여섯 가지 중 하나를 낸다. 라벨의 상자 색(tone)이
- * 곧 운전 상태라, 라벨·HUD·리포트·저널이 같은 값을 본다. 적용은
+ * 곧 운전 상태라, 라벨·HUD·리포트가 같은 값을 본다. 적용은
  * model/use-model-runtime-statuses.ts.
  *
  * 우선순위(위에서부터 먼저 맞는 것):

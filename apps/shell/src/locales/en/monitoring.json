@@ -436,11 +436,6 @@
       "stopHint": "Entering a zone with level 'Stop' pauses simulation and 3D Play. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
     }
   },
-  "craneList": {
-    "countAll": "{{count}} units",
-    "countFiltered": "{{visible}} / {{total}} units",
-    "emptyForFilter": "No cranes match the selected status."
-  },
   "virtualTags": {
     "play": "Play all",
     "pause": "Pause",

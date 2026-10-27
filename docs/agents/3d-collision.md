@@ -19,7 +19,6 @@
 | 화면 경보(가장자리 비네트) | `packages/features/src/3d/ui/scene-collision-alert-overlay.tsx` |
 | 씬 안 표시(빨간 실루엣·경고 표지) | `packages/features/src/3d/ui/scene-collision-highlight.tsx`, `packages/domain/src/3d/ui/object-silhouette-outline.tsx`, `packages/domain/src/3d/lib/silhouette-outline.ts` |
 | 충돌 시 카메라 포즈 | `computeCollisionViewPose` (`lib/scene-collision-pairs.ts`) |
-| 저널 동기화(실시간만) | `packages/features/src/3d/ui/collision-journal-sync.tsx`, `lib/collision-journal-map.ts` |
 | 캔버스 GL 옵션(스텐실) | `SCENE_GL_OPTIONS` (`packages/features/src/3d/ui/scene-render-preset.tsx`) |
 
 ## 동작
@@ -49,7 +48,7 @@
 
 - Canvas 안 `RigDriver` **바로 다음**에 마운트한다. 같은 priority 의 useFrame 은 마운트 순이라, 드라이버가 자세를 쓴 뒤 같은 프레임에 검사한다.
 - 감지는 `runner` 가 **재생 중(+기즈모 드래그 아님)** 일 때만 돈다. 판정은 `scene-collision-hold.ts` 의 `isRunnerRunning(runner)` — 시뮬레이션은 가상 태그 스토어 `isRunning`, 3D 플레이는 활성 소스의 러너, 실시간은 진입~이탈 내내 재생으로 본다(`held` 여도 스캔).
-- 러너 종류 `SceneCollisionRunner` 는 `'simulation'`(에디터·미리보기) | `'realtime'` | `'play3d'`(활성 소스가 `usePlay3dStore.source` 에 따라 리플레이 러너 또는 가상 태그 러너).
+- 러너 종류 `SceneCollisionRunner` 는 `'simulation'`(에디터) | `'realtime'` | `'play3d'`(활성 소스가 `usePlay3dStore.source` 에 따라 리플레이 러너 또는 가상 태그 러너).
 - 스토어 `baselinePending` 은 검출기가 런타임 phase 변화 시에만 갱신하고 **스캔 중일 때만** true 다(러너 정지·드래그 중엔 내린다). 워밍업 표시(`scene-warmup-step.ts`)가 이 값을 "기준선 잡는 중" 단계로 보인다 — 재생 시작·드래그 종료·편집 뒤 안정화 창 동안 잠깐 나타난다.
 - 어느 모드든 충돌한 쌍만 억제한 채 다른 쌍 감시는 계속한다.
 
@@ -74,8 +73,8 @@
 
 ### 기록·소비자
 
-- 기록은 스토어에 세션 전용으로 최대 `HISTORY_MAX` 개 남는다. 소비자는 하이라이트, 저널(`collision-journal-sync.tsx`, 실시간 화면만 — `isRealtimeSceneActive`), 3D 플레이 실행 리포트(`docs/agents/3d-play.md`), 경보 알림(`scene-alert-notifier.tsx`, `docs/agents/monitoring-ui.md`)이다.
-- 마운트 범위: 모니터링은 전 모드(실시간·3D 플레이·미리보기)에서 켠다. 에디터는 러너를 켤 UI 가 없어 충돌 검출기·하이라이트를 마운트하지 않는다.
+- 기록은 스토어에 세션 전용으로 최대 `HISTORY_MAX` 개 남는다. 소비자는 하이라이트, 3D 플레이 실행 리포트(`docs/agents/3d-play.md`), 경보 알림(`scene-alert-notifier.tsx`, `docs/agents/monitoring-ui.md`)이다.
+- 마운트 범위: 모니터링은 전 모드(실시간·3D 플레이)에서 켠다. 에디터는 러너를 켤 UI 가 없어 충돌 검출기·하이라이트를 마운트하지 않는다.
 
 ## 불변식
 
@@ -92,7 +91,7 @@
 
 ## 하지 않기로 한 것
 
-- 충돌 기록 목록 UI·[충돌 지점 보기]·상단 배너·[이어서 재생] 버튼은 두지 않는다 — HUD 알람 목록·비네트와 겹쳐 보였다. 기록은 하이라이트·저널·실행 리포트만 쓰고 재개는 러너 ▶ 하나다.
+- 충돌 기록 목록 UI·[충돌 지점 보기]·상단 배너·[이어서 재생] 버튼은 두지 않는다 — HUD 알람 목록·비네트와 겹쳐 보였다. 기록은 하이라이트·실행 리포트·경보 알림만 쓰고 재개는 러너 ▶ 하나다.
 - 독(dock) 팝업·에디터 팔레트 탭에 감지 스위치를 흩어 두지 않는다 — 설정은 감지 설정 페이지 하나다.
 - 캔버스 위 충돌 오버레이 패널(지점·쌍 목록)은 두지 않는다 — 비네트만.
 - 실시간 자동 정지는 넣지 않는다 — 장비는 멈추지 않는데 화면만 얼린다.

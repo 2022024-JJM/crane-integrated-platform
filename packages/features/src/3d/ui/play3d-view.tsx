@@ -65,10 +65,8 @@ export function Play3dView({
         <Monitoring3dView
           regionId={regionId}
           mode="play3d"
-          toolbarLayout="dock"
           alarmsByCraneId={EMPTY_ALARMS}
           alarmHighlightMesh={false}
-          autoStartSimulation={false}
           onLoadingChange={onLoadingChange}
         />
       </div>

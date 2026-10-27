@@ -1,11 +1,11 @@
-import type { ZoneJournalEntry } from '@crane/domain/journal';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import type { ZoneIntrusion } from '../model/use-scene-zone-store';
 
 /**
- * 영역 침범 스토어(현재 상태) → 저널 항목(진입·이탈 사건). 스토어는 기록을
- * 들지 않으므로(use-scene-zone-store 주석) 두 스냅샷의 차이로 사건을 복원한다.
- * 순수 함수 — 동기화 컴포넌트(ZoneJournalSync)가 subscribe 마다 부른다.
+ * 영역 침범 스토어(현재 상태) → 진입·이탈 사건. 스토어는 기록을 들지
+ * 않으므로(use-scene-zone-store 주석) 두 스냅샷의 차이로 사건을 복원한다.
+ * 순수 함수 — 영역 알람 브릿지·경보 알림·3D 플레이 기록기가 subscribe 마다
+ * 부른다.
  */
 
 export interface ZonePairRef {
@@ -55,7 +55,7 @@ export function diffZoneIntrusions(
 }
 
 /**
- * 브릿지(저널·로컬 알람·알림)의 승인 규칙 — 진입은 `acceptEnter`(실시간 화면이
+ * 브릿지(로컬 알람·알림)의 승인 규칙 — 진입은 `acceptEnter`(실시간 화면이
  * 떠 있는가)일 때만, 이탈은 진입을 승인했던 쌍(`isAccepted`)만 받는다.
  * 3D 플레이·에디터의 침범은 진입에서 걸러지고, 그 이탈도 승인이 없어 걸러진다.
  * 실시간 화면을 떠나며 오는 이탈은 진입이 승인돼 있어 화면 상태와 무관하게
@@ -78,7 +78,7 @@ export function filterAcceptedZoneTransitions(
 
 /**
  * 모델 id 가 속한 region. 한 씬 파일을 공유하는 region 들은 같은 모델 id 를
- * 가지므로(대시보드가 모든 region 을 채워 둔다) 화면에 떠 있는 region 을
+ * 가지므로 화면에 떠 있는 region 을
  * 먼저 본다. 없으면 전부 훑는다.
  */
 export function findRegionOfModel(
@@ -96,31 +96,4 @@ export function findRegionOfModel(
     if (scene.models.some((m) => m.id === modelId)) return regionId;
   }
   return null;
-}
-
-export function toZoneJournalEntry(
-  ref: ZonePairRef,
-  kind: 'enter' | 'exit',
-  at: number,
-  regionId: string | null,
-  enteredAt: number | null,
-): ZoneJournalEntry {
-  const { intrusion } = ref;
-  return {
-    key: `${at}:${kind}:${pairKeyOf(intrusion.zoneKey, ref.intruderId)}`,
-    at,
-    kind,
-    regionId,
-    zoneKey: intrusion.zoneKey,
-    ownerId: intrusion.ownerId,
-    ownerName: intrusion.ownerName,
-    zoneName: intrusion.zoneName || intrusion.zoneId,
-    level: intrusion.level,
-    intruderId: ref.intruderId,
-    intruderName: ref.intruderName,
-    durationMs:
-      kind === 'exit' && enteredAt !== null
-        ? Math.max(0, at - enteredAt)
-        : null,
-  };
 }

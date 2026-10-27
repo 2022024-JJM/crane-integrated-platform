@@ -24,7 +24,7 @@ import {
   diffZoneIntrusions,
   pairKeyOf,
   type ZonePairRef,
-} from '../lib/zone-journal-map';
+} from '../lib/zone-transitions';
 import {
   readPlay3dFrameIndex,
   readPlay3dPositionMs,

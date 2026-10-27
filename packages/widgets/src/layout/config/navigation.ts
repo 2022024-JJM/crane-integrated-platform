@@ -1,15 +1,10 @@
 import {
   LayoutDashboard,
   Box,
-  List,
   History,
   Map,
-  MonitorCheck,
   LayoutGrid,
   SquarePen,
-  Activity,
-  ArrowUpDown,
-  ArrowLeftRight,
   TrendingUp,
   Settings,
   Layers,
@@ -17,7 +12,6 @@ import {
   Wrench,
   Package,
   ShieldCheck,
-  Bell,
   MonitorCog,
   CalendarDays,
   CalendarRange,
@@ -40,18 +34,6 @@ const defaultSystemGroup: NavGroup = {
   items: [],
 };
 
-function getOverviewGroup(): NavGroup {
-  const items = [
-    {
-      label: i18n.t('common:nav.dashboard'),
-      path: '/',
-      icon: LayoutDashboard,
-    },
-  ];
-
-  return { title: i18n.t('common:nav.overview'), items };
-}
-
 function getMonitoringGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.monitoring'),
@@ -65,11 +47,6 @@ function getMonitoringGroup(): NavGroup {
         label: i18n.t('common:nav.map'),
         path: '/monitoring/map',
         icon: Map,
-      },
-      {
-        label: i18n.t('common:nav.cmms'),
-        path: '/monitoring/cmms',
-        icon: MonitorCheck,
       },
     ],
   };
@@ -87,52 +64,6 @@ function getAssetsGroup(): NavGroup {
         label: i18n.t('common:nav.assetLibrary'),
         path: '/asset-library',
         icon: Library,
-      },
-    ],
-  };
-}
-
-function buildCmmsGroup(craneId: string): NavGroup {
-  const base = `/crane-detail/${craneId}`;
-  const title = craneId.replace(/_/g, '-');
-  return {
-    title,
-    highlight: true,
-    items: [
-      {
-        label: 'Overview',
-        path: `${base}/overview`,
-        icon: LayoutDashboard,
-      },
-      {
-        label: 'Main/Aux Hoist',
-        path: `${base}/hoist`,
-        icon: ArrowUpDown,
-      },
-      {
-        label: 'Trolley/Travelling',
-        path: `${base}/trolley`,
-        icon: ArrowLeftRight,
-      },
-      {
-        label: '가동/고장 정보',
-        path: `${base}/fault-info`,
-        icon: Activity,
-      },
-      {
-        label: '가동/고장 이력',
-        path: `${base}/fault-history`,
-        icon: History,
-      },
-      {
-        label: 'Trend',
-        path: `${base}/trend`,
-        icon: TrendingUp,
-      },
-      {
-        label: 'Configuration',
-        path: `${base}/configuration`,
-        icon: Settings,
       },
     ],
   };
@@ -161,21 +92,6 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         label: i18n.t('common:nav.tags'),
         path: `${base}/tags`,
         icon: Tags,
-      },
-      {
-        label: i18n.t('common:nav.craneStatus'),
-        path: `${base}/crane-status`,
-        icon: List,
-      },
-      {
-        label: i18n.t('common:nav.workHistory'),
-        path: `${base}/work-history`,
-        icon: History,
-      },
-      {
-        label: i18n.t('common:nav.alarmHistory'),
-        path: `${base}/alarm-history`,
-        icon: Bell,
       },
       {
         // 감지 설정 페이지(경로는 detection-settings) — 메뉴는 "설정", 맨 아래.
@@ -405,11 +321,6 @@ function getMro2Group(): NavGroup {
 }
 
 const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
-  '/crane-detail': (pathname) => {
-    const craneId = pathname.split('/')[2];
-    if (!craneId) return defaultSystemGroup;
-    return buildCmmsGroup(craneId);
-  },
   '/outdoor-work': (pathname) => {
     const regionId = pathname.split('/')[2] || '';
     return buildWorkGroup(
@@ -428,8 +339,8 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
 
 // role 별로 허용된 systemGroup prefix
 const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
-  ocean: ['/crane-detail', '/outdoor-work', '/indoor-work'],
-  philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
+  ocean: ['/outdoor-work', '/indoor-work'],
+  philly: ['/outdoor-work', '/indoor-work'],
   mro: [],
   mro2: [],
   hmi: [],
@@ -491,19 +402,11 @@ export function getNavigationConfig(
 
   const groups: NavGroup[] = [];
 
-  // 모든 role: Overview(Dashboard) + Monitoring(3개) + 자산 + work systemGroup
+  // 모든 role: Monitoring(도크 현황·지도) + 자산 + work systemGroup
   // MRO 그룹은 'mro' 전용 (위에서 단축 반환)
-  groups.push(getOverviewGroup());
   groups.push(getMonitoringGroup());
   groups.push(getAssetsGroup());
   groups.push(systemGroup);
 
   return groups.filter((g) => g.items.length > 0);
 }
-
-export const navigationConfig: NavGroup[] = [
-  getOverviewGroup(),
-  getMonitoringGroup(),
-  defaultSystemGroup,
-  getMroGroup(),
-];

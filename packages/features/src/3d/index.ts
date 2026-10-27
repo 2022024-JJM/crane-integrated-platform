@@ -143,14 +143,11 @@ export {
 } from './ui/scene-simulation-badge';
 export { SceneZoneAlertOverlay } from './ui/scene-zone-alert-overlay';
 export { SceneAlertNotifier } from './ui/scene-alert-notifier';
-export { ZoneJournalSync } from './ui/zone-journal-sync';
-export { useZoneJournalStore } from './model/use-zone-journal-store';
-export { useStatusJournalStore } from './model/use-status-journal-store';
 export {
   diffZoneIntrusions,
   filterAcceptedZoneTransitions,
   findRegionOfModel,
-} from './lib/zone-journal-map';
+} from './lib/zone-transitions';
 export { useHudConditions } from './model/use-hud-conditions';
 export {
   buildHudConditions,
@@ -262,9 +259,6 @@ export {
   type ZoneTransition,
 } from './model/scene-zone-runtime';
 export { zoneKey } from './lib/scene-zones';
-export { CollisionJournalSync } from './ui/collision-journal-sync';
-export { useCollisionJournalStore } from './model/use-collision-journal-store';
-export { toCollisionJournalEntries } from './lib/collision-journal-map';
 export { SceneLoadingOverlay } from './ui/scene-loading-overlay';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
 export {

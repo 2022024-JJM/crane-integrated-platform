@@ -66,7 +66,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
             </>
           ) : null
         }
-        toolbarLayout="dock"
       />
     </div>
   );
