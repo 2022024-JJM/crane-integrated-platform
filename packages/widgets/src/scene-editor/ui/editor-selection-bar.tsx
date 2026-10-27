@@ -50,7 +50,7 @@ export function EditorSelectionBar({
           'absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2',
         )}
       >
-        <span className="text-box-cap text-foreground px-2 text-xs font-medium whitespace-nowrap">
+        <span className="text-box-cap text-muted-foreground px-2 text-xs font-medium whitespace-nowrap">
           {t('monitoring:editor.selectionCount', { count: selectedCount })}
         </span>
         <span aria-hidden className={EDITOR_TOOLBAR_DIVIDER_CLASS} />
