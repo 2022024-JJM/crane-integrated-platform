@@ -10,7 +10,10 @@ export const OVERDUE_DAYS = 5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 기준일이 오늘로부터 OVERDUE_DAYS 이상 지났는지 */
-export function isPastDue(due: string | null | undefined, now: number = Date.now()): boolean {
+export function isPastDue(
+  due: string | null | undefined,
+  now: number = Date.now(),
+): boolean {
   if (!due) return false;
   const t = new Date(due).getTime();
   if (Number.isNaN(t)) return false;
@@ -34,7 +37,9 @@ export function inspectionTone(
     case 'overdue':
       // 도메인이 overdue로 표시했어도 5일 규칙을 넘겨야 빨강으로 본다.
       // 예정일을 모르면 도메인 판단을 그대로 신뢰한다.
-      return scheduledDate === undefined || isPastDue(scheduledDate, now) ? 'delayed' : 'open';
+      return scheduledDate === undefined || isPastDue(scheduledDate, now)
+        ? 'delayed'
+        : 'open';
     default:
       return isPastDue(scheduledDate, now) ? 'delayed' : 'open';
   }
@@ -63,8 +68,18 @@ export function serviceToneLabel(tone: ServiceTone): string {
 
 /** 라틴어 축약 월명 (Intl에 la 로케일이 없어 수동 매핑) */
 const LA_MONTHS_SHORT = [
-  'Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun',
-  'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Ian',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mai',
+  'Iun',
+  'Iul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /** 현재 i18n 언어에 맞춘 날짜 포맷 (ko: 2026. 8. 1. / en: Aug 1, 2026 / la: 1 Aug 2026) */

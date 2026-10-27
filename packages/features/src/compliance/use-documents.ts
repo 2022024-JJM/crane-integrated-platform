@@ -6,7 +6,10 @@ import {
   getAllUploadedDocuments,
 } from '@crane/domain/compliance';
 import type { DocumentType, UploadedDocument } from '@crane/domain/compliance';
-import { useDomainEventStore, useEntityTick } from '../shared/use-domain-event-store';
+import {
+  useDomainEventStore,
+  useEntityTick,
+} from '../shared/use-domain-event-store';
 
 /** 문서 보관함 소스 — 자동 생성 보고서/인증서 + 사용자 업로드 */
 export function useDocuments() {
@@ -38,7 +41,9 @@ function todayIso(): string {
 }
 
 /** 문서 업로드 — 메타데이터만 등록하고 tick을 발행한다 */
-export function useUploadDocument(): (input: UploadDocumentInput) => UploadedDocument {
+export function useUploadDocument(): (
+  input: UploadDocumentInput,
+) => UploadedDocument {
   const publish = useDomainEventStore((s) => s.publish);
   return useCallback(
     (input: UploadDocumentInput) => {

@@ -1,4 +1,5 @@
 import { getAllInspectionWOs } from '../../inspection/model/mock-data';
+import { registerPersisted, replaceArray } from '../../shared/persistence';
 import type {
   Certification,
   ComplianceSummary,
@@ -174,7 +175,20 @@ function deriveCertStatus(cert: Certification): Certification['status'] {
 
 // 갱신 요청된 인증서 id — 세션 내 저장. 요청되면 파생 상태 대신 'renewing'으로 노출한다
 // (만료/임박 알림에서 빠지고 "갱신 중"으로 보여 이미 처리 착수했음을 나타냄)
+registerPersisted(
+  'certifications',
+  () => allCertifications,
+  (v: Certification[]) => replaceArray(allCertifications, v),
+);
 const renewalRequestedIds = new Set<string>();
+registerPersisted(
+  'certRenewals',
+  () => [...renewalRequestedIds],
+  (v: string[]) => {
+    renewalRequestedIds.clear();
+    for (const id of v) renewalRequestedIds.add(id);
+  },
+);
 
 export function getAllCertifications(): Certification[] {
   return allCertifications.map((c) => ({
@@ -192,6 +206,21 @@ export function requestCertRenewal(id: string): boolean {
 }
 
 /** 갱신 요청 취소 (Undo용) */
+/** 갱신 완료 — 새 만료일을 적고 갱신 중 표식을 뗀다. */
+export function completeCertRenewal(id: string, newExpiry: string): boolean {
+  const idx = allCertifications.findIndex((c) => c.id === id);
+  if (idx === -1 || !/^\d{4}-\d{2}-\d{2}$/.test(newExpiry)) return false;
+  const c = allCertifications[idx]!;
+  allCertifications[idx] = {
+    ...c,
+    issuedDate: new Date().toISOString().slice(0, 10),
+    expiryDate: newExpiry,
+    status: 'valid',
+  };
+  renewalRequestedIds.delete(id);
+  return true;
+}
+
 export function cancelCertRenewal(id: string): void {
   renewalRequestedIds.delete(id);
 }
@@ -231,6 +260,17 @@ const uploadedDocuments: UploadedDocument[] = [
     sizeBytes: 645_000,
   },
 ];
+// object URL 은 새로고침하면 죽는다 — 메타데이터만 남긴다
+registerPersisted(
+  'uploads',
+  () =>
+    uploadedDocuments.map((d) => {
+      const copy = { ...d };
+      delete copy.objectUrl;
+      return copy;
+    }),
+  (v: UploadedDocument[]) => replaceArray(uploadedDocuments, v),
+);
 
 export function getAllUploadedDocuments(): UploadedDocument[] {
   return uploadedDocuments;

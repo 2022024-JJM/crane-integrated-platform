@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, CheckCircle2, Play } from 'lucide-react';
+import { Camera, CheckCircle2, ClipboardCheck, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEntityTicks } from '@crane/features/shared';
 import { useDocuments, useUploadDocument } from '@crane/features/compliance';
@@ -14,7 +14,11 @@ import { getAllPartsRequests } from '@crane/domain/inventory';
 import { KC } from '../../../shared/ui/kc';
 import { useIsMobile } from '@crane/core/lib/use-is-mobile';
 import { fmtDate } from '../../../shared/lib/service-status';
-import { FIELD_PATH, type FieldKind } from '../lib/field-route';
+import {
+  FIELD_PATH,
+  fieldInspectPath,
+  type FieldKind,
+} from '../lib/field-route';
 import {
   collectMyTickets,
   myTicketTone,
@@ -22,6 +26,7 @@ import {
 } from '../lib/my-tickets';
 import { useFieldWorker } from '../lib/field-storage';
 import { FieldBigButton, FieldChip, FieldShell } from './field-shell';
+import { SrTimeline } from '../../../shared/ui/sr-timeline';
 
 /**
  * 현장용 티켓 상세 — 번호·장비·내용·상태·날짜·첨부 사진. 휴대폰에서는 포털
@@ -111,6 +116,10 @@ export function FieldTicketDetail({
     row.status !== 'in_progress' &&
     row.status !== 'completed';
   const canComplete = kind === 'repair' && row.status === 'in_progress';
+  const canInspect =
+    kind === 'inspection' &&
+    row.status !== 'completed' &&
+    row.status !== 'cancelled';
   const ACTION_PRESETS = [
     'partReplaced',
     'adjusted',
@@ -178,11 +187,18 @@ export function FieldTicketDetail({
           ))}
         </div>
       ) : null}
+      {canInspect ? (
+        <div className="mt-4">
+          <FieldBigButton onClick={() => navigate(fieldInspectPath(row.id))}>
+            <ClipboardCheck size={18} /> {t('mro2:field.inspect.start')}
+          </FieldBigButton>
+        </div>
+      ) : null}
       {canStart ? (
         <div className="mt-4">
           <FieldBigButton
             onClick={() => {
-              if (work.start(row.id))
+              if (work.start(row.id, worker))
                 toast.success(
                   t('mro2:field.work.started', { number: row.number }),
                 );
@@ -230,10 +246,40 @@ export function FieldTicketDetail({
               borderRadius: KC.radius,
             }}
           />
+          <label
+            className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded text-[15px] font-bold"
+            style={{
+              border: `1px dashed ${KC.borderStrong}`,
+              color: KC.ink,
+              borderRadius: KC.radius,
+            }}
+          >
+            <Camera size={18} /> {t('mro2:field.detail.addPhoto')}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                for (const file of Array.from(e.target.files ?? [])) {
+                  upload({
+                    fileName: file.name,
+                    docType: 'other',
+                    uploadedBy: worker || t('mro2:field.reporter'),
+                    sizeBytes: file.size,
+                    objectUrl: URL.createObjectURL(file),
+                    refWoNumber: row.number,
+                  });
+                }
+                e.target.value = '';
+              }}
+            />
+          </label>
           <FieldBigButton
             disabled={action.trim().length === 0}
             onClick={() => {
-              if (work.complete(row.id, action)) {
+              if (work.complete(row.id, action, worker)) {
                 toast.success(
                   t('mro2:field.work.completed', { number: row.number }),
                 );
@@ -281,6 +327,15 @@ export function FieldTicketDetail({
           }}
         />
       </label>
+      <div className="mt-5">
+        <div
+          className="mb-2 text-[13px] font-semibold"
+          style={{ color: KC.muted }}
+        >
+          {t('mro2:timeline.title')}
+        </div>
+        <SrTimeline kind={kind} refId={row.id} side="field" by={worker} big />
+      </div>
       {!isMobile ? (
         <Link
           to={portalPath}

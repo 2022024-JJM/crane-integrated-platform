@@ -35,11 +35,19 @@ export function useNewTicket() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('new');
   const kind: TicketKind | null =
-    raw && KINDS.includes(raw as TicketKind) ? (raw as TicketKind) : raw ? 'repair' : null;
+    raw && KINDS.includes(raw as TicketKind)
+      ? (raw as TicketKind)
+      : raw
+        ? 'repair'
+        : null;
   const craneId = params.get('nc');
 
   const openTicket = useCallback(
-    (nextKind: TicketKind = 'repair', prefillCraneId?: string, prefill?: TicketPrefill) => {
+    (
+      nextKind: TicketKind = 'repair',
+      prefillCraneId?: string,
+      prefill?: TicketPrefill,
+    ) => {
       pendingPrefill = prefill ?? null;
       const next = new URLSearchParams(params);
       next.set('new', nextKind);
@@ -57,5 +65,11 @@ export function useNewTicket() {
     setParams(next);
   }, [params, setParams]);
 
-  return { isOpen: kind !== null, kind: kind ?? 'repair', craneId, openTicket, closeTicket };
+  return {
+    isOpen: kind !== null,
+    kind: kind ?? 'repair',
+    craneId,
+    openTicket,
+    closeTicket,
+  };
 }

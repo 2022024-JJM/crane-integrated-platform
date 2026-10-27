@@ -12,7 +12,12 @@ import { getAllRepairWOs } from '@crane/domain/maintenance';
 import type { RepairWO } from '@crane/domain/maintenance';
 import { useEntityTicks } from '../shared/use-domain-event-store';
 
-const ACTIVE_REPAIR_STATUSES = new Set(['received', 'waiting_parts', 'in_progress', 're_inspection']);
+const ACTIVE_REPAIR_STATUSES = new Set([
+  'received',
+  'waiting_parts',
+  'in_progress',
+  're_inspection',
+]);
 
 const STATUS_SEVERITY: Record<ComponentStatus, number> = {
   normal: 0,
@@ -48,7 +53,9 @@ export interface AssetComponentStats {
 }
 
 /** 잎 컴포넌트(개별 부품)만 집계 — 클러스터 롤업 컴포넌트는 제외 */
-function computeComponentStats(components: CraneComponent[]): AssetComponentStats {
+function computeComponentStats(
+  components: CraneComponent[],
+): AssetComponentStats {
   const leaves = components.filter((c) => c.parentId !== null);
   const stats: AssetComponentStats = {
     total: leaves.length,
@@ -66,7 +73,9 @@ function computeComponentStats(components: CraneComponent[]): AssetComponentStat
   return stats;
 }
 
-function computeWorstHealth(components: CraneComponent[]): AssetHealthSnapshot | null {
+function computeWorstHealth(
+  components: CraneComponent[],
+): AssetHealthSnapshot | null {
   // "건강도 최저"는 잔여 수명이 가장 적은 부품 — 상세의 부품 수명 탭이 쓰는 최악 기준과
   // 동일하게 루트 클러스터에서 고른다(둘이 다른 부품을 가리켜 카드↔상세가 모순되던 것 해소).
   // 상태 심각도는 별도 '구성품' 타일이 이미 보여주므로 여기선 잔여 수명만 본다.
@@ -74,12 +83,17 @@ function computeWorstHealth(components: CraneComponent[]): AssetHealthSnapshot |
   const pool = clusters.length > 0 ? clusters : components;
   if (pool.length === 0) return null;
   const usedRatio = (c: CraneComponent) =>
-    c.expectedLifeHours > 0 ? Math.min(1, c.currentHours / c.expectedLifeHours) : 0;
+    c.expectedLifeHours > 0
+      ? Math.min(1, c.currentHours / c.expectedLifeHours)
+      : 0;
   let worst = pool[0];
   for (const c of pool) {
     const diff = usedRatio(c) - usedRatio(worst);
     // 잔여 수명 최저(=소모율 최고) 우선, 동률이면 상태 심각도로 결정
-    if (diff > 0 || (diff === 0 && STATUS_SEVERITY[c.status] > STATUS_SEVERITY[worst.status])) {
+    if (
+      diff > 0 ||
+      (diff === 0 && STATUS_SEVERITY[c.status] > STATUS_SEVERITY[worst.status])
+    ) {
       worst = c;
     }
   }
@@ -92,7 +106,9 @@ function computeWorstHealth(components: CraneComponent[]): AssetHealthSnapshot |
   };
 }
 
-function pickLatestDate(...dates: Array<string | null | undefined>): string | null {
+function pickLatestDate(
+  ...dates: Array<string | null | undefined>
+): string | null {
   let latest: string | null = null;
   for (const d of dates) {
     if (!d) continue;
@@ -139,7 +155,10 @@ export function useAssetList() {
   for (const wo of allInspections) {
     if (wo.status === 'completed' || wo.status === 'cancelled') continue;
     const prev = craneNextInspectionMap[wo.craneId];
-    if (!prev || new Date(wo.scheduledDate).getTime() < new Date(prev).getTime()) {
+    if (
+      !prev ||
+      new Date(wo.scheduledDate).getTime() < new Date(prev).getTime()
+    ) {
       craneNextInspectionMap[wo.craneId] = wo.scheduledDate;
     }
   }
@@ -197,10 +216,12 @@ export function useAssetDetail(craneId: string) {
   // 이력 탭은 최신순(예정일 내림차순) — 생성순으로 뒤섞여 보이던 것 해소
   const inspections: InspectionWO[] = getAllInspectionWOs()
     .filter((w) => w.craneId === craneId)
-    .map((w) =>
-      isKo && w.findings_ko ? { ...w, findings: w.findings_ko } : w,
-    )
-    .sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime());
+    .map((w) => (isKo && w.findings_ko ? { ...w, findings: w.findings_ko } : w))
+    .sort(
+      (a, b) =>
+        new Date(b.scheduledDate).getTime() -
+        new Date(a.scheduledDate).getTime(),
+    );
 
   const repairs: RepairWO[] = getAllRepairWOs()
     .filter((w) => w.craneId === craneId)
@@ -213,7 +234,11 @@ export function useAssetDetail(craneId: string) {
           }
         : w,
     )
-    .sort((a, b) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.scheduledStart).getTime() -
+        new Date(a.scheduledStart).getTime(),
+    );
 
   return { asset, components, inspections, repairs };
 }

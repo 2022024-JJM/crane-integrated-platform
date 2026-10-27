@@ -88,15 +88,43 @@ export function computeSpend(
   for (const wo of inspections) {
     const d = new Date(wo.actualDate ?? wo.scheduledDate);
     if (d.getFullYear() === targetYear) agg.visits += 1;
-    add(agg, d.getFullYear(), targetYear, d.getMonth(), wo.craneId, wo.craneName, 'ipm', wo.cost ?? 0);
+    add(
+      agg,
+      d.getFullYear(),
+      targetYear,
+      d.getMonth(),
+      wo.craneId,
+      wo.craneName,
+      'ipm',
+      wo.cost ?? 0,
+    );
   }
 
   for (const wo of repairs) {
     const d = new Date(wo.actualStart ?? wo.scheduledStart);
     if (d.getFullYear() === targetYear) agg.visits += 1;
-    const laborKey: SpendTypeKey = wo.sourceType === 'breakdown' ? 'oncall' : 'planned';
-    add(agg, d.getFullYear(), targetYear, d.getMonth(), wo.craneId, wo.craneName, laborKey, wo.laborCost ?? 0);
-    add(agg, d.getFullYear(), targetYear, d.getMonth(), wo.craneId, wo.craneName, 'parts', wo.partsCost ?? 0);
+    const laborKey: SpendTypeKey =
+      wo.sourceType === 'breakdown' ? 'oncall' : 'planned';
+    add(
+      agg,
+      d.getFullYear(),
+      targetYear,
+      d.getMonth(),
+      wo.craneId,
+      wo.craneName,
+      laborKey,
+      wo.laborCost ?? 0,
+    );
+    add(
+      agg,
+      d.getFullYear(),
+      targetYear,
+      d.getMonth(),
+      wo.craneId,
+      wo.craneName,
+      'parts',
+      wo.partsCost ?? 0,
+    );
   }
 
   return agg;

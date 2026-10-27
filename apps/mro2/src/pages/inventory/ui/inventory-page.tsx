@@ -1,8 +1,18 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, ChevronDown, ChevronUp, Download } from 'lucide-react';
-import { useInventoryList } from '@crane/features/inventory';
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ShoppingCart,
+} from 'lucide-react';
+import {
+  useCreateReorderDraft,
+  useInventoryList,
+} from '@crane/features/inventory';
+import { toast } from 'sonner';
 import type {
   InventoryItem,
   InventoryStatus,
@@ -111,6 +121,7 @@ export function Mro2InventoryPage() {
     [items],
   );
   const lowCount = useMemo(() => items.filter(isLowOrOut).length, [items]);
+  const createReorderDraft = useCreateReorderDraft();
   const reorderCount = useMemo(
     () => items.filter((i) => i.availableQty <= i.reorderPoint).length,
     [items],
@@ -253,6 +264,29 @@ export function Mro2InventoryPage() {
           >
             {t('inventory.reorderNeeded', { n: reorderCount })}
           </button>
+          {reorderCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                const res = createReorderDraft(t('timeline.office'));
+                if (!res) {
+                  toast.info(t('inventory.reorderDraftNone'));
+                  return;
+                }
+                toast.success(
+                  t('inventory.reorderDraftCreated', {
+                    po: res.po.poNumber,
+                    n: res.po.items.length,
+                  }),
+                  { action: { label: t('common:undo'), onClick: res.undo } },
+                );
+              }}
+              className="flex cursor-pointer items-center gap-1 font-semibold underline-offset-2 hover:underline"
+              style={{ color: KC.link }}
+            >
+              <ShoppingCart size={13} /> {t('inventory.reorderDraft')}
+            </button>
+          ) : null}
         </div>
 
         {lowCount > 0 ? (

@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { addRepairWO } from '@crane/domain/maintenance';
 import type { RepairWO } from '@crane/domain/maintenance';
 import { newRepairId, nextRepairWoNumber } from '@crane/domain/shared';
+import { logActivity } from '@crane/domain/shared';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface RepairTicketDraft {
@@ -47,6 +48,12 @@ export function useCreateRepairTicket() {
       };
 
       addRepairWO(wo);
+      logActivity({
+        kind: 'repair',
+        refId: wo.id,
+        type: 'reported',
+        by: draft.fieldReport?.reportedBy ?? 'office',
+      });
       publish('repair', wo.id);
       return wo;
     },

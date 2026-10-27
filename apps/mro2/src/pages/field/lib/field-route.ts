@@ -18,13 +18,16 @@ export type FieldView =
   | { view: 'new'; kind: FieldKind }
   | { view: 'tickets' }
   | { view: 'ticket'; kind: FieldKind; id: string }
-  | { view: 'emergency' };
+  | { view: 'emergency' }
+  | { view: 'inspect'; id: string };
 
 /** splat → 뷰. 모르는 경로는 홈으로(잘못된 딥링크가 빈 화면이 되지 않게). */
 export function matchFieldSubRoute(splat: string | undefined): FieldView {
   const parts = (splat ?? '').split('/').filter(Boolean);
   if (parts.length === 0) return { view: 'home' };
   if (parts[0] === 'emergency') return { view: 'emergency' };
+  if (parts[0] === 'inspect' && parts[1])
+    return { view: 'inspect', id: parts[1] };
   if (parts[0] === 'tickets') {
     if (isFieldKind(parts[1]) && parts[2]) {
       return { view: 'ticket', kind: parts[1], id: parts[2] };
@@ -39,6 +42,10 @@ export function matchFieldSubRoute(splat: string | undefined): FieldView {
 
 export const FIELD_PATH = '/mro2/field';
 export const FIELD_EMERGENCY_PATH = `${FIELD_PATH}/emergency`;
+/** 배정된 점검 수행 화면 */
+export function fieldInspectPath(id: string): string {
+  return `${FIELD_PATH}/inspect/${id}`;
+}
 export function fieldTicketPath(kind: FieldKind, id: string): string {
   return `${FIELD_PATH}/tickets/${kind}/${encodeURIComponent(id)}`;
 }

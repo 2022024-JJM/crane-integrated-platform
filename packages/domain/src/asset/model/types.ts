@@ -50,7 +50,16 @@ export interface CraneAsset {
   indoorOutdoor: 'indoor' | 'outdoor';
   status: AssetStatus;
   oshaClassification: string;
+  /** 정기 점검 주기 — 비어 있으면 정기 점검을 자동으로 잡지 않는다 */
+  inspectionInterval?: InspectionInterval | null;
 }
+
+/** 점검 슬라이스의 RecurrenceInterval 과 같은 값 — 레이어 규칙상 여기서 따로 둔다 */
+export type InspectionInterval =
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'quarterly';
 
 export interface CraneComponent {
   id: string;

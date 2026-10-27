@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { InspectionWO } from '@crane/domain/inspection';
 import type { PartsRequest } from '@crane/domain/inventory';
 import type { RepairWO } from '@crane/domain/maintenance';
-import { collectMyTickets, myTicketTone } from '../my-tickets';
+import { collectMyTickets, groupMyTickets, myTicketTone } from '../my-tickets';
 
 const repair = (o: Partial<RepairWO>): RepairWO =>
   ({
@@ -80,5 +80,34 @@ describe('collectMyTickets', () => {
     expect(myTicketTone('in_progress')).toBe('active');
     expect(myTicketTone('scheduled')).toBe('waiting');
     expect(myTicketTone('pending')).toBe('waiting');
+  });
+});
+
+describe('groupMyTickets', () => {
+  const row = (status: string, date: string) =>
+    ({
+      kind: 'repair',
+      id: date + status,
+      number: 'x',
+      craneName: 'c',
+      title: '',
+      status,
+      date,
+    }) as import('../my-tickets').MyTicketRow;
+  it('완료는 done, 날짜로 지연·오늘·예정, 지연·예정은 날짜순', () => {
+    const g = groupMyTickets(
+      [
+        row('received', '2026-07-12'),
+        row('received', '2026-07-09'),
+        row('in_progress', '2026-07-10'),
+        row('completed', '2026-07-01'),
+        row('received', '2026-07-11'),
+      ],
+      '2026-07-10',
+    );
+    expect(g.overdue.map((r) => r.date)).toEqual(['2026-07-09']);
+    expect(g.today.map((r) => r.date)).toEqual(['2026-07-10']);
+    expect(g.upcoming.map((r) => r.date)).toEqual(['2026-07-11', '2026-07-12']);
+    expect(g.done).toHaveLength(1);
   });
 });

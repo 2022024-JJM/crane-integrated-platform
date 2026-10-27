@@ -23,7 +23,9 @@
     "./shared": "./src/shared/index.ts",
     "./history": "./src/history/index.ts",
     "./risk": "./src/risk/index.ts",
-    "./triage": "./src/triage/index.ts"
+    "./triage": "./src/triage/index.ts",
+    "./notes": "./src/notes/index.ts",
+    "./activity": "./src/activity/index.ts"
   },
   "scripts": {
     "test": "vitest run"

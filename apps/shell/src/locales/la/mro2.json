@@ -50,7 +50,7 @@
     "scheduled": "Praestitutum",
     "in_progress": "In Cursu",
     "completed": "Perfectum",
-    "overdue": "Serum",
+    "overdue": "Tardata",
     "cancelled": "Cancellatum",
     "received": "Acceptum",
     "waiting_parts": "Partes Exspectans",
@@ -218,7 +218,17 @@
     "status": "Status",
     "frontViewCaption": "Facies antica — {{name}}",
     "indoor": "Intus",
-    "outdoor": "Foris"
+    "outdoor": "Foris",
+    "inspectionInterval": "Inspectio periodica",
+    "intervalSaved": "Intervallum servatum",
+    "intervalScheduled": "{{number}} in {{date}}",
+    "interval": {
+      "none": "Nulla",
+      "weekly": "Hebdomadalis",
+      "biweekly": "Bis in mense",
+      "monthly": "Menstrua",
+      "quarterly": "Trimestris"
+    }
   },
   "calendar": {
     "title": "Calendarium Servitii",
@@ -383,7 +393,10 @@
       "reporter": "Nuntius",
       "toInbox": "In arca assigna",
       "photos": "{{n}} imagines",
-      "fullDetail": "Totum aperi"
+      "fullDetail": "Totum aperi",
+      "partsItems": "Res petitae {{n}}",
+      "stock": "copia {{n}}",
+      "fulfilled": "Emissa {{issued}} · ordo {{po}}"
     },
     "checklistSection": "{{n}} capita — inspectio campi exspectatur",
     "pending": "Non iudicatum",
@@ -392,7 +405,8 @@
       "minor": "Minor",
       "major": "Maior",
       "overhaul": "Renovatio"
-    }
+    },
+    "notesFilter": "Notae campi non lectae"
   },
   "inventory": {
     "title": "Inventarium et Partes",
@@ -494,7 +508,10 @@
     "lowStockStrip": "{{n}} partes infra copiam tutam",
     "showInTable": "In tabula monstra ›",
     "poTitle": "Mandata aperta",
-    "reorderNeeded": "Iterum ordinanda {{n}}"
+    "reorderNeeded": "Iterum ordinanda {{n}}",
+    "reorderDraft": "Ordinem conscribe",
+    "reorderDraftCreated": "Ordo {{po}} — {{n}} res",
+    "reorderDraftNone": "Nihil ordinandum"
   },
   "spend": {
     "title": "Sumptus",
@@ -507,7 +524,8 @@
     "byLocation": "Sumptus per Locum",
     "locations": "Loci",
     "assetsToggle": "Bona",
-    "locationLabel": "Doca No.4 — Philly Shipyard"
+    "locationLabel": "Doca No.4 — Philly Shipyard",
+    "topAsset": "Res maximi sumptus"
   },
   "ticket": {
     "title": "Nova Petitio Servitii",
@@ -606,7 +624,11 @@
       "renewing": "Renovatur"
     },
     "requestRenewal": "Renovationem pete",
-    "renewalRequested": "Renovatio petita: {{name}}"
+    "renewalRequested": "Renovatio petita: {{name}}",
+    "completeRenewal": "Renovatum",
+    "confirmRenewal": "OK",
+    "newExpiry": "Novus finis",
+    "renewalDone": "{{name}} renovatum"
   },
   "search": {
     "placeholder": "Quaere bona aut petitiones servitii…",
@@ -726,7 +748,8 @@
       "notePlaceholder": "Nota brevis (optio)",
       "alreadyOpen": "Nuntius urgens {{number}} iam apertus est huic rei",
       "sent": "Nuntius urgens receptus",
-      "sentHint": "In summo arcae administratoris stat."
+      "sentHint": "In summo arcae administratoris stat.",
+      "component": "Sistere urgens"
     },
     "duplicate": {
       "title": "{{n}} nuntii defectus aperti huic rei",
@@ -748,6 +771,25 @@
         "cleaned": "Purgatum",
         "tempFix": "Remedium temporale"
       }
+    },
+    "inspect": {
+      "title": "Inspectionem fac",
+      "start": "Inspectionem incipe",
+      "send": "Eventum mitte",
+      "submitted": "Eventus inspectionis missus",
+      "submittedPass": "Omnia bene — statim perfectum.",
+      "submittedFail": "{{n}} vitiosa — in arcam officii.",
+      "alreadyDone": "Inspectio iam perfecta est."
+    },
+    "group": {
+      "overdue": "Tardata",
+      "today": "Hodie",
+      "upcoming": "Ventura",
+      "done": "Perfecta"
+    },
+    "badge": {
+      "assigned": "{{n}} nova",
+      "notes": "{{n}} notae"
     }
   },
   "triage": {
@@ -769,6 +811,35 @@
     "rejected": "{{number}} reiectum",
     "acknowledge": "Agnosce",
     "acknowledged": "{{number}} agnitum",
-    "openField": "Aperi tabulam campi"
+    "openField": "Aperi tabulam campi",
+    "fulfillIssued": "{{n}} e copia emissa",
+    "fulfillOrdered": "{{n}} in ordine {{po}}"
+  },
+  "timeline": {
+    "title": "Notae et acta",
+    "empty": "Nulla acta adhuc",
+    "office": "Officium",
+    "field": "Campus",
+    "send": "Mitte",
+    "placeholderOffice": "Nuntius ad campum…",
+    "placeholderField": "Nuntius ad officium…",
+    "act": {
+      "reported": "{{by}} rettulit",
+      "triaged": "{{by}} accepit → {{detail}}",
+      "rejected": "{{by}} reiecit",
+      "assigned": "{{by}} mandavit → {{detail}}",
+      "rescheduled": "{{by}} diem mutavit → {{detail}}",
+      "started": "{{by}} opus incepit",
+      "completed": "{{by}} perfecit {{detail}}",
+      "status": "{{by}} status → {{detail}}",
+      "approved": "{{by}} approbavit",
+      "fulfilled": "Emissum / ordinatum ({{detail}})",
+      "acknowledged": "{{by}} agnovit"
+    }
+  },
+  "alerts": {
+    "inbox": "Arca campi {{n}}",
+    "inboxEmergency": "Urgens {{e}} · arca {{n}}",
+    "notes": "Notae campi {{n}}"
   }
 }

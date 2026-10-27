@@ -16,7 +16,11 @@ export function normalizeLabel(raw: string): string {
   return raw.trim().slice(0, MAX_LABEL_LENGTH);
 }
 
-export function addLabelTo(map: OwnLabelMap, craneId: string, raw: string): OwnLabelMap {
+export function addLabelTo(
+  map: OwnLabelMap,
+  craneId: string,
+  raw: string,
+): OwnLabelMap {
   const label = normalizeLabel(raw);
   if (!label) return map;
   const cur = map[craneId] ?? [];
@@ -24,7 +28,11 @@ export function addLabelTo(map: OwnLabelMap, craneId: string, raw: string): OwnL
   return { ...map, [craneId]: [...cur, label] };
 }
 
-export function removeLabelFrom(map: OwnLabelMap, craneId: string, label: string): OwnLabelMap {
+export function removeLabelFrom(
+  map: OwnLabelMap,
+  craneId: string,
+  label: string,
+): OwnLabelMap {
   const cur = map[craneId] ?? [];
   const next = cur.filter((l) => l !== label);
   if (next.length === cur.length) return map;
@@ -80,7 +88,16 @@ export function useOwnLabels() {
     commit(removeLabelFrom(cache, craneId, label));
   }, []);
 
-  const labelsFor = useCallback((craneId: string): string[] => map[craneId] ?? [], [map]);
+  const labelsFor = useCallback(
+    (craneId: string): string[] => map[craneId] ?? [],
+    [map],
+  );
 
-  return { map, allLabels: collectAllLabels(map), labelsFor, addLabel, removeLabel };
+  return {
+    map,
+    allLabels: collectAllLabels(map),
+    labelsFor,
+    addLabel,
+    removeLabel,
+  };
 }

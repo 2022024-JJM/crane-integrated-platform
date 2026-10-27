@@ -125,7 +125,12 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
     ['ROTARY HANDLE', 'NZM3-XTVDVR', 'EATON', 3],
     ['SHUNT RELEASE BLOCK, 480~525VAC/DC', 'NZM4-XA480-525AC/DC', 'EATON', 2],
     ['SHUNT RELEASE BLOCK, 480~525VAC/DC', 'NZM2/3-XA480-525AC/DC', 'EATON', 1],
-    ['UNDERVOLTAGE RELEASE BLOCK, 480~525VAC', 'NZM2/3-XU480-525AC', 'EATON', 3],
+    [
+      'UNDERVOLTAGE RELEASE BLOCK, 480~525VAC',
+      'NZM2/3-XU480-525AC',
+      'EATON',
+      3,
+    ],
   ],
   'motor-starter': [
     ['AUX. CONTACT BLOCK', 'GVAE20', 'SCHNEIDER ELECTRIC', 3],
@@ -213,21 +218,46 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
     ['ETHERNET SWITCH, 4-PoE', 'EDS-P206A-4POE-T', 'MOXA', 3],
     ['FIBER CONVERTER RECEIVER', 'LWLS-D-1', 'HUBNER', 1],
     ['FIBER CONVERTER TRANSMITTER', 'LWLS-T-1-62.5/125', 'HUBNER', 1],
-    ['FIBER OPTIC CABLE, 150M', 'LS-JC-SC/SC-M1-20DPV-1500', 'LS CABLE & SYSTEM', 1],
+    [
+      'FIBER OPTIC CABLE, 150M',
+      'LS-JC-SC/SC-M1-20DPV-1500',
+      'LS CABLE & SYSTEM',
+      1,
+    ],
     ['FIBER OPTICAL POE SWITCH', 'EDS-P206A-4POE-M-SC-T', 'MOXA', 1],
     ['INDUSTRIAL ETHERNET SWITCH', 'L110-F2G-EX', 'WESTERMO', 1],
-    ['INTERFACE CONVERTER, OZD Profi 12M G11', 'OZD Profi 12M G11', 'HIRSCHMANN', 3],
+    [
+      'INTERFACE CONVERTER, OZD Profi 12M G11',
+      'OZD Profi 12M G11',
+      'HIRSCHMANN',
+      3,
+    ],
     ['MODBUS TCP GATEWAY', 'MGATE 5111-T', 'MOXA', 2],
     ['PROFIBUS CONNECTOR (180°)', '6GK1500-0FC10', 'SIEMENS', 3],
     ['PROFIBUS CONNECTOR (90°)', '6ES7972-0BA70-0XA0', 'SIEMENS', 3],
-    ['PROFIBUS CONNECTOR (90° + PG SOCKET)', '6ES7972-0BB70-0XA0', 'SIEMENS', 3],
+    [
+      'PROFIBUS CONNECTOR (90° + PG SOCKET)',
+      '6ES7972-0BB70-0XA0',
+      'SIEMENS',
+      3,
+    ],
     ['PROFINET CABLE (CAT.6A)', '2170484', 'LAPP', 3],
     ['PROFINET CABLE (ENCODER), ETHERLINE Y FC CAT.5', '2170893', 'LAPP', 3],
     ['PROFINET CONNECTOR', '21700600', 'LAPP', 3],
     ['PROFINET CONNECTOR (ENCODER)', '99 3727 810 04', 'BINDER', 3],
-    ['PROFINET CONNECTOR (RFID), SACC-M12MSX-8QO SH PN', '1411044', 'PHOENIX CONTACT', 3],
+    [
+      'PROFINET CONNECTOR (RFID), SACC-M12MSX-8QO SH PN',
+      '1411044',
+      'PHOENIX CONTACT',
+      3,
+    ],
     ['PROFIBUS CABLE, UNITRONIC BUS PB FC', '2170820', 'LAPP', 2],
-    ['PROFIBUS CONNECTOR (for MGate 5111-T), ED-PB-90-FC', '21700502', 'LAPP', 2],
+    [
+      'PROFIBUS CONNECTOR (for MGate 5111-T), ED-PB-90-FC',
+      '21700502',
+      'LAPP',
+      2,
+    ],
     ['WLAN AP/BRIDGE/CLIENT', 'AWK-4262A-US-T', 'MOXA', 2],
     ['WLAN ANTENNA CABLE, 3M', 'ANT-CABLE-3M', 'MOXA', 2],
   ],
@@ -263,30 +293,70 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
     ['DI/DO MODULE', '6ES7523-1BL00-0AA0', 'SIEMENS', 2],
     ['FLASH MEMORY CARD', '6ES7954-8LF04-0AA0', 'SIEMENS', 3],
     ['FLASH MEMORY CARD, 256MB', '6ES7954-8LL03-0AA0', 'SIEMENS', 3],
-    ['PLC ANALOG INPUT MODULE, AI 16BIT x 8CH', '6ES7531-7KF00-0AB0', 'SIEMENS', 3],
+    [
+      'PLC ANALOG INPUT MODULE, AI 16BIT x 8CH',
+      '6ES7531-7KF00-0AB0',
+      'SIEMENS',
+      3,
+    ],
     ['PLC CPU MODULE, CPU 1516-3 PN/DP', '6ES7516-3AP03-0AB0', 'SIEMENS', 3],
     ['PLC DIGITAL INPUT MODULE, DC24V', '6ES7521-1BH00-0AB0', 'SIEMENS', 3],
     ['PLC DIGITAL INPUT MODULE, DC24V', '6ES7521-1BL00-0AB0', 'SIEMENS', 1],
     ['PLC DIGITAL OUTPUT MODULE, DC24V', '6ES7522-1BL01-0AB0', 'SIEMENS', 3],
-    ['PLC DIGITAL OUTPUT MODULE, DQ 8x230VAC/5A RELAY OUTPUT', '6ES7522-5HF00-0AB0', 'SIEMENS', 3],
+    [
+      'PLC DIGITAL OUTPUT MODULE, DQ 8x230VAC/5A RELAY OUTPUT',
+      '6ES7522-5HF00-0AB0',
+      'SIEMENS',
+      3,
+    ],
     ['PLC INTERFACE MODULE (PROFIBUS)', '6ES7155-5BA00-0AB0', 'SIEMENS', 3],
     ['PLC POWER SUPPLY, 24VDC 3A', '6EP1332-4BA00', 'SIEMENS', 3],
     ['RAIL (S7-1500, 482mm)', '6ES7590-1AE80-0AA0', 'SIEMENS', 3],
     ['RAIL (S7-1500, 530mm)', '6ES7590-1AF30-0AA0', 'SIEMENS', 2],
     ['REPEATER BUS COMPONENTS', '6ES7972-0AA02-0XA0', 'SIEMENS', 3],
-    ['PLC CPU MODULE, CPU 1515-2 PN (S7-1500)', '6ES7515-2AN03-0AB0', 'SIEMENS', 3],
+    [
+      'PLC CPU MODULE, CPU 1515-2 PN (S7-1500)',
+      '6ES7515-2AN03-0AB0',
+      'SIEMENS',
+      3,
+    ],
     ['TM COUNT MODULE', '6ES7550-1AA01-0AB0', 'SIEMENS', 1],
   ],
   sensing: [
     ['ENCODER', 'OCD-EIC1B-1416-C100-PRM', 'POSITAL', 3],
     ['LOAD CELL, 1t', 'VISHAY MODEL 616 1T', 'IGUS', 1],
     ['MOUNTING BRACKET SET', '2105772', 'SICK', 3],
-    ['POWER CABLE (RFID/ENCODER), UNITRONIC SENSOR LIFYY 4x0.25', '7038904', 'LAPP', 3],
+    [
+      'POWER CABLE (RFID/ENCODER), UNITRONIC SENSOR LIFYY 4x0.25',
+      '7038904',
+      'LAPP',
+      3,
+    ],
     ['POWER CONNECTOR (RFID/ENCODER), DOS-1204-G', '6007302', 'SICK', 3],
-    ['RECEIVE INDICATOR, KAE-72 ±1000ADC / FS ±10VDC', 'KAE-72-1000ADC', 'LIGHTSTAR INSTRUMENT', 3],
-    ['RECEIVE INDICATOR, KAE-72 ±1500ADC / FS ±10VDC', 'KAE-72-1500ADC', 'LIGHTSTAR INSTRUMENT', 1],
-    ['RECEIVE INDICATOR, KAE-72 ±500ADC / FS ±10VDC', 'KAE-72-500ADC', 'LIGHTSTAR INSTRUMENT', 3],
-    ['RECEIVE INDICATOR, KAE-72 ±600VDC / FS ±10VDC', 'KAE-72-600VDC', 'LIGHTSTAR INSTRUMENT', 3],
+    [
+      'RECEIVE INDICATOR, KAE-72 ±1000ADC / FS ±10VDC',
+      'KAE-72-1000ADC',
+      'LIGHTSTAR INSTRUMENT',
+      3,
+    ],
+    [
+      'RECEIVE INDICATOR, KAE-72 ±1500ADC / FS ±10VDC',
+      'KAE-72-1500ADC',
+      'LIGHTSTAR INSTRUMENT',
+      1,
+    ],
+    [
+      'RECEIVE INDICATOR, KAE-72 ±500ADC / FS ±10VDC',
+      'KAE-72-500ADC',
+      'LIGHTSTAR INSTRUMENT',
+      3,
+    ],
+    [
+      'RECEIVE INDICATOR, KAE-72 ±600VDC / FS ±10VDC',
+      'KAE-72-600VDC',
+      'LIGHTSTAR INSTRUMENT',
+      3,
+    ],
     ['RFID BRACKET (FABRICATED)', 'RFID-BRACKET', 'FAB/PUR', 3],
     ['RFID SCANNER', 'RFU610-10601', 'SICK', 3],
     ['RFID TAG, IRON', 'TAG IRON', 'SICK', 3],
@@ -295,18 +365,48 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
   ],
   'dcm-drive': [
     ['ADVANCED CUD LEFT for DCM', 'G00', 'SIEMENS', 3],
-    ['ARMATURE REACTOR for DCM, 0.03mH 996A 1000V', '6RX1800-4DK12', 'SIEMENS', 1],
-    ['ARMATURE REACTOR for DCM, 0.042mH 706A 1000V', '6RX1800-4DK11', 'SIEMENS', 2],
-    ['ARMATURE REACTOR for DCM, 0.059mH 498A 600V', '6RX1800-4DK10', 'SIEMENS', 3],
-    ['ARMATURE REACTOR for DCM, 0.079mH 374A 600V', '6RX1800-4DK08', 'SIEMENS', 2],
-    ['ARMATURE REACTOR for DCM, 0.127mH 232A 600V', '6RX1800-4DK06', 'SIEMENS', 1],
+    [
+      'ARMATURE REACTOR for DCM, 0.03mH 996A 1000V',
+      '6RX1800-4DK12',
+      'SIEMENS',
+      1,
+    ],
+    [
+      'ARMATURE REACTOR for DCM, 0.042mH 706A 1000V',
+      '6RX1800-4DK11',
+      'SIEMENS',
+      2,
+    ],
+    [
+      'ARMATURE REACTOR for DCM, 0.059mH 498A 600V',
+      '6RX1800-4DK10',
+      'SIEMENS',
+      3,
+    ],
+    [
+      'ARMATURE REACTOR for DCM, 0.079mH 374A 600V',
+      '6RX1800-4DK08',
+      'SIEMENS',
+      2,
+    ],
+    [
+      'ARMATURE REACTOR for DCM, 0.127mH 232A 600V',
+      '6RX1800-4DK06',
+      'SIEMENS',
+      1,
+    ],
     ['FIELD REACTOR for DCM, 1.27mH 40A 600V', '6RX1800-4DE06', 'SIEMENS', 1],
     ['FIELD REACTOR for DCM, 1.7mH 30A 600V', '6RX1800-4DE05', 'SIEMENS', 2],
     ['FIELD REACTOR for DCM, 2.04mH 25A 600V', '6RX1800-4DE04', 'SIEMENS', 3],
     ['FIELD REACTOR for DCM, 3.4mH 15A 600V', '6RX1800-4DE03', 'SIEMENS', 1],
     ['MEMORY CARD LEFT for DCM', 'S01', 'SIEMENS', 3],
     ['OPERATOR PANEL (AOP30)', '6SL3055-0AA00-4CA5', 'SIEMENS', 3],
-    ['SINAMICS DCM, 480VAC 1200ADC 600kW', '6RA8091-6FV62-0AA0-Z', 'SIEMENS', 1],
+    [
+      'SINAMICS DCM, 480VAC 1200ADC 600kW',
+      '6RA8091-6FV62-0AA0-Z',
+      'SIEMENS',
+      1,
+    ],
     ['SINAMICS DCM, 480VAC 280ADC 140kW', '6RA8078-6FV62-0AA0-Z', 'SIEMENS', 1],
     ['SINAMICS DCM, 480VAC 450ADC 225kW', '6RA8082-6FV62-0AA0-Z', 'SIEMENS', 2],
     ['SINAMICS DCM, 480VAC 600ADC 300kW', '6RA8085-6FV62-0AA0-Z', 'SIEMENS', 3],
@@ -328,7 +428,12 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
   ],
   'power-supply': [
     ['BATTERY, 25A', 'UPS-BAT/VRLA/24DC/3.4AH', 'PHOENIX CONTACT', 1],
-    ['POWER SUPPLY, 100-240VAC / 24V 10A', 'QUINT-PS/1AC/24DC/10', 'PHOENIX CONTACT', 1],
+    [
+      'POWER SUPPLY, 100-240VAC / 24V 10A',
+      'QUINT-PS/1AC/24DC/10',
+      'PHOENIX CONTACT',
+      1,
+    ],
     ['POWER SUPPLY, 24VDC 10A', '787-732', 'WAGO', 3],
     ['POWER SUPPLY, 24VDC 2.5A', '787-712', 'WAGO', 3],
     ['POWER SUPPLY, 24VDC 20A', '787-2742', 'WAGO', 3],
@@ -336,7 +441,12 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
     ['POWER SUPPLY, 24VDC 40A', '787-2744', 'WAGO', 1],
     ['POWER SUPPLY, 24VDC 5A', '787-722', 'WAGO', 2],
     ['UPS, 1000VA', '5P1000', 'EATON', 3],
-    ['UPS, 24VDC/24VDC 10A 240W', 'QUINT-UPS/24DC/24DC/10', 'PHOENIX CONTACT', 1],
+    [
+      'UPS, 24VDC/24VDC 10A 240W',
+      'QUINT-UPS/24DC/24DC/10',
+      'PHOENIX CONTACT',
+      1,
+    ],
   ],
   instrument: [
     ['DIGITAL MULTI PANEL METER, 0~500VAC', 'MX4W-V-FN', 'AUTONICS', 3],
@@ -358,14 +468,44 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
   'mech-drive': [
     ['BRAKE (TRAVELLING)', 'CB5-M3 M 1501 373 E-EN-2020-08', 'SIBRE', 1],
     ['BRAKE (TRAVERSING)', 'CB5-M4 M 1501 373 E-EN-2020-08', 'SIBRE', 1],
-    ['DC MOTOR (TRAVELLING, WITH ENCODER)', 'NP225 KL5-CNV/B3 W/ENC', 'SICME', 1],
+    [
+      'DC MOTOR (TRAVELLING, WITH ENCODER)',
+      'NP225 KL5-CNV/B3 W/ENC',
+      'SICME',
+      1,
+    ],
     ['DC MOTOR (TRAVELLING, WITHOUT ENCODER)', 'NP225 KL5-CNV/B3', 'SICME', 1],
-    ['DC MOTOR (TRAVERSING, WITH ENCODER)', 'NP225 NS5-CNV/B3 W/ENC', 'SICME', 1],
+    [
+      'DC MOTOR (TRAVERSING, WITH ENCODER)',
+      'NP225 NS5-CNV/B3 W/ENC',
+      'SICME',
+      1,
+    ],
     ['DC MOTOR (TRAVERSING, WITHOUT ENCODER)', 'NP225 NS5-CNV/B3', 'SICME', 1],
-    ['FLEXIBLE COUPLING WITH BRAKE DISC (TRAVELLING)', 'AFC-AS-90-SPECIAL 315X20', 'SIBRE', 1],
-    ['FLEXIBLE COUPLING WITH BRAKE DISC (TRAVERSING)', 'AFC-AS-90-SPECIAL 420X20', 'SIBRE', 1],
-    ['GEARBOX (TRAVELLING), 42KW x 1500RPM x 1/49.568', 'TRAVELLING REDUCER 42KW', 'JEIL EPS', 1],
-    ['GEARBOX (TRAVERSING), 30KW x 1500RPM x 1/39.551', 'TRAVERSING REDUCER 30KW', 'JEIL EPS', 1],
+    [
+      'FLEXIBLE COUPLING WITH BRAKE DISC (TRAVELLING)',
+      'AFC-AS-90-SPECIAL 315X20',
+      'SIBRE',
+      1,
+    ],
+    [
+      'FLEXIBLE COUPLING WITH BRAKE DISC (TRAVERSING)',
+      'AFC-AS-90-SPECIAL 420X20',
+      'SIBRE',
+      1,
+    ],
+    [
+      'GEARBOX (TRAVELLING), 42KW x 1500RPM x 1/49.568',
+      'TRAVELLING REDUCER 42KW',
+      'JEIL EPS',
+      1,
+    ],
+    [
+      'GEARBOX (TRAVERSING), 30KW x 1500RPM x 1/39.551',
+      'TRAVERSING REDUCER 30KW',
+      'JEIL EPS',
+      1,
+    ],
   ],
   enclosure: [
     ['FAN / FILTER UNIT, AC 115VAC', 'HF1016414', 'HOFFMAN', 3],
@@ -383,13 +523,23 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
     ['TOUCH MONITOR, cMT2108X2 10.1"', 'cMT2108X2', 'EASYVIEW', 2],
   ],
   transformer: [
-    ['CONTROL TRANSFORMER, AC480/24V 500VA 1PH 60Hz', 'CTR-480/24-500VA', 'SCHNEIDER ELECTRIC', 3],
+    [
+      'CONTROL TRANSFORMER, AC480/24V 500VA 1PH 60Hz',
+      'CTR-480/24-500VA',
+      'SCHNEIDER ELECTRIC',
+      3,
+    ],
     ['TRANSFORMER, AC480/120V 200VA 1PH 60Hz', 'WY41-200UL', 'WOONYOUNG', 3],
     ['TRANSFORMER, AC480/120V 5KVA 1PH 60Hz', 'WY41-5KUL', 'WOONYOUNG', 3],
     ['TRANSFORMER, AC480/415V 5KVA 3PH 60Hz', 'WY3P44D-5KUL', 'WOONYOUNG', 2],
   ],
   'current-sensing': [
-    ['CURRENT MEASUREMENT RELAY, 0.15~15A', 'RM35JA32MW', 'SCHNEIDER ELECTRIC', 3],
+    [
+      'CURRENT MEASUREMENT RELAY, 0.15~15A',
+      'RM35JA32MW',
+      'SCHNEIDER ELECTRIC',
+      3,
+    ],
     ['CURRENT TRANSFORMER, 1500/1A 5VA', '855-601/1500-501', 'WAGO', 2],
     ['CURRENT TRANSFORMER, 2500/1A 10VA', '855-1001/2500-1001', 'WAGO', 3],
     ['CURRENT TRANSFORMER, 400/1A 5VA', '855-401/400-501', 'WAGO', 1],
@@ -410,8 +560,18 @@ const BOM_ROWS: Record<BomClusterKey, BomRow[]> = {
     ['NW ZOOM CAMERA', 'XNZ-L6320A', 'HANWHA VISION', 3],
   ],
   surge: [
-    ['SURGE PROTECTOR, 400/35 480V 50kA', 'VPU AC II US 3 R 400/50', 'WEIDMULLER', 3],
-    ['SURGE PROTECTOR, 480/50 480V 50kA', 'VPU AC II 3 R 480/50', 'WEIDMULLER', 1],
+    [
+      'SURGE PROTECTOR, 400/35 480V 50kA',
+      'VPU AC II US 3 R 400/50',
+      'WEIDMULLER',
+      3,
+    ],
+    [
+      'SURGE PROTECTOR, 480/50 480V 50kA',
+      'VPU AC II 3 R 480/50',
+      'WEIDMULLER',
+      1,
+    ],
   ],
 };
 
@@ -426,7 +586,9 @@ function buildCatalog(): BomCatalogItem[] {
   const items: BomCatalogItem[] = [];
   const usedIds = new Set<string>();
   for (const clusterKey of BOM_CLUSTER_KEYS) {
-    for (const [description, partNumber, manufacturer, flags] of BOM_ROWS[clusterKey]) {
+    for (const [description, partNumber, manufacturer, flags] of BOM_ROWS[
+      clusterKey
+    ]) {
       let partId = slugifyPartNumber(partNumber);
       let suffix = 2;
       while (usedIds.has(partId)) {
@@ -450,7 +612,9 @@ function buildCatalog(): BomCatalogItem[] {
 
 export const bomCatalog: BomCatalogItem[] = buildCatalog();
 
-export function getBomItemsByCluster(clusterKey: BomClusterKey): BomCatalogItem[] {
+export function getBomItemsByCluster(
+  clusterKey: BomClusterKey,
+): BomCatalogItem[] {
   return bomCatalog.filter((item) => item.clusterKey === clusterKey);
 }
 

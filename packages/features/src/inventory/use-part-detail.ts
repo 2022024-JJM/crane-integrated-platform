@@ -18,7 +18,10 @@ export interface PartRepairUsage {
   qty: number;
 }
 
-function localizeTx(tx: InventoryTransaction, isKo: boolean): InventoryTransaction {
+function localizeTx(
+  tx: InventoryTransaction,
+  isKo: boolean,
+): InventoryTransaction {
   if (!isKo) return tx;
   return { ...tx, note: tx.note_ko ?? tx.note };
 }
@@ -50,7 +53,8 @@ export function usePartDetail(partId: string): {
         ? {
             ...wo,
             componentName: wo.componentName_ko ?? wo.componentName,
-            failureDescription: wo.failureDescription_ko ?? wo.failureDescription,
+            failureDescription:
+              wo.failureDescription_ko ?? wo.failureDescription,
           }
         : wo,
       qty: wo.partsUsed

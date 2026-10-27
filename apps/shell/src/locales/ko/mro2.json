@@ -50,7 +50,7 @@
     "scheduled": "예정",
     "in_progress": "진행 중",
     "completed": "완료",
-    "overdue": "기한 초과",
+    "overdue": "지연",
     "cancelled": "취소",
     "received": "접수",
     "waiting_parts": "부품 대기",
@@ -218,7 +218,17 @@
     "status": "상태",
     "frontViewCaption": "정면 뷰 — {{name}}",
     "indoor": "실내",
-    "outdoor": "실외"
+    "outdoor": "실외",
+    "inspectionInterval": "정기 점검 주기",
+    "intervalSaved": "점검 주기를 저장했습니다",
+    "intervalScheduled": "{{number}} 정기 점검이 {{date}} 로 잡혔습니다",
+    "interval": {
+      "none": "없음",
+      "weekly": "매주",
+      "biweekly": "격주",
+      "monthly": "매월",
+      "quarterly": "분기"
+    }
   },
   "calendar": {
     "title": "서비스 캘린더",
@@ -383,7 +393,10 @@
       "reporter": "보고자",
       "toInbox": "접수함에서 배정하기",
       "photos": "사진 {{n}}장",
-      "fullDetail": "상세 페이지 열기"
+      "fullDetail": "상세 페이지 열기",
+      "partsItems": "요청 품목 {{n}}",
+      "stock": "재고 {{n}}",
+      "fulfilled": "출고 {{issued}}종 · 발주 {{po}}"
     },
     "checklistSection": "점검 항목 {{n}} — 현장 점검 대기",
     "pending": "미판정",
@@ -392,7 +405,8 @@
       "minor": "경수리",
       "major": "중수리",
       "overhaul": "오버홀"
-    }
+    },
+    "notesFilter": "읽지 않은 현장 메모만"
   },
   "inventory": {
     "title": "재고·부품",
@@ -494,7 +508,10 @@
     "lowStockStrip": "안전재고 미달 부품 {{n}}종",
     "showInTable": "표에서 보기 ›",
     "poTitle": "진행 중 발주 (PO)",
-    "reorderNeeded": "재주문 필요 {{n}}"
+    "reorderNeeded": "재주문 필요 {{n}}",
+    "reorderDraft": "발주 초안 만들기",
+    "reorderDraftCreated": "{{po}} 발주 초안 — {{n}}종",
+    "reorderDraftNone": "발주할 부품이 없습니다(모두 발주 중)"
   },
   "spend": {
     "title": "비용",
@@ -507,7 +524,8 @@
     "byLocation": "위치별 비용",
     "locations": "위치",
     "assetsToggle": "자산",
-    "locationLabel": "Dock No.4 — Philly Shipyard"
+    "locationLabel": "Dock No.4 — Philly Shipyard",
+    "topAsset": "비용 최대 자산"
   },
   "ticket": {
     "title": "새 서비스 요청",
@@ -606,7 +624,11 @@
       "renewing": "갱신 중"
     },
     "requestRenewal": "갱신 요청",
-    "renewalRequested": "{{name}} 갱신 요청됨"
+    "renewalRequested": "{{name}} 갱신 요청됨",
+    "completeRenewal": "갱신 완료",
+    "confirmRenewal": "확인",
+    "newExpiry": "새 만료일",
+    "renewalDone": "{{name}} 갱신 완료"
   },
   "search": {
     "placeholder": "자산·서비스 요청 검색…",
@@ -726,7 +748,8 @@
       "notePlaceholder": "한 줄 메모 (선택)",
       "alreadyOpen": "이 장비에 이미 긴급 신고 {{number}} 가 열려 있습니다",
       "sent": "긴급 신고가 접수되었습니다",
-      "sentHint": "관리자 접수함 맨 위에 올라갑니다."
+      "sentHint": "관리자 접수함 맨 위에 올라갑니다.",
+      "component": "긴급 정지"
     },
     "duplicate": {
       "title": "이 장비에 열린 고장 신고 {{n}}건",
@@ -748,6 +771,25 @@
         "cleaned": "청소·정비",
         "tempFix": "임시 조치"
       }
+    },
+    "inspect": {
+      "title": "점검 수행",
+      "start": "점검 시작",
+      "send": "점검 결과 보내기",
+      "submitted": "점검 결과가 제출되었습니다",
+      "submittedPass": "전 항목 양호 — 바로 완료 처리되었습니다.",
+      "submittedFail": "불량 {{n}}건 — 사무실 접수함에 올라갑니다.",
+      "alreadyDone": "이미 완료된 점검입니다."
+    },
+    "group": {
+      "overdue": "지연",
+      "today": "오늘",
+      "upcoming": "예정",
+      "done": "완료"
+    },
+    "badge": {
+      "assigned": "새 배정 {{n}}",
+      "notes": "메모 {{n}}"
     }
   },
   "triage": {
@@ -769,6 +811,35 @@
     "rejected": "{{number}} 반려됨",
     "acknowledge": "확인",
     "acknowledged": "{{number}} 확인됨",
-    "openField": "현장 화면 열기"
+    "openField": "현장 화면 열기",
+    "fulfillIssued": "재고에서 {{n}}종 출고",
+    "fulfillOrdered": "{{n}}종 발주 초안 {{po}}"
+  },
+  "timeline": {
+    "title": "메모·기록",
+    "empty": "아직 기록이 없습니다",
+    "office": "사무실",
+    "field": "현장",
+    "send": "보내기",
+    "placeholderOffice": "현장에 전할 말…",
+    "placeholderField": "사무실에 전할 말…",
+    "act": {
+      "reported": "{{by}} 등록",
+      "triaged": "{{by}} 접수 → {{detail}} 배정",
+      "rejected": "{{by}} 반려",
+      "assigned": "{{by}} 담당 변경 → {{detail}}",
+      "rescheduled": "{{by}} 예정일 변경 → {{detail}}",
+      "started": "{{by}} 작업 시작",
+      "completed": "{{by}} 완료 {{detail}}",
+      "status": "{{by}} 상태 변경 → {{detail}}",
+      "approved": "{{by}} 승인",
+      "fulfilled": "출고·발주 처리 ({{detail}})",
+      "acknowledged": "{{by}} 확인"
+    }
+  },
+  "alerts": {
+    "inbox": "현장 접수 {{n}}",
+    "inboxEmergency": "긴급 {{e}} · 현장 접수 {{n}}",
+    "notes": "현장 메모 {{n}}"
   }
 }

@@ -62,7 +62,16 @@ export function Mro2OverviewPage() {
   const spendPct = (key: SpendTypeKey) =>
     spend.total > 0 ? Math.round((spend.byType[key] / spend.total) * 100) : 0;
 
-  const openRiskTotal = safety.length + production.length;
+  // 재고는 리스크 목록에서 분리한다 — 점검·수리와 섞이면 숫자가 겁만 준다
+  const stockRisks = useMemo(
+    () => production.filter((r) => r.source === 'stock'),
+    [production],
+  );
+  const workRisks = useMemo(
+    () => production.filter((r) => r.source !== 'stock'),
+    [production],
+  );
+  const openRiskTotal = safety.length + workRisks.length;
   // 기준 시각은 마운트 때 한 번 — 렌더 중 Date.now() 는 순수하지 않다.
   const [now] = useState(() => Date.now());
   const { i18n } = useTranslation();
@@ -77,13 +86,13 @@ export function Mro2OverviewPage() {
         `${t('mro2:detail.typeInspection', { type: t(`calendar:type.${w.woType}`) })} · ${w.woNumber}`;
     }
     return buildTodoRows(
-      [...safety, ...production],
+      [...safety, ...workRisks],
       now,
       i18n.language === 'ko',
       undefined,
       labels,
     );
-  }, [safety, production, now, i18n.language, inspections, t]);
+  }, [safety, workRisks, now, i18n.language, inspections, t]);
 
   return (
     <div className="pt-2">
@@ -131,13 +140,24 @@ export function Mro2OverviewPage() {
                 <span
                   className="font-bold"
                   style={{
-                    color: production.length > 0 ? KC.production : KC.muted,
+                    color: workRisks.length > 0 ? KC.production : KC.muted,
                   }}
                 >
-                  {production.length}
+                  {workRisks.length}
                 </span>{' '}
                 {t('common.production')}
               </span>
+              <Link to="/mro2/inventory" className="hover:underline">
+                <span
+                  className="font-bold"
+                  style={{
+                    color: stockRisks.length > 0 ? KC.production : KC.muted,
+                  }}
+                >
+                  {stockRisks.length}
+                </span>{' '}
+                {t('overview.todo.source.stock')}
+              </Link>
             </div>
             {todo.length === 0 ? (
               <div

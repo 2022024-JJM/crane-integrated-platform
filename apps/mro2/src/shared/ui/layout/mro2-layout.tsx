@@ -2,11 +2,13 @@ import '../kc-theme.css';
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@crane/core/lib/use-is-mobile';
+import { resetPersisted } from '@crane/domain/shared';
 import { Clock } from 'lucide-react';
 import { KC } from '../kc';
 import { NewTicketModal } from '../new-ticket-modal';
 import { Mro2GlobalSearch } from '../global-search';
 import { Mro2FilterContext, MRO2_YEARS } from './mro2-year-context';
+import { Mro2Alerts } from './mro2-alerts';
 
 /* ── 레이아웃 본체 ──────────────────────────────────────────────────────
  * 헤더/햄버거 사이드바는 기존 MRO와 동일하게 shell의 AppLayout이 담당한다.
@@ -22,6 +24,19 @@ const RETURN_KEY = 'mro2.field.returnTo';
  * 되돌린다(메뉴에서 직접 연 현장 모드는 그대로). 데스크톱에서도
  * `/mro2/field` 로 직접 열 수 있다.
  */
+/** `?reset=1` — 브라우저에 남긴 데모 데이터를 지우고 시드로 돌아간다(새로고침). */
+function PersistedReset() {
+  const { search } = useLocation();
+  useEffect(() => {
+    if (!new URLSearchParams(search).has('reset')) return;
+    resetPersisted();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('reset');
+    window.location.replace(url.toString());
+  }, [search]);
+  return null;
+}
+
 function FieldRedirect() {
   const isMobile = useIsMobile();
   const { pathname, search } = useLocation();
@@ -55,10 +70,12 @@ export function Mro2Layout() {
         className="mro2-root min-h-full"
         style={{ background: KC.bg, color: KC.text }}
       >
+        <PersistedReset />
         <FieldRedirect />
         {/* 콘텐츠 툴바: 전역 검색 + 기간(연도) 셀렉터 — 현장 모드엔 없다 */}
         {onField ? null : (
           <div className="flex items-center justify-end gap-4 px-3 pt-2.5 md:px-5">
+            <Mro2Alerts />
             <Mro2GlobalSearch />
             <label
               className="flex cursor-pointer items-center gap-1 text-[13px]"

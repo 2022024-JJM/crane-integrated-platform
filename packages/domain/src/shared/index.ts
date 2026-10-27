@@ -21,3 +21,14 @@ export {
 } from './id-generator';
 export { isUntriagedFieldReport, markTriaged } from './field-report';
 export type { FieldReport } from './field-report';
+export {
+  registerPersisted,
+  replaceArray,
+  persistAll,
+  resetPersisted,
+  persistedKeys,
+} from './persistence';
+export { addNote, getNotes, getAllNotes, unreadNotes } from './notes';
+export type { Note, NoteRefKind, NoteSide } from './notes';
+export { logActivity, getActivities, getAllActivities } from './activity';
+export type { Activity, ActivityType } from './activity';

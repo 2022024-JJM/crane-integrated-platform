@@ -1,6 +1,7 @@
 import { markTriaged } from '../../shared/field-report';
 import { seedSequence } from '../../shared/id-generator';
 import type { MaintenanceSummary, RepairWO } from './types';
+import { registerPersisted, replaceArray } from '../../shared/persistence';
 
 // 실제 크레인 2기(660T Goliath / 50T East Luffing) 기준 수리 WO.
 // 부품명은 HPSI BOM 실품목(SINAMICS DCM, S7-1500, SICME 모터 등)을 참조한다.
@@ -433,6 +434,12 @@ const allRepairWOs: RepairWO[] = [
     preventiveAction_ko: '자동 급지 라인 압력 분기 점검',
   },
 ];
+
+registerPersisted(
+  'repairs',
+  () => allRepairWOs,
+  (v: RepairWO[]) => replaceArray(allRepairWOs, v),
+);
 
 const maxRepairSeq = allRepairWOs.reduce((max, wo) => {
   const m = wo.woNumber.match(/-(\d{4})$/);

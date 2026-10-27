@@ -19,9 +19,14 @@ export type {
   StockMovementResult,
   Uom,
 } from './model/types';
+export type { FulfillOutcome } from './model/mock-data';
 export {
   addPartsRequest,
   triagePartsRequest,
+  fulfillPartsRequest,
+  addPurchaseOrder,
+  createReorderDraft,
+  removePurchaseOrder,
   getAllInventoryItems,
   getAllPartsRequests,
   getAllPurchaseOrders,

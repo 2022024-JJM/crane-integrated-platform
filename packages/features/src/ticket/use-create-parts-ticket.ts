@@ -6,6 +6,7 @@ import {
   newPartsRequestId,
   nextPartsRequestNumber,
 } from '@crane/domain/shared';
+import { logActivity } from '@crane/domain/shared';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface PartsTicketDraft {
@@ -37,6 +38,12 @@ export function useCreatePartsTicket() {
       };
 
       addPartsRequest(req);
+      logActivity({
+        kind: 'parts',
+        refId: req.id,
+        type: 'reported',
+        by: draft.fieldReport?.reportedBy ?? 'office',
+      });
       publish('parts', req.id);
       return req;
     },

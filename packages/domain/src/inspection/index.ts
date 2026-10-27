@@ -21,6 +21,8 @@ export {
   triageInspectionWO,
   acknowledgeInspectionReport,
   assignInspectionWO,
+  attachInspectionFieldReport,
+  updateInspectionRecurrence,
   submitInspectionResult,
 } from './model/mock-data';
 export type {

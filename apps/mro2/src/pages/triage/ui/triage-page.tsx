@@ -117,16 +117,36 @@ export function Mro2TriagePage() {
               }
               onAssign={(a) => assign(row, a)}
               onParts={(status) => {
-                if (triageParts(row.id, status)) {
-                  toast.success(
-                    t(
-                      status === 'approved'
-                        ? 'mro2:triage.approved'
-                        : 'mro2:triage.rejected',
-                      { number: row.number },
-                    ),
-                  );
-                }
+                const res = triageParts(row.id, status);
+                if (!res.ok) return;
+                const f = res.fulfillment;
+                toast.success(
+                  t(
+                    status === 'approved'
+                      ? 'mro2:triage.approved'
+                      : 'mro2:triage.rejected',
+                    { number: row.number },
+                  ),
+                  f
+                    ? {
+                        description: [
+                          f.issued.length > 0
+                            ? t('mro2:triage.fulfillIssued', {
+                                n: f.issued.length,
+                              })
+                            : null,
+                          f.poNumber
+                            ? t('mro2:triage.fulfillOrdered', {
+                                n: f.ordered.length,
+                                po: f.poNumber,
+                              })
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · '),
+                      }
+                    : undefined,
+                );
               }}
               onAcknowledge={() => {
                 if (acknowledgeInspection(row.id)) {

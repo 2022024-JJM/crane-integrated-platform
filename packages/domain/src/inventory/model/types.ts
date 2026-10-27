@@ -153,6 +153,8 @@ export interface PartsRequest {
   note?: string;
   /** 현장(모바일) 보고로 생성된 경우 — 접수함 판정. */
   fieldReport?: FieldReport;
+  /** 승인 후속 결과 — 출고 건수와 발주 번호 */
+  fulfillment?: { issued: number; poNumber?: string };
 }
 
 export interface InventorySummary {

@@ -19,7 +19,9 @@ function escapeCell(v: CsvValue): string {
 
 export function toCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
   const head = columns.map((c) => escapeCell(c.header)).join(',');
-  const body = rows.map((row) => columns.map((c) => escapeCell(c.value(row))).join(','));
+  const body = rows.map((row) =>
+    columns.map((c) => escapeCell(c.value(row))).join(','),
+  );
   return [head, ...body].join('\r\n');
 }
 

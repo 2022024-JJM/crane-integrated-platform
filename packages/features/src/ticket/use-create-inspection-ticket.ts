@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { addInspectionWO, getDefaultChecklist } from '@crane/domain/inspection';
 import type { InspectionWO } from '@crane/domain/inspection';
 import { newInspectionId, nextInspectionWoNumber } from '@crane/domain/shared';
+import { logActivity } from '@crane/domain/shared';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface InspectionTicketDraft {
@@ -41,6 +42,12 @@ export function useCreateInspectionTicket() {
       };
 
       addInspectionWO(wo);
+      logActivity({
+        kind: 'inspection',
+        refId: wo.id,
+        type: 'reported',
+        by: draft.fieldReport?.reportedBy ?? 'office',
+      });
       publish('inspection', wo.id);
       return wo;
     },

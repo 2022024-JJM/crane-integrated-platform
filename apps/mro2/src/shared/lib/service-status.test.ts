@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { inspectionTone, isPastDue, OVERDUE_DAYS, repairTone } from './service-status';
+import {
+  inspectionTone,
+  isPastDue,
+  OVERDUE_DAYS,
+  repairTone,
+} from './service-status';
 
 const NOW = new Date('2026-07-20T12:00:00').getTime();
 const DAY = 24 * 60 * 60 * 1000;
@@ -65,6 +70,8 @@ describe('inspectionTone', () => {
   });
 
   it('미래 예정 점검은 open', () => {
-    expect(inspectionTone('scheduled', new Date(NOW + 5 * DAY).toISOString(), NOW)).toBe('open');
+    expect(
+      inspectionTone('scheduled', new Date(NOW + 5 * DAY).toISOString(), NOW),
+    ).toBe('open');
   });
 });

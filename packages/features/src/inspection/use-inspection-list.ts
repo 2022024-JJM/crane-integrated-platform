@@ -8,7 +8,10 @@ import {
 import type { InspectionWO, ChecklistItem } from '@crane/domain/inspection';
 import { useEntityTick } from '../shared/use-domain-event-store';
 
-function localizeChecklist(items: ChecklistItem[], isKo: boolean): ChecklistItem[] {
+function localizeChecklist(
+  items: ChecklistItem[],
+  isKo: boolean,
+): ChecklistItem[] {
   if (!isKo) return items;
   return items.map((item) => ({
     ...item,

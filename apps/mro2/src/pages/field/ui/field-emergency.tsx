@@ -50,7 +50,7 @@ export function FieldEmergency() {
       craneName: asset.name,
       siteId: asset.siteId,
       siteName: asset.siteName,
-      componentName: 'General',
+      componentName: t('mro2:field.emergency.component'),
       failureType: 'other',
       sourceType: 'breakdown',
       priority: 'emergency',

@@ -1,4 +1,5 @@
 import { bomCatalog } from '../../shared/bom-catalog';
+import { registerPersisted, replaceArray } from '../../shared/persistence';
 import type {
   AssetSummary,
   ComponentStatus,
@@ -54,6 +55,11 @@ const allCraneAssets: CraneAsset[] = [
     oshaClassification: 'Overhead and Gantry',
   },
 ];
+registerPersisted(
+  'assets',
+  () => allCraneAssets,
+  (v: CraneAsset[]) => replaceArray(allCraneAssets, v),
+);
 
 // BOM 21개 클러스터를 크레인 컴포넌트(1차 계층)로 사용한다.
 // mech-drive(기계 구동계)는 660T BOM에만 존재한다 — 50T는 기계부 별도 BOM 관리 추정.
@@ -391,6 +397,19 @@ const allComponents: CraneComponent[] = [
 
 export function getAllCraneAssets(): CraneAsset[] {
   return allCraneAssets;
+}
+
+export function setAssetInspectionInterval(
+  id: string,
+  interval: CraneAsset['inspectionInterval'],
+): boolean {
+  const idx = allCraneAssets.findIndex((a) => a.id === id);
+  if (idx === -1) return false;
+  allCraneAssets[idx] = {
+    ...allCraneAssets[idx]!,
+    inspectionInterval: interval,
+  };
+  return true;
 }
 
 export function addCraneAsset(asset: CraneAsset): void {

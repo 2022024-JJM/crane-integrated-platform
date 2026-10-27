@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { addLabelTo, collectAllLabels, normalizeLabel, removeLabelFrom } from './own-labels';
+import {
+  addLabelTo,
+  collectAllLabels,
+  normalizeLabel,
+  removeLabelFrom,
+} from './own-labels';
 
 describe('own-labels 순수 연산', () => {
   it('추가 — 공백 트림, 빈 값 무시, 대소문자 무시 중복 제거', () => {

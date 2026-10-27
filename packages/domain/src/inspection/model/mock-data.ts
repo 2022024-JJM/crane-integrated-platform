@@ -1,4 +1,6 @@
 import { markTriaged } from '../../shared/field-report';
+import type { FieldReport } from '../../shared/field-report';
+import { registerPersisted, replaceArray } from '../../shared/persistence';
 import {
   newInspectionId,
   nextInspectionWoNumber,
@@ -503,6 +505,12 @@ const allInspectionWOs: InspectionWO[] = [
   ...historicalInspectionWOs,
 ];
 
+registerPersisted(
+  'inspections',
+  () => allInspectionWOs,
+  (v: InspectionWO[]) => replaceArray(allInspectionWOs, v),
+);
+
 const maxInspectionSeq = allInspectionWOs.reduce((max, wo) => {
   const m = wo.woNumber.match(/-(\d{4})$/);
   return m ? Math.max(max, parseInt(m[1], 10)) : max;
@@ -524,6 +532,17 @@ function deriveStatus(wo: InspectionWO): InspectionWO {
 
 export function getAllInspectionWOs(): InspectionWO[] {
   return allInspectionWOs.map(deriveStatus);
+}
+
+/** 열린 반복 점검의 주기를 바꾼다(자산 주기 변경을 따라감) */
+export function updateInspectionRecurrence(
+  id: string,
+  recurrence: InspectionWO['recurrence'],
+): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  allInspectionWOs[idx] = { ...allInspectionWOs[idx]!, recurrence };
+  return true;
 }
 
 export function addInspectionWO(wo: InspectionWO): void {
@@ -681,6 +700,17 @@ export function assignInspectionWO(id: string, assignedTo: string): boolean {
   const wo = allInspectionWOs[idx];
   if (wo.status === 'completed' || wo.status === 'cancelled') return false;
   allInspectionWOs[idx] = { ...wo, assignedTo };
+  return true;
+}
+
+/** 배정된 점검을 현장이 수행했을 때 — 현장 보고 표식을 붙인다(완료 전에 호출). */
+export function attachInspectionFieldReport(
+  id: string,
+  report: FieldReport,
+): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  allInspectionWOs[idx] = { ...allInspectionWOs[idx], fieldReport: report };
   return true;
 }
 

@@ -318,7 +318,12 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
         <InspectionStep draft={draft} patch={patch} template={template} />
       ) : null}
       {step === 'parts' ? (
-        <PartsStep inventory={inventory} draft={draft} patch={patch} />
+        <PartsStep
+          inventory={inventory}
+          draft={draft}
+          patch={patch}
+          craneId={draft.assetId}
+        />
       ) : null}
       {step === 'photo' ? <PhotoStep draft={draft} patch={patch} /> : null}
       {step === 'priority' ? (

@@ -15,4 +15,5 @@ export {
   getComplianceSummary,
   requestCertRenewal,
   cancelCertRenewal,
+  completeCertRenewal,
 } from './model/mock-data';

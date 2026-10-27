@@ -6,6 +6,7 @@ export type {
   CraneAsset,
   CraneComponent,
   CraneType,
+  InspectionInterval,
 } from './model/types';
 export {
   usedLifePercent,
@@ -19,5 +20,6 @@ export {
   getAssetSummary,
   getComponentsByCraneId,
   getCraneAssetById,
+  setAssetInspectionInterval,
   getCraneAssetsBySite,
 } from './model/mock-data';

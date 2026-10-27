@@ -22,6 +22,8 @@ export function getTechnicians(): Technician[] {
   return technicians;
 }
 
-export function getTechniciansByPerformerType(type: PerformerType): Technician[] {
+export function getTechniciansByPerformerType(
+  type: PerformerType,
+): Technician[] {
   return technicians.filter((t) => t.performerType === type);
 }

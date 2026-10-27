@@ -276,10 +276,13 @@ export function PartsStep({
   inventory,
   draft,
   patch,
+  craneId,
 }: {
   inventory: InventoryItem[];
   draft: FieldDraft;
   patch: Patch;
+  /** 고른 장비 — 그 장비에 쓰는 부품을 먼저 보여 준다 */
+  craneId?: string | null;
 }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
@@ -293,11 +296,15 @@ export function PartsStep({
             i.partNumber.toLowerCase().includes(query),
         )
       : inventory;
-    // 선택한 부품을 앞으로, 그다음 이름순.
+    // 선택한 부품 › 이 장비에 쓰는 부품 › 나머지.
+    const fits = (i: InventoryItem) =>
+      craneId ? i.craneIds.includes(craneId) : false;
     return [...filtered].sort(
-      (a, b) => Number(chosen.has(b.partId)) - Number(chosen.has(a.partId)),
+      (a, b) =>
+        Number(chosen.has(b.partId)) - Number(chosen.has(a.partId)) ||
+        Number(fits(b)) - Number(fits(a)),
     );
-  }, [inventory, draft.parts, query]);
+  }, [inventory, draft.parts, query, craneId]);
   const qtyOf = (partId: string) =>
     draft.parts.find((p) => p.partId === partId)?.qty ?? 0;
   return (

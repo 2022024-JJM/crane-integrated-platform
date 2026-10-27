@@ -218,7 +218,17 @@
     "status": "Status",
     "frontViewCaption": "Front view — {{name}}",
     "indoor": "Indoor",
-    "outdoor": "Outdoor"
+    "outdoor": "Outdoor",
+    "inspectionInterval": "Periodic inspection",
+    "intervalSaved": "Interval saved",
+    "intervalScheduled": "{{number}} scheduled for {{date}}",
+    "interval": {
+      "none": "None",
+      "weekly": "Weekly",
+      "biweekly": "Biweekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly"
+    }
   },
   "calendar": {
     "title": "Service Calendar",
@@ -383,7 +393,10 @@
       "reporter": "Reporter",
       "toInbox": "Assign in the inbox",
       "photos": "{{n}} photos",
-      "fullDetail": "Open full detail"
+      "fullDetail": "Open full detail",
+      "partsItems": "Requested items {{n}}",
+      "stock": "stock {{n}}",
+      "fulfilled": "Issued {{issued}} · PO {{po}}"
     },
     "checklistSection": "{{n}} checklist items — awaiting field inspection",
     "pending": "Not judged",
@@ -392,7 +405,8 @@
       "minor": "Minor",
       "major": "Major",
       "overhaul": "Overhaul"
-    }
+    },
+    "notesFilter": "Unread field notes only"
   },
   "inventory": {
     "title": "Inventory and Parts",
@@ -494,7 +508,10 @@
     "lowStockStrip": "{{n}} parts below safety stock",
     "showInTable": "Show in table ›",
     "poTitle": "Open purchase orders",
-    "reorderNeeded": "Reorder needed {{n}}"
+    "reorderNeeded": "Reorder needed {{n}}",
+    "reorderDraft": "Create PO draft",
+    "reorderDraftCreated": "PO draft {{po}} — {{n}} items",
+    "reorderDraftNone": "Nothing to order (all on order)"
   },
   "spend": {
     "title": "Spend",
@@ -507,7 +524,8 @@
     "byLocation": "Spend by Location",
     "locations": "Locations",
     "assetsToggle": "Assets",
-    "locationLabel": "Dock No.4 — Philly Shipyard"
+    "locationLabel": "Dock No.4 — Philly Shipyard",
+    "topAsset": "Highest-cost asset"
   },
   "ticket": {
     "title": "New Service Request",
@@ -606,7 +624,11 @@
       "renewing": "Renewing"
     },
     "requestRenewal": "Request renewal",
-    "renewalRequested": "Renewal requested for {{name}}"
+    "renewalRequested": "Renewal requested for {{name}}",
+    "completeRenewal": "Mark renewed",
+    "confirmRenewal": "OK",
+    "newExpiry": "New expiry",
+    "renewalDone": "{{name}} renewed"
   },
   "search": {
     "placeholder": "Search assets or service requests…",
@@ -726,7 +748,8 @@
       "notePlaceholder": "One-line note (optional)",
       "alreadyOpen": "An emergency report {{number}} is already open for this asset",
       "sent": "Emergency report filed",
-      "sentHint": "It goes to the top of the admin inbox."
+      "sentHint": "It goes to the top of the admin inbox.",
+      "component": "Emergency stop"
     },
     "duplicate": {
       "title": "{{n}} open fault reports for this asset",
@@ -748,6 +771,25 @@
         "cleaned": "Cleaned / serviced",
         "tempFix": "Temporary fix"
       }
+    },
+    "inspect": {
+      "title": "Perform inspection",
+      "start": "Start inspection",
+      "send": "Send inspection result",
+      "submitted": "Inspection result submitted",
+      "submittedPass": "All items OK — completed immediately.",
+      "submittedFail": "{{n}} failed — sent to the office inbox.",
+      "alreadyDone": "This inspection is already completed."
+    },
+    "group": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "upcoming": "Upcoming",
+      "done": "Done"
+    },
+    "badge": {
+      "assigned": "{{n}} new",
+      "notes": "{{n}} notes"
     }
   },
   "triage": {
@@ -769,6 +811,35 @@
     "rejected": "{{number}} rejected",
     "acknowledge": "Acknowledge",
     "acknowledged": "{{number}} acknowledged",
-    "openField": "Open field screen"
+    "openField": "Open field screen",
+    "fulfillIssued": "{{n}} issued from stock",
+    "fulfillOrdered": "{{n}} on PO draft {{po}}"
+  },
+  "timeline": {
+    "title": "Notes & log",
+    "empty": "No records yet",
+    "office": "Office",
+    "field": "Field",
+    "send": "Send",
+    "placeholderOffice": "Message to the field…",
+    "placeholderField": "Message to the office…",
+    "act": {
+      "reported": "Reported by {{by}}",
+      "triaged": "{{by}} accepted → assigned {{detail}}",
+      "rejected": "Rejected by {{by}}",
+      "assigned": "{{by}} reassigned → {{detail}}",
+      "rescheduled": "{{by}} rescheduled → {{detail}}",
+      "started": "{{by}} started work",
+      "completed": "{{by}} completed {{detail}}",
+      "status": "{{by}} status → {{detail}}",
+      "approved": "Approved by {{by}}",
+      "fulfilled": "Issued / ordered ({{detail}})",
+      "acknowledged": "Acknowledged by {{by}}"
+    }
+  },
+  "alerts": {
+    "inbox": "Field inbox {{n}}",
+    "inboxEmergency": "Emergency {{e}} · inbox {{n}}",
+    "notes": "Field notes {{n}}"
   }
 }

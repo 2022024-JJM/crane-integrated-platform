@@ -9,6 +9,7 @@ import type {
   RepairDetailsUpdate,
   RepairStatus,
 } from '@crane/domain/maintenance';
+import { logActivity } from '@crane/domain/shared';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export type RepairActionOutcome =
@@ -35,6 +36,13 @@ export function useSetRepairStatus() {
         actualEnd: wo.actualEnd,
       };
       updateRepairStatus(id, status);
+      logActivity({
+        kind: 'repair',
+        refId: id,
+        type: 'status',
+        by: 'office',
+        detail: status,
+      });
       publish('repair', id);
       return {
         success: true,
@@ -55,23 +63,36 @@ export function useSetRepairStatus() {
 export function useRepairWorkProgress() {
   const publish = useDomainEventStore((s) => s.publish);
   const start = useCallback(
-    (id: string): boolean => {
+    (id: string, by?: string): boolean => {
       const wo = getRepairWOById(id);
       if (!wo || wo.status === 'completed' || wo.status === 'in_progress')
         return false;
       updateRepairStatus(id, 'in_progress');
+      logActivity({
+        kind: 'repair',
+        refId: id,
+        type: 'started',
+        by: by ?? wo.assignedTo ?? 'field',
+      });
       publish('repair', id);
       return true;
     },
     [publish],
   );
   const complete = useCallback(
-    (id: string, correctiveAction: string): boolean => {
+    (id: string, correctiveAction: string, by?: string): boolean => {
       const wo = getRepairWOById(id);
       if (!wo || wo.status === 'completed') return false;
       if (correctiveAction.trim())
         updateRepairDetails(id, { correctiveAction: correctiveAction.trim() });
       updateRepairStatus(id, 'completed');
+      logActivity({
+        kind: 'repair',
+        refId: id,
+        type: 'completed',
+        by: by ?? wo.assignedTo ?? 'field',
+        detail: correctiveAction.trim() || undefined,
+      });
       publish('repair', id);
       return true;
     },

@@ -25,6 +25,11 @@ describe('matchFieldSubRoute', () => {
     });
     expect(matchFieldSubRoute('tickets')).toEqual({ view: 'tickets' });
     expect(matchFieldSubRoute('emergency')).toEqual({ view: 'emergency' });
+    expect(matchFieldSubRoute('inspect/insp-1')).toEqual({
+      view: 'inspect',
+      id: 'insp-1',
+    });
+    expect(matchFieldSubRoute('inspect')).toEqual({ view: 'home' });
     expect(matchFieldSubRoute('tickets/repair/r-1')).toEqual({
       view: 'ticket',
       kind: 'repair',

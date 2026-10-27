@@ -6,6 +6,7 @@ import { Download, FileText, Upload, X } from 'lucide-react';
 import {
   useDocuments,
   useRequestCertRenewal,
+  useCompleteCertRenewal,
   useUploadDocument,
 } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
@@ -46,6 +47,10 @@ export function Mro2DocumentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { oshaReports, certifications, uploads } = useDocuments();
   const requestRenewal = useRequestCertRenewal();
+  const completeRenewal = useCompleteCertRenewal();
+  const [renewing, setRenewing] = useState<{ id: string; date: string } | null>(
+    null,
+  );
   const uploadDocument = useUploadDocument();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -296,6 +301,66 @@ export function Mro2DocumentsPage() {
                             >
                               {t('documents.requestRenewal')}
                             </button>
+                          ) : r.certStatus === 'renewing' ? (
+                            renewing && renewing.id === r.certId ? (
+                              <span
+                                className="inline-flex items-center gap-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="date"
+                                  value={renewing.date}
+                                  onChange={(e) =>
+                                    setRenewing({
+                                      id: r.certId!,
+                                      date: e.target.value,
+                                    })
+                                  }
+                                  className="h-6 rounded border px-1 text-[12px]"
+                                  style={{
+                                    borderColor: KC.border,
+                                    color: KC.ink,
+                                  }}
+                                  aria-label={t('documents.newExpiry')}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (
+                                      completeRenewal(r.certId!, renewing.date)
+                                    ) {
+                                      toast.success(
+                                        t('documents.renewalDone', {
+                                          name: r.name,
+                                        }),
+                                      );
+                                      setRenewing(null);
+                                    }
+                                  }}
+                                  className="cursor-pointer text-[12px] font-semibold"
+                                  style={{ color: KC.link }}
+                                >
+                                  {t('documents.confirmRenewal')}
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const d = new Date();
+                                  d.setFullYear(d.getFullYear() + 2);
+                                  setRenewing({
+                                    id: r.certId!,
+                                    date: d.toISOString().slice(0, 10),
+                                  });
+                                }}
+                                className="cursor-pointer text-[12px] font-semibold underline-offset-2 hover:underline"
+                                style={{ color: KC.link }}
+                              >
+                                {t('documents.completeRenewal')}
+                              </button>
+                            )
                           ) : null}
                         </span>
                       ) : (

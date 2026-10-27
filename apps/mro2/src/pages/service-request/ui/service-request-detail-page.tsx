@@ -37,6 +37,7 @@ import { formatSize } from '../../documents/lib/document-rows';
 import { RepairWorkSection } from './repair-work-section';
 import { SrDetailHeader } from './sr-detail-header';
 import { buildSrRows } from '../../../shared/lib/sr-rows';
+import { SrTimeline } from '../../../shared/ui/sr-timeline';
 
 /* ── 소견 분류: 체크리스트 → findings 심각도 문법 ───────────────────── */
 
@@ -470,6 +471,17 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
         woNumber={wo.woNumber}
       />
 
+      <div className="kc-no-print">
+        <KcSection title={t('timeline.title')}>
+          <SrTimeline
+            kind="inspection"
+            refId={wo.id}
+            side="office"
+            by={t('timeline.office')}
+          />
+        </KcSection>
+      </div>
+
       {wo.status === 'completed' ? (
         <div className="kc-print-only">
           <Signature name={wo.assignedTo} date={reportDate} />
@@ -625,6 +637,17 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
         craneName={wo.craneName}
         woNumber={wo.woNumber}
       />
+
+      <div className="kc-no-print">
+        <KcSection title={t('timeline.title')}>
+          <SrTimeline
+            kind="repair"
+            refId={wo.id}
+            side="office"
+            by={t('timeline.office')}
+          />
+        </KcSection>
+      </div>
 
       {wo.status === 'completed' && wo.actualEnd ? (
         <div className="kc-print-only">

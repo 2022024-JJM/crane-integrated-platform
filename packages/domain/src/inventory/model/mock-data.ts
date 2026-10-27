@@ -2,6 +2,7 @@ import { markTriaged } from '../../shared/field-report';
 import { bomCatalog, getBomCraneIds } from '../../shared/bom-catalog';
 import type { BomClusterKey } from '../../shared/bom-catalog';
 import { seedSequence } from '../../shared/id-generator';
+import { registerPersisted, replaceArray } from '../../shared/persistence';
 import type {
   InventoryItem,
   InventoryStatus,
@@ -531,7 +532,29 @@ const allInventoryTransactions: InventoryTransaction[] = [
   },
 ];
 
+registerPersisted(
+  'inventoryItems',
+  () => allInventoryItems,
+  (v: InventoryItem[]) => replaceArray(allInventoryItems, v),
+);
+registerPersisted(
+  'purchaseOrders',
+  () => allPurchaseOrders,
+  (v: PurchaseOrder[]) => replaceArray(allPurchaseOrders, v),
+);
+registerPersisted(
+  'inventoryTransactions',
+  () => allInventoryTransactions,
+  (v: InventoryTransaction[]) => replaceArray(allInventoryTransactions, v),
+);
 let txSeq = 100; // 런타임 생성 트랜잭션 ID 시퀀스 (시드와 충돌 방지)
+registerPersisted(
+  'txSeq',
+  () => txSeq,
+  (v: number) => {
+    txSeq = v;
+  },
+);
 
 function nextTxId(): string {
   txSeq += 1;
@@ -651,6 +674,12 @@ export function getOnOrderQtyByPartId(partId: string): number {
 
 const allPartsRequests: PartsRequest[] = [];
 
+registerPersisted(
+  'partsRequests',
+  () => allPartsRequests,
+  (v: PartsRequest[]) => replaceArray(allPartsRequests, v),
+);
+
 const maxPartsSeq = allPartsRequests.reduce((max, req) => {
   const m = req.requestNumber.match(/-(\d{4})$/);
   return m ? Math.max(max, parseInt(m[1], 10)) : max;
@@ -694,6 +723,150 @@ export function addPartsRequest(req: PartsRequest): void {
 
 export function getAllInventoryItems(): InventoryItem[] {
   return allInventoryItems;
+}
+
+/** 발주 번호 — 기존 최대 + 1 */
+function nextPoNumber(): string {
+  const y = new Date().getFullYear();
+  const max = allPurchaseOrders.reduce((m, po) => {
+    const mm = po.poNumber.match(/-(\d{4})$/);
+    return mm ? Math.max(m, Number(mm[1])) : m;
+  }, 0);
+  return `PO-${y}-${String(max + 1).padStart(4, '0')}`;
+}
+
+export function addPurchaseOrder(
+  input: Omit<PurchaseOrder, 'id' | 'poNumber' | 'totalAmount'>,
+): PurchaseOrder {
+  const po: PurchaseOrder = {
+    ...input,
+    id: `po-${Date.now().toString(36)}`,
+    poNumber: nextPoNumber(),
+    totalAmount: input.items.reduce((s, it) => s + it.total, 0),
+  };
+  allPurchaseOrders.unshift(po);
+  return po;
+}
+
+export interface FulfillOutcome {
+  issued: { partId: string; partName: string; qty: number }[];
+  ordered: { partId: string; partName: string; qty: number }[];
+  poNumber?: string;
+}
+
+/**
+ * 승인된 부품 요청의 후속 — 재고가 있으면 바로 출고, 없으면 발주 초안 하나로 묶는다.
+ * 사람이 "승인" 뒤에 할 일이 없어야 한다.
+ */
+export function fulfillPartsRequest(
+  id: string,
+  by: string,
+): FulfillOutcome | null {
+  const req = allPartsRequests.find((r) => r.id === id);
+  if (!req) return null;
+  const out: FulfillOutcome = { issued: [], ordered: [] };
+  const poItems: PurchaseOrder['items'] = [];
+  for (const it of req.items) {
+    const inv = getInventoryItemByPartId(it.partId);
+    if (inv && inv.availableQty >= it.qty) {
+      const r = issuePart({
+        partId: it.partId,
+        qty: it.qty,
+        by,
+        ref: req.requestNumber,
+        refType: 'manual',
+        note: req.craneName,
+      });
+      if (r.success) {
+        out.issued.push({
+          partId: it.partId,
+          partName: it.partName,
+          qty: it.qty,
+        });
+        continue;
+      }
+    }
+    out.ordered.push({ partId: it.partId, partName: it.partName, qty: it.qty });
+    poItems.push({
+      partId: it.partId,
+      partName: it.partName,
+      qty: it.qty,
+      unitPrice: it.unitPrice,
+      total: it.qty * it.unitPrice,
+    });
+  }
+  if (poItems.length > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const lead = Math.max(
+      ...poItems.map(
+        (p) => getInventoryItemByPartId(p.partId)?.leadTimeDays ?? 14,
+      ),
+    );
+    const eta = new Date(Date.now() + lead * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const po = addPurchaseOrder({
+      vendor: getInventoryItemByPartId(poItems[0]!.partId)?.manufacturer ?? '-',
+      orderDate: today,
+      expectedDelivery: eta,
+      items: poItems,
+      status: 'requested',
+      urgency: req.priority === 'urgent' ? 'urgent' : 'normal',
+      requester: by,
+      note: req.requestNumber,
+    });
+    out.poNumber = po.poNumber;
+  }
+  const idx = allPartsRequests.findIndex((r) => r.id === id);
+  allPartsRequests[idx] = {
+    ...req,
+    status: out.ordered.length > 0 ? 'ordered' : 'approved',
+    fulfillment: { issued: out.issued.length, poNumber: out.poNumber },
+  };
+  return out;
+}
+
+/**
+ * 재주문점 이하 부품을 발주 초안 하나로 묶는다 — 이미 발주 중인 부품은 뺀다.
+ * 수량은 재주문점의 두 배까지 채운다. 대상이 없으면 null.
+ */
+export function createReorderDraft(by: string): PurchaseOrder | null {
+  const items: PurchaseOrder['items'] = [];
+  for (const i of allInventoryItems) {
+    if (i.availableQty > i.reorderPoint) continue;
+    if (getOnOrderQtyByPartId(i.partId) > 0) continue;
+    const qty = Math.max(1, i.reorderPoint * 2 - i.availableQty);
+    items.push({
+      partId: i.partId,
+      partName: i.partName,
+      qty,
+      unitPrice: i.unitPrice,
+      total: qty * i.unitPrice,
+    });
+  }
+  if (items.length === 0) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const lead = Math.max(
+    ...items.map((p) => getInventoryItemByPartId(p.partId)?.leadTimeDays ?? 14),
+  );
+  return addPurchaseOrder({
+    vendor: '-',
+    orderDate: today,
+    expectedDelivery: new Date(Date.now() + lead * 86_400_000)
+      .toISOString()
+      .slice(0, 10),
+    items,
+    status: 'requested',
+    urgency: 'normal',
+    requester: by,
+  });
+}
+
+export function removePurchaseOrder(id: string): boolean {
+  const idx = allPurchaseOrders.findIndex((po) => po.id === id);
+  if (idx === -1) return false;
+  allPurchaseOrders.splice(idx, 1);
+  return true;
 }
 
 export function getAllPurchaseOrders(): PurchaseOrder[] {

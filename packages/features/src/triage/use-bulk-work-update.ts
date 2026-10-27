@@ -9,6 +9,7 @@ import {
   getRepairWOById,
   updateRepairSchedule,
 } from '@crane/domain/maintenance';
+import { logActivity } from '@crane/domain/shared';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface WorkTarget {
@@ -25,6 +26,9 @@ export interface BulkOutcome {
  * 관리자 일괄 처리 — 여러 건의 예정일·담당자를 한 번에 바꾼다. 완료 건은 건너뛴다.
  * 되돌리기는 바뀐 건만 이전 값으로 복원한다. 일괄 완료는 두지 않는다(판정 없는 완료는 거짓).
  */
+/** 관리 화면의 행위자 — 계정이 붙으면 로그인 이름으로 */
+const OFFICE = 'office';
+
 export function useBulkWorkUpdate() {
   const publish = useDomainEventStore((s) => s.publish);
 
@@ -36,6 +40,13 @@ export function useBulkWorkUpdate() {
           const prev = getInspectionWOById(t.id)?.scheduledDate;
           if (prev === undefined || !updateInspectionSchedule(t.id, date))
             continue;
+          logActivity({
+            kind: 'inspection',
+            refId: t.id,
+            type: 'rescheduled',
+            by: OFFICE,
+            detail: date,
+          });
           restores.push(() => updateInspectionSchedule(t.id, prev));
         } else {
           const prev = getRepairWOById(t.id);
@@ -53,6 +64,13 @@ export function useBulkWorkUpdate() {
             .toISOString()
             .slice(0, 10);
           if (!updateRepairSchedule(t.id, date, end)) continue;
+          logActivity({
+            kind: 'repair',
+            refId: t.id,
+            type: 'rescheduled',
+            by: OFFICE,
+            detail: date,
+          });
           const { scheduledStart, scheduledEnd } = prev;
           restores.push(() =>
             updateRepairSchedule(t.id, scheduledStart, scheduledEnd),
@@ -83,10 +101,24 @@ export function useBulkWorkUpdate() {
           const prev = getInspectionWOById(t.id)?.assignedTo;
           if (prev === undefined || !assignInspectionWO(t.id, assignedTo))
             continue;
+          logActivity({
+            kind: 'inspection',
+            refId: t.id,
+            type: 'assigned',
+            by: OFFICE,
+            detail: assignedTo,
+          });
           restores.push(() => assignInspectionWO(t.id, prev));
         } else {
           const prev = getRepairWOById(t.id)?.assignedTo;
           if (prev === undefined || !assignRepairWO(t.id, assignedTo)) continue;
+          logActivity({
+            kind: 'repair',
+            refId: t.id,
+            type: 'assigned',
+            by: OFFICE,
+            detail: assignedTo,
+          });
           restores.push(() => assignRepairWO(t.id, prev));
         }
       }

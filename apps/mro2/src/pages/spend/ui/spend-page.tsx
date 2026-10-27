@@ -215,6 +215,12 @@ export function Mro2SpendPage() {
     bucket: a.bucket,
     id: craneId,
   }));
+  const topAsset = [...assetData]
+    .map((a) => ({
+      label: a.label,
+      total: a.bucket.ipm + a.bucket.planned + a.bucket.oncall + a.bucket.parts,
+    }))
+    .sort((a, b) => b.total - a.total)[0];
   const locationBucket = Object.values(spend.byAsset).reduce<SpendBucket>(
     (acc, a) => {
       acc.ipm += a.bucket.ipm;
@@ -239,16 +245,16 @@ export function Mro2SpendPage() {
       <div className="mb-8 flex items-start justify-center gap-24">
         <div className="flex flex-col items-center">
           <span className="text-[12px]" style={{ color: KC.muted }}>
-            {t('spend.serviceVisits')}
+            {t('spend.topAsset')}
           </span>
           <span className="text-[11px]" style={{ color: KC.faint }}>
-            {year}
+            {topAsset?.label ?? '-'}
           </span>
           <span
             className="mt-1 text-[30px] font-bold"
             style={{ color: KC.ink }}
           >
-            {spend.visits}
+            {topAsset ? usd(topAsset.total) : '-'}
           </span>
         </div>
         <div className="flex flex-col items-center">

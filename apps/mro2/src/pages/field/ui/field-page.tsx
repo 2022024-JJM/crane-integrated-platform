@@ -5,6 +5,7 @@ import { FieldMyTickets } from './field-my-tickets';
 import { FieldNewTicket } from './field-new-ticket';
 import { FieldTicketDetail } from './field-ticket-detail';
 import { FieldEmergency } from './field-emergency';
+import { FieldInspect } from './field-inspect';
 
 /** `/mro2/field/*` — 서브라우트는 splat 을 lib 에서 판정해 가른다. */
 export function Mro2FieldPage() {
@@ -13,6 +14,7 @@ export function Mro2FieldPage() {
   if (view.view === 'new')
     return <FieldNewTicket key={view.kind} kind={view.kind} />;
   if (view.view === 'emergency') return <FieldEmergency />;
+  if (view.view === 'inspect') return <FieldInspect id={view.id} />;
   if (view.view === 'tickets') return <FieldMyTickets />;
   if (view.view === 'ticket') {
     return <FieldTicketDetail kind={view.kind} id={view.id} />;

@@ -3,6 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Package, Wrench, Pencil, Siren } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
+import { useAllActivities } from '@crane/features/activity';
+import { useAllNotes } from '@crane/features/notes';
+import { useSeen } from '../../../shared/lib/seen-store';
+import {
+  newAssignments,
+  sumCounts,
+  unreadByRef,
+} from '../../../shared/lib/timeline';
 import { KC } from '../../../shared/ui/kc';
 import {
   FIELD_EMERGENCY_PATH,
@@ -99,6 +107,12 @@ export function FieldHome() {
   const navigate = useNavigate();
   const { assets } = useAssetList();
   const [recent] = useRecentAssets();
+  const [worker] = useFieldWorker();
+  const seen = useSeen('field');
+  const activities = useAllActivities();
+  const notes = useAllNotes();
+  const newAssigned = newAssignments(activities, worker, seen['*']).length;
+  const unreadNotes = sumCounts(unreadByRef(notes, 'field', seen));
   const recentAssets = recent
     .map((id) => assets.find((a) => a.id === id))
     .filter((a): a is NonNullable<typeof a> => a !== undefined);
@@ -166,10 +180,26 @@ export function FieldHome() {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h2
-              className="text-[14px] font-semibold tracking-wide uppercase"
+              className="flex items-center gap-2 text-[14px] font-semibold tracking-wide uppercase"
               style={{ color: KC.muted }}
             >
               {t('mro2:field.myTickets')}
+              {newAssigned > 0 ? (
+                <span
+                  className="rounded px-1.5 text-[12px] font-bold normal-case"
+                  style={{ background: KC.production, color: KC.onProduction }}
+                >
+                  {t('mro2:field.badge.assigned', { n: newAssigned })}
+                </span>
+              ) : null}
+              {unreadNotes > 0 ? (
+                <span
+                  className="rounded px-1.5 text-[12px] font-bold normal-case"
+                  style={{ background: KC.teal, color: KC.onTeal }}
+                >
+                  {t('mro2:field.badge.notes', { n: unreadNotes })}
+                </span>
+              ) : null}
             </h2>
             <Link
               to={`${FIELD_PATH}/tickets`}

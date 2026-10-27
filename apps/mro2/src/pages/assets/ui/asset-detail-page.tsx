@@ -1,5 +1,7 @@
 import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { InspectionInterval } from '@crane/domain/asset';
+import { toast } from 'sonner';
 import {
   Link,
   useNavigate,
@@ -14,7 +16,11 @@ import {
   Upload,
   Wrench,
 } from 'lucide-react';
-import { useAssetDetail, useAssetList } from '@crane/features/asset';
+import {
+  useSetInspectionInterval,
+  useAssetDetail,
+  useAssetList,
+} from '@crane/features/asset';
 import { useOpenRisks } from '@crane/features/risk';
 import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
@@ -386,6 +392,10 @@ export function Mro2AssetDetailPage() {
               k={t('mro2:info.oshaClassification')}
               v={asset.oshaClassification}
             />
+            <InspectionIntervalRow
+              craneId={asset.id}
+              value={asset.inspectionInterval ?? null}
+            />
             <InfoRow
               k={t('mro2:info.status')}
               v={
@@ -409,6 +419,63 @@ export function Mro2AssetDetailPage() {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** 정기 점검 주기 — 고르면 다음 회차가 바로 잡힌다 */
+function InspectionIntervalRow({
+  craneId,
+  value,
+}: {
+  craneId: string;
+  value: InspectionInterval | null;
+}) {
+  const { t } = useTranslation();
+  const setInterval_ = useSetInspectionInterval();
+  const options: Array<InspectionInterval | ''> = [
+    '',
+    'weekly',
+    'biweekly',
+    'monthly',
+    'quarterly',
+  ];
+  return (
+    <div
+      className="flex items-center border-b py-1 text-[13px]"
+      style={{ borderColor: KC.hairline }}
+    >
+      <span className="w-[150px] shrink-0" style={{ color: KC.muted }}>
+        {t('mro2:info.inspectionInterval')}
+      </span>
+      <select
+        value={value ?? ''}
+        aria-label={t('mro2:info.inspectionInterval')}
+        onChange={(e) => {
+          const v = (e.target.value || null) as InspectionInterval | null;
+          const wo = setInterval_(craneId, v);
+          toast.success(
+            wo
+              ? t('mro2:info.intervalScheduled', {
+                  number: wo.woNumber,
+                  date: wo.scheduledDate,
+                })
+              : t('mro2:info.intervalSaved'),
+          );
+        }}
+        className="h-7 cursor-pointer rounded border bg-transparent px-1 text-[13px]"
+        style={{ borderColor: KC.border, color: KC.ink }}
+      >
+        {options.map((o) => (
+          <option
+            key={o}
+            value={o}
+            style={{ background: KC.bg, color: KC.ink }}
+          >
+            {o ? t(`mro2:info.interval.${o}`) : t('mro2:info.interval.none')}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

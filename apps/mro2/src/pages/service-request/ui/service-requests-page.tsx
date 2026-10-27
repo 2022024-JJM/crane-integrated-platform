@@ -7,6 +7,7 @@ import {
   Plus,
   Smartphone,
   Wrench,
+  MessageSquare,
 } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
@@ -40,6 +41,9 @@ import { useNewTicket } from '../../../shared/lib/use-new-ticket';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { useMro2Year } from '../../../shared/ui/layout';
 import { SrDetailPanel } from './sr-detail-panel';
+import { useAllNotes } from '@crane/features/notes';
+import { useSeen } from '../../../shared/lib/seen-store';
+import { unreadByRef } from '../../../shared/lib/timeline';
 
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -83,6 +87,7 @@ export function Mro2ServiceRequestsPage() {
       ? (rawTab as Tab)
       : 'active';
   const selKey = searchParams.get('sel');
+  const notesOnly = searchParams.get('notes') === '1';
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
     if (value === null) next.delete(key);
@@ -90,6 +95,12 @@ export function Mro2ServiceRequestsPage() {
     setSearchParams(next, { replace: true });
   };
   const [assetQuery, setAssetQuery] = useState('');
+  const notes = useAllNotes();
+  const seen = useSeen('office');
+  const unread = useMemo(
+    () => unreadByRef(notes, 'office', seen),
+    [notes, seen],
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_DEFAULT);
   const [now] = useState(() => Date.now());
@@ -144,6 +155,7 @@ export function Mro2ServiceRequestsPage() {
   const q = assetQuery.trim().toLowerCase();
   const rows = allRows.filter(
     (r) =>
+      (!notesOnly || (unread[`${r.kind}:${r.key.slice(2)}`] ?? 0) > 0) &&
       (tab === 'all' ||
         (tab === 'active'
           ? srBucket(r) !== 'completed'
@@ -425,6 +437,13 @@ export function Mro2ServiceRequestsPage() {
                         />
                       ) : null}
                       {r.woNumber}
+                      {(unread[`${r.kind}:${r.key.slice(2)}`] ?? 0) > 0 ? (
+                        <MessageSquare
+                          size={12}
+                          aria-label={t('mro2:sr.notesFilter')}
+                          style={{ color: KC.teal }}
+                        />
+                      ) : null}
                     </span>
                   </td>
                   <td className="max-w-0 py-2 pr-3">

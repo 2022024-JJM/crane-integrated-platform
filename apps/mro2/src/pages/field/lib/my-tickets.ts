@@ -18,6 +18,42 @@ export interface MyTicketRow {
   date: string;
   /** 수리 — 현장이 올린 조치 내용 */
   action?: string;
+  /** 읽지 않은 사무실 메모 수 */
+  unread?: number;
+  /** 점검 종류 — 소견이 없는 예정 점검의 제목용 */
+  woType?: InspectionWO['woType'];
+}
+
+export type MyTicketGroup = 'today' | 'overdue' | 'upcoming' | 'done';
+export const MY_TICKET_GROUPS: readonly MyTicketGroup[] = [
+  'overdue',
+  'today',
+  'upcoming',
+  'done',
+];
+const DONE = new Set(['completed', 'ordered', 'approved', 'cancelled']);
+
+/** 오늘(YYYY-MM-DD) 기준 묶음 — 지연 › 오늘 › 예정 › 완료. 현장은 "오늘 뭐 하지"가 먼저다. */
+export function groupMyTickets(
+  rows: readonly MyTicketRow[],
+  todayIso: string,
+): Record<MyTicketGroup, MyTicketRow[]> {
+  const out: Record<MyTicketGroup, MyTicketRow[]> = {
+    today: [],
+    overdue: [],
+    upcoming: [],
+    done: [],
+  };
+  for (const r of rows) {
+    const day = r.date.slice(0, 10);
+    if (DONE.has(r.status)) out.done.push(r);
+    else if (day < todayIso) out.overdue.push(r);
+    else if (day === todayIso) out.today.push(r);
+    else out.upcoming.push(r);
+  }
+  out.overdue.sort((a, b) => (a.date < b.date ? -1 : 1));
+  out.upcoming.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return out;
 }
 
 export function collectMyTickets(
@@ -57,6 +93,7 @@ export function collectMyTickets(
       title: i.findings ?? '',
       status: i.status,
       date: i.scheduledDate,
+      woType: i.woType,
     });
   }
   for (const p of parts) {
