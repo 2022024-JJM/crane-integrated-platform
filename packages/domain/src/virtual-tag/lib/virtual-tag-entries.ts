@@ -12,8 +12,8 @@ export interface VirtualTagEntry {
 }
 
 /**
- * 모든 장비의 모든 태그. `enabledOnly` 면 장비·태그 둘 다 켜진 것만 — 러너가
- * 내보낼 목록이다. 순서는 장비 순 › 태그 순.
+ * 모든 장비의 모든 태그. `enabledOnly` 면 켜진 장비의 것만 — 러너가 내보낼
+ * 목록이다(태그별 켜짐은 없다). 순서는 장비 순 › 태그 순.
  */
 export function collectVirtualTagEntries(
   equipments: readonly VirtualEquipment[],
@@ -23,7 +23,6 @@ export function collectVirtualTagEntries(
   for (const equipment of equipments) {
     if (enabledOnly && !equipment.enabled) continue;
     for (const tag of equipment.tags) {
-      if (enabledOnly && !tag.enabled) continue;
       out.push({
         key: buildVirtualTagKey(equipment.craneId, tag.code),
         equipment,

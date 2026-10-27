@@ -2,9 +2,6 @@ export type {
   VirtualEquipment,
   VirtualTagDataType,
   VirtualTagDefinition,
-  VirtualTagGroup,
-  VirtualTagGroupPreset,
-  VirtualTagLimits,
   VirtualTagPattern,
   VirtualTagPatternKind,
   VirtualTagSet,
@@ -12,21 +9,18 @@ export type {
 export {
   SIMULATION_SPEED_OPTIONS,
   VIRTUAL_EQUIPMENT_BAY_MAX,
-  VIRTUAL_EQUIPMENT_GROUPS_MAX,
   VIRTUAL_EQUIPMENT_ID_MAX,
-  VIRTUAL_EQUIPMENT_NAME_MAX,
   VIRTUAL_EQUIPMENT_TAGS_MAX,
   VIRTUAL_EQUIPMENTS_MAX,
   VIRTUAL_TAG_BOOL_PATTERN_KINDS,
   VIRTUAL_TAG_CODE_MAX,
   VIRTUAL_TAG_DATA_TYPES,
-  VIRTUAL_TAG_GROUP_NAME_MAX,
-  VIRTUAL_TAG_GROUP_PRESETS,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAG_PERIOD_MAX,
   VIRTUAL_TAG_PERIOD_MIN,
+  VIRTUAL_TAG_SECONDS_DECIMALS,
   VIRTUAL_TAG_TICK_DEFAULT,
   VIRTUAL_TAG_TICK_MAX,
   VIRTUAL_TAG_TICK_MIN,
@@ -47,11 +41,6 @@ export {
   type VirtualTagEntry,
 } from './lib/virtual-tag-entries';
 export {
-  createDefaultGroups,
-  findPresetGroup,
-  toGroupPreset,
-} from './lib/default-groups';
-export {
   clampToTag,
   initVirtualTagState,
   setVirtualTagManualValue,
@@ -66,9 +55,6 @@ export {
   sanitizeVirtualEquipment,
   sanitizeVirtualEquipmentList,
   sanitizeVirtualTag,
-  sanitizeVirtualTagGroup,
-  sanitizeVirtualTagGroupList,
-  sanitizeVirtualTagLimits,
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
@@ -81,9 +67,3 @@ export {
   VIRTUAL_TAGS_PUBLIC_PATH,
   VIRTUAL_TAGS_STORAGE_KEY,
 } from './lib/virtual-tag-storage';
-export {
-  hasRateLimits,
-  rateLimitStep,
-  rateLimitSteps,
-  type RateLimitState,
-} from './lib/rate-limit';

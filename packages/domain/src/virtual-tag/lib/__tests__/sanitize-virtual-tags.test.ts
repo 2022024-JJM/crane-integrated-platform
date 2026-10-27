@@ -7,9 +7,6 @@ import {
   sanitizeVirtualEquipment,
   sanitizeVirtualEquipmentList,
   sanitizeVirtualTag,
-  sanitizeVirtualTagGroup,
-  sanitizeVirtualTagGroupList,
-  sanitizeVirtualTagLimits,
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
@@ -18,13 +15,10 @@ import {
 import { buildVirtualTagKey } from '../virtual-tag-key';
 import {
   VIRTUAL_EQUIPMENT_BAY_MAX,
-  VIRTUAL_EQUIPMENT_GROUPS_MAX,
   VIRTUAL_EQUIPMENT_ID_MAX,
-  VIRTUAL_EQUIPMENT_NAME_MAX,
   VIRTUAL_EQUIPMENT_TAGS_MAX,
   VIRTUAL_EQUIPMENTS_MAX,
   VIRTUAL_TAG_CODE_MAX,
-  VIRTUAL_TAG_GROUP_NAME_MAX,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAG_PERIOD_MAX,
@@ -42,28 +36,32 @@ const tag = {
   min: -10,
   max: 10,
   initial: 3,
-  pattern: { kind: 'triangle', periodMs: 2000 },
-  enabled: true,
+  pattern: { kind: 'triangle', periodSec: 2 },
 };
-
-const group = { id: 'g1', name: ' 계측값 ', preset: 'measurement' };
 
 const equipment = {
   id: 'e1',
   craneId: ' GC-04 ',
-  name: 'Goliath',
   bay: 'B1',
   enabled: true,
-  groups: [group],
-  tags: [{ ...tag, groupId: 'g1' }],
+  tags: [tag],
 };
 
-describe('clamp helpers', () => {
+/** 버전 2 저장본의 태그 — ms 주기, 그룹·사용·한계 필드. */
+const legacyTag = {
+  ...tag,
+  pattern: { kind: 'triangle', periodMs: 2000 },
+  groupId: 'g1',
+  enabled: false,
+  limits: { maxSpeed: 2.5, maxAccel: 0.5 },
+};
+
+describe('clamp helpers (초 단위)', () => {
   it('tick: 경계 정확값 통과, 밖은 클램프, 손상은 기본값', () => {
     expect(clampVirtualTagTick(VIRTUAL_TAG_TICK_MIN)).toBe(
       VIRTUAL_TAG_TICK_MIN,
     );
-    expect(clampVirtualTagTick(VIRTUAL_TAG_TICK_MIN - 1)).toBe(
+    expect(clampVirtualTagTick(VIRTUAL_TAG_TICK_MIN - 0.001)).toBe(
       VIRTUAL_TAG_TICK_MIN,
     );
     expect(clampVirtualTagTick(VIRTUAL_TAG_TICK_MAX)).toBe(
@@ -72,19 +70,34 @@ describe('clamp helpers', () => {
     expect(clampVirtualTagTick(VIRTUAL_TAG_TICK_MAX + 1)).toBe(
       VIRTUAL_TAG_TICK_MAX,
     );
-    expect(clampVirtualTagTick(33.4)).toBe(33);
-    expect(clampVirtualTagTick('100')).toBe(VIRTUAL_TAG_TICK_DEFAULT);
+    expect(clampVirtualTagTick(0)).toBe(VIRTUAL_TAG_TICK_MIN);
+    expect(clampVirtualTagTick('0.1')).toBe(VIRTUAL_TAG_TICK_DEFAULT);
     expect(clampVirtualTagTick(NaN)).toBe(VIRTUAL_TAG_TICK_DEFAULT);
+    expect(clampVirtualTagTick(undefined)).toBe(VIRTUAL_TAG_TICK_DEFAULT);
+  });
+
+  it('ms 해상도(소수 셋째 자리)로 반올림한다 — 부동소수 잡음이 dirty 를 만들지 않게', () => {
+    expect(clampVirtualTagTick(0.1234)).toBe(0.123);
+    expect(clampVirtualTagTick(0.1 + 0.2)).toBe(0.3);
+    expect(clampVirtualTagPeriod(8.0004)).toBe(8);
+    expect(clampVirtualTagPeriod(8.0005)).toBe(8.001);
   });
 
   it('period: 같은 규칙', () => {
-    expect(clampVirtualTagPeriod(VIRTUAL_TAG_PERIOD_MIN - 1)).toBe(
+    expect(clampVirtualTagPeriod(VIRTUAL_TAG_PERIOD_MIN)).toBe(
       VIRTUAL_TAG_PERIOD_MIN,
+    );
+    expect(clampVirtualTagPeriod(VIRTUAL_TAG_PERIOD_MIN - 0.01)).toBe(
+      VIRTUAL_TAG_PERIOD_MIN,
+    );
+    expect(clampVirtualTagPeriod(VIRTUAL_TAG_PERIOD_MAX)).toBe(
+      VIRTUAL_TAG_PERIOD_MAX,
     );
     expect(clampVirtualTagPeriod(VIRTUAL_TAG_PERIOD_MAX + 1)).toBe(
       VIRTUAL_TAG_PERIOD_MAX,
     );
     expect(clampVirtualTagPeriod(Infinity)).toBe(VIRTUAL_TAG_PERIOD_DEFAULT);
+    expect(clampVirtualTagPeriod(null)).toBe(VIRTUAL_TAG_PERIOD_DEFAULT);
   });
 });
 
@@ -96,31 +109,44 @@ describe('sanitizeVirtualTagPattern', () => {
     });
   });
 
-  it('주기 파형은 periodMs 클램프, square 는 dutyPct 를 [0,100] 으로', () => {
-    expect(sanitizeVirtualTagPattern({ kind: 'sine', periodMs: 10 })).toEqual({
+  it('주기 파형은 periodSec 클램프, square 는 dutyPct 를 [0,100] 으로', () => {
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'sine', periodSec: 0.01 }),
+    ).toEqual({ kind: 'sine', periodSec: VIRTUAL_TAG_PERIOD_MIN });
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'square', periodSec: 1, dutyPct: 150 }),
+    ).toEqual({ kind: 'square', periodSec: 1, dutyPct: 100 });
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'square', periodSec: 1, dutyPct: 'x' }),
+    ).toEqual({ kind: 'square', periodSec: 1 });
+    expect(sanitizeVirtualTagPattern({ kind: 'sawtooth' })).toEqual({
+      kind: 'sawtooth',
+      periodSec: VIRTUAL_TAG_PERIOD_DEFAULT,
+    });
+  });
+
+  it('버전 2 의 periodMs 는 초로 바꿔 받고, periodSec 가 있으면 그쪽이 이긴다', () => {
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'sine', periodMs: 40000 }),
+    ).toEqual({ kind: 'sine', periodSec: 40 });
+    expect(
+      sanitizeVirtualTagPattern({
+        kind: 'square',
+        periodMs: 1500,
+        dutyPct: 30,
+      }),
+    ).toEqual({ kind: 'square', periodSec: 1.5, dutyPct: 30 });
+    expect(
+      sanitizeVirtualTagPattern({
+        kind: 'sine',
+        periodSec: 3,
+        periodMs: 40000,
+      }),
+    ).toEqual({ kind: 'sine', periodSec: 3 });
+    // ms 가 손상이면 기본값.
+    expect(sanitizeVirtualTagPattern({ kind: 'sine', periodMs: 'x' })).toEqual({
       kind: 'sine',
-      periodMs: VIRTUAL_TAG_PERIOD_MIN,
-    });
-    expect(
-      sanitizeVirtualTagPattern({
-        kind: 'square',
-        periodMs: 1000,
-        dutyPct: 150,
-      }),
-    ).toEqual({
-      kind: 'square',
-      periodMs: 1000,
-      dutyPct: 100,
-    });
-    expect(
-      sanitizeVirtualTagPattern({
-        kind: 'square',
-        periodMs: 1000,
-        dutyPct: 'x',
-      }),
-    ).toEqual({
-      kind: 'square',
-      periodMs: 1000,
+      periodSec: VIRTUAL_TAG_PERIOD_DEFAULT,
     });
   });
 
@@ -128,46 +154,6 @@ describe('sanitizeVirtualTagPattern', () => {
     expect(
       sanitizeVirtualTagPattern({ kind: 'random-walk', stepPct: 5, seed: 1 }),
     ).toEqual({ kind: 'manual' });
-  });
-});
-
-describe('sanitizeVirtualTagGroup / List', () => {
-  it('id 필수, 이름은 trim·길이 제한, 모르는 표식은 뗀다', () => {
-    expect(sanitizeVirtualTagGroup(group)).toEqual({
-      id: 'g1',
-      name: '계측값',
-      preset: 'measurement',
-    });
-    expect(
-      sanitizeVirtualTagGroup({
-        id: 'g',
-        name: 'n'.repeat(VIRTUAL_TAG_GROUP_NAME_MAX + 3),
-        preset: 'alarm',
-      }),
-    ).toEqual({ id: 'g', name: 'n'.repeat(VIRTUAL_TAG_GROUP_NAME_MAX) });
-    expect(sanitizeVirtualTagGroup({ id: 'g' })).toEqual({ id: 'g', name: '' });
-    expect(sanitizeVirtualTagGroup({ name: 'no id' })).toBeNull();
-    expect(sanitizeVirtualTagGroup('x')).toBeNull();
-  });
-
-  it('목록 — id 중복은 첫 항목, 순서 유지, 상한, 배열 아님은 빈 배열', () => {
-    expect(
-      sanitizeVirtualTagGroupList([
-        { id: 'b', name: 'B' },
-        { id: 'a', name: 'A' },
-        { id: 'b', name: 'dup' },
-        null,
-      ]).map((g) => g.name),
-    ).toEqual(['B', 'A']);
-    expect(
-      sanitizeVirtualTagGroupList(
-        Array.from({ length: VIRTUAL_EQUIPMENT_GROUPS_MAX + 1 }, (_, i) => ({
-          id: `g${i}`,
-          name: '',
-        })),
-      ),
-    ).toHaveLength(VIRTUAL_EQUIPMENT_GROUPS_MAX);
-    expect(sanitizeVirtualTagGroupList('x')).toEqual([]);
   });
 });
 
@@ -182,12 +168,25 @@ describe('sanitizeVirtualTag — 숫자', () => {
       min: -10,
       max: 10,
       initial: 3,
-      pattern: { kind: 'triangle', periodMs: 2000 },
-      enabled: true,
+      pattern: { kind: 'triangle', periodSec: 2 },
     });
     expect(sanitizeVirtualTag({ ...tag, dataType: 'float' })?.dataType).toBe(
       'number',
     );
+  });
+
+  it('버전 2 필드(groupId·enabled·limits)는 버리고 ms 주기는 초로', () => {
+    expect(sanitizeVirtualTag(legacyTag)).toEqual({
+      id: 'a',
+      code: 'x',
+      name: 'X',
+      dataType: 'number',
+      unit: 'mm',
+      min: -10,
+      max: 10,
+      initial: 3,
+      pattern: { kind: 'triangle', periodSec: 2 },
+    });
   });
 
   it('id 가 없거나 코드가 비었거나 공백·콜론이 있거나 길면 버린다', () => {
@@ -207,23 +206,6 @@ describe('sanitizeVirtualTag — 숫자', () => {
     expect(sanitizeVirtualTag('garbage')).toBeNull();
   });
 
-  it('groupId 는 주어진 그룹 집합에 있을 때만 남고, 집합이 없으면 그대로 둔다', () => {
-    const groupIds = new Set(['g1']);
-    expect(
-      sanitizeVirtualTag({ ...tag, groupId: 'g1' }, groupIds)?.groupId,
-    ).toBe('g1');
-    expect(
-      sanitizeVirtualTag({ ...tag, groupId: 'gone' }, groupIds),
-    ).not.toHaveProperty('groupId');
-    expect(sanitizeVirtualTag({ ...tag, groupId: 'any' })?.groupId).toBe('any');
-    expect(sanitizeVirtualTag({ ...tag, groupId: '' })).not.toHaveProperty(
-      'groupId',
-    );
-    expect(sanitizeVirtualTag({ ...tag, groupId: 7 })).not.toHaveProperty(
-      'groupId',
-    );
-  });
-
   it('min ≥ max 면 최소 폭 1 을 주고, initial 은 범위로 클램프, 이름은 길이 제한', () => {
     const out = sanitizeVirtualTag({
       ...tag,
@@ -232,9 +214,8 @@ describe('sanitizeVirtualTag — 숫자', () => {
       initial: 99,
       name: 'n'.repeat(VIRTUAL_TAG_NAME_MAX + 5),
       unit: '',
-      enabled: 'yes',
     });
-    expect(out).toMatchObject({ min: 5, max: 6, initial: 6, enabled: true });
+    expect(out).toMatchObject({ min: 5, max: 6, initial: 6 });
     expect(out?.name).toHaveLength(VIRTUAL_TAG_NAME_MAX);
     expect(out).not.toHaveProperty('unit');
   });
@@ -247,20 +228,18 @@ describe('sanitizeVirtualTag — 숫자', () => {
       max: 100,
       initial: 0,
     });
-    expect(sanitizeVirtualTag({ ...tag, enabled: false })?.enabled).toBe(false);
   });
 });
 
 describe('sanitizeVirtualTag — 불리언', () => {
   const bool = { ...tag, dataType: 'bool' };
 
-  it('범위 0~1·초기값 0/1 로 강제하고 단위·한계를 뗀다', () => {
+  it('범위 0~1·초기값 0/1 로 강제하고 단위를 뗀다', () => {
     const out = sanitizeVirtualTag({
       ...bool,
       min: -5,
       max: 50,
       initial: 0.7,
-      limits: { maxSpeed: 1 },
       pattern: { kind: 'manual' },
     });
     expect(out).toEqual({
@@ -272,7 +251,6 @@ describe('sanitizeVirtualTag — 불리언', () => {
       max: 1,
       initial: 1,
       pattern: { kind: 'manual' },
-      enabled: true,
     });
     expect(sanitizeVirtualTag({ ...bool, initial: -3 })?.initial).toBe(0);
     expect(sanitizeVirtualTag({ ...bool, initial: 'x' })?.initial).toBe(0);
@@ -281,24 +259,15 @@ describe('sanitizeVirtualTag — 불리언', () => {
 
   it('패턴은 manual·square 만 — 다른 파형은 manual 로', () => {
     expect(
-      sanitizeVirtualTag({ ...bool, pattern: { kind: 'sine', periodMs: 1000 } })
+      sanitizeVirtualTag({ ...bool, pattern: { kind: 'sine', periodSec: 1 } })
         ?.pattern,
     ).toEqual({ kind: 'manual' });
     expect(
       sanitizeVirtualTag({
         ...bool,
-        pattern: { kind: 'square', periodMs: 1000, dutyPct: 30 },
+        pattern: { kind: 'square', periodSec: 1, dutyPct: 30 },
       })?.pattern,
-    ).toEqual({ kind: 'square', periodMs: 1000, dutyPct: 30 });
-  });
-
-  it('groupId 규칙은 숫자와 같다', () => {
-    expect(
-      sanitizeVirtualTag({ ...bool, groupId: 'g1' }, new Set(['g1']))?.groupId,
-    ).toBe('g1');
-    expect(
-      sanitizeVirtualTag({ ...bool, groupId: 'g9' }, new Set(['g1'])),
-    ).not.toHaveProperty('groupId');
+    ).toEqual({ kind: 'square', periodSec: 1, dutyPct: 30 });
   });
 });
 
@@ -325,23 +294,26 @@ describe('sanitizeVirtualTagList', () => {
 });
 
 describe('sanitizeVirtualEquipment / List', () => {
-  it('유효 장비는 trim 해 통과하고 태그의 groupId 를 그룹 목록으로 거른다', () => {
-    const out = sanitizeVirtualEquipment({
-      ...equipment,
-      tags: [
-        { ...tag, groupId: 'g1' },
-        { ...tag, id: 'b', code: 'y', groupId: 'gone' },
-      ],
-    });
-    expect(out).toMatchObject({
+  it('유효 장비는 trim 해 통과한다', () => {
+    expect(sanitizeVirtualEquipment(equipment)).toEqual({
       id: 'e1',
       craneId: 'GC-04',
-      name: 'Goliath',
       bay: 'B1',
       enabled: true,
-      groups: [{ id: 'g1', name: '계측값', preset: 'measurement' }],
+      tags: [sanitizeVirtualTag(tag)],
     });
-    expect(out?.tags.map((t) => t.groupId)).toEqual(['g1', undefined]);
+  });
+
+  it('버전 2 의 이름·그룹은 버린다', () => {
+    const out = sanitizeVirtualEquipment({
+      ...equipment,
+      name: 'Goliath',
+      groups: [{ id: 'g1', name: '계측값', preset: 'measurement' }],
+      tags: [legacyTag],
+    });
+    expect(out).not.toHaveProperty('name');
+    expect(out).not.toHaveProperty('groups');
+    expect(out?.tags[0]).not.toHaveProperty('groupId');
   });
 
   it('id·장비 ID 필수 — 공백·콜론·길이 초과 ID 는 버린다', () => {
@@ -362,32 +334,22 @@ describe('sanitizeVirtualEquipment / List', () => {
     expect(sanitizeVirtualEquipment(null)).toBeNull();
   });
 
-  it('이름·구역은 선택 — 빈 값은 떼고 길이는 자른다. enabled 는 false 만 false', () => {
+  it('구역은 선택 — 빈 값은 떼고 길이는 자른다. enabled 는 false 만 false', () => {
     const out = sanitizeVirtualEquipment({
       ...equipment,
-      name: 'n'.repeat(VIRTUAL_EQUIPMENT_NAME_MAX + 2),
       bay: 'b'.repeat(VIRTUAL_EQUIPMENT_BAY_MAX + 2),
       enabled: 'no',
-      groups: 'x',
       tags: 'y',
     });
-    expect(out?.name).toHaveLength(VIRTUAL_EQUIPMENT_NAME_MAX);
     expect(out?.bay).toHaveLength(VIRTUAL_EQUIPMENT_BAY_MAX);
-    expect(out).toMatchObject({ enabled: true, groups: [], tags: [] });
+    expect(out).toMatchObject({ enabled: true, tags: [] });
     const bare = sanitizeVirtualEquipment({
       id: 'e',
       craneId: 'C_1',
-      name: '  ',
       bay: '',
       enabled: false,
     });
-    expect(bare).toEqual({
-      id: 'e',
-      craneId: 'C_1',
-      enabled: false,
-      groups: [],
-      tags: [],
-    });
+    expect(bare).toEqual({ id: 'e', craneId: 'C_1', enabled: false, tags: [] });
   });
 
   it('목록 — id 중복과 정규화 장비키 중복(GC-04 ↔ GC_04)은 첫 항목, 상한', () => {
@@ -412,35 +374,93 @@ describe('sanitizeVirtualEquipment / List', () => {
   });
 });
 
-describe('sanitizeVirtualTagSet — 버전 2', () => {
+describe('sanitizeVirtualTagSet — 버전 3', () => {
   it('봉투가 아니면 빈 세트', () => {
     expect(sanitizeVirtualTagSet(null)).toEqual(createEmptyVirtualTagSet());
     expect(sanitizeVirtualTagSet('x')).toEqual(createEmptyVirtualTagSet());
     expect(createEmptyVirtualTagSet()).toEqual({
-      version: 2,
-      tickMs: VIRTUAL_TAG_TICK_DEFAULT,
+      version: 3,
+      tickSec: VIRTUAL_TAG_TICK_DEFAULT,
       equipments: [],
     });
   });
 
-  it('equipments 배열이 있으면 버전 2 로 정규화한다', () => {
+  it('equipments 배열이 있으면 버전 3 으로 정규화한다', () => {
+    const out = sanitizeVirtualTagSet({
+      version: 3,
+      tickSec: 0.25,
+      equipments: [equipment, { id: 'bad' }],
+    });
+    expect(out.version).toBe(3);
+    expect(out.tickSec).toBe(0.25);
+    expect(out.equipments.map((e) => e.id)).toEqual(['e1']);
+  });
+
+  it('정규화는 멱등이다 — 버전 3 저장본을 다시 넣으면 같은 값', () => {
+    const once = sanitizeVirtualTagSet({
+      version: 3,
+      tickSec: 0.1,
+      equipments: [equipment],
+    });
+    expect(sanitizeVirtualTagSet(once)).toEqual(once);
+  });
+
+  it('버전 2(tickMs·ms 주기·이름·그룹·한계)는 초 단위 버전 3 으로 읽힌다', () => {
     const out = sanitizeVirtualTagSet({
       version: 2,
       tickMs: 250,
-      equipments: [equipment, { id: 'bad' }],
+      equipments: [
+        {
+          ...equipment,
+          name: 'Goliath',
+          groups: [{ id: 'g1', name: '계측값' }],
+          tags: [legacyTag],
+        },
+      ],
     });
-    expect(out.version).toBe(2);
-    expect(out.tickMs).toBe(250);
-    expect(out.equipments.map((e) => e.id)).toEqual(['e1']);
+    expect(out).toEqual({
+      version: 3,
+      tickSec: 0.25,
+      equipments: [
+        {
+          id: 'e1',
+          craneId: 'GC-04',
+          bay: 'B1',
+          enabled: true,
+          tags: [
+            {
+              id: 'a',
+              code: 'x',
+              name: 'X',
+              dataType: 'number',
+              unit: 'mm',
+              min: -10,
+              max: 10,
+              initial: 3,
+              pattern: { kind: 'triangle', periodSec: 2 },
+            },
+          ],
+        },
+      ],
+    });
+    // 옛 봉투의 ms 가 범위 밖이면 초 단위 경계로.
+    expect(sanitizeVirtualTagSet({ tickMs: 5, equipments: [] }).tickSec).toBe(
+      VIRTUAL_TAG_TICK_MIN,
+    );
+    // 둘 다 있으면 초가 이긴다.
+    expect(
+      sanitizeVirtualTagSet({ tickSec: 0.5, tickMs: 250, equipments: [] })
+        .tickSec,
+    ).toBe(0.5);
   });
 
   it('tags 도 equipments 도 배열이 아니면 tick 만 살린 빈 세트', () => {
     expect(
-      sanitizeVirtualTagSet({ version: 9, tickMs: 'x', tags: 'y' }),
+      sanitizeVirtualTagSet({ version: 9, tickSec: 'x', tags: 'y' }),
     ).toEqual(createEmptyVirtualTagSet());
-    expect(sanitizeVirtualTagSet({ tickMs: 250 })).toEqual({
-      version: 2,
-      tickMs: 250,
+    expect(sanitizeVirtualTagSet({ tickSec: 0.25 })).toEqual({
+      version: 3,
+      tickSec: 0.25,
       equipments: [],
     });
   });
@@ -488,8 +508,8 @@ describe('버전 1 변환(migrateVirtualTagSetV1)', () => {
 
   it('키를 첫 콜론에서 나눠 장비로 묶고, 조립한 키가 원래 문자열과 같다', () => {
     const out = migrateVirtualTagSetV1(v1);
-    expect(out.version).toBe(2);
-    expect(out.tickMs).toBe(120);
+    expect(out.version).toBe(3);
+    expect(out.tickSec).toBe(0.12);
     expect(out.equipments.map((e) => [e.id, e.craneId])).toEqual([
       ['legacy-GC_04', 'GC_04'],
       ['legacy-LLC_002', 'LLC_002'],
@@ -508,12 +528,10 @@ describe('버전 1 변환(migrateVirtualTagSetV1)', () => {
       min: 0,
       max: 300,
       initial: 0,
-      pattern: { kind: 'sine', periodMs: 40000 },
-      enabled: true,
-      limits: { maxSpeed: 2.5, maxAccel: 0.5 },
+      pattern: { kind: 'sine', periodSec: 40 },
     });
-    expect(gc.tags[1].enabled).toBe(false);
-    expect(gc.groups).toEqual([]);
+    expect(gc.tags[1]).not.toHaveProperty('enabled');
+    expect(gc).not.toHaveProperty('groups');
     for (const e of out.equipments) {
       for (const t of e.tags) {
         const original = v1.tags.find((raw) => raw.id === t.id)!;
@@ -565,33 +583,8 @@ describe('버전 1 변환(migrateVirtualTagSetV1)', () => {
       migrateVirtualTagSetV1({ tags: v1.tags }),
     );
     expect(sanitizeVirtualTagSet(v1)).toEqual(migrateVirtualTagSetV1(v1));
-    expect(sanitizeVirtualTagSet(v1.tags).tickMs).toBe(
+    expect(sanitizeVirtualTagSet(v1.tags).tickSec).toBe(
       VIRTUAL_TAG_TICK_DEFAULT,
-    );
-  });
-});
-
-describe('sanitizeVirtualTagLimits', () => {
-  it('양의 유한수만 남기고, 둘 다 없으면 undefined', () => {
-    expect(sanitizeVirtualTagLimits({ maxSpeed: 2, maxAccel: 0.5 })).toEqual({
-      maxSpeed: 2,
-      maxAccel: 0.5,
-    });
-    expect(
-      sanitizeVirtualTagLimits({ maxSpeed: 0, maxAccel: -1 }),
-    ).toBeUndefined();
-    expect(sanitizeVirtualTagLimits({ maxSpeed: NaN, maxAccel: 1 })).toEqual({
-      maxAccel: 1,
-    });
-    expect(sanitizeVirtualTagLimits('x')).toBeUndefined();
-    expect(sanitizeVirtualTagLimits(undefined)).toBeUndefined();
-    expect(
-      sanitizeVirtualTag({ ...tag, limits: { maxSpeed: 1 } })?.limits,
-    ).toEqual({
-      maxSpeed: 1,
-    });
-    expect(sanitizeVirtualTag({ ...tag, limits: {} })).not.toHaveProperty(
-      'limits',
     );
   });
 });

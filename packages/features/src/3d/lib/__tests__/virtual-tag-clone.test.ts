@@ -40,8 +40,6 @@ const entry: Pick<CraneSnapshotEntry, 'snapshot' | 'stats'> = {
   },
 };
 
-const names = { datetime: '시각', measurement: '계측값', status: '상태·알람' };
-
 function ids() {
   let n = 0;
   return () => `id${++n}`;
@@ -72,34 +70,23 @@ describe('fallbackRange / cloneRange', () => {
 });
 
 describe('cloneTagsFromSnapshot', () => {
-  it('묶음 순으로 복제하고 없는 표식 그룹을 만들어 넣는다', () => {
-    const out = cloneTagsFromSnapshot(entry, {
-      existingGroups: [],
-      groupNames: names,
-      nextId: ids(),
-    });
-    expect(out.groups).toEqual([
-      { id: 'id1', name: '시각', preset: 'datetime' },
-      { id: 'id3', name: '계측값', preset: 'measurement' },
-      { id: 'id6', name: '상태·알람', preset: 'status' },
-    ]);
-    expect(out.tags.map((t) => [t.code, t.groupId])).toEqual([
-      ['year', 'id1'],
-      ['mh1_weight', 'id3'],
-      ['tl_distance', 'id3'],
-      ['crane_system_error', 'id6'],
-      ['heartbeat', 'id6'],
+  it('카탈로그 묶음 순(시각 › 계측값 › 상태)으로 복제하고 id 는 nextId 순서다', () => {
+    const out = cloneTagsFromSnapshot(entry, { nextId: ids() });
+    expect(out.map((t) => [t.id, t.code])).toEqual([
+      ['id1', 'year'],
+      ['id2', 'mh1_weight'],
+      ['id3', 'tl_distance'],
+      ['id4', 'crane_system_error'],
+      ['id5', 'heartbeat'],
     ]);
   });
 
-  it('숫자는 현재값·관측 범위·단위·표시명, 패턴은 수동', () => {
-    const out = cloneTagsFromSnapshot(entry, {
-      existingGroups: [],
-      groupNames: names,
-      nextId: ids(),
-    });
-    const weight = out.tags.find((t) => t.code === 'mh1_weight')!;
-    expect(weight).toMatchObject({
+  it('숫자는 현재값·관측 범위·단위·표시명, 패턴은 수동 — 옛 필드는 없다', () => {
+    const out = cloneTagsFromSnapshot(entry, { nextId: ids() });
+    const weight = out.find((t) => t.code === 'mh1_weight')!;
+    expect(weight).toEqual({
+      id: 'id2',
+      code: 'mh1_weight',
       name: 'MH#1 Weight',
       dataType: 'number',
       unit: 'ton',
@@ -107,87 +94,63 @@ describe('cloneTagsFromSnapshot', () => {
       max: 20,
       initial: 12,
       pattern: { kind: 'manual' },
-      enabled: true,
     });
-    expect(weight).not.toHaveProperty('limits');
-    const distance = out.tags.find((t) => t.code === 'tl_distance')!;
+    const distance = out.find((t) => t.code === 'tl_distance')!;
     expect(distance).toMatchObject({
       min: 0,
       max: 240,
       initial: 120,
       unit: 'm',
     });
-    const year = out.tags.find((t) => t.code === 'year')!;
+    const year = out.find((t) => t.code === 'year')!;
     expect(year).toMatchObject({ min: 0, max: 4052, initial: 2026 });
     expect(year).not.toHaveProperty('unit');
   });
 
-  it('불리언은 bool 형식 0~1, 초기값은 현재 비트, 단위 없음', () => {
-    const out = cloneTagsFromSnapshot(entry, {
-      existingGroups: [],
-      groupNames: names,
-      nextId: ids(),
-    });
-    expect(out.tags.find((t) => t.code === 'heartbeat')).toMatchObject({
+  it('불리언은 bool 형식 0~1, 초기값은 현재 비트, 단위·옛 필드 없음', () => {
+    const out = cloneTagsFromSnapshot(entry, { nextId: ids() });
+    const heartbeat = out.find((t) => t.code === 'heartbeat')!;
+    expect(heartbeat).toMatchObject({
       dataType: 'bool',
       min: 0,
       max: 1,
       initial: 1,
       pattern: { kind: 'manual' },
     });
-    expect(out.tags.find((t) => t.code === 'crane_system_error')).toMatchObject(
-      { dataType: 'bool', initial: 0, name: 'Crane System Error' },
-    );
+    expect(Object.keys(heartbeat).sort()).toEqual([
+      'code',
+      'dataType',
+      'id',
+      'initial',
+      'max',
+      'min',
+      'name',
+      'pattern',
+    ]);
+    expect(out.find((t) => t.code === 'crane_system_error')).toMatchObject({
+      dataType: 'bool',
+      initial: 0,
+      name: 'Crane System Error',
+    });
   });
 
-  it('이미 있는 표식 그룹은 재사용하고(이름이 달라도) 새로 만들지 않는다', () => {
-    const out = cloneTagsFromSnapshot(entry, {
-      existingGroups: [
-        { id: 'mine', name: 'renamed', preset: 'measurement' },
-        { id: 'free', name: 'no preset' },
-      ],
-      groupNames: names,
-      nextId: ids(),
-    });
-    expect(out.groups.map((g) => g.preset)).toEqual(['datetime', 'status']);
-    expect(out.tags.find((t) => t.code === 'mh1_weight')?.groupId).toBe('mine');
-  });
-
-  it('codes 로 고른 것만 복제하고, 쓰지 않는 그룹은 만들지 않는다', () => {
-    const out = cloneTagsFromSnapshot(entry, {
-      codes: new Set(['mh1_weight', 'nope']),
-      existingGroups: [],
-      groupNames: names,
-      nextId: ids(),
-    });
-    expect(out.tags.map((t) => t.code)).toEqual(['mh1_weight']);
-    expect(out.groups.map((g) => g.preset)).toEqual(['measurement']);
+  it('codes 로 고른 것만 복제한다 — 모르는 코드는 무시, 빈 집합은 빈 결과', () => {
     expect(
       cloneTagsFromSnapshot(entry, {
-        codes: new Set(),
-        existingGroups: [],
-        groupNames: names,
+        codes: new Set(['mh1_weight', 'nope']),
         nextId: ids(),
-      }),
-    ).toEqual({ groups: [], tags: [] });
+      }).map((t) => t.code),
+    ).toEqual(['mh1_weight']);
+    expect(
+      cloneTagsFromSnapshot(entry, { codes: new Set(), nextId: ids() }),
+    ).toEqual([]);
   });
 
   it('빈 스냅샷은 빈 결과이고, 같은 입력은 같은 출력(결정론)', () => {
     const empty = { snapshot: { ...entry.snapshot, tags: {} }, stats: {} };
-    expect(
-      cloneTagsFromSnapshot(empty, {
-        existingGroups: [],
-        groupNames: names,
-        nextId: ids(),
-      }),
-    ).toEqual({ groups: [], tags: [] });
-    const options = () => ({
-      existingGroups: [],
-      groupNames: names,
-      nextId: ids(),
-    });
-    expect(cloneTagsFromSnapshot(entry, options())).toEqual(
-      cloneTagsFromSnapshot(entry, options()),
+    expect(cloneTagsFromSnapshot(empty, { nextId: ids() })).toEqual([]);
+    expect(cloneTagsFromSnapshot(entry, { nextId: ids() })).toEqual(
+      cloneTagsFromSnapshot(entry, { nextId: ids() }),
     );
   });
 });

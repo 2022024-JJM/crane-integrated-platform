@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  VIRTUAL_EQUIPMENT_GROUPS_MAX,
   VIRTUAL_EQUIPMENT_TAGS_MAX,
   VIRTUAL_EQUIPMENTS_MAX,
   type VirtualTagDefinition,
@@ -34,7 +33,7 @@ vi.mock('@crane/domain/virtual-tag', async (importOriginal) => {
 });
 
 const received = new Map<string, number[]>();
-const EMPTY: VirtualTagSet = { version: 2, tickMs: 100, equipments: [] };
+const EMPTY: VirtualTagSet = { version: 3, tickSec: 0.1, equipments: [] };
 
 function tagDef(
   id: string,
@@ -50,7 +49,6 @@ function tagDef(
     max: 10,
     initial: 0,
     pattern: { kind: 'manual' },
-    enabled: true,
     ...patch,
   };
 }
@@ -60,7 +58,7 @@ function reset() {
   useVirtualTagStore.setState({
     equipments: [],
     entries: [],
-    tickMs: 100,
+    tickSec: 0.1,
     savedSnapshot: JSON.stringify(EMPTY),
     hydrated: false,
     isSaving: false,
@@ -116,14 +114,13 @@ function addTag(
 describe('load / save / isDirty', () => {
   it('load 는 한 번만 읽고 스냅샷·평탄 목록·러너를 채운다 — 직후는 dirty 아님', async () => {
     const loaded: VirtualTagSet = {
-      version: 2,
-      tickMs: 250,
+      version: 3,
+      tickSec: 0.25,
       equipments: [
         {
           id: 'e',
           craneId: 'C-1',
           enabled: true,
-          groups: [],
           tags: [tagDef('a', 'x', { initial: 5 })],
         },
       ],
@@ -134,7 +131,7 @@ describe('load / save / isDirty', () => {
     expect(storage.load).toHaveBeenCalledTimes(1);
     expect(store().equipments.map((e) => e.id)).toEqual(['e']);
     expect(store().entries.map((e) => e.key)).toEqual(['C_1:x']);
-    expect(store().tickMs).toBe(250);
+    expect(store().tickSec).toBe(0.25);
     expect(store().isDirty()).toBe(false);
     expect(virtualTagRuntime.getValue('C_1:x')).toBe(5);
   });
@@ -147,27 +144,27 @@ describe('load / save / isDirty', () => {
     expect(store().equipments).toEqual([]);
   });
 
-  it('편집은 저장하지 않고 dirty 만 세운다. save 가 버전 2 세트를 넘기고 스냅샷을 갱신한다', async () => {
+  it('편집은 저장하지 않고 dirty 만 세운다. save 가 버전 3 세트를 넘기고 스냅샷을 갱신한다', async () => {
     await store().load();
     addEquipment();
     expect(storage.save).not.toHaveBeenCalled();
     expect(store().isDirty()).toBe(true);
     expect(await store().save()).toBe(true);
     expect(storage.save).toHaveBeenCalledWith(
-      expect.objectContaining({ version: 2, tickMs: 100 }),
+      expect.objectContaining({ version: 3, tickSec: 0.1 }),
     );
     expect(store().isDirty()).toBe(false);
-    store().setTickMs(200);
+    store().setTickSec(0.2);
     expect(store().isDirty()).toBe(true);
   });
 
   it('save 응답(정규화된 세트)을 상태에 반영한다', async () => {
     addEquipment();
     storage.save.mockImplementation((set) =>
-      Promise.resolve({ ...set, tickMs: 16 }),
+      Promise.resolve({ ...set, tickSec: 0.016 }),
     );
     await store().save();
-    expect(store().tickMs).toBe(16);
+    expect(store().tickSec).toBe(0.016);
     expect(store().isDirty()).toBe(false);
   });
 
@@ -183,20 +180,13 @@ describe('load / save / isDirty', () => {
 });
 
 describe('장비 CRUD', () => {
-  it('추가는 ID 를 trim 하고 그룹 시드를 받는다. 빈·콜론·공백 ID 는 invalid-id', () => {
-    const result = store().addEquipment({
-      craneId: ' GC-04 ',
-      name: 'Goliath',
-      bay: 'B1',
-      groups: [{ id: 'g1', name: '계측값', preset: 'measurement' }],
-    });
+  it('추가는 ID 를 trim 한다. 빈·콜론·공백 ID 는 invalid-id', () => {
+    const result = store().addEquipment({ craneId: ' GC-04 ', bay: 'B1' });
     expect(result.ok).toBe(true);
     expect(store().equipments[0]).toMatchObject({
       craneId: 'GC-04',
-      name: 'Goliath',
       bay: 'B1',
       enabled: true,
-      groups: [{ id: 'g1', name: '계측값', preset: 'measurement' }],
       tags: [],
     });
     for (const craneId of ['  ', 'GC 04', 'GC:04']) {
@@ -227,26 +217,22 @@ describe('장비 CRUD', () => {
     const a = addEquipment('A');
     addEquipment('B');
     const before = store().equipments;
-    expect(store().updateEquipment(a, { craneId: 'B', name: 'x' })).toBe(false);
-    expect(store().updateEquipment(a, { craneId: 'a b', name: 'x' })).toBe(
+    expect(store().updateEquipment(a, { craneId: 'B', bay: 'x' })).toBe(false);
+    expect(store().updateEquipment(a, { craneId: 'a b', bay: 'x' })).toBe(
       false,
     );
     expect(store().equipments).toBe(before);
-    expect(store().updateEquipment('missing', { name: 'x' })).toBe(false);
+    expect(store().updateEquipment('missing', { bay: 'x' })).toBe(false);
   });
 
-  it('updateEquipment: ID 를 바꾸면 평탄 목록 키와 러너 키가 따라간다. 이름·구역·사용', () => {
+  it('updateEquipment: ID 를 바꾸면 평탄 목록 키와 러너 키가 따라간다. 구역·사용', () => {
     const a = addEquipment('A');
     addTag(a, { code: 'x', initial: 3 });
     expect(virtualTagRuntime.getValue('A:x')).toBe(3);
-    expect(
-      store().updateEquipment(a, { craneId: 'A-2', name: ' N ', bay: 'Z' }),
-    ).toBe(true);
-    expect(store().equipments[0]).toMatchObject({
-      craneId: 'A-2',
-      name: 'N',
-      bay: 'Z',
-    });
+    expect(store().updateEquipment(a, { craneId: 'A-2', bay: ' Z ' })).toBe(
+      true,
+    );
+    expect(store().equipments[0]).toMatchObject({ craneId: 'A-2', bay: 'Z' });
     expect(store().entries.map((e) => e.key)).toEqual(['A_2:x']);
     expect(virtualTagRuntime.getValue('A:x')).toBeUndefined();
     expect(virtualTagRuntime.getValue('A_2:x')).toBe(3);
@@ -266,21 +252,18 @@ describe('장비 CRUD', () => {
     expect(virtualTagRuntime.getValue('A:x')).toBeUndefined();
   });
 
-  it('duplicateEquipment: 새 id·접미사 ID, 그룹·태그도 새 id 이고 groupId 가 따라간다', () => {
-    const a = store().addEquipment({
-      craneId: 'A',
-      groups: [{ id: 'g1', name: 'G' }],
-    });
+  it('duplicateEquipment: 새 id·접미사 ID, 태그도 새 id 로 복제한다', () => {
+    const a = store().addEquipment({ craneId: 'A', bay: 'B1' });
     if (!a.ok) throw new Error('add failed');
-    addTag(a.id, { code: 'x', groupId: 'g1', initial: 2 });
+    addTag(a.id, { code: 'x', initial: 2 });
     const dup = store().duplicateEquipment(a.id);
     expect(dup.ok).toBe(true);
     const copy = store().equipments[1];
     expect(copy.id).not.toBe(a.id);
     expect(copy.craneId).toBe('A_2');
-    expect(copy.groups[0].id).not.toBe('g1');
+    expect(copy.bay).toBe('B1');
     expect(copy.tags[0].id).not.toBe(store().equipments[0].tags[0].id);
-    expect(copy.tags[0].groupId).toBe(copy.groups[0].id);
+    expect(copy.tags[0]).toMatchObject({ code: 'x', initial: 2 });
     expect(virtualTagRuntime.getValue('A_2:x')).toBe(2);
     store().duplicateEquipment(a.id);
     expect(store().equipments[2].craneId).toBe('A_3');
@@ -288,76 +271,19 @@ describe('장비 CRUD', () => {
   });
 });
 
-describe('그룹', () => {
-  it('addGroup: 상한까지, 없는 장비는 no-equipment', () => {
-    const a = addEquipment();
-    const g = store().addGroup(a, ' 계측값 ', 'measurement');
-    expect(g.ok).toBe(true);
-    expect(store().equipments[0].groups[0]).toMatchObject({
-      name: '계측값',
-      preset: 'measurement',
-    });
-    for (let i = 1; i < VIRTUAL_EQUIPMENT_GROUPS_MAX; i++) {
-      expect(store().addGroup(a, `g${i}`).ok).toBe(true);
-    }
-    expect(store().addGroup(a, 'more')).toEqual({ ok: false, reason: 'limit' });
-    expect(store().addGroup('missing', 'x')).toEqual({
-      ok: false,
-      reason: 'no-equipment',
-    });
-  });
-
-  it('updateGroup 은 이름만, removeGroup 은 그 그룹 태그를 미분류로', () => {
-    const a = addEquipment();
-    const g = store().addGroup(a, 'G');
-    if (!g.ok) throw new Error('add failed');
-    addTag(a, { code: 'x', groupId: g.id });
-    expect(store().updateGroup(a, g.id, { name: 'renamed' })).toBe(true);
-    expect(store().equipments[0].groups[0].name).toBe('renamed');
-    expect(store().updateGroup(a, 'missing', { name: 'x' })).toBe(false);
-    const before = store().equipments;
-    store().removeGroup(a, 'missing');
-    expect(store().equipments).toBe(before);
-    store().removeGroup(a, g.id);
-    expect(store().equipments[0].groups).toEqual([]);
-    expect(store().equipments[0].tags[0]).not.toHaveProperty('groupId');
-  });
-
-  it('moveGroup 은 이웃과 자리를 바꾸고 끝에서는 false', () => {
-    const a = addEquipment();
-    const g1 = store().addGroup(a, 'g1');
-    const g2 = store().addGroup(a, 'g2');
-    if (!g1.ok || !g2.ok) throw new Error('add failed');
-    expect(store().moveGroup(a, g1.id, -1)).toBe(false);
-    expect(store().moveGroup(a, g1.id, 1)).toBe(true);
-    expect(store().equipments[0].groups.map((g) => g.name)).toEqual([
-      'g2',
-      'g1',
-    ]);
-    expect(store().moveGroup(a, g1.id, 1)).toBe(false);
-    expect(store().moveGroup(a, 'missing', 1)).toBe(false);
-  });
-});
-
 describe('태그 CRUD', () => {
-  it('추가하면 기본 패턴은 숫자 삼각파·불리언 수동이고, 그룹은 장비 그룹에 있을 때만', () => {
-    const a = store().addEquipment({
-      craneId: 'C_1',
-      groups: [{ id: 'g1', name: 'G' }],
-    });
-    if (!a.ok) throw new Error('add failed');
-    addTag(a.id, { code: ' x ', min: 0, max: 10, groupId: 'g1' });
-    addTag(a.id, { code: 'b', dataType: 'bool', groupId: 'gone' });
+  it('추가하면 기본 패턴은 숫자 삼각파(기본 주기, 초)·불리언 수동이다', () => {
+    const a = addEquipment('C_1');
+    addTag(a, { code: ' x ', min: 0, max: 10 });
+    addTag(a, { code: 'b', dataType: 'bool' });
     const [num, bool] = store().equipments[0].tags;
     expect(num).toMatchObject({
       code: 'x',
       dataType: 'number',
       min: 0,
       max: 10,
-      enabled: true,
-      groupId: 'g1',
+      pattern: { kind: 'triangle', periodSec: 8 },
     });
-    expect(num.pattern.kind).toBe('triangle');
     expect(bool).toMatchObject({
       code: 'b',
       dataType: 'bool',
@@ -365,7 +291,6 @@ describe('태그 CRUD', () => {
       max: 1,
       pattern: { kind: 'manual' },
     });
-    expect(bool).not.toHaveProperty('groupId');
     expect(store().entries.map((e) => e.key)).toEqual(['C_1:x', 'C_1:b']);
   });
 
@@ -462,49 +387,50 @@ describe('태그 CRUD', () => {
     expect(store().duplicateTag('missing', x).ok).toBe(false);
   });
 
-  it('importTags: 없는 그룹만 붙이고, 코드 중복·손상은 건너뛰며 수를 돌려준다', () => {
-    const a = store().addEquipment({
-      craneId: 'C_1',
-      groups: [{ id: 'g-m', name: '계측값', preset: 'measurement' }],
-    });
-    if (!a.ok) throw new Error('add failed');
-    addTag(a.id, { code: 'dup' });
-    const result = store().importTags(a.id, {
-      groups: [
-        { id: 'g-m', name: 'again', preset: 'measurement' },
-        { id: 'g-s', name: '상태', preset: 'status' },
-      ],
-      tags: [
-        tagDef('t1', 'dup'),
-        tagDef('t2', 'fresh', { groupId: 'g-s' }),
-        tagDef('t3', 'orphan', { groupId: 'nope' }),
-        { id: 'bad' } as unknown as VirtualTagDefinition,
-      ],
-    });
+  it('importTags: 코드 중복·손상은 건너뛰고 수를 돌려주며, 옛 필드는 버린다', () => {
+    const a = addEquipment('C_1');
+    addTag(a, { code: 'dup' });
+    const legacy = {
+      ...tagDef('t3', 'legacy'),
+      groupId: 'g',
+      enabled: false,
+      limits: { maxSpeed: 1 },
+    } as unknown as VirtualTagDefinition;
+    const result = store().importTags(a, [
+      tagDef('t1', 'dup'),
+      tagDef('t2', 'fresh'),
+      legacy,
+      { id: 'bad' } as unknown as VirtualTagDefinition,
+    ]);
     expect(result).toEqual({ added: 2, skipped: 2 });
     const equipment = store().equipments[0];
-    expect(equipment.groups.map((g) => g.name)).toEqual(['계측값', '상태']);
     expect(equipment.tags.map((t) => t.code)).toEqual([
       'dup',
       'fresh',
-      'orphan',
+      'legacy',
     ]);
-    expect(equipment.tags[1].groupId).toBe('g-s');
-    expect(equipment.tags[2]).not.toHaveProperty('groupId');
-    expect(store().importTags('missing', { tags: [tagDef('t', 'x')] })).toEqual(
-      {
-        added: 0,
-        skipped: 1,
-      },
-    );
+    expect(equipment.tags[2]).toEqual(tagDef('t3', 'legacy'));
+    expect(store().importTags('missing', [tagDef('t', 'x')])).toEqual({
+      added: 0,
+      skipped: 1,
+    });
+    // 전부 건너뛰면 참조를 유지한다.
+    const before = store().equipments;
+    expect(store().importTags(a, [tagDef('t9', 'dup')])).toEqual({
+      added: 0,
+      skipped: 1,
+    });
+    expect(store().equipments).toBe(before);
   });
 
-  it('setTickMs 는 클램프하고 같은 값이면 상태 참조를 유지한다', () => {
-    store().setTickMs(5);
-    expect(store().tickMs).toBe(16);
+  it('setTickSec 는 클램프하고 같은 값이면 상태 참조를 유지한다', () => {
+    store().setTickSec(0.005);
+    expect(store().tickSec).toBe(0.016);
     const before = useVirtualTagStore.getState();
-    store().setTickMs(16);
+    store().setTickSec(0.016);
     expect(useVirtualTagStore.getState()).toBe(before);
+    store().setTickSec(9);
+    expect(store().tickSec).toBe(5);
   });
 });
 
@@ -516,13 +442,11 @@ describe('재생(runner)', () => {
       min: 0,
       max: 100,
       initial: 0,
-      pattern: { kind: 'triangle', periodMs: 1000 },
+      pattern: { kind: 'triangle', periodSec: 1 },
     });
-    addTag(a, { code: 'off', enabled: false });
     store().start();
     expect(store().isRunning).toBe(true);
     expect(received.get('A:tri')).toEqual([0]);
-    expect(received.has('A:off')).toBe(false);
 
     vi.advanceTimersByTime(250);
     const values = received.get('A:tri') ?? [];
@@ -537,7 +461,7 @@ describe('재생(runner)', () => {
       code: 'saw',
       min: 0,
       max: 100,
-      pattern: { kind: 'sawtooth', periodMs: 1000 },
+      pattern: { kind: 'sawtooth', periodSec: 1 },
     });
     store().start();
     vi.advanceTimersByTime(300);
@@ -599,7 +523,7 @@ describe('재생(runner)', () => {
       code: 'saw',
       min: 0,
       max: 100,
-      pattern: { kind: 'sawtooth', periodMs: 1000 },
+      pattern: { kind: 'sawtooth', periodSec: 1 },
     });
     store().start();
     vi.advanceTimersByTime(500);
@@ -615,7 +539,7 @@ describe('discard', () => {
     await store().load();
     const a = addEquipment('GC_04');
     addTag(a, { code: 'gantry', initial: 7 });
-    store().setTickMs(250);
+    store().setTickSec(0.25);
     expect(store().isDirty()).toBe(true);
     expect(virtualTagRuntime.getValue('GC_04:gantry')).toBe(7);
 
@@ -623,21 +547,20 @@ describe('discard', () => {
 
     expect(store().equipments).toEqual([]);
     expect(store().entries).toEqual([]);
-    expect(store().tickMs).toBe(100);
+    expect(store().tickSec).toBe(0.1);
     expect(store().isDirty()).toBe(false);
     expect(virtualTagRuntime.getValue('GC_04:gantry')).toBeUndefined();
   });
 
   it('저장된 태그를 수정·삭제한 뒤 discard 하면 저장본과 러너 값이 돌아온다', async () => {
     const loaded: VirtualTagSet = {
-      version: 2,
-      tickMs: 100,
+      version: 3,
+      tickSec: 0.1,
       equipments: [
         {
           id: 'e',
           craneId: 'GC_04',
           enabled: true,
-          groups: [],
           tags: [
             tagDef('a', 'a', { name: 'A', initial: 3 }),
             tagDef('b', 'b', { name: 'B', initial: 5 }),

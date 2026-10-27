@@ -15,7 +15,6 @@ import { formatMappingValue } from '../lib/tag-mapping-editor';
 import {
   filterPickEquipments,
   filterPickVirtualTags,
-  groupPickEntries,
   resolveSelectedEquipment,
 } from '../lib/tag-pick';
 
@@ -23,10 +22,10 @@ type T = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * 태그 연결 다이얼로그의 가상 태그 탭 — 실시간 탭과 같은 세 단. 검색창 아래
- * 장비 목록 › 그 장비의 그룹별 태그 › 미리보기. 검색창 하나가 두 목록을
- * 겨눈다 — 장비(ID·이름·구역)에 맞으면 장비를 거르고, 아니면 태그(코드·
- * 이름)를 거른다(`lib/tag-pick.ts`). 처음 고르는 장비는 연결된 키의 장비 ›
- * 모델 craneId › 첫 장비.
+ * 장비 목록 › 그 장비의 태그 › 미리보기. 검색창 하나가 두 목록을 겨눈다 —
+ * 장비(ID·구역)에 맞으면 장비를 거르고, 아니면 태그(코드·이름)를 거른다
+ * (`lib/tag-pick.ts`). 처음 고르는 장비는 연결된 키의 장비 › 모델 craneId ›
+ * 첫 장비.
  *
  * 값은 러너의 현재 상태(정지 중이면 initial)를 우선 보이고, 없으면 버스
  * 캐시. 지금 연결된 키가 카탈로그에 없으면(지운 장비·옛 씬) amber 항목으로
@@ -67,10 +66,6 @@ export function TagPickVirtualTab({
           )
         : [],
     [selected, query, filter.equipmentMatched],
-  );
-  const sections = useMemo(
-    () => (selected ? groupPickEntries(selected.groups, entries) : []),
-    [selected, entries],
   );
   const selectedEntry = value
     ? equipments.flatMap((e) => e.entries).find((e) => e.key === value)
@@ -113,9 +108,7 @@ export function TagPickVirtualTab({
                           {equipment.craneId}
                         </span>
                         <span className="text-muted-foreground block truncate text-[10px]">
-                          {[equipment.name, equipment.bay]
-                            .filter(Boolean)
-                            .join(' · ')}
+                          {equipment.bay ?? ''}
                         </span>
                       </span>
                       <span className="text-muted-foreground text-[10px]">
@@ -162,31 +155,21 @@ export function TagPickVirtualTab({
                   />
                 </ul>
               ) : null}
-              {sections.map((section) => (
-                <div key={section.group?.id ?? '__ungrouped__'}>
-                  <p className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wide">
-                    {section.group
-                      ? section.group.name ||
-                        t('monitoring:virtualTags.groups.newName')
-                      : t('monitoring:virtualTags.groups.ungrouped')}
-                  </p>
-                  <ul>
-                    {section.entries.map((entry) => (
-                      <VirtualRow
-                        key={entry.key}
-                        label={entry.name}
-                        description={entry.code}
-                        valueText={formatEntryValue(entry, t)}
-                        unit={entry.unit}
-                        selected={entry.key === value}
-                        dimmed={!entry.enabled}
-                        onSelect={() => onChange(entry.key)}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ))}
-              {selected && sections.length === 0 ? (
+              <ul>
+                {entries.map((entry) => (
+                  <VirtualRow
+                    key={entry.key}
+                    label={entry.name}
+                    description={entry.code}
+                    valueText={formatEntryValue(entry, t)}
+                    unit={entry.unit}
+                    selected={entry.key === value}
+                    dimmed={!entry.enabled}
+                    onSelect={() => onChange(entry.key)}
+                  />
+                ))}
+              </ul>
+              {selected && entries.length === 0 ? (
                 <p className="text-muted-foreground px-2 py-6 text-center text-xs">
                   {t('monitoring:inspector.tagPick.emptyTags')}
                 </p>
@@ -226,13 +209,6 @@ export function TagPickVirtualTab({
                   {t(
                     `monitoring:virtualTags.dataTypes.${selectedEntry.dataType}`,
                   )}
-                </dd>
-                <dt className="text-muted-foreground">
-                  {t('monitoring:inspector.tagPick.group')}
-                </dt>
-                <dd>
-                  {selectedEntry.groupName ??
-                    t('monitoring:virtualTags.groups.ungrouped')}
                 </dd>
                 <dt className="text-muted-foreground">
                   {t('monitoring:inspector.tagPick.unit')}

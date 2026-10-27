@@ -105,9 +105,6 @@ export function Play3dReportPanel({ className }: { className?: string }) {
         eventTimeLabel(e, replayFrames),
       ),
       tagRows,
-      saturationLabel:
-        tagRows.find((r) => r.stat.key === stats.summary.saturation.key)
-          ?.label ?? null,
     };
   }, [stats, meta.source, tagDefs, sceneInfo, replayFrames]);
 
@@ -196,8 +193,13 @@ export function Play3dReportPanel({ className }: { className?: string }) {
         </p>
       ) : null}
 
-      {/* KPI */}
-      <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
+      {/* KPI — 리플레이 4장(통신 두절 포함), 시뮬레이션 3장. */}
+      <div
+        className={cn(
+          'grid grid-cols-2 gap-2',
+          isReplay ? '@lg:grid-cols-4' : '@lg:grid-cols-3',
+        )}
+      >
         <Play3dKpiCard
           label={t('monitoring:play3d.tile.collisions')}
           value={String(stats.collisions.count)}
@@ -233,22 +235,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
               time: formatSimClock(summary.offlineMs),
             })}
           />
-        ) : (
-          <Play3dKpiCard
-            label={t('monitoring:play3d.tile.saturation')}
-            value={formatRatio(summary.saturation.maxRatio)}
-            tone={
-              summary.saturation.maxRatio !== null &&
-              summary.saturation.maxRatio > 0
-                ? 'warn'
-                : 'neutral'
-            }
-            hint={
-              derived.saturationLabel ??
-              t('monitoring:play3d.tile.noSpeedLimit')
-            }
-          />
-        )}
+        ) : null}
       </div>
 
       {/* 타임라인 */}
@@ -342,7 +329,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
         {derived.tagRows.length === 0 ? (
           <Empty>{t('monitoring:play3d.noData')}</Empty>
         ) : (
-          <TagTable rows={derived.tagRows} showSaturation={!isReplay} />
+          <TagTable rows={derived.tagRows} />
         )}
       </Disclosure>
     </div>

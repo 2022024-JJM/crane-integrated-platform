@@ -11,7 +11,7 @@ import { InputNumber } from '@crane/ui/atoms/input-number';
 import { CELL_NUMBER_INPUT, CELL_NUMBER_WRAPPER } from './virtual-cell-styles';
 
 /**
- * 가상 태그 탭 공통 바 — 저장, 전체 재생/일시정지, 값 초기화, 갱신 주기.
+ * 가상 태그 탭 공통 바 — 저장, 전체 재생/일시정지, 값 초기화, 갱신 주기(초).
  * 목록과 상세 어디서든 같은 자리에 있다. 재생은 전역(모든 장비)이다.
  *
  * 저장 상태는 버튼 자체가 나타낸다 — 씬 편집 헤더 바와 같은 규칙. 미저장이면
@@ -31,21 +31,21 @@ export function VirtualSimulationBar({
   const isRunning = useVirtualTagStore((s) => s.isRunning);
   const start = useVirtualTagStore((s) => s.start);
   const pause = useVirtualTagStore((s) => s.pause);
-  const tickMs = useVirtualTagStore((s) => s.tickMs);
-  const setTickMs = useVirtualTagStore((s) => s.setTickMs);
+  const tickSec = useVirtualTagStore((s) => s.tickSec);
+  const setTickSec = useVirtualTagStore((s) => s.setTickSec);
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
       <label className="text-muted-foreground mr-2 flex items-center gap-1.5 text-[11px]">
         {t('monitoring:virtualTags.tick')}
         <InputNumber
-          value={tickMs}
+          value={tickSec}
           min={VIRTUAL_TAG_TICK_MIN}
           max={VIRTUAL_TAG_TICK_MAX}
-          step={10}
+          step={0.01}
           className={cn(CELL_NUMBER_WRAPPER, 'w-20')}
           inputClassName={CELL_NUMBER_INPUT}
-          onChange={setTickMs}
+          onChange={setTickSec}
         />
       </label>
       <Button

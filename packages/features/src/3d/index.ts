@@ -416,7 +416,6 @@ export {
   type VirtualEquipmentDraft,
   type VirtualTagAddResult,
   type VirtualTagDraft,
-  type VirtualTagGroupAddResult,
   type VirtualTagImportResult,
 } from './model/use-virtual-tag-store';
 export {
@@ -435,7 +434,6 @@ export {
   cloneTagsFromSnapshot,
   fallbackRange,
   type CloneTagsOptions,
-  type CloneTagsResult,
 } from './lib/virtual-tag-clone';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export {

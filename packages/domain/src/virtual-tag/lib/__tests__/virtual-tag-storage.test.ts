@@ -12,14 +12,13 @@ import type { VirtualTagSet } from '../../model/types';
 
 function set(code = 'x'): VirtualTagSet {
   return {
-    version: 2,
-    tickMs: 100,
+    version: 3,
+    tickSec: 0.1,
     equipments: [
       {
         id: 'e',
         craneId: 'C_1',
         enabled: true,
-        groups: [],
         tags: [
           {
             id: 'a',
@@ -30,7 +29,6 @@ function set(code = 'x'): VirtualTagSet {
             max: 10,
             initial: 0,
             pattern: { kind: 'manual' },
-            enabled: true,
           },
         ],
       },
@@ -42,7 +40,7 @@ function firstCode(out: VirtualTagSet): string {
   return out.equipments[0].tags[0].code;
 }
 
-const empty: VirtualTagSet = { version: 2, tickMs: 100, equipments: [] };
+const empty: VirtualTagSet = { version: 3, tickSec: 0.1, equipments: [] };
 const fetchMock = vi.fn<typeof fetch>();
 
 function fetchOk(body: unknown) {
@@ -76,13 +74,13 @@ describe('dev (파일)', () => {
   beforeEach(() => vi.stubEnv('DEV', true));
 
   it('저장은 미들웨어에 POST 하고 응답을 정규화해 돌려준다', async () => {
-    fetchOk({ ...set(), tickMs: 5 });
+    fetchOk({ ...set(), tickSec: 0.005 });
     const out = await saveVirtualTagSet(set());
     expect(fetchMock).toHaveBeenCalledWith(
       '/__dev/virtual-tags',
       expect.objectContaining({ method: 'POST', body: JSON.stringify(set()) }),
     );
-    expect(out.tickMs).toBe(16);
+    expect(out.tickSec).toBe(0.016);
     expect(stored()).toBeNull();
     expect(isVirtualTagSetStoredLocallyOnly()).toBe(false);
   });
@@ -177,7 +175,7 @@ describe('운영 (localStorage 봉투)', () => {
       }),
     );
     const out = await loadVirtualTagSet();
-    expect(out.version).toBe(2);
+    expect(out.version).toBe(3);
     expect(out.equipments[0].craneId).toBe('GC_04');
     expect(firstCode(out)).toBe('gantry');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -197,12 +195,12 @@ describe('운영 (localStorage 봉투)', () => {
 
   it('배포본도 정규화를 거친다(손상 항목 제거)', async () => {
     fetchOk({
-      version: 2,
-      tickMs: 'x',
+      version: 3,
+      tickSec: 'x',
       equipments: [set().equipments[0], { id: 'bad' }],
     });
     const out = await loadVirtualTagSet();
-    expect(out.tickMs).toBe(100);
+    expect(out.tickSec).toBe(0.1);
     expect(out.equipments.map((e) => e.id)).toEqual(['e']);
   });
 });

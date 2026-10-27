@@ -531,18 +531,11 @@ export function usePlay3dStatsRecorder(regionId: string): void {
       if (!keys.has(key)) return;
       const { data } = usePlay3dStatsStore.getState();
       let agg = data.tags[key];
-      let maxSpeed: number | null = null;
-      if (sourceRef.current === 'simulation') {
-        const entry = useVirtualTagStore
-          .getState()
-          .entries.find((e) => e.key === key);
-        maxSpeed = entry?.tag.limits?.maxSpeed ?? null;
-      }
       if (!agg) {
-        agg = createTagAggregate(key, maxSpeed !== null);
+        agg = createTagAggregate(key);
         data.tags[key] = agg;
       }
-      accumulateTagValue(agg, value, readPlay3dPositionMs(), maxSpeed);
+      accumulateTagValue(agg, value, readPlay3dPositionMs());
     });
   }, [sceneInfo, source]);
 }

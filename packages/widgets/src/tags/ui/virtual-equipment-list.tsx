@@ -7,6 +7,13 @@ import {
 } from '@crane/domain/virtual-tag';
 import { BayChip, useVirtualTagStore } from '@crane/features/3d';
 import { Button } from '@crane/ui/atoms/button';
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from '@crane/ui/molecules/alert-dialog';
 import { SearchField } from '@crane/ui/molecules/search-field';
 import {
   collectVirtualBays,
@@ -16,7 +23,8 @@ import { VirtualEquipmentCard } from './virtual-equipment-card';
 
 /**
  * 가상 장비 목록 — 실시간 크레인 목록과 같은 구성. 검색·구역 칩은 왼쪽,
- * 장비 수·장비 등록은 오른쪽 끝. 카드는 저장 순이다.
+ * 장비 수·장비 등록은 오른쪽 끝. 카드는 저장 순이다. 카드의 복제는 바로
+ * 적용하고, 삭제는 목록이 든 확인창 하나를 거친다.
  */
 export function VirtualEquipmentList({
   equipments,
@@ -29,16 +37,63 @@ export function VirtualEquipmentList({
 }) {
   const { t } = useTranslation();
   const updateEquipment = useVirtualTagStore((s) => s.updateEquipment);
+  const duplicateEquipment = useVirtualTagStore((s) => s.duplicateEquipment);
+  const removeEquipment = useVirtualTagStore((s) => s.removeEquipment);
   const [bay, setBay] = useState<string>('all');
   const [query, setQuery] = useState('');
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const bays = useMemo(() => collectVirtualBays(equipments), [equipments]);
   const visible = useMemo(
     () => filterVirtualEquipments(equipments, bay, query),
     [equipments, bay, query],
   );
+  const canAdd = equipments.length < VIRTUAL_EQUIPMENTS_MAX;
+  const pendingRemove =
+    pendingRemoveId === null
+      ? null
+      : (equipments.find((e) => e.id === pendingRemoveId) ?? null);
 
   return (
     <div className="flex flex-col gap-3">
+      <AlertDialog
+        open={pendingRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemoveId(null);
+        }}
+      >
+        <AlertDialogPopup>
+          <AlertDialogTitle>
+            {t('monitoring:virtualTags.equipment.removeTitle')}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingRemove
+              ? t('monitoring:virtualTags.equipment.removeDescription', {
+                  id: pendingRemove.craneId,
+                  count: pendingRemove.tags.length,
+                })
+              : null}
+          </AlertDialogDescription>
+          <div className="mt-4 flex justify-end gap-2">
+            <AlertDialogClose
+              render={<Button type="button" variant="outline" size="sm" />}
+            >
+              {t('monitoring:virtualTags.equipment.cancel')}
+            </AlertDialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (pendingRemove) removeEquipment(pendingRemove.id);
+                setPendingRemoveId(null);
+              }}
+            >
+              {t('monitoring:virtualTags.equipment.confirmRemove')}
+            </Button>
+          </div>
+        </AlertDialogPopup>
+      </AlertDialog>
+
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <SearchField
           value={query}
@@ -81,7 +136,7 @@ export function VirtualEquipmentList({
           type="button"
           variant="outline"
           size="sm"
-          disabled={equipments.length >= VIRTUAL_EQUIPMENTS_MAX}
+          disabled={!canAdd}
           onClick={onRegister}
         >
           <Plus />
@@ -103,10 +158,13 @@ export function VirtualEquipmentList({
             <VirtualEquipmentCard
               key={equipment.id}
               equipment={equipment}
+              canDuplicate={canAdd}
               onOpen={onOpen}
               onToggleEnabled={(enabled) =>
                 updateEquipment(equipment.id, { enabled })
               }
+              onDuplicate={() => duplicateEquipment(equipment.id)}
+              onRemove={() => setPendingRemoveId(equipment.id)}
             />
           ))}
         </div>

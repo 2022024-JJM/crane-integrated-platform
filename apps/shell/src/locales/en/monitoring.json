@@ -167,8 +167,7 @@
       "cancel": "Cancel",
       "apply": "Link",
       "equipmentList": "Equipment",
-      "noEquipments": "No virtual equipment. Register one in the Virtual tags tab of the Tags page.",
-      "group": "Group"
+      "noEquipments": "No virtual equipment. Register one in the Virtual tags tab of the Tags page."
     },
     "ruler": {
       "title": "Ruler",
@@ -446,17 +445,16 @@
     "play": "Play all",
     "pause": "Pause",
     "resetValues": "Reset values",
-    "tick": "Tick (ms)",
+    "tick": "Tick (s)",
     "save": "Save",
     "saveFailed": "Failed to save virtual tags.",
     "cloneToVirtual": "Clone to virtual equipment",
     "equipment": {
       "add": "Add equipment",
       "id": "Equipment ID",
-      "name": "Name",
       "bay": "Bay",
       "enabled": "Enabled",
-      "search": "Search equipment ID or name",
+      "search": "Search equipment ID or bay",
       "tagCount": "{{count}} tags",
       "count": "Equipment {{count}} / {{max}}",
       "empty": "No virtual equipment. Use \"Add equipment\" or clone from a realtime crane.",
@@ -491,37 +489,16 @@
       "clonedSkipped": "Cloned {{count}} tags, skipped {{skipped}} (duplicates or limit).",
       "pickCrane": "Pick a crane on the left to clone. Without one, the equipment is created empty."
     },
-    "groups": {
-      "add": "Add group",
-      "newName": "New group",
-      "rename": "Group name",
-      "remove": "Delete group",
-      "moveUp": "Move up",
-      "moveDown": "Move down",
-      "ungrouped": "Ungrouped",
-      "all": "All",
-      "addTag": "Add tag",
-      "limit": "At most {{max}} groups per equipment.",
-      "defaults": {
-        "datetime": "Datetime",
-        "measurement": "Measurement",
-        "status": "Status & alarm"
-      }
-    },
     "columns": {
-      "enabled": "On",
       "code": "Code",
       "name": "Name",
-      "group": "Group",
       "dataType": "Type",
       "unit": "Unit",
       "min": "Min",
       "max": "Max",
       "initial": "Initial",
       "pattern": "Pattern",
-      "period": "Period (ms)",
-      "maxSpeed": "Max speed",
-      "maxAccel": "Max accel",
+      "period": "Period (s)",
       "value": "Value",
       "actions": ""
     },
@@ -536,9 +513,10 @@
       "sawtooth": "Sawtooth",
       "square": "Square"
     },
+    "addTag": "Add tag",
     "duplicate": "Duplicate",
     "remove": "Remove",
-    "empty": "No tags. Use \"Add tag\" in a group header.",
+    "empty": "No tags. Use \"Add tag\" to create one.",
     "emptyFiltered": "No tags match.",
     "errors": {
       "invalid-code": "Code must be non-empty, without spaces or colons, and at most {{codeMax}} characters.",
@@ -549,9 +527,7 @@
     "newCode": "tag",
     "count": "Tags {{count}} / {{max}}",
     "codeHint": "Bus keys are built as equipmentKey:code (e.g. GC_04:gantry_position). Changing a code or equipment ID also changes the keys scenes are linked to.",
-    "periodHint": "Time (ms) for one cycle (min→max→min)",
-    "maxSpeedHint": "Max speed (unit/s). Empty = no limit — the value follows the waveform target at or below this speed.",
-    "maxAccelHint": "Max acceleration (unit/s²). Empty = no limit."
+    "periodHint": "Time (s) for one cycle (min→max→min)"
   },
   "tags": {
     "tabs": {
@@ -833,9 +809,7 @@
       "dwellTotal": "dwell total {{time}}",
       "equipmentCount": "{{count}} equipment",
       "offline": "Offline",
-      "offlineTotal": "total {{time}}",
-      "saturation": "Speed-limit saturation",
-      "noSpeedLimit": "no speed limit defined"
+      "offlineTotal": "total {{time}}"
     },
     "col": {
       "equipment": "Equipment",
@@ -851,8 +825,7 @@
       "tag": "Axis",
       "range": "Range",
       "mean": "Mean",
-      "travel": "Travel",
-      "saturation": "Limit saturation"
+      "travel": "Travel"
     },
     "timeline": {
       "title": "Timeline",

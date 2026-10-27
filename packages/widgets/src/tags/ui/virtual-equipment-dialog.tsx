@@ -5,8 +5,6 @@ import { toast } from 'sonner';
 import {
   VIRTUAL_EQUIPMENT_ID_MAX,
   VIRTUAL_EQUIPMENTS_MAX,
-  createDefaultGroups,
-  type VirtualTagGroupPreset,
 } from '@crane/domain/virtual-tag';
 import {
   cloneTagsFromSnapshot,
@@ -39,11 +37,10 @@ export interface VirtualEquipmentDialogProps {
 type DialogTab = 'basic' | 'clone';
 
 /**
- * 장비 등록 다이얼로그 — 기본 정보(ID·이름·구역) 탭과 실시간 복제 탭. 등록
- * 하면 기본 그룹(시각·계측값·상태·알람)을 시드하고, 복제 소스를 골랐으면
- * 그 크레인의 체크한 태그를 현재값·관측 범위로 넣는다(1회 스냅샷). 본문은
- * 열려 있을 때만 마운트해 열 때마다 초안이 비고, 크레인 스냅샷 피드도 본문
- * 수명이다(태그 연결 다이얼로그와 같은 규칙).
+ * 장비 등록 다이얼로그 — 기본 정보(ID·구역) 탭과 실시간 복제 탭. 복제 소스를
+ * 골랐으면 그 크레인의 체크한 태그를 현재값·관측 범위로 넣는다(1회 스냅샷).
+ * 본문은 열려 있을 때만 마운트해 열 때마다 초안이 비고, 크레인 스냅샷 피드도
+ * 본문 수명이다(태그 연결 다이얼로그와 같은 규칙).
  */
 export function VirtualEquipmentDialog(props: VirtualEquipmentDialogProps) {
   const { open, onOpenChange } = props;
@@ -69,7 +66,6 @@ function DialogBody({
 
   const [tab, setTab] = useState<DialogTab>(cloneCraneId ? 'clone' : 'basic');
   const [craneId, setCraneId] = useState(cloneCraneId ?? '');
-  const [name, setName] = useState('');
   const [bay, setBay] = useState('');
   const [cloneSource, setCloneSource] = useState<string | null>(
     cloneCraneId ?? null,
@@ -92,12 +88,6 @@ function DialogBody({
     idError === null &&
     equipments.length < VIRTUAL_EQUIPMENTS_MAX;
 
-  const groupNames: Record<VirtualTagGroupPreset, string> = {
-    datetime: t('monitoring:virtualTags.groups.defaults.datetime'),
-    measurement: t('monitoring:virtualTags.groups.defaults.measurement'),
-    status: t('monitoring:virtualTags.groups.defaults.status'),
-  };
-
   const handleCloneSourceChange = (next: string | null) => {
     setCloneSource(next);
     setSelectedCodes(null);
@@ -112,12 +102,7 @@ function DialogBody({
   };
 
   const handleSubmit = () => {
-    const result = addEquipment({
-      craneId,
-      name,
-      bay,
-      groups: createDefaultGroups(groupNames, createId),
-    });
+    const result = addEquipment({ craneId, bay });
     if (!result.ok) {
       setError(
         t(`monitoring:virtualTags.equipment.errors.${result.reason}`, {
@@ -129,14 +114,9 @@ function DialogBody({
     }
     if (cloneSource) {
       const entry = useCraneSnapshotStore.getState().cranes[cloneSource];
-      const equipment = useVirtualTagStore
-        .getState()
-        .equipments.find((e) => e.id === result.id);
-      if (entry && equipment) {
+      if (entry) {
         const cloned = cloneTagsFromSnapshot(entry, {
           codes: selectedCodes ?? undefined,
-          existingGroups: equipment.groups,
-          groupNames,
           nextId: createId,
         });
         const imported = importTags(result.id, cloned);
@@ -217,13 +197,6 @@ function DialogBody({
                   })
                 : t('monitoring:virtualTags.equipment.idHint')}
             </p>
-          </Field>
-          <Field label={t('monitoring:virtualTags.equipment.name')}>
-            <Input
-              value={name}
-              className={cn(CELL_INPUT, 'h-8')}
-              onChange={(event) => setName(event.target.value)}
-            />
           </Field>
           <Field label={t('monitoring:virtualTags.equipment.bay')}>
             <Input

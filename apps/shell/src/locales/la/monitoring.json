@@ -167,8 +167,7 @@
       "cancel": "Abrogare",
       "apply": "Iungere",
       "equipmentList": "Machinae",
-      "noEquipments": "Nullae machinae fictae. In tabula signorum fictorum inscribe.",
-      "group": "Grex"
+      "noEquipments": "Nullae machinae fictae. In tabula signorum fictorum inscribe."
     },
     "ruler": {
       "title": "Regula",
@@ -446,17 +445,16 @@
     "play": "Omnia age",
     "pause": "Siste",
     "resetValues": "Valores restitue",
-    "tick": "Intervallum (ms)",
+    "tick": "Intervallum (s)",
     "save": "Serva",
     "saveFailed": "Signa virtualia servari non potuerunt.",
     "cloneToVirtual": "In machinam fictam duplica",
     "equipment": {
       "add": "Machinam inscribe",
       "id": "ID machinae",
-      "name": "Nomen",
       "bay": "Regio",
       "enabled": "Activa",
-      "search": "ID vel nomen machinae quaere",
+      "search": "ID vel aream machinae quaere",
       "tagCount": "{{count}} signa",
       "count": "Machinae {{count}} / {{max}}",
       "empty": "Nullae machinae fictae. \"Machinam inscribe\" preme vel ex grue reali duplica.",
@@ -491,37 +489,16 @@
       "clonedSkipped": "{{count}} signa duplicata, {{skipped}} omissa (duplicata vel limes).",
       "pickCrane": "Gruem ad duplicandum a sinistra elige. Sine ea, machina vacua creatur."
     },
-    "groups": {
-      "add": "Gregem adde",
-      "newName": "Novus grex",
-      "rename": "Nomen gregis",
-      "remove": "Gregem dele",
-      "moveUp": "Sursum",
-      "moveDown": "Deorsum",
-      "ungrouped": "Sine grege",
-      "all": "Omnia",
-      "addTag": "Signum adde",
-      "limit": "Ad summum {{max}} greges per machinam.",
-      "defaults": {
-        "datetime": "Tempus",
-        "measurement": "Mensurae",
-        "status": "Status et alarma"
-      }
-    },
     "columns": {
-      "enabled": "Activum",
       "code": "Codex",
       "name": "Nomen",
-      "group": "Grex",
       "dataType": "Genus",
       "unit": "Unitas",
       "min": "Min",
       "max": "Max",
       "initial": "Initiale",
       "pattern": "Forma",
-      "period": "Periodus (ms)",
-      "maxSpeed": "Celeritas max",
-      "maxAccel": "Acceleratio max",
+      "period": "Periodus (s)",
       "value": "Valor",
       "actions": ""
     },
@@ -536,9 +513,10 @@
       "sawtooth": "Serra",
       "square": "Quadratum"
     },
+    "addTag": "Signum adde",
     "duplicate": "Duplica",
     "remove": "Dele",
-    "empty": "Nulla signa. \"Signum adde\" in capite gregis preme.",
+    "empty": "Nulla signa. \"Signum adde\" preme.",
     "emptyFiltered": "Nullum signum congruit.",
     "errors": {
       "invalid-code": "Codex vacuus esse non potest, sine spatiis et colis, nec longior quam {{codeMax}}.",
@@ -549,9 +527,7 @@
     "newCode": "tag",
     "count": "Signa {{count}} / {{max}}",
     "codeHint": "Claves ut clavisMachinae:codex componuntur (e.g. GC_04:gantry_position). Codice vel ID mutato, claves quibus scaenae nectuntur quoque mutantur.",
-    "periodHint": "Tempus (ms) unius cycli (min→max→min)",
-    "maxSpeedHint": "Celeritas maxima (unitas/s). Vacuum = sine limite.",
-    "maxAccelHint": "Acceleratio maxima (unitas/s²). Vacuum = sine limite."
+    "periodHint": "Tempus (s) unius cycli (min→max→min)"
   },
   "tags": {
     "tabs": {
@@ -833,9 +809,7 @@
       "dwellTotal": "mora summa {{time}}",
       "equipmentCount": "{{count}} machinae",
       "offline": "Disiunctiones",
-      "offlineTotal": "summa {{time}}",
-      "saturation": "Saturatio limitis celeritatis",
-      "noSpeedLimit": "limes celeritatis non definitus"
+      "offlineTotal": "summa {{time}}"
     },
     "col": {
       "equipment": "Machina",
@@ -851,8 +825,7 @@
       "tag": "Axis",
       "range": "Ambitus",
       "mean": "Medium",
-      "travel": "Motus",
-      "saturation": "Saturatio limitis"
+      "travel": "Motus"
     },
     "timeline": {
       "title": "Linea temporis",

@@ -1,194 +1,116 @@
 {
-  "version": 2,
-  "tickMs": 100,
+  "version": 3,
+  "tickSec": 0.1,
   "equipments": [
     {
       "id": "legacy-GC_04",
       "craneId": "GC_04",
-      "name": "GC-04",
       "enabled": true,
-      "groups": [
-        {
-          "id": "gc04-datetime",
-          "name": "시각",
-          "preset": "datetime"
-        },
-        {
-          "id": "gc04-measurement",
-          "name": "계측값",
-          "preset": "measurement"
-        },
-        {
-          "id": "gc04-status",
-          "name": "상태·알람",
-          "preset": "status"
-        }
-      ],
       "tags": [
         {
           "id": "gc04-gantry-travel",
           "code": "gantry_position",
           "name": "주행(직선 이동)",
-          "groupId": "gc04-measurement",
           "dataType": "number",
-          "unit": "m",
           "min": 0,
           "max": 300,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 40000
+            "periodSec": 40
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 2.5,
-            "maxAccel": 0.5
-          }
+          "unit": "m"
         },
         {
           "id": "gc04-trolley-traverse",
           "code": "trolley_position",
           "name": "상부 트롤리 횡행",
-          "groupId": "gc04-measurement",
           "dataType": "number",
-          "unit": "m",
           "min": -30,
           "max": 0,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 40000
+            "periodSec": 40
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 1.5,
-            "maxAccel": 0.5
-          }
+          "unit": "m"
         },
         {
           "id": "907a7df8-4232-4c25-8dae-476beca71e95",
           "code": "trolley_position_2",
           "name": "하부 트롤리 횡행",
-          "groupId": "gc04-measurement",
           "dataType": "number",
-          "unit": "m",
           "min": -20,
           "max": 5,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 40000
+            "periodSec": 40
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 1.5,
-            "maxAccel": 0.5
-          }
+          "unit": "m"
         }
       ]
     },
     {
       "id": "legacy-LLC_002",
       "craneId": "LLC_002",
-      "name": "LLC-002",
       "enabled": true,
-      "groups": [
-        {
-          "id": "llc002-datetime",
-          "name": "시각",
-          "preset": "datetime"
-        },
-        {
-          "id": "llc002-measurement",
-          "name": "계측값",
-          "preset": "measurement"
-        },
-        {
-          "id": "llc002-status",
-          "name": "상태·알람",
-          "preset": "status"
-        }
-      ],
       "tags": [
         {
           "id": "llc002-luffing",
           "code": "luff_angle",
           "name": "러핑 각도",
-          "groupId": "llc002-measurement",
           "dataType": "number",
-          "unit": "deg",
           "min": -32,
           "max": 11.75,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 30000
+            "periodSec": 30
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 3,
-            "maxAccel": 1.5
-          }
+          "unit": "deg"
         },
         {
           "id": "llc002-slew",
           "code": "slew_angle",
           "name": "상체 선회",
-          "groupId": "llc002-measurement",
           "dataType": "number",
-          "unit": "deg",
           "min": 0,
           "max": 360,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 40000
+            "periodSec": 40
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 6,
-            "maxAccel": 2
-          }
+          "unit": "deg"
         },
         {
           "id": "llc002-gantry-travel",
           "code": "gantry_position",
           "name": "주행(직선 이동)",
-          "groupId": "llc002-measurement",
           "dataType": "number",
-          "unit": "m",
           "min": 0,
           "max": 50,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 20000
+            "periodSec": 20
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 2,
-            "maxAccel": 0.5
-          }
+          "unit": "m"
         },
         {
           "id": "12ce2409-e0e5-4db8-92b9-111a85aef267",
           "code": "gantry_position_2",
           "name": "주행(직선 이동) 2",
-          "groupId": "llc002-measurement",
           "dataType": "number",
-          "unit": "m",
           "min": -20,
           "max": 0,
           "initial": 0,
           "pattern": {
             "kind": "sine",
-            "periodMs": 20000
+            "periodSec": 20
           },
-          "enabled": true,
-          "limits": {
-            "maxSpeed": 2,
-            "maxAccel": 0.5
-          }
+          "unit": "m"
         }
       ]
     }

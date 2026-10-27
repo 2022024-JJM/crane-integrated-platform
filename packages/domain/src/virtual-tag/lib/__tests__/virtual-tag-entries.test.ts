@@ -5,7 +5,7 @@ import {
   findVirtualTagEntry,
 } from '../virtual-tag-entries';
 
-function tag(code: string, enabled = true): VirtualTagDefinition {
+function tag(code: string): VirtualTagDefinition {
   return {
     id: `t-${code}`,
     code,
@@ -15,7 +15,6 @@ function tag(code: string, enabled = true): VirtualTagDefinition {
     max: 1,
     initial: 0,
     pattern: { kind: 'manual' },
-    enabled,
   };
 }
 
@@ -24,14 +23,12 @@ const equipments: VirtualEquipment[] = [
     id: 'e1',
     craneId: 'GC-04',
     enabled: true,
-    groups: [],
-    tags: [tag('a'), tag('b', false)],
+    tags: [tag('a'), tag('b')],
   },
   {
     id: 'e2',
     craneId: 'LLC_002',
     enabled: false,
-    groups: [],
     tags: [tag('c')],
   },
 ];
@@ -48,12 +45,12 @@ describe('collectVirtualTagEntries', () => {
     expect(first.tag).toBe(equipments[0].tags[0]);
   });
 
-  it('enabledOnly 는 꺼진 장비의 태그 전부와 꺼진 태그를 뺀다', () => {
+  it('enabledOnly 는 꺼진 장비의 태그 전부를 뺀다(태그별 켜짐은 없다)', () => {
     expect(
       collectVirtualTagEntries(equipments, { enabledOnly: true }).map(
         (e) => e.key,
       ),
-    ).toEqual(['GC_04:a']);
+    ).toEqual(['GC_04:a', 'GC_04:b']);
   });
 
   it('빈 목록·태그 없는 장비는 빈 배열', () => {
@@ -65,9 +62,11 @@ describe('collectVirtualTagEntries', () => {
 });
 
 describe('findVirtualTagEntry', () => {
-  it('키로 찾고, 꺼진 항목도 찾으며, 없으면 undefined', () => {
+  it('키로 찾고, 꺼진 장비의 항목도 찾으며, 없으면 undefined', () => {
     expect(findVirtualTagEntry(equipments, 'LLC_002:c')?.tag.code).toBe('c');
-    expect(findVirtualTagEntry(equipments, 'GC_04:b')?.tag.enabled).toBe(false);
+    expect(
+      findVirtualTagEntry(equipments, 'LLC_002:c')?.equipment.enabled,
+    ).toBe(false);
     expect(findVirtualTagEntry(equipments, 'GC-04:a')).toBeUndefined();
     expect(findVirtualTagEntry(equipments, 'nope')).toBeUndefined();
   });

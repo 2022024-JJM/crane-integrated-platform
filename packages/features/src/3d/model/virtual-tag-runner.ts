@@ -1,6 +1,4 @@
 import {
-  hasRateLimits,
-  rateLimitStep,
   initVirtualTagState,
   setVirtualTagManualValue,
   stepVirtualTag,
@@ -28,14 +26,13 @@ import {
  * 정의는 장비 계층을 평탄화한 항목(`VirtualTagEntry`)으로 받고 상태는 **키**
  * 기준이다 — 키는 장비키와 코드의 조립값이라 전역에서 유일하고, 코드나 장비 ID
  * 를 바꾸면 새 키로 상태가 다시 잡힌다(범위를 바꿨을 때와 같은 규칙). 장비가
- * 꺼져 있으면 그 장비의 태그는 태그 자체가 켜져 있어도 내보내지 않는다.
+ * 꺼져 있으면 그 장비의 태그는 내보내지 않는다(태그별 켜짐은 없다).
  *
  * 시뮬레이션 시계: 벽시계 dt 에 `speed` 를 곱해 씬 시간 `elapsedMs` 를 누적한다
- * (트랜스포트 위치). 값은 **씬 시간의 함수**다 — `tickMs` 의 고정 스텝으로만
- * 적분하고(`advanceTo`), 재생·seek 가 같은 적분기를 쓴다. 속도·가속 한계가
- * 있는 태그는 값이 경로 의존(값·속도 상태)이라 seek 에서 목표값을 바로 넣으면
- * 재생 때 그 시각에 보이던 자세와 어긋난다. 그래서 `seek(ms)` 는 0 초 상태에서
- * ms 까지 다시 적분한다(재시뮬레이션). 비용은 스텝 수에 선형이다.
+ * (트랜스포트 위치). 값은 **씬 시간의 함수**다 — `tickMs` 의 고정 스텝 경계
+ * 에서만 계산하고(`advanceTo`), 재생·seek 가 같은 함수를 쓴다. 파형은 경로
+ * 의존이 없어 스텝을 하나씩 밟지 않고 목표 시각 직전의 스텝 경계로 바로 간다.
+ * 저장본의 시간 단위는 초이고 러너 시계는 ms 다 — 스토어가 경계에서 바꾼다.
  *
  * 벽시계 타이머 간격은 `tickMs / speed`(하한 TIMER_MIN_MS)다 — 배속이 높아도
  * 스텝마다 내보내 화면 보간 지연이 씬 시간으로 한 스텝에 머문다. 틱이 밀리면
@@ -49,7 +46,7 @@ import {
 export interface VirtualTagRunnerConfig {
   /** 모든 장비의 모든 태그(꺼진 것 포함) — 켜짐 판정은 러너가 한다. */
   entries: readonly VirtualTagEntry[];
-  /** 적분 스텝(씬 시간 ms) = 값 갱신 주기. */
+  /** 스텝(씬 시간 ms) = 값 갱신 주기. 저장본의 `tickSec` 을 스토어가 ms 로 바꿔 넘긴다. */
   tickMs: number;
   isRunning: boolean;
   /** 배속. 기본 1. */
@@ -73,9 +70,9 @@ function timerIntervalMs(config: VirtualTagRunnerConfig): number {
   return Math.max(TIMER_MIN_MS, config.tickMs / speedOf(config));
 }
 
-/** 장비와 태그가 둘 다 켜져 있어야 값이 나간다. */
+/** 장비가 켜져 있어야 값이 나간다. */
 export function isVirtualTagEntryEnabled(entry: VirtualTagEntry): boolean {
-  return entry.equipment.enabled && entry.tag.enabled;
+  return entry.equipment.enabled;
 }
 
 /** 상태를 다시 잡아야 하는 정의 변경 — 옛 값이 새 범위·패턴 밖일 수 있다. */
@@ -88,8 +85,7 @@ function isDefinitionChanged(
     prev.max !== next.max ||
     prev.initial !== next.initial ||
     prev.dataType !== next.dataType ||
-    JSON.stringify(prev.pattern) !== JSON.stringify(next.pattern) ||
-    JSON.stringify(prev.limits ?? null) !== JSON.stringify(next.limits ?? null)
+    JSON.stringify(prev.pattern) !== JSON.stringify(next.pattern)
   );
 }
 
@@ -100,7 +96,7 @@ class VirtualTagRuntime {
   private timerMs = 0;
   /** 씬 시간(ms) — 트랜스포트 위치. 벽시계 dt × 배속의 누적. */
   private elapsedMs = 0;
-  /** 적분이 도달한 씬 시간 — 항상 `tickMs` 의 배수이고 `elapsedMs` 이하. */
+  /** 값을 계산한 씬 시간 — 항상 `tickMs` 의 배수이고 `elapsedMs` 이하. */
   private integratedMs = 0;
   private lastTickAt = 0;
   private getConfig: GetConfig | null = null;
@@ -112,8 +108,6 @@ class VirtualTagRuntime {
     this.lastTickAt = Date.now();
     this.ensureTimer();
     // 재생 즉시 **현재 상태값**을 한 번 내보내 첫 틱 전에도 노드가 값을 받는다.
-    // 시각 기준 재계산을 하지 않는다 — 한계로 목표보다 뒤처져 있던 값이 재개
-    // 순간 목표로 점프해 모델이 미끄러진다. 재계산은 seek·리셋만.
     this.publishAll(this.publishSmoothing());
   }
 
@@ -184,9 +178,9 @@ class VirtualTagRuntime {
   }
 
   /**
-   * 경과 시간을 옮기고 0 초부터 그 시각까지 다시 적분해 내보낸다 — 재생해서
-   * 그 시각에 닿았을 때와 같은 값·속도 상태. 재생 여부와 무관(정지 상태에서
-   * 타임라인을 훑는 용도). 음수·NaN 은 0. 화면에는 즉시 대입한다.
+   * 경과 시간을 옮기고 0 초 상태에서 그 시각의 값을 계산해 내보낸다 — 재생해서
+   * 그 시각에 닿았을 때와 같은 값. 재생 여부와 무관(정지 상태에서 타임라인을
+   * 훑는 용도). 음수·NaN 은 0. 화면에는 즉시 대입한다.
    */
   seek(elapsedMs: number): void {
     this.elapsedMs =
@@ -202,8 +196,8 @@ class VirtualTagRuntime {
   }
 
   /**
-   * 0 초 상태 — 전부 initial, 속도 0. `keepManual` 이면 manual 태그는 슬라이더
-   * 값을 유지한다(seek — 파형이 없으니 시각과 무관).
+   * 0 초 상태 — 전부 initial. `keepManual` 이면 manual 태그는 슬라이더 값을
+   * 유지한다(seek — 파형이 없으니 시각과 무관).
    */
   private initStates(keepManual: boolean): void {
     for (const entry of this.entries.values()) {
@@ -218,7 +212,7 @@ class VirtualTagRuntime {
     }
   }
 
-  /** 0 초 상태에서 현재 `elapsedMs` 까지 다시 적분한다. 설정이 없으면 no-op. */
+  /** 0 초 상태에서 현재 `elapsedMs` 의 값을 다시 계산한다. 설정이 없으면 no-op. */
   private resimulate(): void {
     const config = this.getConfig?.();
     if (!config) return;
@@ -228,35 +222,25 @@ class VirtualTagRuntime {
   }
 
   /**
-   * 고정 스텝 적분 — `integratedMs` 가 `targetMs` 를 넘지 않는 마지막 스텝
-   * 경계까지 `tickMs` 씩 전진한다. 스텝마다 파형 목표(스텝 끝 시각)를 한계로
-   * 램프한다. 재생 tick 과 seek 재시뮬레이션이 같은 함수를 쓰므로 같은 씬
-   * 시각의 값이 경로와 무관하게 같다. 꺼진 항목은 적분하지 않는다.
+   * 고정 스텝 — `targetMs` 를 넘지 않는 마지막 `tickMs` 경계로 `integratedMs`
+   * 를 옮기고 그 시각의 파형 값을 상태로 둔다. 값이 씬 시간의 순수 함수라
+   * 사이 스텝을 밟을 필요가 없고, 재생 tick 과 seek 가 같은 함수를 쓰므로 같은
+   * 씬 시각의 값이 경로와 무관하게 같다. 꺼진 항목은 계산하지 않는다.
    */
   private advanceTo(config: VirtualTagRunnerConfig, targetMs: number): void {
     const stepMs = config.tickMs;
     if (!(stepMs > 0)) return;
-    const dtSec = stepMs / 1000;
-    while (this.integratedMs + stepMs <= targetMs) {
-      this.integratedMs += stepMs;
-      for (const entry of config.entries) {
-        if (!isVirtualTagEntryEnabled(entry)) continue;
-        const def = entry.tag;
-        const state = this.states.get(entry.key) ?? initVirtualTagState(def);
-        const target = stepVirtualTag(def, this.integratedMs, state).value;
-        this.states.set(
-          entry.key,
-          hasRateLimits(def.limits)
-            ? rateLimitStep(
-                state.value,
-                state.velocity ?? 0,
-                target,
-                dtSec,
-                def.limits,
-              )
-            : { value: target },
-        );
-      }
+    const reachedMs = Math.floor(targetMs / stepMs) * stepMs;
+    if (reachedMs <= this.integratedMs) return;
+    this.integratedMs = reachedMs;
+    for (const entry of config.entries) {
+      if (!isVirtualTagEntryEnabled(entry)) continue;
+      const state =
+        this.states.get(entry.key) ?? initVirtualTagState(entry.tag);
+      this.states.set(
+        entry.key,
+        stepVirtualTag(entry.tag, this.integratedMs, state),
+      );
     }
   }
 

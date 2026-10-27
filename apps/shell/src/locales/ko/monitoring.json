@@ -167,8 +167,7 @@
       "cancel": "취소",
       "apply": "연결",
       "equipmentList": "장비 목록",
-      "noEquipments": "가상 장비가 없습니다. 태그 페이지의 가상 태그 탭에서 등록하세요.",
-      "group": "그룹"
+      "noEquipments": "가상 장비가 없습니다. 태그 페이지의 가상 태그 탭에서 등록하세요."
     },
     "ruler": {
       "title": "눈금",
@@ -446,17 +445,16 @@
     "play": "전체 재생",
     "pause": "일시정지",
     "resetValues": "값 초기화",
-    "tick": "갱신 주기(ms)",
+    "tick": "갱신 주기(s)",
     "save": "저장",
     "saveFailed": "가상 태그를 저장하지 못했습니다.",
     "cloneToVirtual": "가상 장비로 복제",
     "equipment": {
       "add": "장비 등록",
       "id": "장비 ID",
-      "name": "이름",
       "bay": "구역",
       "enabled": "사용",
-      "search": "장비 ID·이름 검색",
+      "search": "장비 ID·구역 검색",
       "tagCount": "{{count}} 태그",
       "count": "장비 {{count}} / {{max}}",
       "empty": "가상 장비가 없습니다. \"장비 등록\"으로 만들거나 실시간 태그 상세에서 복제하세요.",
@@ -491,37 +489,16 @@
       "clonedSkipped": "태그 {{count}}개를 복제했고 {{skipped}}개는 건너뛰었습니다(중복·상한).",
       "pickCrane": "왼쪽 목록에서 복제할 크레인을 고르세요. 고르지 않으면 빈 장비로 등록합니다."
     },
-    "groups": {
-      "add": "그룹 추가",
-      "newName": "새 그룹",
-      "rename": "그룹 이름",
-      "remove": "그룹 삭제",
-      "moveUp": "위로",
-      "moveDown": "아래로",
-      "ungrouped": "미분류",
-      "all": "전체",
-      "addTag": "태그 추가",
-      "limit": "그룹은 장비당 최대 {{max}}개까지 만들 수 있습니다.",
-      "defaults": {
-        "datetime": "시각",
-        "measurement": "계측값",
-        "status": "상태·알람"
-      }
-    },
     "columns": {
-      "enabled": "사용",
       "code": "코드",
       "name": "이름",
-      "group": "그룹",
       "dataType": "형식",
       "unit": "단위",
       "min": "최소",
       "max": "최대",
       "initial": "초기값",
       "pattern": "패턴",
-      "period": "주기(ms)",
-      "maxSpeed": "최대속도",
-      "maxAccel": "최대가속",
+      "period": "주기(s)",
       "value": "현재값",
       "actions": ""
     },
@@ -536,9 +513,10 @@
       "sawtooth": "톱니파",
       "square": "구형파"
     },
+    "addTag": "태그 추가",
     "duplicate": "복제",
     "remove": "삭제",
-    "empty": "태그가 없습니다. 그룹 머리글의 \"태그 추가\"로 만드세요.",
+    "empty": "태그가 없습니다. \"태그 추가\"로 만드세요.",
     "emptyFiltered": "조건에 맞는 태그가 없습니다.",
     "errors": {
       "invalid-code": "코드는 비울 수 없고 공백·콜론 없이 {{codeMax}}자 이하여야 합니다.",
@@ -549,9 +527,7 @@
     "newCode": "tag",
     "count": "태그 {{count}} / {{max}}",
     "codeHint": "값 버스 키는 장비키:코드 로 조립됩니다 (예: GC_04:gantry_position). 코드나 장비 ID 를 바꾸면 씬이 연결한 키도 바뀝니다.",
-    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
-    "maxSpeedHint": "최대 속도(단위/초). 비우면 제한 없음 — 파형 목표값을 이 속도 이하로 따라갑니다.",
-    "maxAccelHint": "최대 가속(단위/초²). 비우면 제한 없음."
+    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(초)"
   },
   "tags": {
     "tabs": {
@@ -833,9 +809,7 @@
       "dwellTotal": "체류 합계 {{time}}",
       "equipmentCount": "장비 {{count}}대",
       "offline": "통신 두절",
-      "offlineTotal": "합계 {{time}}",
-      "saturation": "속도 한계 도달",
-      "noSpeedLimit": "속도 한계 미정의"
+      "offlineTotal": "합계 {{time}}"
     },
     "col": {
       "equipment": "장비",
@@ -851,8 +825,7 @@
       "tag": "축",
       "range": "범위",
       "mean": "평균",
-      "travel": "이동량",
-      "saturation": "한계 포화"
+      "travel": "이동량"
     },
     "timeline": {
       "title": "타임라인",

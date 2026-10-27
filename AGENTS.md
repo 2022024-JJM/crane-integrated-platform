@@ -199,7 +199,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈·직교 탑뷰 토글 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts`, `packages/ui/src/organisms/use-ortho-top-view.ts` — `docs/agents/3d-editor.md` |
 | 씬에 놓는 조명(투광등) — 스키마·배치·인스펙터 / 밤 점등·SpotLight 슬롯·기구 글로우 | 스키마 `SavedFloodlightInfo`(`packages/domain/src/3d/model/floodlight-types.ts`), 기하 `packages/domain/src/3d/lib/floodlight.ts`, 배치 `packages/widgets/src/3d/ui/use-floodlight-place.ts`, 편집 `packages/widgets/src/3d/lib/floodlight-editor.ts` — `docs/agents/3d-editor.md`; 렌더 `packages/features/src/3d/ui/{scene-floodlights,scene-floodlight-fixture}.tsx`, `lib/floodlight-{spot,slots}.ts` — `docs/agents/rendering-perf.md` |
 | 태그 맵핑 스키마(실시간·가상 두 슬롯)·방어 / 활성 슬롯 해석 / 값 버스 / 편집 UI·태그 연결 다이얼로그 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/lib/tag-slot.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/{tag-mapping-section,tag-slot-field,tag-pick-dialog}.tsx` — `docs/agents/tag-mapping-rig.md` |
-| 가상 태그(장비 › 그룹 › 태그) 정의·키 조립 / 스토어·러너·실시간 복제 / 가상 탭(장비 목록·상세·등록 다이얼로그) | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/features/src/3d/lib/virtual-tag-clone.ts`, `packages/widgets/src/tags/ui/virtual-tags-view.tsx` — `docs/agents/tag-mapping-rig.md` |
+| 가상 태그(장비 › 태그) 정의·키 조립 / 스토어·러너·실시간 복제 / 가상 탭(장비 목록·상세·등록 다이얼로그) | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/features/src/3d/lib/virtual-tag-clone.ts`, `packages/widgets/src/tags/ui/virtual-tags-view.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 실시간 태그 피드(크레인 스냅샷 서버 STOMP) / 실시간 태그 탭 / 3D 실시간 모드 값 생산자 / 수신 간격 스무딩 | `packages/core/src/ws/stomp-client.ts`, `packages/domain/src/monitoring/lib/crane-snapshot.ts`, `packages/features/src/3d/model/{use-crane-snapshot-store,use-crane-snapshot-feed,use-crane-snapshot-realtime-bridge,use-realtime-runner}.ts`, `packages/features/src/3d/lib/realtime-smoothing.ts`, `packages/widgets/src/tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
@@ -269,7 +269,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태 | `docs/agents/3d-play.md` |
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치 | `docs/agents/assets-glb.md` |
-| 태그 맵핑·가상 태그(장비·그룹·복제)·시뮬레이션·리깅 | `docs/agents/tag-mapping-rig.md` |
+| 태그 맵핑·가상 태그(장비·복제)·시뮬레이션·리깅 | `docs/agents/tag-mapping-rig.md` |
 | 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·씬 파일 매핑) | `docs/agents/3d-editor.md` |
 | 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·독·경보 알림) | `docs/agents/monitoring-ui.md` |
 | 3D 자산 라이브러리(자산 스키마·버전·상태·배치 속성·저장소·자산 뷰어·통계 표), 씬의 자산 참조·편집 팔레트·새 버전 갱신 | `docs/agents/asset-library.md` |

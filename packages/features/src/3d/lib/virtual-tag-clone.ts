@@ -1,10 +1,6 @@
 import {
-  findPresetGroup,
   normalizeVirtualTagCode,
-  toGroupPreset,
   type VirtualTagDefinition,
-  type VirtualTagGroup,
-  type VirtualTagGroupPreset,
 } from '@crane/domain/virtual-tag';
 import type { CraneSnapshotEntry } from './crane-snapshot-stats';
 import { buildTagRows, type TagRow } from './tag-rows';
@@ -18,25 +14,14 @@ import { buildTagRows, type TagRow } from './tag-rows';
  * - 초깃값은 현재값, 범위는 접속 후 관측 범위. 관측이 한 점이면 값 기준 기본
  *   폭(`fallbackRange`) — 사용자가 바로 고칠 기본값이지 측정 한계가 아니다.
  * - 패턴은 수동 — 복제 직후 값이 머물러 있어야 실시간과 비교가 된다.
- * - 그룹은 카탈로그 묶음을 기본 그룹 표식으로 옮긴다. 장비에 그 표식의 그룹이
- *   없으면 새로 만들어 함께 돌려준다(이름은 호출자가 번역해 넘긴다).
+ * - 순서는 카탈로그 묶음 순(시각 › 계측값 › 상태) — `buildTagRows` 그대로.
  *
  * 순수 함수 — id 는 `nextId` 로 받아 테스트가 결정론이다.
  */
 export interface CloneTagsOptions {
   /** 복제할 코드. 생략하면 전부. */
   codes?: ReadonlySet<string>;
-  /** 대상 장비가 이미 가진 그룹 — 표식으로 찾는다. */
-  existingGroups: readonly VirtualTagGroup[];
-  /** 없는 표식 그룹을 만들 때의 이름. */
-  groupNames: Record<VirtualTagGroupPreset, string>;
   nextId: () => string;
-}
-
-export interface CloneTagsResult {
-  /** 장비에 새로 붙여야 하는 그룹(이미 있던 것은 없음). */
-  groups: VirtualTagGroup[];
-  tags: VirtualTagDefinition[];
 }
 
 /** 관측이 없거나 한 점일 때의 범위 — 값이 들어가고 폭이 0 이 아니게. */
@@ -67,7 +52,6 @@ export function cloneRange(
 
 function cloneTag(
   row: TagRow,
-  groupId: string | undefined,
   nextId: () => string,
 ): VirtualTagDefinition | null {
   const code = normalizeVirtualTagCode(row.code);
@@ -76,9 +60,7 @@ function cloneTag(
     id: nextId(),
     code,
     name: row.name,
-    enabled: true,
     pattern: { kind: 'manual' } as const,
-    ...(groupId ? { groupId } : {}),
   };
   if (typeof row.value === 'boolean') {
     return {
@@ -104,31 +86,12 @@ function cloneTag(
 export function cloneTagsFromSnapshot(
   entry: Pick<CraneSnapshotEntry, 'snapshot' | 'stats'>,
   options: CloneTagsOptions,
-): CloneTagsResult {
-  const newGroups: VirtualTagGroup[] = [];
-  const groupFor = (preset: VirtualTagGroupPreset): string => {
-    const existing =
-      findPresetGroup(options.existingGroups, preset) ??
-      findPresetGroup(newGroups, preset);
-    if (existing) return existing.id;
-    const group: VirtualTagGroup = {
-      id: options.nextId(),
-      name: options.groupNames[preset],
-      preset,
-    };
-    newGroups.push(group);
-    return group.id;
-  };
-
+): VirtualTagDefinition[] {
   const tags: VirtualTagDefinition[] = [];
   for (const row of buildTagRows(entry)) {
     if (options.codes && !options.codes.has(row.code)) continue;
-    const tag = cloneTag(
-      row,
-      groupFor(toGroupPreset(row.category)),
-      options.nextId,
-    );
+    const tag = cloneTag(row, options.nextId);
     if (tag) tags.push(tag);
   }
-  return { groups: newGroups, tags };
+  return tags;
 }

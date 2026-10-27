@@ -67,10 +67,6 @@ export interface TagAggregate {
   travel: number;
   last: number | null;
   lastAtMs: number | null;
-  /** 속도 한계에 잘려 목표를 못 따라간 씬 시간(ms) — 시뮬레이션만. */
-  saturatedMs: number;
-  /** 한계 정의가 있는지(saturatedMs 의 분모가 의미 있는지). */
-  hasSpeedLimit: boolean;
 }
 
 export type StatusMs = Record<EquipmentRuntimeStatus, number>;
@@ -138,8 +134,6 @@ export interface EquipmentStat extends StatusAggregate {
 
 export interface TagStat extends TagAggregate {
   mean: number | null;
-  /** saturatedMs ÷ 검사된 시간. 한계 정의가 없으면 null. */
-  saturationRatio: number | null;
 }
 
 export interface Play3dSummary {
@@ -148,8 +142,6 @@ export interface Play3dSummary {
   runningRatio: number | null;
   offlineEpisodes: number;
   offlineMs: number;
-  /** 속도 한계 도달 비율이 가장 큰 태그(동률은 키 순서 앞). 없으면 null. */
-  saturation: { maxRatio: number | null; key: string | null };
 }
 
 export interface Play3dStats {
@@ -247,7 +239,6 @@ export function accumulateTagValue(
   agg: TagAggregate,
   value: number,
   atMs: number,
-  maxSpeed: number | null,
 ): void {
   if (!Number.isFinite(value)) return;
   if (agg.count === 0) {
@@ -259,26 +250,12 @@ export function accumulateTagValue(
   }
   agg.sum += value;
   agg.count += 1;
-  if (agg.last !== null && agg.lastAtMs !== null) {
-    const delta = Math.abs(value - agg.last);
-    agg.travel += delta;
-    const dtMs = atMs - agg.lastAtMs;
-    if (maxSpeed !== null && maxSpeed > 0 && dtMs > 0) {
-      const speed = delta / (dtMs / 1000);
-      if (speed >= maxSpeed * SATURATION_RATIO) agg.saturatedMs += dtMs;
-    }
-  }
+  if (agg.last !== null) agg.travel += Math.abs(value - agg.last);
   agg.last = value;
   agg.lastAtMs = Number.isFinite(atMs) ? atMs : agg.lastAtMs;
 }
 
-/** 한계 대비 이 비율 이상의 속도면 "한계에 잘린" 것으로 본다. */
-export const SATURATION_RATIO = 0.98;
-
-export function createTagAggregate(
-  key: string,
-  hasSpeedLimit: boolean,
-): TagAggregate {
+export function createTagAggregate(key: string): TagAggregate {
   return {
     key,
     min: Number.NaN,
@@ -288,8 +265,6 @@ export function createTagAggregate(
     travel: 0,
     last: null,
     lastAtMs: null,
-    saturatedMs: 0,
-    hasSpeedLimit,
   };
 }
 
@@ -437,14 +412,7 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
   const reached = input.reachedMs ?? 0;
   const reachedMs = Number.isFinite(reached) ? Math.max(0, reached) : 0;
   const tags: TagStat[] = Object.values(input.tags)
-    .map((t) => ({
-      ...t,
-      mean: t.count > 0 ? t.sum / t.count : null,
-      saturationRatio:
-        t.hasSpeedLimit && scannedMs > 0
-          ? Math.min(1, t.saturatedMs / scannedMs)
-          : null,
-    }))
+    .map((t) => ({ ...t, mean: t.count > 0 ? t.sum / t.count : null }))
     .sort((a, b) => a.key.localeCompare(b.key));
 
   // 요약
@@ -458,16 +426,6 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     offlineMs += eq.ms.offline;
     offlineEpisodeTotal += eq.offlineEpisodes;
   }
-  let saturationMax: number | null = null;
-  let saturationKey: string | null = null;
-  for (const t of tags) {
-    if (t.saturationRatio === null) continue;
-    if (saturationMax === null || t.saturationRatio > saturationMax) {
-      saturationMax = t.saturationRatio;
-      saturationKey = t.key;
-    }
-  }
-
   return {
     windowEndMs,
     statusTransitions: input.statusTransitions ?? [],
@@ -497,7 +455,6 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
       runningRatio: knownMs > 0 ? runningMs / knownMs : null,
       offlineEpisodes: offlineEpisodeTotal,
       offlineMs,
-      saturation: { maxRatio: saturationMax, key: saturationKey },
     },
   };
 }

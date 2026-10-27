@@ -6,9 +6,10 @@ import {
   VIRTUAL_TAG_DATA_TYPES,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
+  VIRTUAL_TAG_PERIOD_MAX,
+  VIRTUAL_TAG_PERIOD_MIN,
   type VirtualTagDataType,
   type VirtualTagDefinition,
-  type VirtualTagGroup,
   type VirtualTagPattern,
   type VirtualTagPatternKind,
 } from '@crane/domain/virtual-tag';
@@ -52,51 +53,45 @@ import { WaveformIcon } from './waveform-icon';
 type T = (key: string, options?: Record<string, unknown>) => string;
 
 /**
- * 상세 표의 열 — 고정 폭이라 열이 흔들리지 않고 표는 가로로 스크롤한다.
- * 머리글(virtual-equipment-detail)과 행이 같은 목록을 쓴다.
+ * 상세 표의 열 — 비율 폭이라 표가 카드 폭에 꽉 차고 가로 스크롤이 없다.
+ * 현재값 열이 나머지 폭을 받는다. 머리글(virtual-equipment-detail)과 행이
+ * 같은 목록을 쓴다.
  */
 export const VIRTUAL_TAG_COLUMNS = [
-  ['enabled', 'w-11'],
-  ['code', 'w-40'],
-  ['name', 'w-36'],
-  ['group', 'w-32'],
-  ['dataType', 'w-24'],
-  ['unit', 'w-16'],
-  ['min', 'w-20'],
-  ['max', 'w-20'],
-  ['initial', 'w-20'],
-  ['pattern', 'w-28'],
-  ['period', 'w-24'],
-  ['maxSpeed', 'w-20'],
-  ['maxAccel', 'w-20'],
-  ['value', 'w-44'],
+  ['code', 'w-[14%]'],
+  ['name', 'w-[14%]'],
+  ['dataType', 'w-[8%]'],
+  ['unit', 'w-[6%]'],
+  ['min', 'w-[7%]'],
+  ['max', 'w-[7%]'],
+  ['initial', 'w-[7%]'],
+  ['pattern', 'w-[12%]'],
+  ['period', 'w-[7%]'],
+  ['value', ''],
   ['actions', 'w-14'],
 ] as const;
-
-const NONE_GROUP = '__none__';
 
 function defaultPattern(kind: VirtualTagPatternKind): VirtualTagPattern {
   return kind === 'manual'
     ? { kind }
-    : { kind, periodMs: VIRTUAL_TAG_PERIOD_DEFAULT };
+    : { kind, periodSec: VIRTUAL_TAG_PERIOD_DEFAULT };
 }
 
 function withPeriod(
   pattern: VirtualTagPattern,
-  periodMs: number,
+  periodSec: number,
 ): VirtualTagPattern {
-  return pattern.kind === 'manual' ? pattern : { ...pattern, periodMs };
+  return pattern.kind === 'manual' ? pattern : { ...pattern, periodSec };
 }
 
 /**
  * 태그 한 행 — 인라인 편집. 코드 입력은 비제어로 blur/Enter 에만 커밋하고
  * 거부되면 툴팁을 띄운 채 포커스를 돌려보낸다(Escape 가 탈출구). 불리언은
- * 범위·단위·한계 칸이 비활성이고 초기값·현재값은 토글이다.
+ * 범위·단위 칸이 비활성이고 초기값·현재값은 토글이다. 주기는 초 단위.
  */
 export function VirtualTagRow({
   tag,
   tagKey,
-  groups,
   takenCodes,
   onUpdate,
   onDuplicate,
@@ -106,7 +101,6 @@ export function VirtualTagRow({
   tag: VirtualTagDefinition;
   /** 값 버스 키 — 러너의 현재값·수동 입력이 이 키로 간다. */
   tagKey: string;
-  groups: readonly VirtualTagGroup[];
   /** 장비 안 전체 코드 — 중복 판정용. */
   takenCodes: readonly string[];
   onUpdate: (patch: Partial<Omit<VirtualTagDefinition, 'id'>>) => boolean;
@@ -132,13 +126,7 @@ export function VirtualTagRow({
   };
 
   return (
-    <TableRow className={cn(!tag.enabled && 'opacity-60')}>
-      <TableCell>
-        <Switch
-          checked={tag.enabled}
-          onCheckedChange={(enabled) => onUpdate({ enabled })}
-        />
-      </TableCell>
+    <TableRow>
       <TableCell>
         <Tooltip open={codeError !== null}>
           <TooltipTrigger
@@ -185,34 +173,6 @@ export function VirtualTagRow({
           className={CELL_INPUT}
           onChange={(event) => onUpdate({ name: event.target.value })}
         />
-      </TableCell>
-      <TableCell>
-        <Select
-          value={tag.groupId ?? NONE_GROUP}
-          onValueChange={(groupId: string) =>
-            onUpdate({ groupId: groupId === NONE_GROUP ? undefined : groupId })
-          }
-        >
-          <SelectTrigger
-            aria-label={t('monitoring:virtualTags.columns.group')}
-            className={CELL_SELECT_TRIGGER}
-          >
-            <span className="text-box-cap truncate">
-              {groups.find((g) => g.id === tag.groupId)?.name ??
-                t('monitoring:virtualTags.groups.ungrouped')}
-            </span>
-          </SelectTrigger>
-          <SelectPopup align="start" className="min-w-40">
-            <SelectItem value={NONE_GROUP}>
-              {t('monitoring:virtualTags.groups.ungrouped')}
-            </SelectItem>
-            {groups.map((group) => (
-              <SelectItem key={group.id} value={group.id}>
-                {group.name || t('monitoring:virtualTags.groups.newName')}
-              </SelectItem>
-            ))}
-          </SelectPopup>
-        </Select>
       </TableCell>
       <TableCell>
         <Select
@@ -328,57 +288,15 @@ export function VirtualTagRow({
           <Dash />
         ) : (
           <InputNumber
-            value={tag.pattern.periodMs}
-            step={100}
+            value={tag.pattern.periodSec}
+            min={VIRTUAL_TAG_PERIOD_MIN}
+            max={VIRTUAL_TAG_PERIOD_MAX}
+            step={0.1}
             title={t('monitoring:virtualTags.periodHint')}
             className={CELL_NUMBER_WRAPPER}
             inputClassName={CELL_NUMBER_INPUT}
-            onChange={(periodMs) =>
-              onUpdate({ pattern: withPeriod(tag.pattern, periodMs) })
-            }
-          />
-        )}
-      </TableCell>
-      {/* 속도·가속 한계(단위/s, 단위/s²) — 비우면 없음. 러너가 파형 목표값을
-          향해 램프한다(lib/rate-limit). 불리언에는 없다. */}
-      <TableCell>
-        {isBool ? (
-          <Dash />
-        ) : (
-          <InputNumber
-            value={tag.limits?.maxSpeed ?? null}
-            min={0}
-            step={0.1}
-            placeholder="—"
-            title={t('monitoring:virtualTags.maxSpeedHint')}
-            className={CELL_NUMBER_WRAPPER}
-            inputClassName={CELL_NUMBER_INPUT}
-            onChange={(maxSpeed) =>
-              onUpdate({ limits: { ...tag.limits, maxSpeed } })
-            }
-            onEmpty={() =>
-              onUpdate({ limits: { ...tag.limits, maxSpeed: undefined } })
-            }
-          />
-        )}
-      </TableCell>
-      <TableCell>
-        {isBool ? (
-          <Dash />
-        ) : (
-          <InputNumber
-            value={tag.limits?.maxAccel ?? null}
-            min={0}
-            step={0.1}
-            placeholder="—"
-            title={t('monitoring:virtualTags.maxAccelHint')}
-            className={CELL_NUMBER_WRAPPER}
-            inputClassName={CELL_NUMBER_INPUT}
-            onChange={(maxAccel) =>
-              onUpdate({ limits: { ...tag.limits, maxAccel } })
-            }
-            onEmpty={() =>
-              onUpdate({ limits: { ...tag.limits, maxAccel: undefined } })
+            onChange={(periodSec) =>
+              onUpdate({ pattern: withPeriod(tag.pattern, periodSec) })
             }
           />
         )}

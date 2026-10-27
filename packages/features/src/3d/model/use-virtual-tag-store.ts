@@ -10,9 +10,7 @@ import {
   normalizeVirtualTagCode,
   sanitizeVirtualEquipment,
   sanitizeVirtualTag,
-  sanitizeVirtualTagGroup,
   saveVirtualTagSet,
-  VIRTUAL_EQUIPMENT_GROUPS_MAX,
   VIRTUAL_EQUIPMENT_TAGS_MAX,
   VIRTUAL_EQUIPMENTS_MAX,
   VIRTUAL_TAG_PERIOD_DEFAULT,
@@ -20,9 +18,6 @@ import {
   type VirtualTagDataType,
   type VirtualTagDefinition,
   type VirtualTagEntry,
-  type VirtualTagGroup,
-  type VirtualTagGroupPreset,
-  type VirtualTagLimits,
   type VirtualTagPattern,
   type VirtualTagSet,
 } from '@crane/domain/virtual-tag';
@@ -32,8 +27,8 @@ import { useRealtimeStore } from './use-realtime-store';
 import { virtualTagRuntime } from './virtual-tag-runner';
 
 /**
- * 가상 태그 정의 스토어 — 전역(region 무관). 장비 › 그룹 › 태그 계층을 들고
- * 있고, 러너·카탈로그가 보는 평탄 목록(`entries`)은 장비가 바뀔 때마다 한 번
+ * 가상 태그 정의 스토어 — 전역(region 무관). 장비 › 태그 계층을 들고 있고,
+ * 러너·카탈로그가 보는 평탄 목록(`entries`)은 장비가 바뀔 때마다 한 번
  * 파생한다.
  *
  * 영속화는 씬과 같은 규칙이다(virtual-tag-storage): dev 는 배포 파일
@@ -44,6 +39,9 @@ import { virtualTagRuntime } from './virtual-tag-runner';
  * 값(현재값·파형 진행)은 여기 없다 — virtual-tag-runner 의 mutable 런타임이
  * 들고 있고, 이 스토어는 정의와 재생 여부만 React 상태로 둔다. 정의가 바뀌면
  * 러너가 다음 틱에서 반영한다. 배속 `speed` 는 세션 전용(저장 안 함).
+ *
+ * 시간 단위: 저장본·스토어는 초(`tickSec`), 러너 시계는 ms — `runnerConfig`
+ * 가 바꿔 넘긴다.
  */
 
 /** 배속 허용 범위 — 선택지(SIMULATION_SPEED_OPTIONS) 밖 값도 이 안이면 받는다. */
@@ -52,11 +50,8 @@ export const SIMULATION_SPEED_MAX = 16;
 
 export interface VirtualEquipmentDraft {
   craneId: string;
-  name?: string;
   bay?: string;
   enabled?: boolean;
-  /** 등록 때 시드할 그룹(기본 그룹 등). 없으면 빈 목록. */
-  groups?: VirtualTagGroup[];
 }
 
 export type VirtualEquipmentAddResult =
@@ -66,15 +61,12 @@ export type VirtualEquipmentAddResult =
 export interface VirtualTagDraft {
   code: string;
   name?: string;
-  groupId?: string;
   dataType?: VirtualTagDataType;
   unit?: string;
   min?: number;
   max?: number;
   initial?: number;
   pattern?: VirtualTagPattern;
-  enabled?: boolean;
-  limits?: VirtualTagLimits;
 }
 
 export type VirtualTagAddResult =
@@ -83,10 +75,6 @@ export type VirtualTagAddResult =
       ok: false;
       reason: 'invalid-code' | 'duplicate-code' | 'limit' | 'no-equipment';
     };
-
-export type VirtualTagGroupAddResult =
-  | { ok: true; id: string }
-  | { ok: false; reason: 'limit' | 'no-equipment' };
 
 /** 여러 태그를 한 번에 넣은 결과 — 복제가 쓴다. */
 export interface VirtualTagImportResult {
@@ -99,7 +87,8 @@ interface VirtualTagState {
   equipments: VirtualEquipment[];
   /** 장비 계층의 평탄 목록 — equipments 가 바뀔 때만 새 참조. */
   entries: VirtualTagEntry[];
-  tickMs: number;
+  /** 값 갱신 주기(초). */
+  tickSec: number;
   /** 배속(세션). */
   speed: number;
   /**
@@ -128,28 +117,11 @@ interface VirtualTagState {
   /** 장비 ID 변경은 정규화 키 유일성을 검사한다(중복이면 false, 나머지도 적용 안 함). */
   updateEquipment: (
     id: string,
-    patch: Partial<
-      Pick<VirtualEquipment, 'craneId' | 'name' | 'bay' | 'enabled'>
-    >,
+    patch: Partial<Pick<VirtualEquipment, 'craneId' | 'bay' | 'enabled'>>,
   ) => boolean;
   removeEquipment: (id: string) => void;
-  /** 그룹·태그까지 새 id 로 복제. 장비 ID 는 접미사로 유일하게. */
+  /** 태그까지 새 id 로 복제. 장비 ID 는 접미사로 유일하게. */
   duplicateEquipment: (id: string) => VirtualEquipmentAddResult;
-
-  addGroup: (
-    equipmentId: string,
-    name: string,
-    preset?: VirtualTagGroupPreset,
-  ) => VirtualTagGroupAddResult;
-  updateGroup: (
-    equipmentId: string,
-    groupId: string,
-    patch: Partial<Pick<VirtualTagGroup, 'name'>>,
-  ) => boolean;
-  /** 그룹을 지우면 그 그룹의 태그는 미분류가 된다. */
-  removeGroup: (equipmentId: string, groupId: string) => void;
-  /** 순서 이동(-1 위, +1 아래). 끝에서는 false. */
-  moveGroup: (equipmentId: string, groupId: string, delta: -1 | 1) => boolean;
 
   addTag: (equipmentId: string, draft: VirtualTagDraft) => VirtualTagAddResult;
   /** 코드 변경은 장비 안 유일성을 검사한다(중복이면 false, 나머지 필드도 적용 안 함). */
@@ -161,15 +133,15 @@ interface VirtualTagState {
   removeTag: (equipmentId: string, tagId: string) => void;
   duplicateTag: (equipmentId: string, tagId: string) => VirtualTagAddResult;
   /**
-   * 그룹·태그를 한 번에 추가한다(실시간 복제). 그룹은 id 가 없는 것만 뒤에
-   * 붙이고, 태그는 코드가 겹치지 않는 것만 상한까지 넣는다.
+   * 태그를 한 번에 추가한다(실시간 복제). 코드가 겹치지 않는 것만 상한까지
+   * 넣는다.
    */
   importTags: (
     equipmentId: string,
-    payload: { groups?: VirtualTagGroup[]; tags: VirtualTagDefinition[] },
+    tags: readonly VirtualTagDefinition[],
   ) => VirtualTagImportResult;
 
-  setTickMs: (tickMs: number) => void;
+  setTickSec: (tickSec: number) => void;
   start: () => void;
   pause: () => void;
   /**
@@ -186,10 +158,10 @@ interface VirtualTagState {
   seek: (elapsedMs: number) => void;
 }
 
-type SetLike = Pick<VirtualTagState, 'equipments' | 'tickMs'>;
+type SetLike = Pick<VirtualTagState, 'equipments' | 'tickSec'>;
 
 function toSet(state: SetLike): VirtualTagSet {
-  return { version: 2, tickMs: state.tickMs, equipments: state.equipments };
+  return { version: 3, tickSec: state.tickSec, equipments: state.equipments };
 }
 
 function snapshotOf(state: SetLike): string {
@@ -233,7 +205,7 @@ function equipmentKeyTaken(
 function defaultPattern(dataType: VirtualTagDataType): VirtualTagPattern {
   return dataType === 'bool'
     ? { kind: 'manual' }
-    : { kind: 'triangle', periodMs: VIRTUAL_TAG_PERIOD_DEFAULT };
+    : { kind: 'triangle', periodSec: VIRTUAL_TAG_PERIOD_DEFAULT };
 }
 
 let loadPromise: Promise<void> | null = null;
@@ -262,15 +234,16 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
     return true;
   };
 
+  /** 러너 설정 — 저장본의 초를 러너 시계의 ms 로(정수, 고정 스텝 경계가 어긋나지 않게). */
   const runnerConfig = () => {
-    const { entries, tickMs, isRunning, speed } = get();
-    return { entries, tickMs, isRunning, speed };
+    const { entries, tickSec, isRunning, speed } = get();
+    return { entries, tickMs: Math.round(tickSec * 1000), isRunning, speed };
   };
 
   return {
     equipments: [],
     entries: [],
-    tickMs: createEmptyVirtualTagSet().tickMs,
+    tickSec: createEmptyVirtualTagSet().tickSec,
     speed: 1,
     hasSession: false,
     savedSnapshot: snapshotOf(createEmptyVirtualTagSet()),
@@ -285,7 +258,7 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
         .then((loaded) => {
           commit(loaded.equipments);
           set({
-            tickMs: loaded.tickMs,
+            tickSec: loaded.tickSec,
             savedSnapshot: snapshotOf(loaded),
             hydrated: true,
           });
@@ -309,7 +282,7 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
         const saved = await saveVirtualTagSet(toSet(get()));
         commit(saved.equipments);
         set({
-          tickMs: saved.tickMs,
+          tickSec: saved.tickSec,
           savedSnapshot: snapshotOf(saved),
           isSaving: false,
         });
@@ -328,7 +301,7 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
       // 스냅샷은 이 스토어가 toSet 으로 직렬화한 것이라 그대로 믿는다.
       const saved = JSON.parse(get().savedSnapshot) as VirtualTagSet;
       commit(saved.equipments);
-      set({ tickMs: saved.tickMs });
+      set({ tickSec: saved.tickSec });
     },
 
     addEquipment: (draft) => {
@@ -344,10 +317,8 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
       const equipment = sanitizeVirtualEquipment({
         id: createId(),
         craneId,
-        name: draft.name,
         bay: draft.bay,
         enabled: draft.enabled ?? true,
-        groups: draft.groups ?? [],
         tags: [],
       });
       if (!equipment) return { ok: false, reason: 'invalid-id' };
@@ -388,90 +359,17 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
       const craneId = nextUniqueSuffix(source.craneId, (candidate) =>
         equipmentKeyTaken(equipments, candidate),
       );
-      const groupIdMap = new Map<string, string>();
-      const groups = source.groups.map((group) => {
-        const next = { ...group, id: createId() };
-        groupIdMap.set(group.id, next.id);
-        return next;
-      });
-      const tags = source.tags.map((tag) => {
-        const next: VirtualTagDefinition = { ...tag, id: createId() };
-        if (tag.groupId) {
-          const mapped = groupIdMap.get(tag.groupId);
-          if (mapped) next.groupId = mapped;
-          else delete next.groupId;
-        }
-        return next;
-      });
+      const tags = source.tags.map((tag) => ({ ...tag, id: createId() }));
       const copy = sanitizeVirtualEquipment({
         ...source,
         id: createId(),
         craneId,
-        groups,
         tags,
       });
       if (!copy) return { ok: false, reason: 'invalid-id' };
       commit([...equipments, copy]);
       return { ok: true, id: copy.id };
     },
-
-    addGroup: (equipmentId, name, preset) => {
-      const equipment = get().equipments.find((e) => e.id === equipmentId);
-      if (!equipment) return { ok: false, reason: 'no-equipment' };
-      if (equipment.groups.length >= VIRTUAL_EQUIPMENT_GROUPS_MAX) {
-        return { ok: false, reason: 'limit' };
-      }
-      const group = sanitizeVirtualTagGroup({ id: createId(), name, preset });
-      if (!group) return { ok: false, reason: 'no-equipment' };
-      replaceEquipment(equipmentId, (e) => ({
-        ...e,
-        groups: [...e.groups, group],
-      }));
-      return { ok: true, id: group.id };
-    },
-
-    updateGroup: (equipmentId, groupId, patch) =>
-      replaceEquipment(equipmentId, (equipment) => {
-        const index = equipment.groups.findIndex((g) => g.id === groupId);
-        if (index < 0) return null;
-        const merged = sanitizeVirtualTagGroup({
-          ...equipment.groups[index],
-          ...patch,
-          id: groupId,
-        });
-        if (!merged) return null;
-        const groups = equipment.groups.slice();
-        groups[index] = merged;
-        return { ...equipment, groups };
-      }),
-
-    removeGroup: (equipmentId, groupId) => {
-      replaceEquipment(equipmentId, (equipment) => {
-        if (!equipment.groups.some((g) => g.id === groupId)) return null;
-        return {
-          ...equipment,
-          groups: equipment.groups.filter((g) => g.id !== groupId),
-          tags: equipment.tags.map((tag) => {
-            if (tag.groupId !== groupId) return tag;
-            const { groupId: _dropped, ...rest } = tag;
-            void _dropped;
-            return rest;
-          }),
-        };
-      });
-    },
-
-    moveGroup: (equipmentId, groupId, delta) =>
-      replaceEquipment(equipmentId, (equipment) => {
-        const index = equipment.groups.findIndex((g) => g.id === groupId);
-        const target = index + delta;
-        if (index < 0 || target < 0 || target >= equipment.groups.length) {
-          return null;
-        }
-        const groups = equipment.groups.slice();
-        [groups[index], groups[target]] = [groups[target], groups[index]];
-        return { ...equipment, groups };
-      }),
 
     addTag: (equipmentId, draft) => {
       const equipment = get().equipments.find((e) => e.id === equipmentId);
@@ -486,23 +384,17 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
       }
       const dataType: VirtualTagDataType =
         draft.dataType === 'bool' ? 'bool' : 'number';
-      const tag = sanitizeVirtualTag(
-        {
-          id: createId(),
-          code,
-          name: draft.name ?? '',
-          groupId: draft.groupId,
-          dataType,
-          unit: draft.unit,
-          min: draft.min ?? 0,
-          max: draft.max ?? 100,
-          initial: draft.initial ?? draft.min ?? 0,
-          pattern: draft.pattern ?? defaultPattern(dataType),
-          enabled: draft.enabled ?? true,
-          limits: draft.limits,
-        },
-        new Set(equipment.groups.map((g) => g.id)),
-      );
+      const tag = sanitizeVirtualTag({
+        id: createId(),
+        code,
+        name: draft.name ?? '',
+        dataType,
+        unit: draft.unit,
+        min: draft.min ?? 0,
+        max: draft.max ?? 100,
+        initial: draft.initial ?? draft.min ?? 0,
+        pattern: draft.pattern ?? defaultPattern(dataType),
+      });
       if (!tag) return { ok: false, reason: 'invalid-code' };
       replaceEquipment(equipmentId, (e) => ({ ...e, tags: [...e.tags, tag] }));
       return { ok: true, id: tag.id };
@@ -525,10 +417,12 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
           }
           code = normalized;
         }
-        const merged = sanitizeVirtualTag(
-          { ...current, ...patch, id: tagId, code },
-          new Set(equipment.groups.map((g) => g.id)),
-        );
+        const merged = sanitizeVirtualTag({
+          ...current,
+          ...patch,
+          id: tagId,
+          code,
+        });
         if (!merged) return null;
         const tags = equipment.tags.slice();
         tags[index] = merged;
@@ -555,24 +449,15 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
       });
     },
 
-    importTags: (equipmentId, payload) => {
+    importTags: (equipmentId, incoming) => {
       const equipment = get().equipments.find((e) => e.id === equipmentId);
-      if (!equipment) return { added: 0, skipped: payload.tags.length };
-      const groups = equipment.groups.slice();
-      const groupIds = new Set(groups.map((g) => g.id));
-      for (const raw of payload.groups ?? []) {
-        if (groups.length >= VIRTUAL_EQUIPMENT_GROUPS_MAX) break;
-        const group = sanitizeVirtualTagGroup(raw);
-        if (!group || groupIds.has(group.id)) continue;
-        groups.push(group);
-        groupIds.add(group.id);
-      }
+      if (!equipment) return { added: 0, skipped: incoming.length };
       const tags = equipment.tags.slice();
       const codes = new Set(tags.map((t) => t.code));
       let added = 0;
       let skipped = 0;
-      for (const raw of payload.tags) {
-        const tag = sanitizeVirtualTag(raw, groupIds);
+      for (const raw of incoming) {
+        const tag = sanitizeVirtualTag(raw);
         if (
           !tag ||
           codes.has(tag.code) ||
@@ -585,16 +470,16 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => {
         codes.add(tag.code);
         added += 1;
       }
-      if (added > 0 || groups.length !== equipment.groups.length) {
-        replaceEquipment(equipmentId, (e) => ({ ...e, groups, tags }));
+      if (added > 0) {
+        replaceEquipment(equipmentId, (e) => ({ ...e, tags }));
       }
       return { added, skipped };
     },
 
-    setTickMs: (tickMs) => {
-      const clamped = clampVirtualTagTick(tickMs);
-      if (clamped === get().tickMs) return;
-      set({ tickMs: clamped });
+    setTickSec: (tickSec) => {
+      const clamped = clampVirtualTagTick(tickSec);
+      if (clamped === get().tickSec) return;
+      set({ tickSec: clamped });
     },
 
     start: () => {

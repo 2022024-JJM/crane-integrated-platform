@@ -14,8 +14,8 @@ import {
 } from '../tag-value-bus';
 
 /**
- * 시뮬레이션 시계·러너 — 배속, seek 재시뮬레이션, 속도·가속 한계, 종료,
- * 장비·태그 켜짐 판정. 저장소는 건드리지 않고 스토어 상태를 직접 세운다.
+ * 시뮬레이션 시계·러너 — 배속, seek(값은 씬 시간의 함수), 종료, 장비 켜짐
+ * 판정. 저장소는 건드리지 않고 스토어 상태를 직접 세운다.
  */
 const TAG_A: VirtualTagDefinition = {
   id: 'a',
@@ -25,8 +25,7 @@ const TAG_A: VirtualTagDefinition = {
   min: 0,
   max: 100,
   initial: 0,
-  pattern: { kind: 'sawtooth', periodMs: 10_000 },
-  enabled: true,
+  pattern: { kind: 'sawtooth', periodSec: 10 },
 };
 const TAG_B: VirtualTagDefinition = {
   id: 'b',
@@ -37,7 +36,6 @@ const TAG_B: VirtualTagDefinition = {
   max: 10,
   initial: 0,
   pattern: { kind: 'manual' },
-  enabled: true,
 };
 
 function equipmentsWith(
@@ -46,8 +44,8 @@ function equipmentsWith(
   enabledA = true,
 ): VirtualEquipment[] {
   return [
-    { id: 'eA', craneId: 'A', enabled: enabledA, groups: [], tags: [a] },
-    { id: 'eB', craneId: 'B', enabled: true, groups: [], tags: [b] },
+    { id: 'eA', craneId: 'A', enabled: enabledA, tags: [a] },
+    { id: 'eB', craneId: 'B', enabled: true, tags: [b] },
   ];
 }
 
@@ -59,7 +57,7 @@ function reset(equipments: VirtualEquipment[] = equipmentsWith()) {
   useVirtualTagStore.setState({
     equipments,
     entries,
-    tickMs: 100,
+    tickSec: 0.1,
     speed: 1,
     hasSession: false,
     hydrated: true,
@@ -116,8 +114,8 @@ describe('seek', () => {
   });
 });
 
-describe('장비·태그 켜짐', () => {
-  it('꺼진 장비의 태그는 태그가 켜져 있어도 내보내지 않고, 슬라이더도 조용하다', () => {
+describe('장비 켜짐', () => {
+  it('꺼진 장비의 태그는 내보내지 않고, 슬라이더도 조용하다', () => {
     const [a, b] = equipmentsWith();
     reset([a, { ...b, enabled: false }]);
     useVirtualTagStore.getState().start();
@@ -131,14 +129,6 @@ describe('장비·태그 켜짐', () => {
     useVirtualTagStore.getState().updateEquipment('eB', { enabled: true });
     vi.advanceTimersByTime(100);
     expect(last.get('B:y')).toBe(7);
-  });
-
-  it('꺼진 태그는 내보내지 않는다', () => {
-    reset(equipmentsWith({ ...TAG_A, enabled: false }));
-    useVirtualTagStore.getState().start();
-    vi.advanceTimersByTime(300);
-    expect(last.has('A:x')).toBe(false);
-    expect(last.has('B:y')).toBe(true);
   });
 
   it('코드를 바꾸면 새 키로 상태가 다시 잡히고 옛 키는 사라진다', () => {
@@ -159,45 +149,12 @@ describe('장비·태그 켜짐', () => {
   });
 });
 
-describe('속도·가속 한계', () => {
-  it('한계가 있는 태그는 파형 목표를 maxSpeed 이하로 따라간다(배속 곱한 시뮬레이션 초 기준)', () => {
-    // sawtooth 10s 0→100 은 10 unit/s — 한계 2 unit/s 로 잘린다.
-    reset(equipmentsWith({ ...TAG_A, limits: { maxSpeed: 2 } }));
-    useVirtualTagStore.getState().start();
-    vi.advanceTimersByTime(1000);
-    // 벽시계 1s ×1 → 최대 2 (파형 목표는 10).
-    expect(last.get('A:x')).toBeCloseTo(2, 5);
-    useVirtualTagStore.getState().setSpeed(2);
-    vi.advanceTimersByTime(1000);
-    // 시뮬레이션 2초 더 → 2 + 4 = 6.
-    expect(last.get('A:x')).toBeCloseTo(6, 5);
-  });
-
-  it('seek 도 한계를 지킨다 — 0 부터 다시 적분한 값이지 그 시각의 목표값이 아니다', () => {
-    reset(equipmentsWith({ ...TAG_A, limits: { maxSpeed: 0.1 } }));
-    useVirtualTagStore.getState().seek(5000);
-    // 목표는 50 이지만 0.1 unit/s × 5s = 0.5.
-    expect(last.get('A:x')).toBeCloseTo(0.5, 5);
-    virtualTagRuntime.resetValues();
-    expect(last.get('A:x')).toBe(0);
-  });
-});
-
-describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
-  // sawtooth 10s 0→100(10 unit/s) 를 maxSpeed 2 · maxAccel 1 로 따라간다 —
-  // 한계가 실제로 작용해 값이 목표보다 뒤처지는 구간에서 본다.
-  const LIMITED: VirtualTagDefinition = {
-    ...TAG_A,
-    limits: { maxSpeed: 2, maxAccel: 1 },
-  };
-
+describe('seek — 값은 씬 시간의 함수', () => {
   it('재생으로 t 에 닿은 값과 정지 상태에서 seek(t) 한 값이 같다', () => {
-    reset(equipmentsWith(LIMITED));
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(3000);
     const played = last.get('A:x')!;
-    expect(played).toBeGreaterThan(0);
-    expect(played).toBeLessThan(30); // 목표 30 보다 뒤처져 있다.
+    expect(played).toBeCloseTo(30, 5);
     useVirtualTagStore.getState().pause();
     virtualTagRuntime.resetValues();
     last.clear();
@@ -205,8 +162,7 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
     expect(last.get('A:x')).toBeCloseTo(played, 10);
   });
 
-  it('seek 뒤 재개하면 원래 재생과 같은 궤적을 잇는다(속도 상태 복원)', () => {
-    reset(equipmentsWith(LIMITED));
+  it('seek 뒤 재개하면 원래 재생과 같은 궤적을 잇는다', () => {
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(2000);
     const at2s = last.get('A:x')!;
@@ -222,7 +178,6 @@ describe('seek 재시뮬레이션 — 값은 씬 시간의 함수', () => {
   });
 
   it('벽시계 틱이 밀려도 같은 씬 시각의 값은 같다(고정 스텝, 나머지는 이월)', () => {
-    reset(equipmentsWith(LIMITED));
     useVirtualTagStore.getState().start();
     vi.advanceTimersByTime(1000);
     // 타이머는 울리지 않고 시계만 250ms 감 → 한 콜백에 스텝 2개 + 50ms 이월.
@@ -309,19 +264,17 @@ describe('종료(관제 복귀)', () => {
 });
 
 describe('일시정지 → 재개', () => {
-  it('한계로 뒤처진 값이 재개 순간 목표로 점프하지 않고 이어서 간다', () => {
-    reset(equipmentsWith({ ...TAG_A, limits: { maxSpeed: 2 } }));
+  it('재개 순간 정지 시점 값을 내보내고 거기서 이어 간다(멈춘 시간은 흐르지 않는다)', () => {
     const store = useVirtualTagStore.getState();
     store.start();
-    vi.advanceTimersByTime(1000); // 값 2 (목표 10)
+    vi.advanceTimersByTime(1000); // 값 10
     store.pause();
     vi.advanceTimersByTime(5000); // 5초 정지
     last.clear();
     useVirtualTagStore.getState().start();
-    // 재개 직후 내보내는 값은 정지 시점 값(2)이어야 한다 — 목표(10)로 튀지 않음.
-    expect(last.get('A:x')).toBeCloseTo(2, 5);
+    expect(last.get('A:x')).toBeCloseTo(10, 5);
     vi.advanceTimersByTime(100);
-    expect(last.get('A:x')!).toBeLessThanOrEqual(2.2 + 1e-6);
+    expect(last.get('A:x')).toBeCloseTo(11, 5);
   });
 
   it('종료는 배속도 1 로 되돌린다', () => {

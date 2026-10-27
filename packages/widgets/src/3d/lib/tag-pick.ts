@@ -12,7 +12,6 @@ import {
 import {
   normalizeVirtualEquipmentKey,
   parseVirtualTagKey,
-  type VirtualTagGroup,
 } from '@crane/domain/virtual-tag';
 import {
   filterTagRows,
@@ -97,11 +96,8 @@ export function filterTagCatalog(
   );
 }
 
-/** 가상 탭의 장비 목록 필터에 필요한 조각 — 카탈로그 장비에서 ID·이름·구역만 본다. */
-export type PickEquipment = Pick<
-  TagCatalogEquipment,
-  'id' | 'craneId' | 'name' | 'bay'
->;
+/** 가상 탭의 장비 목록 필터에 필요한 조각 — 카탈로그 장비에서 ID·구역만 본다. */
+export type PickEquipment = Pick<TagCatalogEquipment, 'id' | 'craneId' | 'bay'>;
 
 export interface PickEquipmentFilter {
   /** 왼쪽 목록에 보일 장비(스토어 순서 유지). */
@@ -111,9 +107,9 @@ export interface PickEquipmentFilter {
 }
 
 /**
- * 가상 탭의 장비 목록 — 검색어가 장비 ID·이름·구역에 부분 일치(대소문자·앞뒤
- * 공백 무시)하면 거르고, 아무 장비에도 안 맞으면 태그 검색어로 보아 장비는
- * 전부 둔다(`filterPickVirtualTags`). 실시간 탭의 `filterPickCranes` 와 같은 규칙.
+ * 가상 탭의 장비 목록 — 검색어가 장비 ID·구역에 부분 일치(대소문자·앞뒤 공백
+ * 무시)하면 거르고, 아무 장비에도 안 맞으면 태그 검색어로 보아 장비는 전부
+ * 둔다(`filterPickVirtualTags`). 실시간 탭의 `filterPickCranes` 와 같은 규칙.
  */
 export function filterPickEquipments<E extends PickEquipment>(
   equipments: readonly E[],
@@ -124,7 +120,6 @@ export function filterPickEquipments<E extends PickEquipment>(
   const matched = equipments.filter(
     (e) =>
       e.craneId.toLowerCase().includes(needle) ||
-      (e.name ?? '').toLowerCase().includes(needle) ||
       (e.bay ?? '').toLowerCase().includes(needle),
   );
   return matched.length > 0
@@ -139,33 +134,6 @@ export function filterPickVirtualTags(
   equipmentMatched: boolean,
 ): TagCatalogEntry[] {
   return equipmentMatched ? [...entries] : filterTagCatalog(entries, query);
-}
-
-export interface PickEntrySection {
-  /** null 은 미분류. */
-  group: VirtualTagGroup | null;
-  entries: TagCatalogEntry[];
-}
-
-/**
- * 장비의 태그를 그룹 순으로 묶는다 — 상세 화면과 같은 순서(그룹 순 › 미분류).
- * 비어 있는 묶음은 넣지 않는다(고르는 화면이라 머리글만 남을 이유가 없다).
- */
-export function groupPickEntries(
-  groups: readonly VirtualTagGroup[],
-  entries: readonly TagCatalogEntry[],
-): PickEntrySection[] {
-  const groupIds = new Set(groups.map((g) => g.id));
-  const sections: PickEntrySection[] = [];
-  for (const group of groups) {
-    const list = entries.filter((e) => e.groupId === group.id);
-    if (list.length > 0) sections.push({ group, entries: list });
-  }
-  const ungrouped = entries.filter(
-    (e) => !e.groupId || !groupIds.has(e.groupId),
-  );
-  if (ungrouped.length > 0) sections.push({ group: null, entries: ungrouped });
-  return sections;
 }
 
 /**
@@ -302,8 +270,8 @@ function splitKeyText(key: string): Pick<SlotChip, 'lead' | 'tail'> {
 
 /**
  * 카드의 슬롯 칩 — 실시간 키는 `크레인 · 코드`, 가상 키도 카탈로그에 있으면
- * `장비 · 코드` 로 나눠 보이고 이름·단위·그룹을 툴팁에 붙인다. 카탈로그에
- * 없는 가상 키는 키 그대로 + unknown. 실시간 키를 못 풀면 키 그대로 + unknown.
+ * `장비 · 코드` 로 나눠 보이고 이름·단위를 툴팁에 붙인다. 카탈로그에 없는
+ * 가상 키는 키 그대로 + unknown. 실시간 키를 못 풀면 키 그대로 + unknown.
  */
 export function describeSlotChip(
   key: string,
@@ -326,11 +294,7 @@ export function describeSlotChip(
       lead,
       tail: entry.code,
       title:
-        [
-          entry.name !== entry.code ? entry.name : '',
-          entry.unit ?? '',
-          entry.groupName ?? '',
-        ]
+        [entry.name !== entry.code ? entry.name : '', entry.unit ?? '']
           .filter(Boolean)
           .join(' · ') || undefined,
       unknown: false,

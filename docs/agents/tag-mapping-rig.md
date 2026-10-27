@@ -1,6 +1,6 @@
 # 태그 맵핑 · 상태 태그 · 가상 태그 시뮬레이션 · 리깅
 
-서버(PLC) 태그 값이 3D 모델의 트랜스폼·관절을 움직이고 라벨을 칠하고 장비에 외곽선을 두르는 경로 전체 — 맵핑 스키마, 상태 태그, 값 버스, 가상 태그(장비 › 그룹 › 태그)·러너, 리그 정의·드라이버.
+서버(PLC) 태그 값이 3D 모델의 트랜스폼·관절을 움직이고 라벨을 칠하고 장비에 외곽선을 두르는 경로 전체 — 맵핑 스키마, 상태 태그, 값 버스, 가상 태그(장비 › 태그)·러너, 리그 정의·드라이버.
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -17,7 +17,7 @@
 | 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스 | `packages/features/src/3d/model/tag-value-bus.ts`, `packages/features/src/3d/lib/tag-mapping-index.ts`, `packages/features/src/3d/model/use-tag-binding-source.ts` |
 | 채널 Δ 적용 / 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/apply-channel.ts`, `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts` |
 | 태그 맵핑 편집 UI(인스펙터 탭) / 태그 줄(슬롯 전환) / 태그 연결 다이얼로그 | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`, `packages/widgets/src/3d/ui/tag-slot-field.tsx`, `packages/widgets/src/3d/ui/tag-pick-dialog.tsx`(+ `tag-pick-realtime-tab.tsx`·`tag-pick-virtual-tab.tsx`·`tag-sparkline.tsx`), `packages/widgets/src/3d/lib/tag-mapping-editor.ts`(충돌 판정·기본값·대상 설명, 테스트 대상), `packages/widgets/src/3d/lib/tag-pick.ts`(필터·선택·칩, 테스트 대상), `packages/widgets/src/3d/lib/tag-history.ts` + `model/use-tag-value-history.ts`(미리보기 최근 60초, 테스트 대상) |
-| 가상 태그 정의(장비 › 그룹 › 태그)·키 조립·파형·방어(버전 1 변환)·기본 그룹·평탄화·한계 | `packages/domain/src/virtual-tag/model/types.ts`, `packages/domain/src/virtual-tag/lib/{virtual-tag-key,tag-pattern,sanitize-virtual-tags,default-groups,virtual-tag-entries,rate-limit}.ts` |
+| 가상 태그 정의(장비 › 태그)·키 조립·파형·방어(버전 1·2 변환)·평탄화 | `packages/domain/src/virtual-tag/model/types.ts`, `packages/domain/src/virtual-tag/lib/{virtual-tag-key,tag-pattern,sanitize-virtual-tags,virtual-tag-entries}.ts` |
 | 가상 태그 영속화 어댑터 / 배포 파일 | `packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts`, `apps/shell/public/simulation/virtual-tags.json` |
 | 가상 태그 스토어 · 러너 · 카탈로그 · 실시간 복제 · 종료 | `packages/features/src/3d/model/use-virtual-tag-store.ts`, `packages/features/src/3d/model/virtual-tag-runner.ts`, `packages/features/src/3d/model/use-tag-catalog.ts`, `packages/features/src/3d/lib/virtual-tag-clone.ts`, `packages/features/src/3d/model/stop-simulation.ts` |
 | 시뮬레이션 UI | 공용 패널 `packages/features/src/3d/ui/scene-simulation-panel.tsx`, 배지 `packages/features/src/3d/ui/scene-simulation-badge.tsx`, 시계 문구 `packages/features/src/3d/lib/sim-clock.ts` |
@@ -94,11 +94,11 @@
 
 실시간 탭과 같은 구성으로 장비 목록 › 장비 상세다. 탭·상세는 URL 이 든다(`lib/tags-route.ts` — `tags` 실시간 목록, `tags/{craneId}` 실시간 상세, `tags/virtual` 가상 목록, `tags/virtual/{equipmentId}` 가상 상세; 경로 조립은 `realtimeTagsPath`·`virtualTagsPath`). 가상 탭은 항상 마운트해 두고 숨긴다 — 편집본이 전역 스토어에 있어 탭 전환으로 사라지면 안 된다. 페이지 이탈(언마운트)에서 `discard()`.
 
-- 공통 바(`virtual-simulation-bar.tsx`): 갱신 주기·저장(미저장 점·스피너)·전체 재생/일시정지·값 초기화. 목록·상세 어디서든 같은 자리이고 재생은 전역(모든 장비)이다.
-- 목록(`virtual-equipment-list.tsx`): 검색(장비 ID·이름·구역)·구역 칩(`collectVirtualBays`)·장비 수·장비 등록. 카드(`virtual-equipment-card.tsx`)는 ID·이름·구역·태그 수와 사용 스위치 — 스위치가 들어 바깥은 버튼이 아니고 본문만 버튼이다.
-- 상세(`virtual-equipment-detail.tsx`): 머리글에 목록 버튼·장비 ID(비제어, blur/Enter 커밋, 거부 시 툴팁 + 포커스 유지, Escape 복귀 — `getEquipmentIdError`)·이름·구역·사용 스위치·장비 복제·장비 삭제(확인창). 그 아래 검색·그룹 필터(전체 › 그룹별 개수 › 미분류)·태그 수·그룹 추가·JSON 복사. 표(`virtual-tag-row.tsx`, 고정 폭 열 + 가로 스크롤)는 그룹 묶음(`groupVirtualTags` — 그룹 순 › 미분류 끝, 검색 중엔 맞는 묶음만, 아니면 빈 그룹도 머리글은 남는다)마다 머리글 행(이름 입력·개수·위/아래·삭제·태그 추가)과 인라인 편집 행. 코드 입력은 장비 ID 와 같은 비제어 규칙(`getTagCodeError`). 불리언은 범위·단위·한계 칸이 대시, 초기값·현재값은 토글, 값은 ON/OFF 배지.
-- 등록 다이얼로그(`virtual-equipment-dialog.tsx`): 기본 정보 탭(ID·이름·구역, 등록 시 기본 그룹 시드)과 실시간 복제 탭(`virtual-clone-picker.tsx` — 크레인 목록 › 실시간 묶음별 체크 목록, 기본 전부 선택, 크레인을 바꾸면 다시 전부 선택 — `lib/clone-selection.ts`). 복제 소스를 고르면 ID 가 비어 있거나 자동으로 채워진 상태일 때 ID 를 크레인 ID 로, 구역이 비어 있으면 스냅샷 구역으로 채운다. 본문은 열려 있을 때만 마운트하고 크레인 스냅샷 피드도 본문 수명이다. 실시간 상세의 "가상 장비로 복제" 는 이 다이얼로그를 그 크레인으로 미리 채워 열고, 만들어지면 가상 상세로 옮긴다.
-- 순수 로직은 `lib/virtual-tag-rows.ts`(구역·필터·묶음·개수·값 표기·새 코드)·`lib/virtual-tag-validation.ts`·`lib/clone-selection.ts` 에 두고 테스트한다. `ui/*.tsx` 에서 계산하지 않는다.
+- 공통 바(`virtual-simulation-bar.tsx`): 갱신 주기(초)·저장(미저장 점·스피너)·전체 재생/일시정지·값 초기화. 목록·상세 어디서든 같은 자리이고 재생은 전역(모든 장비)이다.
+- 목록(`virtual-equipment-list.tsx`): 검색(장비 ID·구역)·구역 칩(`collectVirtualBays`)·장비 수·장비 등록. 카드(`virtual-equipment-card.tsx`)는 위 줄에 ID·구역과 사용 스위치, 아래 줄에 태그 수와 장비 복제·삭제 버튼 — 스위치·버튼이 들어 바깥은 버튼이 아니고 본문만 버튼이다. 삭제 확인창은 목록이 하나 들고 대상 장비만 바꾼다.
+- 상세(`virtual-equipment-detail.tsx`): 머리글에 목록 버튼·장비 ID(비제어, blur/Enter 커밋, 거부 시 툴팁 + 포커스 유지, Escape 복귀 — `getEquipmentIdError`)·구역. 그 아래 검색·태그 수·태그 추가·JSON 복사. 표(`virtual-tag-row.tsx`)는 열 11개(코드·이름·형식·단위·최소·최대·초기값·패턴·주기(초)·현재값·동작)를 비율 폭으로 두어 카드 폭에 꽉 차고 가로 스크롤이 없다. 코드 입력은 장비 ID 와 같은 비제어 규칙(`getTagCodeError`). 불리언은 범위·단위 칸이 대시, 초기값·현재값은 토글, 값은 ON/OFF 배지.
+- 등록 다이얼로그(`virtual-equipment-dialog.tsx`): 기본 정보 탭(ID·구역)과 실시간 복제 탭(`virtual-clone-picker.tsx` — 크레인 목록 › 실시간 묶음별 체크 목록, 기본 전부 선택, 크레인을 바꾸면 다시 전부 선택 — `lib/clone-selection.ts`). 복제 소스를 고르면 ID 가 비어 있거나 자동으로 채워진 상태일 때 ID 를 크레인 ID 로, 구역이 비어 있으면 스냅샷 구역으로 채운다. 본문은 열려 있을 때만 마운트하고 크레인 스냅샷 피드도 본문 수명이다. 실시간 상세의 "가상 장비로 복제" 는 이 다이얼로그를 그 크레인으로 미리 채워 열고, 만들어지면 가상 상세로 옮긴다.
+- 순수 로직은 `lib/virtual-tag-rows.ts`(구역·필터·값 표기·새 코드)·`lib/virtual-tag-validation.ts`·`lib/clone-selection.ts` 에 두고 테스트한다. `ui/*.tsx` 에서 계산하지 않는다.
 
 ### 실시간 태그 피드(크레인 스냅샷 서버)
 
@@ -116,36 +116,28 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 
 ### 가상 태그 `@crane/domain/virtual-tag`
 
-서버 없이 태그 값을 만드는 정의다. 실시간 태그와 같은 모양의 **장비 › 그룹 › 태그** 계층이고 저장 포맷은 버전 2(`VirtualTagSet{ tickMs, equipments[] }`)다.
+서버 없이 태그 값을 만드는 정의다. 실시간 태그와 같은 모양의 **장비 › 태그** 계층이고 저장 포맷은 버전 3(`VirtualTagSet{ tickSec, equipments[] }`, 시간 단위는 전부 **초**)다.
 
-- 장비 `VirtualEquipment` = 장비 ID(`craneId`, 표시용 그대로) · 이름 · 구역 · `enabled` · `groups[]` · `tags[]`. 장비 ID 유일성은 정규화 키(하이픈→밑줄, `normalizeVirtualEquipmentKey`) 기준이라 `GC-04` 와 `GC_04` 는 같은 장비다. 꺼진 장비의 태그는 태그가 켜져 있어도 내보내지 않는다.
-- 그룹 `VirtualTagGroup` 은 장비별 사용자 정의 분류(id·이름·`preset?`)이고 배열 순서가 표시 순서다. 등록 때 `createDefaultGroups` 로 기본 그룹 셋(시각·계측값·상태·알람, 표식 `datetime|measurement|status`)을 시드하고 이름은 호출자가 번역해 넘긴다. 표식은 실시간 복제가 카탈로그 묶음을 넣을 그룹을 찾는 데만 쓰고 이름을 바꿔도 남는다. 그룹을 지우면 그 태그는 미분류(`groupId` 없음)가 된다.
-- 태그 `VirtualTagDefinition` = `code`(장비 안 유일, 공백·콜론 없음) · 이름 · `groupId?` · `dataType`(number|bool) · 범위·`initial` · `pattern`(manual|triangle|sine|sawtooth|square) · `enabled` · `limits?`. 불리언은 범위 0~1·초기값 0/1 로 강제하고 패턴은 manual·square 만, 단위·한계가 없다(sanitize). 버스는 숫자 전용이라 0/1 로 나가고 표시만 ON/OFF 배지다.
+- 장비 `VirtualEquipment` = 장비 ID(`craneId`, 표시용 그대로) · 구역 · `enabled` · `tags[]`. 장비 ID 유일성은 정규화 키(하이픈→밑줄, `normalizeVirtualEquipmentKey`) 기준이라 `GC-04` 와 `GC_04` 는 같은 장비다. 꺼진 장비의 태그는 내보내지 않는다 — 켜짐은 장비 단위뿐이다.
+- 태그 `VirtualTagDefinition` = `code`(장비 안 유일, 공백·콜론 없음) · 이름 · `dataType`(number|bool) · 범위·`initial` · `pattern`(manual|triangle|sine|sawtooth|square, 주기 `periodSec`). 불리언은 범위 0~1·초기값 0/1 로 강제하고 패턴은 manual·square 만, 단위가 없다(sanitize). 버스는 숫자 전용이라 0/1 로 나가고 표시만 ON/OFF 배지다.
+- 초 단위 값(`tickSec`·`periodSec`)은 sanitize 가 ms 해상도(`VIRTUAL_TAG_SECONDS_DECIMALS`)로 반올림한다 — 부동소수 잡음이 dirty 를 만들지 않게. 러너 시계는 ms 라 스토어 `runnerConfig` 가 `tickSec` 을 정수 ms 로 바꿔 넘기고, `tag-pattern.ts` 가 `periodSec` 을 ms 로 바꿔 계산한다.
 - **키는 저장하지 않는다.** `buildVirtualTagKey(craneId, code)` = `장비키:코드`(콜론)로 조립하고, `collectVirtualTagEntries` 가 계층을 평탄화한 `VirtualTagEntry{key, equipment, tag}` 를 러너·카탈로그가 본다. 콜론 구분자가 실시간 키(점)와 키 공간을 가른다. 코드나 장비 ID 를 바꾸면 키가 바뀌어 씬이 연결한 가상 슬롯은 미등록이 된다.
-- 버전 1(평탄 키 목록)은 로드 때 `migrateVirtualTagSetV1` 이 첫 콜론에서 나눠 장비로 묶는다(장비 id `legacy-<장비키>`, 콜론 없는 키는 `UNASSIGNED` 장비, 변환된 태그는 숫자·미분류). 조립한 키가 원래 문자열과 같아 philly-2dock 씬의 참조가 그대로 풀린다. 버전 1 의 시나리오는 버린다.
-- 전역 스토어 `useVirtualTagStore` 가 `equipments` 와 파생 `entries` 를 들고 있다. 편집은 전부 스토어 액션(장비·그룹·태그 CRUD, `importTags`)을 지나며 `commit` 한 곳에서 `entries` 를 다시 만들고 러너에 `syncDefinitions` 한다. 편집은 메모리에만 쌓이고 저장 버튼(`save()`)이 기록한다. dirty·미저장 이탈 경고는 씬 편집과 같은 훅을 재사용한다.
+- 버전 2(ms 단위 `tickMs`·`periodMs`, 장비 이름·그룹, 태그별 `enabled`·`limits`)는 같은 sanitize 경로가 읽는다 — ms 는 초로 바꾸고 없어진 필드는 버린다(운영 localStorage 의 옛 봉투·커밋 전 배포 파일이 그대로 열린다). 버전 1(평탄 키 목록)은 로드 때 `migrateVirtualTagSetV1` 이 첫 콜론에서 나눠 장비로 묶는다(장비 id `legacy-<장비키>`, 콜론 없는 키는 `UNASSIGNED` 장비, 변환된 태그는 숫자). 조립한 키가 원래 문자열과 같아 philly-2dock 씬의 참조가 그대로 풀린다. 버전 1 의 시나리오는 버린다.
+- 전역 스토어 `useVirtualTagStore` 가 `equipments` 와 파생 `entries` 를 들고 있다. 편집은 전부 스토어 액션(장비·태그 CRUD, `importTags`)을 지나며 `commit` 한 곳에서 `entries` 를 다시 만들고 러너에 `syncDefinitions` 한다. 편집은 메모리에만 쌓이고 저장 버튼(`save()`)이 기록한다. dirty·미저장 이탈 경고는 씬 편집과 같은 훅을 재사용한다.
 - 영속화는 씬과 같은 규칙(`virtual-tag-storage.ts`). dev 는 `POST /__dev/virtual-tags` 로 배포 파일 `apps/shell/public/simulation/virtual-tags.json` 에 기록하며 이 파일이 클론·배포의 기준값이라 커밋한다. 운영은 localStorage `crane:virtual-tags` 에 배포 해시 도장(`baseVersion`)과 함께 봉투로 저장하고, 새 배포가 나오면 배포본이 이긴다. API 경로 문자열은 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있다 — `docs/agents/3d-editor.md`.
-- 러너 `virtualTagRuntime`(모듈 전역 `setInterval`, Canvas 불필요)은 상태를 **키** 기준으로 들고 틱마다 켜진 항목(장비·태그 둘 다)만 버스로 내보낸다. 정의의 범위·초기값·패턴·형식·한계가 바뀌면 그 키의 상태를 initial 로 다시 잡고, 이름·그룹만 바뀌면 유지한다.
+- 러너 `virtualTagRuntime`(모듈 전역 `setInterval`, Canvas 불필요)은 상태를 **키** 기준으로 들고 틱마다 켜진 장비의 항목만 버스로 내보낸다. 정의의 범위·초기값·패턴·형식이 바뀌면 그 키의 상태를 initial 로 다시 잡고, 이름·단위만 바뀌면 유지한다.
 - 재생을 켜는 곳: 모니터링 `mode='simulation'` 은 `useSceneData` 의 `autoStartSimulation`(기본 true — 대시보드 3D 미리보기 모달은 ▶ 토글이 없는 뷰라 false 로 정지 상태로 연다). 3D 플레이(`mode='play3d'`, 소스 시뮬레이션)은 상단 트랜스포트 바 ▶ 가 켠다(자동 재생 없음). 실시간 페이지(`mode='realtime'`)에는 시뮬레이션 UI 가 없다. 태그 페이지 가상 탭의 공통 바(재생·값 초기화·갱신 주기)는 전역이다.
-- **실시간 복제**(`lib/virtual-tag-clone.ts` `cloneTagsFromSnapshot`, 순수)는 크레인 스냅샷 한 대분을 태그 정의로 바꾼다 — 코드·표시명·단위는 카탈로그 메타(`buildTagRows`), 불리언 값은 bool 형식, 초깃값은 현재값, 범위는 접속 후 관측 범위(한 점이면 `fallbackRange` 기본 폭), 패턴은 수동, 그룹은 카탈로그 묶음의 표식 그룹(없으면 새로 만들어 함께 돌려준다). 1회 스냅샷이고 이후 실시간과 무관하다. 진입점은 장비 등록 다이얼로그의 복제 탭과 실시간 상세의 "가상 장비로 복제" 버튼이며 둘 다 `importTags` 로 넣는다(코드 중복·상한은 건너뛴다).
-- 카탈로그 `useTagCatalog`(평탄, 꺼진 항목 포함)·`useTagCatalogEquipments`(장비 › 그룹 › 태그)는 태그 연결 다이얼로그의 가상 탭과 카드 칩이 본다. 서버 태그는 여기 합치지 않는다 — 다이얼로그의 실시간 탭이 스냅샷 스토어에서 크레인별로 직접 고른다.
+- **실시간 복제**(`lib/virtual-tag-clone.ts` `cloneTagsFromSnapshot`, 순수)는 크레인 스냅샷 한 대분을 태그 정의로 바꾼다 — 코드·표시명·단위는 카탈로그 메타(`buildTagRows`), 불리언 값은 bool 형식, 초깃값은 현재값, 범위는 접속 후 관측 범위(한 점이면 `fallbackRange` 기본 폭), 패턴은 수동, 순서는 카탈로그 묶음 순(시각 › 계측값 › 상태). 1회 스냅샷이고 이후 실시간과 무관하다. 진입점은 장비 등록 다이얼로그의 복제 탭과 실시간 상세의 "가상 장비로 복제" 버튼이며 둘 다 `importTags` 로 넣는다(코드 중복·상한은 건너뛴다).
+- 카탈로그 `useTagCatalog`(평탄, 꺼진 장비 포함)·`useTagCatalogEquipments`(장비 › 태그)는 태그 연결 다이얼로그의 가상 탭과 카드 칩이 본다. 서버 태그는 여기 합치지 않는다 — 다이얼로그의 실시간 탭이 스냅샷 스토어에서 크레인별로 직접 고른다.
 
 ### 시뮬레이션 시계
 
-- 러너(`virtual-tag-runner.ts`)는 벽시계 dt × `speed`(스토어 세션값, 선택지 `SIMULATION_SPEED_OPTIONS`)를 씬 시간으로 누적하고, 값은 `tickMs` 고정 스텝으로만 적분한다(`advanceTo`) — 같은 씬 시각의 값은 경로·틱 지터와 무관하게 같다. `seek(ms)` 는 0 초 상태에서 ms 까지 다시 적분해 내보낸다(재시뮬레이션, 비용은 스텝 수에 선형). 정지 중에도 동작하도록 `attachConfig` 로 getter 만 붙여 둔다. 타이머 간격은 `tickMs / speed`(하한 `TIMER_MIN_MS`)라 배속이 높아도 스텝마다 내보낸다.
-- `start()` 는 현재 상태값만 내보내고 재시뮬레이션하지 않는다. 0 초 상태는 전부 initial 이다. seek 는 manual 태그의 슬라이더 값을 유지하고, 리셋은 전부 initial 로 돌린다. 시뮬레이션은 끝이 없는 열린 구간이다 — 3D 플레이 트랜스포트의 `durationMs` 는 항상 null.
+- 러너(`virtual-tag-runner.ts`)는 벽시계 dt × `speed`(스토어 세션값, 선택지 `SIMULATION_SPEED_OPTIONS`)를 씬 시간으로 누적하고, 값은 `tickMs` 고정 스텝 경계에서만 계산한다(`advanceTo` — 값이 씬 시간의 순수 함수라 목표 시각 직전 경계로 바로 간다) — 같은 씬 시각의 값은 경로·틱 지터와 무관하게 같다. `seek(ms)` 는 0 초 상태에서 ms 직전 경계의 값을 계산해 내보낸다. 정지 중에도 동작하도록 `attachConfig` 로 getter 만 붙여 둔다. 타이머 간격은 `tickMs / speed`(하한 `TIMER_MIN_MS`)라 배속이 높아도 스텝마다 내보낸다.
+- `start()` 는 현재 상태값만 내보내고 재계산하지 않는다. 0 초 상태는 전부 initial 이다. seek 는 manual 태그의 슬라이더 값을 유지하고, 리셋은 전부 initial 로 돌린다. 시뮬레이션은 끝이 없는 열린 구간이다 — 3D 플레이 트랜스포트의 `durationMs` 는 항상 null.
 - **종료(관제 복귀)** 는 `stop-simulation.ts` 의 `stopSimulation()` 한 곳이다 — 패널 ■·화면 진입/이탈이 전부 이걸 부른다. 내용은 충돌 세션 기록·정지 상태 `clearHistory()` + 스토어 `stop()`(러너 정지·시간 0 — publish 없는 `resetValues(false)`·배속 1) + `rigValueStore.reset()`(rest 복귀) + `tagLiveValues.clear()`(운전 상태 unknown) + 실시간 `release()`. 일시정지(자세 유지)와 다른 경로다.
 - 모니터링 `useSceneData` 와 에디터 페이지는 **진입·이탈 모두** `stopSimulation()` 을 불러 화면마다 깨끗한 시뮬레이션으로 시작한다.
 - UI: 공용 패널 `scene-simulation-panel.tsx`(재생·리셋·종료·배속·경과 시각)를 3D 플레이 트랜스포트 바 팝오버가 쓴다. 재생 위치 이동은 트랜스포트 바의 스크럽 하나다. 경과 시각 문구는 `sim-clock.ts`.
 - **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·배속이 1 이 아니면 배속 — 표시 전용, 조작 버튼 없음). `Monitoring3dView` 좌측 상단 열 첫 항목이고 `toolbarLayout='none'` 은 제외.
-
-### 속도·가속 한계
-
-- `VirtualTagDefinition.limits?: {maxSpeed?, maxAccel?}` — 태그 단위/초·초², 양수만. 상세 표의 두 열(숫자 형식만).
-- 러너가 파형 **목표값**을 향해 `rateLimitStep`(`rate-limit.ts` — 속도 상한, 가속 상한 + 이산 스텝 기준 정지 거리 상한(연속식은 한 스텝 늦어 목표를 지나친다), 오버슈트 클램프, 상태에 `velocity`)을 씬 시간 `tickMs` 고정 스텝마다 한 번 적용해 램프한다.
-- 스텝이 씬 시간이라 한계는 배속과 무관하게 시뮬레이션 초 기준이고, 가속 프로파일도 배속·틱 지터와 무관하다.
-- manual 슬라이더·리셋은 즉시(텔레포트). seek 는 재시뮬레이션이라 한계를 지킨 값이 나온다.
-- 배포 필리 태그에 한계가 들어 있어 sine 파형은 한계에 잘려 평평해진다(의도 — 순간이동 방지).
 
 ### 리깅(관절 연동)
 
@@ -171,9 +163,8 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - 가상 태그 키는 조립값이다 — 저장본·스토어에 키 필드를 두지 않고 `buildVirtualTagKey` 로만 만든다. 콜론 구분자를 점으로 바꾸지 않는다 — 실시간 키와 같은 문자열이 되면 한 버스에서 소스가 섞인다.
 - 장비 ID 의 유일성은 정규화 키(`normalizeVirtualEquipmentKey`) 기준이다 — 표기만 다른 장비를 둘 두면 키가 겹친다. sanitize·스토어·UI 검증이 같은 규칙을 쓴다.
 - `equipments` 는 스토어 액션으로만 바꾼다 — `entries` 파생과 러너 `syncDefinitions` 가 `commit` 한 곳에 묶여 있다. 밖에서 `setState` 하면 러너가 옛 정의를 돈다(테스트는 `entries` 를 함께 세운다).
-- 실시간 복제는 `cloneTagsFromSnapshot` → `importTags` 경로만 쓴다 — 변환 규칙(형식·범위·그룹 표식)이 한 곳에 있고 import 가 중복·상한을 건너뛴다.
-- 러너가 한계를 적용하는 대상은 목표값이다. 한계를 우회해 값을 즉시 넣어야 하면 manual·리셋 경로(텔레포트)를 쓴다. seek 는 우회하지 않는다.
-- 시뮬레이션 값은 씬 시간의 함수다 — 재생 tick 과 seek 가 같은 고정 스텝 적분기(`advanceTo`)를 쓴다. seek 에서 목표값을 직접 대입하거나 벽시계 dt 로 적분하지 않는다. 3D 플레이 타임라인의 사건 시각으로 옮기면 재생 때 그 시각의 자세가 나와야 한다(`docs/agents/3d-play.md`).
+- 실시간 복제는 `cloneTagsFromSnapshot` → `importTags` 경로만 쓴다 — 변환 규칙(형식·범위)이 한 곳에 있고 import 가 중복·상한을 건너뛴다.
+- 시뮬레이션 값은 씬 시간의 함수다 — 재생 tick 과 seek 가 같은 고정 스텝 함수(`advanceTo`)를 쓴다. 벽시계 dt 로 값을 계산하지 않는다. 3D 플레이 타임라인의 사건 시각으로 옮기면 재생 때 그 시각의 자세가 나와야 한다(`docs/agents/3d-play.md`).
 - 위치 불연속(seek·리셋)의 publish 는 `smoothTime: 0` 이다 — 스무딩을 타면 자세가 미끄러져 감지기가 가짜 전이를 낸다.
 - `TagMapping`·`StatusTagBinding` 에 필드를 추가하면 `sanitize-tag-mappings.ts`(`sanitizeTagKeySlots`)와 `scene-snapshot.ts` 의 `isTagMappingListEqual`·`isStatusTagsEqual`(둘 다 `isTagKeySlotsEqual` 로 두 슬롯 비교)을 함께 고친다 — 한쪽 슬롯만 바꾼 편집이 동등 단락에 먹혀 저장되지 않는다.
 - 어느 슬롯을 읽을지는 `resolveActiveTagSlot` 한 곳이 정한다. 소비자에 `mode`·`source` 분기를 따로 두지 않고 슬롯을 인자로 받아 memo 의존성에 넣는다 — 3D 플레이의 소스 전환은 리마운트가 아니다.
@@ -182,13 +173,11 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 
 ## 하지 않기로 한 것
 
-- 러너 `start()` 에서 재시뮬레이션 — 한계로 뒤처진 값이 재개 순간 목표로 점프해 미끄러진다. 현재 상태값만 내보낸다.
-- seek 에서 그 시각의 목표값을 바로 대입 — 한계로 뒤처진 재생 자세와 어긋나, 3D 플레이 타임라인 사건 시각으로 옮기면 크레인이 최대 수 초 앞선 자세로 보였다. 0 초부터 다시 적분한다.
-- 가상 태그를 평탄한 키 목록으로 두는 것 — 장비 없이 키 문자열만 있으면 실시간 태그와 모양이 달라 복제도, 장비별로 모아 보는 것도 안 됐다. 장비 › 그룹 › 태그 계층으로 바꿨고 키는 조립한다.
-- 고정 카테고리(시각·계측값·상태)로 묶는 것 — 사용자 정의 그룹(장비별)으로 바꿨다. 실시간 묶음과는 기본 그룹의 표식(`preset`)으로만 이어진다.
+- 가상 태그를 평탄한 키 목록으로 두는 것 — 장비 없이 키 문자열만 있으면 실시간 태그와 모양이 달라 복제도, 장비별로 모아 보는 것도 안 됐다. 장비 › 태그 계층으로 바꿨고 키는 조립한다.
+- 장비 안 그룹(사용자 정의 분류)·태그별 사용 스위치·속도/가속 한계·장비 이름 — 등록 화면이 복잡해지고 표가 가로로 넘쳐 뺐다. 분류는 실시간 복제 탭의 묶음(시각·계측값·상태)만 남고, 한계는 3D 플레이 리포트의 포화 지표까지 함께 뺐다.
 - 시나리오(태그 키별 키프레임 트랙) — 평탄 키 기준이라 장비 구조와 어긋나 통째로 뺐다. 다시 만들 때는 장비·코드 기준 트랙으로 새로 설계한다.
 - 복제한 가상 태그가 실시간 값을 계속 따라가는 것 — 1회 스냅샷만 둔다. 라이브 연동은 러너가 스냅샷 스토어를 읽어야 해 값 생산자가 둘이 된다.
-- 벽시계 dt 를 그대로 적분하는 rate limit — 큰 dt 는 가속 프로파일이 1~2틱으로 붕괴해 stop‑go 히치가 나고, 틱 지터로 같은 씬 시각의 값이 달라진다. 씬 시간 `tickMs` 고정 스텝으로 적분한다.
+- 벽시계 dt 로 값을 계산하는 것 — 틱 지터로 같은 씬 시각의 값이 달라진다. 씬 시간 `tickMs` 고정 스텝 경계에서만 계산한다.
 - 에디터에 시뮬레이션·시나리오 UI 를 두지 않는다 — 진입·이탈의 `stopSimulation()` 은 관리 페이지에서 켜진 러너가 넘어오지 않게 하는 방어다. 재생 UI 는 관리 페이지와 3D 플레이 트랜스포트 바에만 있다.
 - 시뮬레이션 알림 toast — 배너·HUD·헤더 배지와 겹쳐 보여 소리·브라우저 알림만 쓴다(`docs/agents/monitoring-ui.md`).
 - 레거시 `valueMapList`·`rigBindings`·단일 `tagKey` 를 저장본에 다시 쓰는 것 — 입력 전용, 로드 시 변환 후 소멸.

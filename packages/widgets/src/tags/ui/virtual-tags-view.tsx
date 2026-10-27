@@ -37,14 +37,14 @@ export function VirtualTagsView({
   const save = useVirtualTagStore((s) => s.save);
   const discard = useVirtualTagStore((s) => s.discard);
   const equipments = useVirtualTagStore((s) => s.equipments);
-  const tickMs = useVirtualTagStore((s) => s.tickMs);
+  const tickSec = useVirtualTagStore((s) => s.tickSec);
   const savedSnapshot = useVirtualTagStore((s) => s.savedSnapshot);
   const isSaving = useVirtualTagStore((s) => s.isSaving);
   const [registerOpen, setRegisterOpen] = useState(false);
   // dirty 는 스냅샷 비교 — 스토어의 isDirty() 는 구독이 안 되므로 여기서 파생.
   const isDirty = useMemo(
-    () => serializeVirtualTagSet({ tickMs, equipments }) !== savedSnapshot,
-    [savedSnapshot, equipments, tickMs],
+    () => serializeVirtualTagSet({ tickSec, equipments }) !== savedSnapshot,
+    [savedSnapshot, equipments, tickSec],
   );
 
   useEffect(() => {
