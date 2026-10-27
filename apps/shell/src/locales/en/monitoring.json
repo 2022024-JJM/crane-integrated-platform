@@ -142,11 +142,16 @@
       }
     },
     "crane": {
-      "label": "Crane",
+      "label": "Crane ID",
       "placeholder": "Select a crane…",
-      "search": "Search by crane no. or ID",
-      "empty": "No registered cranes.",
-      "unregistered": "unregistered",
+      "search": "Search by crane ID or bay",
+      "empty": "No cranes received from the server yet.",
+      "connecting": "Connecting to the server…",
+      "disconnected": "Disconnected from the server — no crane list.",
+      "loadError": "Failed to load the crane list. Check the connection.",
+      "offline": "offline",
+      "notOnServer": "Not on server",
+      "notOnServerHint": "The server is not sending this crane.\nMappings still use this ID.",
       "missing": "No crane — tag keys cannot be built",
       "clear": "Clear crane"
     },

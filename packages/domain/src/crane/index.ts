@@ -8,5 +8,4 @@ export {
   getCraneById,
   getCraneIdsByRegion,
   getCraneNameById,
-  listCranes,
 } from './model/registry';
