@@ -657,7 +657,7 @@ describe('isSceneInfoEqual — 리깅', () => {
     ({
       id: 'rig-1',
       name: 'R',
-      modelPath: '/models/crane.glb',
+      assetId: 'crane',
       joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'x' }],
       constraints: [
         { type: 'linear', id: 'l', input: 'a', output: 'b', factor: 1.14 },
@@ -669,6 +669,15 @@ describe('isSceneInfoEqual — 리깅', () => {
 
   it('리그 정의 필드 없음과 빈 배열은 같은 상태다', () => {
     expect(isSceneInfoEqual(scene(), scene({ rigs: [] }))).toBe(true);
+  });
+
+  it('리그의 자산 id 가 다르면 다른 상태다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({ rigs: [rig({ assetId: 'other' })] }),
+      ),
+    ).toBe(false);
   });
 
   it('선형 연동의 factor/offset 변경은 dirty 로 잡히고 offset 기본값 0 은 생략과 같다', () => {

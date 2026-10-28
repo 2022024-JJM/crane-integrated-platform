@@ -39,6 +39,7 @@ import {
   listModelNodeOptions,
   type ModelNodeTreeItem,
 } from '../lib/model-node-tree';
+import { listRigChoices } from '../lib/rig-choices';
 import {
   FIELD_INPUT,
   FIELD_LABEL,
@@ -453,7 +454,7 @@ export function RiggingSection({
   }, [model.tagMappings]);
 
   const rig = rigs.find((r) => r.id === model.rigId) ?? null;
-  const candidates = rigs.filter((r) => r.modelPath === model.path);
+  const candidates = listRigChoices(rigs, model);
 
   // registry 의 clone root 는 마운트 후 고정이라 useMemo 가 폴링 리렌더마다
   // 트리를 다시 만들지 않는다.
@@ -579,6 +580,8 @@ export function RiggingSection({
           size="icon-xs"
           aria-label={t('monitoring:inspector.rigging.create')}
           title={t('monitoring:inspector.rigging.create')}
+          // 리그는 자산 id 로 매인다 — 자산 참조 없는 모델엔 만들 수 없다.
+          disabled={!model.asset}
           onClick={onCreateRig}
         >
           <Plus className="size-3.5" />

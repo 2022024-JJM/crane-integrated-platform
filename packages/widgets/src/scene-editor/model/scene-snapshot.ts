@@ -311,7 +311,7 @@ function isRigDefinitionListEqual(
     if (
       ar.id !== br.id ||
       ar.name !== br.name ||
-      ar.modelPath !== br.modelPath ||
+      ar.assetId !== br.assetId ||
       ar.joints.length !== br.joints.length ||
       ar.constraints.length !== br.constraints.length
     ) {

@@ -58,7 +58,7 @@ function rig(overrides: Partial<RigDefinition> = {}): RigDefinition {
   return {
     id: 'rig-a',
     name: 'A',
-    modelPath: '/models/a.glb',
+    assetId: 'a',
     joints: [
       { id: 'arm', node: '[0]Arm', type: 'hinge', axis: 'z', max: 90 },
       { id: 'hand', node: '[0]Arm/[0]Hand', type: 'slide', axis: 'y' },

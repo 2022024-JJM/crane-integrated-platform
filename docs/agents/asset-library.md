@@ -23,7 +23,7 @@
 | 3D 화면 편집의 팔레트(모델·맵·배경) | `packages/features/src/asset-library/lib/scene-palette.ts`, `model/use-scene-palette.ts`, 화면 `packages/widgets/src/3d/ui/{palette-asset-grid,palette-category-filter,palette-map-section,palette-environment-section,palette-tile-thumbnail}.tsx`, 타일 상태 `packages/widgets/src/3d/lib/map-palette-tiles.ts`, 썸네일 주소 `lib/palette-thumbnail.ts` |
 | 씬의 자산 참조(스키마·방어) | `SceneAssetRef`·`SavedEnvironmentInfo`(`packages/domain/src/3d/model/types.ts`), `packages/domain/src/3d/lib/scene-asset-ref.ts` |
 | 새 버전 알림과 갱신 | 찾기 `packages/features/src/asset-library/lib/scene-asset-updates.ts`, 바꾸기 `packages/domain/src/3d/lib/scene-asset-update.ts`(`withSceneAssetVersion`), 화면 `packages/widgets/src/3d/ui/palette-asset-updates.tsx` |
-| 씬 JSON 에 자산 참조 채우기 `node scripts/migrate-scene-asset-refs.mjs [--check]` | `scripts/migrate-scene-asset-refs.mjs` |
+| 씬 JSON 에 자산 참조 채우기(옛 리그의 `assetId` 포함) `node scripts/migrate-scene-asset-refs.mjs [--check]` | `scripts/migrate-scene-asset-refs.mjs` |
 | 등록할 파일 검사(GLB 헤더·EXR 해상도·중복) | `lib/asset-file.ts`(`validateExrHeader`), `packages/widgets/src/asset-library/lib/analyze-asset-file.ts` |
 | 저장소 인터페이스·구현 | `lib/asset-library-storage.ts`(`AssetLibraryRepository`), 브라우저 바이너리 `lib/asset-blob-store.ts` |
 | 스토어(자동 저장) | `packages/features/src/asset-library/model/use-asset-library-store.ts` |

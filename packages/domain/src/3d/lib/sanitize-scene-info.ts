@@ -107,9 +107,11 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const seenIds = new Set<string>();
 
   // 리그 정의는 모델보다 먼저 — 모델의 rigId 가 존재하는 정의를 가리키는지
-  // 검사해야 하므로.
+  // 검사해야 하므로. 모델 원본은 옛 리그(assetId 없음)의 자산 id 를 유도하는
+  // 데만 쓴다.
   const safeRigs = sanitizeRigDefinitions(
     (sceneInfo as SavedSceneInfo | undefined)?.rigs,
+    (sceneInfo as SavedSceneInfo | undefined)?.models,
   );
 
   const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })

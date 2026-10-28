@@ -387,7 +387,7 @@
     {
       "id": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
       "name": "LLC-002",
-      "modelPath": "/models/LLC_002.glb",
+      "assetId": "llc-002",
       "joints": [
         {
           "id": "joint-8d326e4d",

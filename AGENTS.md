@@ -24,7 +24,7 @@ pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` �
 - `pnpm test` — vitest
 - `pnpm new-site <slug>` — 새 사이트 plugin scaffold
 - `node scripts/optimize-{glb,map}.mjs --single <입력> <출력>`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 최적화는 자산 등록 화면이 돌린다. 절차는 `docs/agents/assets-glb.md`
-- `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채운다. `docs/agents/asset-library.md`
+- `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채우고 옛 리그에는 `assetId` 를 적는다. `docs/agents/asset-library.md`
 - `pnpm assets:stats [--check|--changed]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. 등록 화면은 저장 뒤 `--changed` 로 자동 갱신한다. `docs/agents/asset-library.md`
 
 ### 검증 커맨드의 실제 커버리지 (주의)
@@ -296,6 +296,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).
 - 새 dev 저장 미들웨어는 `vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다 (3d-editor).
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
+- 리그는 `assetId` 로 모델에 매인다. 경로·버전으로 맞추지 않는다 — `modelPath` 만 있는 옛 리그는 sanitize 가 그 리그를 쓰는 모델의 자산 id 로 채운다 (tag-mapping-rig).
 - 시뮬레이션 값은 씬 시간의 함수다 — 시나리오 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
 - 값 생산자의 정상 전진 스무딩 시간은 **다음 값이 올 때까지의 벽시계 시간**이다 — 시나리오 러너 `tickMs / speed`, 리플레이 프레임 길이 ÷ 배속(`lib/replay-smoothing.ts`), 실시간은 키별 값 변화 간격(`lib/realtime-smoothing.ts`, publish 간격이 아니다 — 브리지가 스냅샷의 태그 전부를 재발행한다). 바뀌지 않은 재발행은 마지막 스무딩 시간을 이어받는다 — 기본값으로 넘기면 진행 중 스무딩이 잘린다 (tag-mapping-rig, 3d-play).

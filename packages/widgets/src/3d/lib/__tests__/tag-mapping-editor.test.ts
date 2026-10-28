@@ -11,7 +11,7 @@ import {
 const rig: RigDefinition = {
   id: 'rig',
   name: 'R',
-  modelPath: '/models/a.glb',
+  assetId: 'a',
   joints: [
     { id: 'luff', node: '[0]Arm', type: 'hinge', axis: 'x' },
     { id: 'trolley', node: '[0]Arm/[0]Hand', type: 'slide', axis: 'z' },

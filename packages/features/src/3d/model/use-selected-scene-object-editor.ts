@@ -890,11 +890,13 @@ export function useSelectedSceneObjectEditor({
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) return prev;
       const model = prev.models.find((m) => m.id === selectedModelId);
-      if (!model) return prev;
+      // 리그는 자산 id 로 모델에 매인다 — 자산 참조가 없는 모델(마이그레이션
+      // 전 씬)에는 만들 수 없다. 리깅 탭의 만들기 버튼도 같은 조건으로 잠긴다.
+      if (!model?.asset) return prev;
       const rig: RigDefinition = {
         id: `rig-${createId()}`,
         name: model.equipName.trim() || model.id,
-        modelPath: model.path,
+        assetId: model.asset.id,
         joints: [],
         constraints: [],
       };
