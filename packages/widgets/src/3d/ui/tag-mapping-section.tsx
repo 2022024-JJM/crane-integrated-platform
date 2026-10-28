@@ -37,7 +37,7 @@ import { craneListEmptyReason, isListedCraneId } from '../lib/crane-id-options';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
-  type ModelNodeOption,
+  type ModelNodeTreeItem,
 } from '../lib/model-node-tree';
 import {
   PREVIEW_CHOICES,
@@ -234,7 +234,8 @@ function MappingCard({
   index,
   mapping,
   rig,
-  options,
+  tree,
+  jointNodePaths,
   nodesReady,
   conflict,
   unresolved,
@@ -250,7 +251,9 @@ function MappingCard({
   index: number;
   mapping: TagMapping;
   rig: RigDefinition | undefined;
-  options: ModelNodeOption[];
+  tree: ModelNodeTreeItem[];
+  /** 리그 관절이 구동하는 노드 경로 — 노드 선택기의 관절 표시. */
+  jointNodePaths: ReadonlySet<string>;
   nodesReady: boolean;
   conflict: TagMappingConflict | undefined;
   unresolved: boolean;
@@ -343,7 +346,8 @@ function MappingCard({
           <Field compact label={t('monitoring:inspector.mapping.node')}>
             <NodeSelect
               value={target.node}
-              options={options}
+              tree={tree}
+              jointNodePaths={jointNodePaths}
               rootLabel={t('monitoring:inspector.mapping.root')}
               previewModelId={modelId}
               onChange={(node) => onChange({ target: { ...target, node } })}
@@ -729,9 +733,12 @@ export function TagMappingSection({
   const mappings = model.tagMappings ?? NO_MAPPINGS;
   const statusTags = model.statusTags ?? NO_STATUS_TAGS;
   const root = modelObjectRegistry.get(model.id) ?? null;
-  const options = useMemo(
-    () => (root ? listModelNodeOptions(buildModelNodeTree(root)) : []),
-    [root],
+  const tree = useMemo(() => (root ? buildModelNodeTree(root) : []), [root]);
+  const options = useMemo(() => listModelNodeOptions(tree), [tree]);
+  // 계층 목록과 같은 관절 노드 표시 — 선형 연동의 출력도 joints 에 있다.
+  const jointNodePaths = useMemo(
+    () => new Set(rig?.joints.map((joint) => joint.node) ?? []),
+    [rig],
   );
   const knownPaths = useMemo(
     () => new Set(options.map((o) => o.path)),
@@ -806,7 +813,8 @@ export function TagMappingSection({
                 index={index}
                 mapping={mapping}
                 rig={rig}
-                options={options}
+                tree={tree}
+                jointNodePaths={jointNodePaths}
                 nodesReady={root !== null}
                 conflict={conflicts.get(mapping.id)}
                 unresolved={
