@@ -524,6 +524,48 @@
       "animations": 0
     }
   },
+  "/asset-library/files/rt-goliath-crane-body/v2/goliath_crane_body.glb": {
+    "hash": "c2a99dd3",
+    "bytes": 1108356,
+    "stats": {
+      "triangles": 64560,
+      "vertices": 126052,
+      "meshes": 2,
+      "materials": 2,
+      "textures": 1,
+      "drawCalls": 2,
+      "nodes": 2,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        129.991,
+        61.875,
+        43.738
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
+  "/asset-library/files/rt-goliath-crane-trolley/v2/goliath_crane_trolley.glb": {
+    "hash": "8b530dcf",
+    "bytes": 347368,
+    "stats": {
+      "triangles": 12380,
+      "vertices": 10391,
+      "meshes": 10,
+      "materials": 5,
+      "textures": 1,
+      "drawCalls": 10,
+      "nodes": 8,
+      "textureMemoryBytes": 22313697,
+      "size": [
+        12.289,
+        38.285,
+        22.044
+      ],
+      "lodLevels": 1,
+      "animations": 0
+    }
+  },
   "/asset-library/files/truck/v1/Truck.glb": {
     "hash": "b6f75917",
     "bytes": 5589660,

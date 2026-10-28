@@ -3894,9 +3894,44 @@
           "note": "",
           "createdAt": "2026-09-01T06:28:37.000Z",
           "createdBy": "조범희"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/rt-goliath-crane-body/v2/goliath_crane_body.glb"
+            },
+            "fileName": "goliath_crane_body.glb",
+            "format": "glb",
+            "sizeBytes": 1108356,
+            "contentHash": "sha256:4d1cafa2523fab583421e919b531e3f9d5238de72d8d562e1bdaece81ea7538d",
+            "originalSizeBytes": 14423760
+          },
+          "note": "Philly Goliath v2(로프 추가)에서 분리",
+          "createdAt": "2026-10-27T23:50:17.580Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 64560,
+            "vertices": 126052,
+            "meshes": 2,
+            "materials": 2,
+            "textures": 1,
+            "drawCalls": 2,
+            "nodes": 5,
+            "textureMemoryBytes": 22313697,
+            "size": [
+              129.99077606201172,
+              61.87524443004233,
+              43.73755015972409
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -3905,7 +3940,7 @@
         "updatedAt": "2026-10-01T06:01:10.728Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "updatedAt": "2026-10-27T23:50:27.003Z",
       "history": [
         {
           "id": "id-muqawrpk-1r0yhy5p",
@@ -3924,6 +3959,49 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "4202c49c-1f8f-4a3c-b6c7-917d11e19f44",
+          "at": "2026-10-27T23:50:17.580Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "73d8816e-3e6f-40c5-8dbe-8889fcf34dc2",
+          "at": "2026-10-27T23:50:21.731Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "dea1dbe0-5e45-4298-ad09-c8aa37532793",
+          "at": "2026-10-27T23:50:23.536Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "973cae84-0463-4849-aa5d-db87b050581c",
+          "at": "2026-10-27T23:50:25.232Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "35a781a4-8e6d-4aba-a55e-c59b875a702d",
+          "at": "2026-10-27T23:50:27.003Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
         }
       ]
     },
@@ -3959,9 +4037,44 @@
           "note": "",
           "createdAt": "2026-09-01T06:28:37.000Z",
           "createdBy": "조범희"
+        },
+        {
+          "version": 2,
+          "status": "published",
+          "file": {
+            "ref": {
+              "storage": "public",
+              "path": "/asset-library/files/rt-goliath-crane-trolley/v2/goliath_crane_trolley.glb"
+            },
+            "fileName": "goliath_crane_trolley.glb",
+            "format": "glb",
+            "sizeBytes": 347368,
+            "contentHash": "sha256:170ee9a652657eb8aaa669cb1302873f6b7fecdd1000505f1cef1efbfaf9c2ce",
+            "originalSizeBytes": 14425412
+          },
+          "note": "Philly Goliath v2(로프 추가)에서 분리 — 트롤리 + 로프",
+          "createdAt": "2026-10-27T23:50:32.494Z",
+          "createdBy": "crane.ocean",
+          "stats": {
+            "triangles": 12380,
+            "vertices": 10391,
+            "meshes": 10,
+            "materials": 5,
+            "textures": 0,
+            "drawCalls": 10,
+            "nodes": 18,
+            "textureMemoryBytes": 0,
+            "size": [
+              12.288563908461626,
+              38.28473793160407,
+              22.044200897216797
+            ],
+            "lodLevels": 1,
+            "animations": 0
+          }
         }
       ],
-      "currentVersion": 1,
+      "currentVersion": 2,
       "thumbnail": {
         "ref": {
           "storage": "public",
@@ -3970,7 +4083,7 @@
         "updatedAt": "2026-10-01T06:01:14.366Z"
       },
       "createdAt": "2026-07-23T09:43:08.000Z",
-      "updatedAt": "2026-10-06T04:19:24.991Z",
+      "updatedAt": "2026-10-27T23:50:39.337Z",
       "history": [
         {
           "id": "id-muqawrpk-hlo9ikdg",
@@ -3989,6 +4102,49 @@
           "fields": [
             "categories"
           ]
+        },
+        {
+          "id": "d95dc613-d0a3-4a52-9e05-d2a684f240d5",
+          "at": "2026-10-27T23:50:32.494Z",
+          "actor": "crane.ocean",
+          "action": "version-added",
+          "version": 2
+        },
+        {
+          "id": "a104efa2-3b1a-40e4-9719-63edf094201f",
+          "at": "2026-10-27T23:50:35.427Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "draft",
+          "to": "in-review"
+        },
+        {
+          "id": "9a6f9a09-fcb1-42ba-82b3-2159615cf09f",
+          "at": "2026-10-27T23:50:36.764Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "in-review",
+          "to": "approved"
+        },
+        {
+          "id": "7146eb03-d08e-4fbd-b6cb-c2d6735201e0",
+          "at": "2026-10-27T23:50:38.062Z",
+          "actor": "crane.ocean",
+          "action": "status",
+          "version": 2,
+          "from": "approved",
+          "to": "published"
+        },
+        {
+          "id": "3e1d4d80-d05f-4075-8840-11f4526b7a99",
+          "at": "2026-10-27T23:50:39.337Z",
+          "actor": "crane.ocean",
+          "action": "current-changed",
+          "version": 2,
+          "from": "1",
+          "to": "2"
         }
       ]
     },

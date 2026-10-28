@@ -10,29 +10,42 @@
 // 쓰므로 로프가 보여서, 두 화면이 서로 달라 보이는 증상이 됐다).
 //
 // 사용법:
-//   node scripts/split-goliath-parts.mjs        # assets-src 원본 → 파트 2개
-//   이어서: 두 파트를 자산 라이브러리에서 새 버전으로 올린다(최적화 켬)
+//   node scripts/split-goliath-parts.mjs [--src <원본.glb>] [--out <디렉터리>]
+//   이어서: 두 파트를 자산 라이브러리(rt-goliath-crane-body ·
+//   rt-goliath-crane-trolley)에서 새 버전으로 올린다(최적화 켬). 올린 원본은
+//   미들웨어가 assets-src/asset-library/<id>/v<N>/ 에 남기므로 출력은 임시
+//   디렉터리로 받아도 된다.
 //
-// 입력은 assets-src/models/goliath_crane.glb (언베이크된 "진짜 원본"),
-// 출력도 assets-src/models/ 다 — 배포 경로에는 직접 쓰지 않는다(배포 파일은
-// 자산 라이브러리의 버전으로만 바뀐다).
+// 입력 기본값은 자산 라이브러리 goliath-crane 의 현재 버전 원본(압축 전 GLB,
+// assets-src/asset-library/goliath-crane/v<N>/). 배포 경로에는 직접 쓰지
+// 않는다(배포 파일은 자산 라이브러리의 버전으로만 바뀐다).
 //
 // 분리 기준은 원본의 노드 이름이다. 종전처럼 지오메트리 연결 요소로 자르지
 // 않는다 — 원본이 이미 트롤리를 별도 노드로 갖고 있어 이름만 보면 되고,
 // 노드 단위로 옮기면 월드 변환이 보존되어 두 파트가 position [0,0,0] 으로
-// 정확히 조립된다(존 설정이 전제하는 계약).
+// 정확히 조립된다(존 설정이 전제하는 계약). 트롤리 노드의 **자손**(로프·후크
+// 노드)은 트롤리 파트로 따라간다 — 로프는 트롤리에 매달려 함께 움직인다.
+import { mkdirSync } from 'node:fs';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
 
-const SRC = 'assets-src/models/goliath_crane.glb';
+const argOf = (flag, fallback) => {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
+};
+const SRC = argOf(
+  '--src',
+  'assets-src/asset-library/goliath-crane/v2/Philly_Goliath-add_rope.glb',
+);
+const OUT_DIR = argOf('--out', 'assets-src/models');
 
-/** 트롤리 파트로 보낼 원본 노드 이름 (나머지는 전부 body). */
+/** 트롤리 파트로 보낼 원본 노드 이름 — 그 자손(로프·후크)까지 (나머지는 전부 body). */
 const TROLLEY_NODES = ['Goliath Crane_Trolley_01', 'Goliath Crane_Trolley_02'];
 
 const OUTPUTS = [
-  { path: 'assets-src/models/goliath_crane_body.glb', name: 'Goliath Crane Body', trolley: false },
-  { path: 'assets-src/models/goliath_crane_trolley.glb', name: 'Goliath Crane Trolley', trolley: true },
+  { path: `${OUT_DIR}/goliath_crane_body.glb`, name: 'Goliath Crane Body', trolley: false },
+  { path: `${OUT_DIR}/goliath_crane_trolley.glb`, name: 'Goliath Crane Trolley', trolley: true },
 ];
 
 const io = new NodeIO()
@@ -87,6 +100,7 @@ function measure(doc) {
 
 const fmt = (a) => a.map((v) => v.toFixed(2)).join(', ');
 
+mkdirSync(OUT_DIR, { recursive: true });
 const source = await io.read(SRC);
 const srcStats = measure(source);
 console.log(`원본 ${SRC}`);
@@ -113,16 +127,18 @@ for (const out of OUTPUTS) {
 
   // 반대편 파트의 노드를 씬에서 떼어낸다. 남긴 노드의 월드 변환은 그대로라
   // 두 파트를 position [0,0,0] 으로 겹쳐 놓으면 원본과 동일하게 조립된다.
+  // 트롤리 노드 안쪽은 자손까지 트롤리다(inTrolley 를 내려 보낸다).
   const drop = [];
-  const walk = (node) => {
-    const isTrolley = TROLLEY_NODES.includes(node.getName());
+  const walk = (node, inTrolley) => {
+    const isTrolley = inTrolley || TROLLEY_NODES.includes(node.getName());
     if (node.getMesh() && isTrolley !== out.trolley) drop.push(node);
-    for (const child of node.listChildren()) walk(child);
+    for (const child of node.listChildren()) walk(child, isTrolley);
   };
-  for (const n of scene.listChildren()) walk(n);
+  for (const n of scene.listChildren()) walk(n, false);
   for (const node of drop) node.dispose();
 
-  // 남은 메시 노드에 파트 이름을 부여한다(디버깅·에디터 표시용).
+  // 메시 노드가 하나로 남으면 파트 이름을 부여한다(디버깅·에디터 표시용).
+  // 여러 개(트롤리 + 로프 노드)면 원본 이름을 그대로 둔다 — 리깅이 이름을 본다.
   const kept = doc.getRoot().listNodes().filter((n) => n.getMesh());
   if (kept.length === 1) kept[0].setName(out.name);
 

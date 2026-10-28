@@ -27,8 +27,8 @@ export interface CodeAssetRef {
 export const CODE_ASSETS = {
   goliathCrane: {
     id: 'goliath-crane',
-    version: 1,
-    path: '/models/goliath_crane.glb',
+    version: 2,
+    path: '/asset-library/files/goliath-crane/v2/Philly_Goliath-add_rope.glb',
     usedBy: 'crane-type-model',
   },
   llc002: {
@@ -57,14 +57,14 @@ export const CODE_ASSETS = {
   },
   goliathCraneBody: {
     id: 'rt-goliath-crane-body',
-    version: 1,
-    path: '/models/goliath_crane_body.glb',
+    version: 2,
+    path: '/asset-library/files/rt-goliath-crane-body/v2/goliath_crane_body.glb',
     usedBy: 'crane-zone-config',
   },
   goliathCraneTrolley: {
     id: 'rt-goliath-crane-trolley',
-    version: 1,
-    path: '/models/goliath_crane_trolley.glb',
+    version: 2,
+    path: '/asset-library/files/rt-goliath-crane-trolley/v2/goliath_crane_trolley.glb',
     usedBy: 'crane-zone-config',
   },
   person: {
