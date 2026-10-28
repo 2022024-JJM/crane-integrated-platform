@@ -81,6 +81,7 @@ describe('SceneCarryRuntime', () => {
     let r = rt.step(s.models, s.resolve);
     expect(r.moved).toBe(false);
     expect(r.cables).toHaveLength(1);
+    expect(r.cables[0].node).toBe(s.rope);
     expect(r.cables[0].from.y).toBe(60);
     expect(r.cables[0].to.y).toBeCloseTo(40);
     expect(sceneCarryState.size).toBe(0);

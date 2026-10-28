@@ -76,7 +76,7 @@ interface MovedBlock {
 export interface CarryStepResult {
   /** 이 프레임에 어떤 블록이든 위치가 바뀌었는가 — 그림자 무효화 신호. */
   moved: boolean;
-  /** 훅 노드마다 한 가닥(모델 › 훅 › 노드 순). 레이어가 그린다. */
+  /** 훅 노드마다 하나(모델 › 훅 › 노드 순). 레이어가 그 노드의 로프를 잇는다. */
   cables: CableSegment[];
 }
 
@@ -327,7 +327,7 @@ export class SceneCarryRuntime {
   private cableAt(cables: CableSegment[], index: number): CableSegment {
     let cable = cables[index];
     if (!cable) {
-      cable = { from: new Vector3(), to: new Vector3() };
+      cable = { from: new Vector3(), to: new Vector3(), node: null };
       cables[index] = cable;
     }
     return cable;
