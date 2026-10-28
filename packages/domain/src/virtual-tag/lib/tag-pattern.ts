@@ -21,11 +21,6 @@ export function initVirtualTagState(
   return { value: clampToTag(def, def.initial) };
 }
 
-/** 0→1→0 삼각파(0 에서 상승 시작). */
-function triangle(t: number): number {
-  return t < 0.5 ? 2 * t : 2 - 2 * t;
-}
-
 /** 0 에서 상승 시작하는 정규화 사인(0.5 − 0.5cos). */
 function sineWave(t: number): number {
   return 0.5 - 0.5 * Math.cos(2 * Math.PI * t);
@@ -36,12 +31,11 @@ function sineWave(t: number): number {
  * 값이 initial 에서 점프하지 않고 이어진다.
  */
 function phaseForInitial(
-  kind: 'triangle' | 'sine' | 'sawtooth',
+  kind: 'sine' | 'sawtooth',
   normalized: number,
 ): number {
   const n = Math.min(1, Math.max(0, normalized));
   if (kind === 'sawtooth') return n;
-  if (kind === 'triangle') return n / 2;
   return Math.acos(1 - 2 * n) / (2 * Math.PI);
 }
 
@@ -74,18 +68,12 @@ export function stepVirtualTag(
   switch (pattern.kind) {
     case 'manual':
       return state;
-    case 'triangle':
     case 'sine':
     case 'sawtooth': {
       const period = periodOf(pattern);
       const phase = phaseForInitial(pattern.kind, normalizedInitial(def));
       const t = (((elapsed / period + phase) % 1) + 1) % 1;
-      const u =
-        pattern.kind === 'triangle'
-          ? triangle(t)
-          : pattern.kind === 'sine'
-            ? sineWave(t)
-            : t;
+      const u = pattern.kind === 'sine' ? sineWave(t) : t;
       return { value: clampToTag(def, def.min + u * range) };
     }
     case 'square': {

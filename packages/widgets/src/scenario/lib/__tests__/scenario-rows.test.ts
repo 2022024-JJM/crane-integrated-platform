@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSceneInfo } from '@crane/domain/3d';
-import type {
-  ScenarioTag,
-  SimulationScenario,
+import {
+  VIRTUAL_TAG_PERIOD_DEFAULT,
+  type ScenarioTag,
+  type SimulationScenario,
+  type VirtualTagPattern,
 } from '@crane/domain/virtual-tag';
 import type { ScenarioTagIssue, VirtualTagEntry } from '@crane/features/3d';
 import {
+  describePatternSentence,
   formatVirtualValue,
   groupScenarioRows,
   isBoolOn,
+  nextPattern,
   nodeLeafName,
+  resolveRowControl,
+  showsInitialValue,
   sliderStep,
   valuePercent,
 } from '../scenario-rows';
@@ -201,6 +207,248 @@ describe('valuePercent · sliderStep · isBoolOn', () => {
     expect(isBoolOn(undefined)).toBe(false);
     expect(isBoolOn(0.5)).toBe(true);
     expect(isBoolOn(0.499)).toBe(false);
+  });
+});
+
+function withPattern(
+  pattern: VirtualTagPattern,
+  patch: Partial<ScenarioTag> = {},
+): ScenarioTag {
+  return { ...tag('t', 'm1', 'code'), pattern, ...patch };
+}
+
+describe('resolveRowControl', () => {
+  const sine: VirtualTagPattern = { kind: 'sine', periodSec: 8 };
+  const square: VirtualTagPattern = { kind: 'square', periodSec: 8 };
+
+  it('issue 가 있으면 키가 있어도 none', () => {
+    expect(
+      resolveRowControl({
+        tag: withPattern({ kind: 'manual' }),
+        key: 'GC_04.x',
+        issue: 'duplicate-key',
+      }),
+    ).toBe('none');
+  });
+
+  it('issue 가 없어도 키가 없으면 none', () => {
+    expect(
+      resolveRowControl({
+        tag: withPattern({ kind: 'manual' }),
+        key: undefined,
+        issue: undefined,
+      }),
+    ).toBe('none');
+    expect(
+      resolveRowControl({ tag: withPattern(sine), key: '', issue: undefined }),
+    ).toBe('none');
+  });
+
+  it('숫자는 수동이면 slider, 파형이면 bar', () => {
+    const base = { key: 'GC_04.x', issue: undefined };
+    expect(
+      resolveRowControl({ ...base, tag: withPattern({ kind: 'manual' }) }),
+    ).toBe('slider');
+    expect(resolveRowControl({ ...base, tag: withPattern(sine) })).toBe('bar');
+    expect(resolveRowControl({ ...base, tag: withPattern(square) })).toBe(
+      'bar',
+    );
+  });
+
+  it('불리언은 수동이면 toggle, 구형파면 pill', () => {
+    const base = { key: 'GC_04.x', issue: undefined };
+    expect(
+      resolveRowControl({
+        ...base,
+        tag: withPattern({ kind: 'manual' }, { dataType: 'bool' }),
+      }),
+    ).toBe('toggle');
+    expect(
+      resolveRowControl({
+        ...base,
+        tag: withPattern(square, { dataType: 'bool' }),
+      }),
+    ).toBe('pill');
+  });
+});
+
+describe('nextPattern', () => {
+  it('같은 종류면 같은 참조 — duty 가 있는 구형파도 그대로', () => {
+    const manual: VirtualTagPattern = { kind: 'manual' };
+    const square: VirtualTagPattern = {
+      kind: 'square',
+      periodSec: 10,
+      dutyPct: 25,
+    };
+    expect(nextPattern(manual, 'manual')).toBe(manual);
+    expect(nextPattern(square, 'square')).toBe(square);
+  });
+
+  it('수동에서 파형으로 가면 기본 주기', () => {
+    expect(nextPattern({ kind: 'manual' }, 'sine')).toEqual({
+      kind: 'sine',
+      periodSec: VIRTUAL_TAG_PERIOD_DEFAULT,
+    });
+  });
+
+  it('파형끼리는 주기를 이어받는다', () => {
+    expect(nextPattern({ kind: 'sawtooth', periodSec: 20 }, 'sine')).toEqual({
+      kind: 'sine',
+      periodSec: 20,
+    });
+    expect(nextPattern({ kind: 'sine', periodSec: 0.5 }, 'square')).toEqual({
+      kind: 'square',
+      periodSec: 0.5,
+    });
+  });
+
+  it('구형파에서 다른 파형으로 가면 dutyPct 를 버린다', () => {
+    const next = nextPattern(
+      { kind: 'square', periodSec: 10, dutyPct: 25 },
+      'sawtooth',
+    );
+    expect(next).toEqual({ kind: 'sawtooth', periodSec: 10 });
+    expect(next).not.toHaveProperty('dutyPct');
+  });
+
+  it('파형에서 수동으로 가면 주기가 없는 manual', () => {
+    const next = nextPattern({ kind: 'sine', periodSec: 40 }, 'manual');
+    expect(next).toEqual({ kind: 'manual' });
+    expect(next).not.toHaveProperty('periodSec');
+  });
+});
+
+describe('showsInitialValue', () => {
+  it('사인·톱니파만 초기값 줄을 둔다', () => {
+    expect(showsInitialValue({ kind: 'sine', periodSec: 40 })).toBe(true);
+    expect(showsInitialValue({ kind: 'sawtooth', periodSec: 0.1 })).toBe(true);
+  });
+
+  it('수동과 구형파(duty 와 무관)는 숨긴다', () => {
+    expect(showsInitialValue({ kind: 'manual' })).toBe(false);
+    expect(showsInitialValue({ kind: 'square', periodSec: 10 })).toBe(false);
+    expect(
+      showsInitialValue({ kind: 'square', periodSec: 10, dutyPct: 25 }),
+    ).toBe(false);
+  });
+});
+
+describe('describePatternSentence', () => {
+  it('수동은 주기가 없어 null — 숫자·불리언 모두', () => {
+    expect(describePatternSentence(withPattern({ kind: 'manual' }))).toBeNull();
+    expect(
+      describePatternSentence(
+        withPattern({ kind: 'manual' }, { dataType: 'bool' }),
+      ),
+    ).toBeNull();
+  });
+
+  it('사인·톱니파는 파형 이름이 키, 단위는 앞 공백을 붙인다', () => {
+    const patch = { min: 0, max: 60, unit: 'm' };
+    expect(
+      describePatternSentence(
+        withPattern({ kind: 'sine', periodSec: 20 }, patch),
+      ),
+    ).toEqual({
+      key: 'sine',
+      values: { period: '20', min: '0', max: '60', unit: ' m', duty: '50' },
+    });
+    expect(
+      describePatternSentence(withPattern({ kind: 'sawtooth', periodSec: 40 }))
+        ?.key,
+    ).toBe('sawtooth');
+  });
+
+  it('단위가 없거나 공백뿐이면 빈 문자열, 앞뒤 공백은 뗀다', () => {
+    const sine: VirtualTagPattern = { kind: 'sine', periodSec: 8 };
+    expect(describePatternSentence(withPattern(sine))?.values.unit).toBe('');
+    expect(
+      describePatternSentence(withPattern(sine, { unit: '   ' }))?.values.unit,
+    ).toBe('');
+    expect(
+      describePatternSentence(withPattern(sine, { unit: '  deg ' }))?.values
+        .unit,
+    ).toBe(' deg');
+  });
+
+  it('음수·소수 범위와 소수 주기는 formatVirtualValue 표기', () => {
+    expect(
+      describePatternSentence(
+        withPattern(
+          { kind: 'sine', periodSec: 0.5 },
+          { min: -32, max: 11.75, unit: 'deg' },
+        ),
+      )?.values,
+    ).toEqual({
+      period: '0.5',
+      min: '-32',
+      max: '11.75',
+      unit: ' deg',
+      duty: '50',
+    });
+  });
+
+  it('구형파는 duty 가 없거나 50 이면 square, 아니면 squareDuty', () => {
+    expect(
+      describePatternSentence(withPattern({ kind: 'square', periodSec: 10 }))
+        ?.key,
+    ).toBe('square');
+    expect(
+      describePatternSentence(
+        withPattern({ kind: 'square', periodSec: 10, dutyPct: 50 }),
+      )?.key,
+    ).toBe('square');
+    expect(
+      describePatternSentence(
+        withPattern({ kind: 'square', periodSec: 10, dutyPct: 25 }),
+      ),
+    ).toMatchObject({ key: 'squareDuty', values: { duty: '25' } });
+  });
+
+  it('duty 경계 0·100 은 squareDuty, 범위 밖은 클램프, 숫자가 아니면 기본 50', () => {
+    const square = (dutyPct: number) =>
+      describePatternSentence(
+        withPattern({ kind: 'square', periodSec: 10, dutyPct }),
+      );
+    expect(square(0)).toMatchObject({
+      key: 'squareDuty',
+      values: { duty: '0' },
+    });
+    expect(square(100)).toMatchObject({
+      key: 'squareDuty',
+      values: { duty: '100' },
+    });
+    expect(square(150)).toMatchObject({
+      key: 'squareDuty',
+      values: { duty: '100' },
+    });
+    expect(square(-5)).toMatchObject({
+      key: 'squareDuty',
+      values: { duty: '0' },
+    });
+    expect(square(Number.NaN)).toMatchObject({
+      key: 'square',
+      values: { duty: '50' },
+    });
+  });
+
+  it('불리언 구형파는 boolSquare(Duty) 이고 단위가 있어도 넣지 않는다', () => {
+    expect(
+      describePatternSentence(
+        withPattern(
+          { kind: 'square', periodSec: 10 },
+          { dataType: 'bool', unit: 'm' },
+        ),
+      ),
+    ).toMatchObject({ key: 'boolSquare', values: { period: '10', unit: '' } });
+    expect(
+      describePatternSentence(
+        withPattern(
+          { kind: 'square', periodSec: 10, dutyPct: 30 },
+          { dataType: 'bool' },
+        ),
+      ),
+    ).toMatchObject({ key: 'boolSquareDuty', values: { duty: '30' } });
   });
 });
 

@@ -249,7 +249,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - variant 스타일링은 CVA(`class-variance-authority`) 패턴을 따른다.
 - 서체는 Pretendard 하나다(`global.css` 의 `--font-sans`, 캔버스는 같은 스택을 상수로). 화면·앱마다 `fontFamily` 를 따로 지정하지 않고, 고정폭·좁은 글꼴도 두지 않는다. Pretendard 숫자는 비례폭이라 `html` 에 `tabular-nums` 를 전역으로 건다 — 크게 적는 숫자만 `proportional-nums` 로 푼다.
 - 고정 높이 컨트롤의 한 줄 글자는 `text-box-cap`(`global.css`)으로 세로 가운데를 맞춘다 — Chrome 이 서체 높이를 px 로 깎아 Pretendard 가 0.5~1.5px 뜬다. 글자를 직접 감싼 요소에만 걸려서 공용 Button·Badge·Toggle·Kbd·Select·Tabs 는 안에서 글자를 감싸 두었고(`@crane/ui/atoms/cap-text`), 직접 만든 버튼·탭은 글자 span 에 붙인다. 높이가 내용으로 정해지는 요소에 붙이면 그만큼 줄어든다.
-- blur·Enter 로 확정하는 텍스트 입력은 `@crane/core/lib/use-ime-safe-blur` 를 거친다 — blur 는 `useImeSafeBlur`, keydown 은 `isImeComposing`. 한글 조합 중에 값을 바꾸거나 비우면 마지막 글자가 한 번 더 들어간다. 3D 에디터 팔레트의 이름 입력·시나리오 이름 입력은 아직 거치지 않는다.
+- blur·Enter 로 확정하는 텍스트 입력은 `@crane/core/lib/use-ime-safe-blur` 를 거친다 — blur 는 `useImeSafeBlur`, keydown 은 `isImeComposing`. 한글 조합 중에 값을 바꾸거나 비우면 마지막 글자가 한 번 더 들어간다. 3D 에디터 팔레트의 이름 입력은 아직 거치지 않는다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다(`react-refresh/only-export-components` 규칙과도 맞물린다. 선례 `packages/features/src/3d/lib/scene-shadow.ts`).
 
 ### State / Data / i18n

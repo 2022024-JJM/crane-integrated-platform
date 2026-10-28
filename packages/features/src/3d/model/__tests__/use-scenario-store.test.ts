@@ -343,7 +343,7 @@ describe('태그 CRUD', () => {
     const id = addScenario('S', [tagDef('mA', 'x')]);
     const result = store().addTags(id, [
       tagDef('mA', 'x'), // 중복
-      tagDef('mA', 'tri', { pattern: { kind: 'triangle', periodSec: 1 } }),
+      tagDef('mA', 'tri', { pattern: { kind: 'sine', periodSec: 1 } }),
       { ...tagDef('mB', 'y'), modelId: '' }, // 손상
     ]);
     expect(result).toEqual({ added: 1, skipped: 2 });
@@ -482,7 +482,7 @@ describe('재생(runner)', () => {
     addScenario('S', [
       tagDef('mA', 'tri', {
         max: 100,
-        pattern: { kind: 'triangle', periodSec: 1 },
+        pattern: { kind: 'sine', periodSec: 1 },
       }),
     ]);
     store().start();
@@ -492,8 +492,10 @@ describe('재생(runner)', () => {
     vi.advanceTimersByTime(250);
     const values = received.get('A.tri') ?? [];
     expect(values.length).toBe(1 + 2);
-    expect(values[values.length - 1]).toBeCloseTo(40, 6);
-    expect(tagLiveValues.get('A.tri')?.value).toBeCloseTo(40, 6);
+    // 두 틱 = 씬 시간 0.2초 — 0 에서 상승하는 사인(0.5 − 0.5cos) 위의 값.
+    const expected = 50 - 50 * Math.cos(2 * Math.PI * 0.2);
+    expect(values[values.length - 1]).toBeCloseTo(expected, 6);
+    expect(tagLiveValues.get('A.tri')?.value).toBeCloseTo(expected, 6);
   });
 
   it('pause 후에는 틱이 멈추고, 재개하면 위상이 이어진다', () => {

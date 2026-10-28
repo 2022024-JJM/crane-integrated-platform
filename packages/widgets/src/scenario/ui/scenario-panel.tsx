@@ -2,16 +2,21 @@ import {
   AlertTriangle,
   ChevronRight,
   Copy,
+  Pencil,
   PencilLine,
   Plus,
   Save,
   Trash2,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { scenariosOfSceneFile, useScenarioStore } from '@crane/features/3d';
+import {
+  isImeComposing,
+  useImeSafeBlur,
+} from '@crane/core/lib/use-ime-safe-blur';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
@@ -55,6 +60,13 @@ interface ExpandedGroups {
   ids: ReadonlySet<string>;
 }
 const NONE_EXPANDED: ExpandedGroups = { scenarioId: null, ids: new Set() };
+
+/** 정의를 펼친 태그 행 — 한 번에 하나. 묶음처럼 시나리오가 바뀌면 접힌다. */
+interface OpenTag {
+  scenarioId: string | null;
+  tagId: string | null;
+}
+const NO_OPEN_TAG: OpenTag = { scenarioId: null, tagId: null };
 
 export interface ScenarioPanelProps {
   className?: string;
@@ -100,9 +112,10 @@ export function ScenarioPanel({
 
   const [pick, setPick] = useState<ScenarioPickMode | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [nameError, setNameError] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [expandedGroups, setExpandedGroups] =
     useState<ExpandedGroups>(NONE_EXPANDED);
+  const [openTag, setOpenTag] = useState<OpenTag>(NO_OPEN_TAG);
 
   const candidates = useMemo(
     () => scenariosOfSceneFile(scenarios, sceneFile),
@@ -135,15 +148,29 @@ export function ScenarioPanel({
     });
   };
 
+  const openTagId =
+    active && openTag.scenarioId === active.id ? openTag.tagId : null;
+  const toggleTag = (tagId: string) => {
+    if (!active) return;
+    setOpenTag((prev) => ({
+      scenarioId: active.id,
+      tagId:
+        prev.scenarioId === active.id && prev.tagId === tagId ? null : tagId,
+    }));
+  };
+
   const openAddModel = () => {
     if (active) setPick({ kind: 'add', scenario: active });
   };
 
-  const commitName = (input: HTMLInputElement) => {
-    if (!active) return;
-    const ok = renameScenario(active.id, input.value);
-    setNameError(!ok);
-    if (!ok) queueMicrotask(() => input.focus());
+  // 이름 수정은 머리줄의 선택 상자 자리에서 한다. 거부(빈 이름·너무 김)되면
+  // 입력을 열어 둔다.
+  const editingName = renaming && active !== null;
+  const commitName = (value: string): boolean => {
+    if (!active) return true;
+    const ok = renameScenario(active.id, value);
+    if (ok) setRenaming(false);
+    return ok;
   };
 
   return (
@@ -207,9 +234,28 @@ export function ScenarioPanel({
         </AlertDialogPopup>
       </AlertDialog>
 
-      {/* 머리줄 — 시나리오 선택과 목록 조작. */}
+      {/* 머리줄 — 새 시나리오 · 시나리오 선택(이름 수정 중엔 이름 입력)과 목록 조작. */}
       <div className="border-border flex items-center gap-1 border-b px-2 py-1.5">
-        {candidates.length > 0 ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t('monitoring:scenario.add')}
+          title={t('monitoring:scenario.add')}
+          disabled={!sceneFile}
+          onClick={() => setPick({ kind: 'create' })}
+        >
+          <Plus className="size-3.5" />
+        </Button>
+        {editingName && active ? (
+          <ScenarioNameInput
+            key={active.id}
+            name={active.name}
+            onCommit={commitName}
+            onCancel={() => setRenaming(false)}
+            t={t}
+          />
+        ) : candidates.length > 0 ? (
           <select
             className={SELECT_CLASS}
             value={activeScenarioId ?? ''}
@@ -227,17 +273,19 @@ export function ScenarioPanel({
             {t('monitoring:scenario.none')}
           </span>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t('monitoring:scenario.add')}
-          title={t('monitoring:scenario.add')}
-          disabled={!sceneFile}
-          onClick={() => setPick({ kind: 'create' })}
-        >
-          <Plus className="size-3.5" />
-        </Button>
+        {editingName ? null : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t('monitoring:scenario.rename')}
+            title={t('monitoring:scenario.rename')}
+            disabled={!active}
+            onClick={() => setRenaming(true)}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -274,10 +322,18 @@ export function ScenarioPanel({
           {isSaving ? (
             <Spinner className="size-3" />
           ) : (
-            <Save className="size-3.5" />
+            // 미저장 표시 — 씬 편집 저장 버튼과 같은 붉은 점을 아이콘 우측 위에.
+            <span className="relative flex">
+              <Save className="size-3.5" />
+              {isDirty ? (
+                <span
+                  aria-hidden
+                  className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-red-500"
+                />
+              ) : null}
+            </span>
           )}
           {t('monitoring:scenario.save')}
-          {isDirty && !isSaving ? <span aria-hidden>•</span> : null}
         </Button>
       </div>
 
@@ -298,32 +354,8 @@ export function ScenarioPanel({
         </Empty>
       ) : (
         <>
-          {/* 이름 줄 — 이름 · 갱신 주기 · 모델 추가. */}
-          <div className="border-border flex items-center gap-2 border-b px-2 py-1.5">
-            <span className="text-muted-foreground shrink-0">
-              {t('monitoring:scenario.name')}
-            </span>
-            <Input
-              key={active.id + active.name}
-              defaultValue={active.name}
-              aria-label={t('monitoring:scenario.name')}
-              aria-invalid={nameError}
-              className={cn(
-                CELL_INPUT,
-                'h-7 min-w-0 flex-1 font-semibold',
-                nameError && 'border-amber-500 text-amber-500',
-              )}
-              onChange={() => setNameError(false)}
-              onBlur={(event) => commitName(event.currentTarget)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') event.currentTarget.blur();
-                if (event.key === 'Escape') {
-                  event.currentTarget.value = active.name;
-                  setNameError(false);
-                  event.currentTarget.blur();
-                }
-              }}
-            />
+          {/* 설정 줄 — 갱신 주기 · 크레인(모델) 추가. */}
+          <div className="border-border flex items-center gap-2 border-b px-2 py-1">
             <span className="text-muted-foreground shrink-0">
               {t('monitoring:scenario.tick')}
             </span>
@@ -333,16 +365,17 @@ export function ScenarioPanel({
               max={5}
               step={0.01}
               aria-label={t('monitoring:scenario.tick')}
-              className={cn(CELL_NUMBER_WRAPPER, 'h-7 w-16')}
-              inputClassName={CELL_NUMBER_INPUT}
+              className={cn(CELL_NUMBER_WRAPPER, 'h-5 w-16')}
+              inputClassName={cn(CELL_NUMBER_INPUT, 'text-[11px]')}
               onChange={setTickSec}
             />
+            <span className="flex-1" />
             <Button
               type="button"
               variant="ghost"
-              size="xs"
-              className="h-7 shrink-0 gap-1 px-1.5 text-[10px]"
+              size="icon-xs"
               disabled={!canAddModel}
+              aria-label={t('monitoring:scenario.addModel')}
               title={t(
                 canAddModel
                   ? 'monitoring:scenario.addModel'
@@ -350,8 +383,7 @@ export function ScenarioPanel({
               )}
               onClick={openAddModel}
             >
-              <Plus className="size-3" />
-              {t('monitoring:scenario.addModel')}
+              <Plus className="size-3.5" />
             </Button>
           </div>
 
@@ -378,6 +410,8 @@ export function ScenarioPanel({
                     group={group}
                     expanded={expanded.has(group.modelId)}
                     onToggle={() => toggleExpanded(group.modelId)}
+                    openTagId={openTagId}
+                    onToggleTag={toggleTag}
                     onEditTags={() =>
                       setPick({
                         kind: 'edit',
@@ -414,6 +448,63 @@ export function ScenarioPanel({
   );
 }
 
+/**
+ * 머리줄의 시나리오 이름 입력 — 연필 버튼으로 열리고 선택 상자 자리를 쓴다.
+ * blur/Enter 로 확정(한글 조합이 끝난 뒤), Escape 로 취소. 거부되면 amber 로
+ * 남기고 포커스를 되돌린다.
+ */
+function ScenarioNameInput({
+  name,
+  onCommit,
+  onCancel,
+  t,
+}: {
+  name: string;
+  onCommit: (value: string) => boolean;
+  onCancel: () => void;
+  t: T;
+}) {
+  const [invalid, setInvalid] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Escape 로 닫힐 때 뒤따르는 blur 가 확정하지 않게 한다.
+  const cancelledRef = useRef(false);
+  const blurHandlers = useImeSafeBlur<HTMLInputElement>(({ value }) => {
+    if (cancelledRef.current || onCommit(value)) return;
+    setInvalid(true);
+    queueMicrotask(() => inputRef.current?.focus());
+  });
+
+  return (
+    <Input
+      ref={inputRef}
+      autoFocus
+      defaultValue={name}
+      aria-label={t('monitoring:scenario.name')}
+      aria-invalid={invalid}
+      className={cn(
+        CELL_INPUT,
+        'h-7 min-w-0 flex-1 font-semibold',
+        invalid && 'border-amber-500 text-amber-500',
+      )}
+      onChange={() => setInvalid(false)}
+      {...blurHandlers}
+      onFocus={(event) => {
+        blurHandlers.onFocus();
+        event.currentTarget.select();
+      }}
+      onKeyDown={(event) => {
+        // 조합을 끝내는 Enter·Esc 는 확정·취소가 아니다 — 뒤에 한 번 더 온다.
+        if (isImeComposing(event.nativeEvent)) return;
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') {
+          cancelledRef.current = true;
+          onCancel();
+        }
+      }}
+    />
+  );
+}
+
 function Empty({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-4 py-8 text-center">
@@ -426,6 +517,8 @@ function ModelGroup({
   group,
   expanded,
   onToggle,
+  openTagId,
+  onToggleTag,
   onEditTags,
   onRemoveModel,
   onUpdateTag,
@@ -434,6 +527,8 @@ function ModelGroup({
   group: ScenarioModelGroup;
   expanded: boolean;
   onToggle: () => void;
+  openTagId: string | null;
+  onToggleTag: (tagId: string) => void;
   onEditTags: () => void;
   onRemoveModel: () => void;
   onUpdateTag: (
@@ -491,12 +586,13 @@ function ModelGroup({
           <Button
             type="button"
             variant="ghost"
-            size="xs"
-            className="h-6 px-1.5 text-[10px]"
+            size="icon-xs"
+            className="text-muted-foreground"
+            aria-label={t('monitoring:scenario.editTags')}
+            title={t('monitoring:scenario.editTags')}
             onClick={onEditTags}
           >
-            <PencilLine className="size-3" />
-            {t('monitoring:scenario.editTags')}
+            <PencilLine className="size-3.5" />
           </Button>
         ) : null}
         <Button
@@ -516,6 +612,8 @@ function ModelGroup({
             <ScenarioTagRow
               key={row.tag.id}
               row={row}
+              expanded={openTagId === row.tag.id}
+              onToggle={() => onToggleTag(row.tag.id)}
               onUpdate={(patch) => onUpdateTag(row.tag.id, patch)}
               t={t}
             />

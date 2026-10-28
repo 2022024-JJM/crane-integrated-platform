@@ -666,14 +666,7 @@
     "zoneAlarmLevelStop": "Regio gradus sistendi"
   },
   "simulation": {
-    "title": "Horologium simulationis",
-    "play": "Age",
-    "pause": "Siste",
-    "reset": "Valores et tempus restitue",
-    "speed": "Celeritas",
-    "time": "Elapsum",
     "stop": "Simulationem finire",
-    "stopHint": "Simulationem finire — tempus 0, exemplaria in statum quietis",
     "badgeRunning": "Simulatio agitur",
     "badgePaused": "Simulatio sistitur",
     "scenario": "Scaenarium",
@@ -691,13 +684,14 @@
     "name": "Nomen",
     "namePlaceholder": "Nomen scaenarii",
     "duplicate": "Duplica",
+    "rename": "Renomina",
     "remove": "Dele",
     "removeTitle": "Scaenarium delere",
     "removeDescription": "Scaenarium \"{{name}}\" ({{count}} signa) deletur. Servatum revocari non potest.",
     "confirmRemove": "Dele",
     "save": "Serva",
     "saveFailed": "Scaenaria servari non potuerunt.",
-    "addModel": "Exemplar adde",
+    "addModel": "Adde gruem",
     "editTags": "Signa muta",
     "removeModel": "Exemplaris fasciculum tolle",
     "emptyTags": "Nulla signa. Ex exemplaribus in scaena iunctis signa elige.",
@@ -724,7 +718,11 @@
       "period": "Periodus (s)",
       "periodHint": "Una periodus in secundis",
       "noValue": "Nullus valor",
-      "targetMissing": "Nulla iunctio"
+      "targetMissing": "Nulla iunctio",
+      "range": "Ambitus",
+      "periodLabel": "Periodus",
+      "seconds": "s",
+      "initialHint": "Valor initio cursus"
     },
     "dataTypes": {
       "number": "Numerus",
@@ -732,14 +730,27 @@
     },
     "patterns": {
       "manual": "Manuale",
-      "triangle": "Triangulum",
       "sine": "Sinus",
       "sawtooth": "Serra",
       "square": "Quadratum"
     },
+    "patternsShort": {
+      "manual": "Manu",
+      "sine": "Sin",
+      "sawtooth": "Ser",
+      "square": "Quad"
+    },
+    "sentence": {
+      "sine": "Sinus, {{min}} ↔ {{max}}{{unit}} et retro singulis {{period}} s.",
+      "sawtooth": "Serra, {{min}} → {{max}}{{unit}} intra {{period}} s, deinde ab initio.",
+      "square": "Quadratum, dimidium {{max}}, dimidium {{min}}{{unit}} singulis {{period}} s.",
+      "squareDuty": "Quadratum, {{duty}}% {{max}}, reliquum {{min}}{{unit}} singulis {{period}} s.",
+      "boolSquare": "Dimidium ON, dimidium OFF singulis {{period}} s.",
+      "boolSquareDuty": "{{duty}}% ON, reliquum OFF singulis {{period}} s."
+    },
     "pick": {
       "createTitle": "Novum scaenarium",
-      "addModelTitle": "Exemplar adde",
+      "addModelTitle": "Adde gruem",
       "editTitle": "Signa muta",
       "search": "Quaere exemplaria, grues, codices",
       "selected": "{{selected}} / {{total}} electa",
@@ -748,7 +759,7 @@
       "tagCount": "{{count}} signa",
       "noMappedModels": "Nullum exemplar in scaena signa iuncta habet. In editore primum signa iunge.",
       "emptyFiltered": "Nihil inventum.",
-      "noModelsLeft": "Nullum exemplar addendum restat. Omnia exemplaria scaenae signata iam in scaenario sunt.",
+      "noModelsLeft": "Nulla grus addenda restat. Omnes grues scaenae signatae iam in scaenario sunt.",
       "summary": "{{models}} exemplaria · {{tags}} signa electa",
       "cancel": "Abrogare",
       "create": "Crea",

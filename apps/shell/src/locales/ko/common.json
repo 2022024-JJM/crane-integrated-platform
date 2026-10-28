@@ -165,6 +165,7 @@
     "title": "3D 리플레이",
     "play": "재생",
     "pause": "일시정지",
+    "stop": "리플레이 종료",
     "seekStart": "처음으로",
     "seekEnd": "끝으로",
     "jumpBack": "5초 뒤로",

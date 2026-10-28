@@ -134,7 +134,6 @@ export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
 export { SceneStatusHud } from './ui/scene-status-hud';
 export { SceneDangerVignette } from './ui/scene-danger-vignette';
-export { SceneSimulationPanel } from './ui/scene-simulation-panel';
 export { formatSimClock } from './lib/sim-clock';
 export { stopSimulation } from './model/stop-simulation';
 export {

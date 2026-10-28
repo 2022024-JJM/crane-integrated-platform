@@ -34,7 +34,7 @@ const tag = {
   min: -10,
   max: 10,
   initial: 3,
-  pattern: { kind: 'triangle', periodSec: 2 },
+  pattern: { kind: 'sine', periodSec: 2 },
 };
 
 const scenarioTag = { ...tag, modelId: 'model-1' };
@@ -109,6 +109,22 @@ describe('sanitizeVirtualTagPattern', () => {
       sanitizeVirtualTagPattern({ kind: 'random-walk', stepPct: 5, seed: 1 }),
     ).toEqual({ kind: 'manual' });
   });
+
+  it('제거된 삼각파 저장본은 같은 주기의 사인파로 읽는다 — 주기 클램프·기본값도 사인파 규칙', () => {
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'triangle', periodSec: 20 }),
+    ).toEqual({ kind: 'sine', periodSec: 20 });
+    expect(
+      sanitizeVirtualTagPattern({
+        kind: 'triangle',
+        periodSec: VIRTUAL_TAG_PERIOD_MAX + 1,
+      }),
+    ).toEqual({ kind: 'sine', periodSec: VIRTUAL_TAG_PERIOD_MAX });
+    expect(sanitizeVirtualTagPattern({ kind: 'triangle' })).toEqual({
+      kind: 'sine',
+      periodSec: VIRTUAL_TAG_PERIOD_DEFAULT,
+    });
+  });
 });
 
 describe('sanitizeVirtualTag — 숫자', () => {
@@ -122,7 +138,7 @@ describe('sanitizeVirtualTag — 숫자', () => {
       min: -10,
       max: 10,
       initial: 3,
-      pattern: { kind: 'triangle', periodSec: 2 },
+      pattern: { kind: 'sine', periodSec: 2 },
     });
     expect(sanitizeVirtualTag({ ...tag, dataType: 'float' })?.dataType).toBe(
       'number',

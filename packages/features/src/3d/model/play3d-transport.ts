@@ -3,6 +3,7 @@ import { SIMULATION_SPEED_OPTIONS } from '@crane/domain/virtual-tag';
 import { cumulativeMs, frameIndexAtMs, totalMs } from '../lib/replay-position';
 import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
+import { stopSimulation } from './stop-simulation';
 import { useSceneCollisionStore } from './use-scene-collision-store';
 import { useScenarioStore } from './use-scenario-store';
 import { virtualTagRuntime } from './virtual-tag-runner';
@@ -37,6 +38,12 @@ export interface Play3dTransport {
   /** 프레임 단위 이동(리플레이 전용, 시뮬레이션은 no-op). */
   stepFrames: (delta: number) => void;
   setSpeed: (speed: number) => void;
+  /**
+   * 종료 — 재생을 멈추고 처음으로. 리플레이는 정지 + 첫 프레임(불러온 프레임은
+   * 남긴다), 시뮬레이션은 `stopSimulation`(자세 rest·충돌 기록 삭제). 소스를
+   * 떠날 때 `Play3dView` 가 하는 정리와 같다.
+   */
+  stop: () => void;
 }
 
 /** 현재 씬 시간(ms) — 폴링으로 읽는다. */
@@ -67,6 +74,12 @@ function seekReplay(ms: number): void {
   useSceneCollisionStore.getState().clearActive();
 }
 
+function stopReplay(): void {
+  const store = useReplayPlayerStore.getState();
+  store.pause();
+  if (store.frames.length > 0) seekReplay(0);
+}
+
 function seekSimulation(ms: number): void {
   useScenarioStore.getState().seek(ms);
   useSceneCollisionStore.getState().clearActive();
@@ -89,6 +102,7 @@ export function readPlay3dTransport(): Play3dTransport {
       seek: seekReplay,
       stepFrames: replay.seekByFrames,
       setSpeed: replay.setSpeed,
+      stop: stopReplay,
     };
   }
   const sim = useScenarioStore.getState();
@@ -107,6 +121,7 @@ export function readPlay3dTransport(): Play3dTransport {
     seek: seekSimulation,
     stepFrames: () => {},
     setSpeed: sim.setSpeed,
+    stop: stopSimulation,
   };
 }
 

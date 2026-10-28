@@ -165,6 +165,7 @@
     "title": "Repetitio 3D",
     "play": "Ludere",
     "pause": "Sistere",
+    "stop": "Repetitionem fini",
     "seekStart": "Ad initium",
     "seekEnd": "Ad finem",
     "jumpBack": "Retro 5s",

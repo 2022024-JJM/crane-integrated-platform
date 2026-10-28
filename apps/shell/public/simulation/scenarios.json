@@ -9,108 +9,170 @@
       "tags": [
         {
           "id": "gc04-gantry-travel",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
           "code": "gantry_position",
           "name": "",
           "dataType": "number",
-          "unit": "m",
           "min": 0,
           "max": 300,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 40
-          }
+          },
+          "unit": "m",
+          "modelId": "id-mt0rhrsw-icvq0ukr"
         },
         {
           "id": "gc04-trolley-traverse",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
           "code": "trolley_position",
           "name": "",
           "dataType": "number",
-          "unit": "m",
           "min": -30,
           "max": 0,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 40
-          }
+          },
+          "unit": "m",
+          "modelId": "id-mt0rhrsw-icvq0ukr"
         },
         {
           "id": "907a7df8-4232-4c25-8dae-476beca71e95",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
           "code": "trolley_position_2",
           "name": "",
           "dataType": "number",
-          "unit": "m",
           "min": -20,
           "max": 5,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 40
-          }
+          },
+          "unit": "m",
+          "modelId": "id-mt0rhrsw-icvq0ukr"
         },
         {
           "id": "llc002-luffing",
-          "modelId": "id-mt0riz7x-bxncy0uk",
           "code": "luff_angle",
           "name": "",
           "dataType": "number",
-          "unit": "deg",
           "min": -32,
           "max": 11.75,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 30
-          }
+          },
+          "unit": "deg",
+          "modelId": "id-mt0riz7x-bxncy0uk"
         },
         {
           "id": "llc002-slew",
-          "modelId": "id-mt0riz7x-bxncy0uk",
           "code": "slew_angle",
           "name": "",
           "dataType": "number",
-          "unit": "deg",
           "min": 0,
           "max": 360,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 40
-          }
+          },
+          "unit": "deg",
+          "modelId": "id-mt0riz7x-bxncy0uk"
         },
         {
           "id": "llc002-gantry-travel",
-          "modelId": "id-mt0riz7x-bxncy0uk",
           "code": "gantry_position",
           "name": "",
           "dataType": "number",
-          "unit": "m",
           "min": 0,
           "max": 50,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 20
-          }
+          },
+          "unit": "m",
+          "modelId": "id-mt0riz7x-bxncy0uk"
         },
         {
           "id": "12ce2409-e0e5-4db8-92b9-111a85aef267",
-          "modelId": "id-mt0rka4j-lfz5p217",
           "code": "gantry_position_2",
           "name": "",
           "dataType": "number",
-          "unit": "m",
           "min": -20,
           "max": 0,
           "initial": 0,
           "pattern": {
             "kind": "sine",
             "periodSec": 20
-          }
+          },
+          "unit": "m",
+          "modelId": "id-mt0rka4j-lfz5p217"
+        }
+      ]
+    },
+    {
+      "id": "5d747a36-a9be-4c1f-9d8e-bb02921798ef",
+      "name": "C-800 충돌 시나리오",
+      "sceneFile": "dock-in.json",
+      "tags": [
+        {
+          "id": "ed2257d4-0825-472c-b948-48b0dfac4deb",
+          "code": "tl_distance",
+          "name": "",
+          "dataType": "number",
+          "min": 0,
+          "max": 100,
+          "initial": 1,
+          "pattern": {
+            "kind": "manual"
+          },
+          "unit": "m",
+          "modelId": "7332781e-f10e-460b-8e72-e4decfaa5fb2"
+        },
+        {
+          "id": "5e28d047-0cf7-44be-9558-64694a373957",
+          "code": "ts1_distance",
+          "name": "",
+          "dataType": "number",
+          "min": 0,
+          "max": 100,
+          "initial": 0,
+          "pattern": {
+            "kind": "manual"
+          },
+          "unit": "m",
+          "modelId": "7332781e-f10e-460b-8e72-e4decfaa5fb2"
+        },
+        {
+          "id": "2af13eb6-833b-4489-8758-f8c107170685",
+          "code": "ts2_distance",
+          "name": "",
+          "dataType": "number",
+          "min": 0,
+          "max": 100,
+          "initial": 0,
+          "pattern": {
+            "kind": "manual"
+          },
+          "unit": "m",
+          "modelId": "7332781e-f10e-460b-8e72-e4decfaa5fb2"
+        },
+        {
+          "id": "7313ea64-7fb1-4f7e-afcd-33c08453b83a",
+          "code": "crane_control_on",
+          "name": "",
+          "dataType": "bool",
+          "min": 0,
+          "max": 1,
+          "initial": 0,
+          "pattern": {
+            "kind": "manual"
+          },
+          "modelId": "7332781e-f10e-460b-8e72-e4decfaa5fb2"
         }
       ]
     }

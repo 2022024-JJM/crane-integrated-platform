@@ -8,8 +8,6 @@ import { cn } from '@crane/core/lib/utils';
 const PATH: Record<VirtualTagPatternKind, string> = {
   // 정현파: 두 주기(0→48), 진폭 6, 중심 8
   sine: 'M0 8 C3 2 6 2 9 8 S15 14 18 8 S24 2 27 8 S33 14 36 8 S42 2 45 8 L48 8',
-  // 삼각파
-  triangle: 'M0 8 L6 2 L18 14 L30 2 L42 14 L48 8',
   // 톱니파: 경사 상승 후 수직 낙하
   sawtooth: 'M0 14 L16 2 L16 14 L32 2 L32 14 L48 2',
   // 구형파

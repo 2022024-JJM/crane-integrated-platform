@@ -75,17 +75,20 @@ export function clampVirtualTagPeriod(value: unknown): number {
   );
 }
 
+/** 없앤 삼각파 — 사인파와 거의 같은 왕복이라 같은 주기의 사인파로 읽는다. */
+const LEGACY_TRIANGLE_KIND = 'triangle';
+
 export function sanitizeVirtualTagPattern(raw: unknown): VirtualTagPattern {
   if (!raw || typeof raw !== 'object') return { kind: 'manual' };
   const p = raw as Record<string, unknown>;
-  if (!isPatternKind(p.kind)) return { kind: 'manual' };
-  switch (p.kind) {
+  const kind = p.kind === LEGACY_TRIANGLE_KIND ? 'sine' : p.kind;
+  if (!isPatternKind(kind)) return { kind: 'manual' };
+  switch (kind) {
     case 'manual':
       return { kind: 'manual' };
-    case 'triangle':
     case 'sine':
     case 'sawtooth':
-      return { kind: p.kind, periodSec: clampVirtualTagPeriod(p.periodSec) };
+      return { kind, periodSec: clampVirtualTagPeriod(p.periodSec) };
     case 'square': {
       const pattern: VirtualTagPattern = {
         kind: 'square',

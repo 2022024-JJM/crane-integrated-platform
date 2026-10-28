@@ -40,25 +40,6 @@ describe('clampToTag / initVirtualTagState', () => {
 });
 
 describe('stepVirtualTag — 시간 파형', () => {
-  it('triangle: 0 → max(반주기) → 0(한 주기), initial 이 시작점', () => {
-    const def = tag({ kind: 'triangle', periodSec: 1 });
-    const s = initVirtualTagState(def);
-    expect(stepVirtualTag(def, 0, s).value).toBe(0);
-    expect(stepVirtualTag(def, 250, s).value).toBeCloseTo(50);
-    expect(stepVirtualTag(def, 500, s).value).toBeCloseTo(100);
-    expect(stepVirtualTag(def, 750, s).value).toBeCloseTo(50);
-    expect(stepVirtualTag(def, 1000, s).value).toBeCloseTo(0);
-
-    const fromMid = tag({ kind: 'triangle', periodSec: 1 }, { initial: 50 });
-    expect(
-      stepVirtualTag(fromMid, 0, initVirtualTagState(fromMid)).value,
-    ).toBeCloseTo(50);
-    // 상승 중이어야 한다 — 초기값에서 점프 없이 이어진다.
-    expect(
-      stepVirtualTag(fromMid, 100, initVirtualTagState(fromMid)).value,
-    ).toBeCloseTo(70);
-  });
-
   it('sine: initial 에서 시작해 부드럽게 max 까지, 범위를 벗어나지 않는다', () => {
     const def = tag({ kind: 'sine', periodSec: 1 }, { initial: 25 });
     const s = initVirtualTagState(def);

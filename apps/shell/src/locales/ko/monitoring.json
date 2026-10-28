@@ -666,14 +666,7 @@
     "zoneAlarmLevelStop": "정지 등급 영역"
   },
   "simulation": {
-    "title": "시뮬레이션 시계",
-    "play": "재생",
-    "pause": "일시정지",
-    "reset": "값·시간 초기화",
-    "speed": "배속",
-    "time": "경과",
     "stop": "시뮬레이션 종료",
-    "stopHint": "시뮬레이션 종료 — 시간 0, 모델을 원래 자세로(실시간 화면이면 실제 값 반영 재개)",
     "badgeRunning": "시뮬레이션 중",
     "badgePaused": "시뮬레이션 일시정지",
     "scenario": "시나리오",
@@ -691,13 +684,14 @@
     "name": "이름",
     "namePlaceholder": "시나리오 이름",
     "duplicate": "복제",
+    "rename": "이름 수정",
     "remove": "삭제",
     "removeTitle": "시나리오 삭제",
     "removeDescription": "\"{{name}}\" 시나리오(태그 {{count}}개)를 삭제합니다. 저장하면 되돌릴 수 없습니다.",
     "confirmRemove": "삭제",
     "save": "저장",
     "saveFailed": "시나리오를 저장하지 못했습니다.",
-    "addModel": "모델 추가",
+    "addModel": "크레인 추가",
     "editTags": "태그 수정",
     "removeModel": "모델 묶음 제거",
     "emptyTags": "태그가 없습니다. 씬에 맵핑된 모델에서 태그를 고르세요.",
@@ -720,11 +714,15 @@
       "min": "최소",
       "max": "최대",
       "initial": "초기값",
-      "pattern": "패턴",
+      "pattern": "동작",
       "period": "주기(s)",
       "periodHint": "한 주기(초)",
       "noValue": "값 없음",
-      "targetMissing": "맵핑 없음"
+      "targetMissing": "맵핑 없음",
+      "range": "범위",
+      "periodLabel": "주기",
+      "seconds": "초",
+      "initialHint": "재생을 시작할 때 값"
     },
     "dataTypes": {
       "number": "숫자",
@@ -732,14 +730,27 @@
     },
     "patterns": {
       "manual": "수동",
-      "triangle": "삼각파",
       "sine": "사인파",
       "sawtooth": "톱니파",
       "square": "구형파"
     },
+    "patternsShort": {
+      "manual": "수동",
+      "sine": "사인",
+      "sawtooth": "톱니",
+      "square": "구형"
+    },
+    "sentence": {
+      "sine": "사인파, {{period}}초에 한 번 {{min}} ↔ {{max}}{{unit}} 왕복.",
+      "sawtooth": "톱니파, {{period}}초 동안 {{min}} → {{max}}{{unit}} 오른 뒤 처음으로.",
+      "square": "구형파, {{period}}초 주기로 반은 {{max}}, 반은 {{min}}{{unit}}.",
+      "squareDuty": "구형파, {{period}}초 주기로 {{duty}}% 는 {{max}}, 나머지는 {{min}}{{unit}}.",
+      "boolSquare": "{{period}}초 주기로 반은 ON, 반은 OFF.",
+      "boolSquareDuty": "{{period}}초 주기로 {{duty}}% 는 ON, 나머지는 OFF."
+    },
     "pick": {
       "createTitle": "새 시나리오",
-      "addModelTitle": "모델 추가",
+      "addModelTitle": "크레인 추가",
       "editTitle": "태그 수정",
       "search": "모델·크레인·태그 코드 검색",
       "selected": "{{selected}} / {{total}} 선택",
@@ -748,7 +759,7 @@
       "tagCount": "태그 {{count}}개",
       "noMappedModels": "씬에 태그가 맵핑된 모델이 없습니다. 에디터에서 먼저 태그를 연결하세요.",
       "emptyFiltered": "검색 결과가 없습니다.",
-      "noModelsLeft": "추가할 모델이 없습니다. 씬에 맵핑된 모델이 모두 시나리오에 있습니다.",
+      "noModelsLeft": "추가할 크레인이 없습니다. 씬에 맵핑된 크레인이 모두 시나리오에 있습니다.",
       "summary": "모델 {{models}} · 태그 {{tags}} 선택",
       "cancel": "취소",
       "create": "만들기",

@@ -14,8 +14,7 @@
  */
 export type VirtualTagPattern =
   | { kind: 'manual' }
-  /** min↔max 왕복. 예전 시뮬 생성기의 파형. */
-  | { kind: 'triangle'; periodSec: number }
+  /** min↔max 부드러운 왕복. 옛 삼각파(`triangle`)는 sanitize 가 이것으로 읽는다. */
   | { kind: 'sine'; periodSec: number }
   /** min→max 톱니. */
   | { kind: 'sawtooth'; periodSec: number }
@@ -26,7 +25,6 @@ export type VirtualTagPatternKind = VirtualTagPattern['kind'];
 
 export const VIRTUAL_TAG_PATTERN_KINDS = [
   'manual',
-  'triangle',
   'sine',
   'sawtooth',
   'square',
