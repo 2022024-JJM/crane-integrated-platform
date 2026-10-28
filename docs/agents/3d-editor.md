@@ -23,6 +23,7 @@
 | 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts`, `packages/features/src/3d/model/use-rig-driver.ts` |
 | 선택 표시(박스·실루엣) | `packages/domain/src/3d/lib/selection-bounding-box.ts`, 박스 바닥 방향 `packages/domain/src/3d/lib/xz-footprint.ts`(둘 다 테스트 대상), `packages/domain/src/3d/lib/silhouette-outline.ts`, `packages/domain/src/3d/ui/gltf-model.tsx`, `packages/domain/src/3d/ui/model-mesh.tsx` |
 | 안쪽 노드 선택(부모 판정·노드 트리·계층 목록) | `packages/domain/src/3d/lib/scene-node-parent.ts`(`resolveSceneNodeParent`), `packages/widgets/src/3d/lib/model-node-tree.ts`(전부 테스트 대상), `packages/widgets/src/3d/ui/palette-placed-objects.tsx` |
+| 노드 미리보기(인스펙터 노드 선택기 하이라이트 → 실루엣·고스트·중심 이동) | 선택기 `packages/widgets/src/3d/ui/inspector-fields.tsx`(`NodeSelect`), 스토어 `packages/features/src/3d/model/use-node-preview-store.ts`, 프레이밍 `packages/widgets/src/3d/lib/focus-camera.ts`(F 포커스와 공유), 고스트 `packages/domain/src/3d/lib/ghost-opacity.ts`(셋 다 테스트 대상), 캔버스 배선 `scene-objects-edit-canvas.tsx`(`SelectionAwareGltfModel`·`EditorCameraBridge`) |
 | 거리 눈금 스키마 / 방어 / 기하 / 렌더 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/sanitize-rulers.ts`, `packages/domain/src/3d/lib/ruler.ts`(테스트 대상), `packages/domain/src/3d/ui/scene-ruler.tsx` |
 | 화면을 향한 표시(모델 라벨·눈금)의 거리 축소·숨김 | `packages/domain/src/3d/lib/label-scale.ts`(테스트 대상) |
 | 거리 눈금 그리기 / 인스펙터 탭 / 편집 로직 | `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx`, `packages/widgets/src/3d/lib/ruler-editor.ts`(테스트 대상) |
@@ -136,6 +137,9 @@
 - 발자국 껍질은 위치 속성별로 캐시한다(클론·LOD 사본이 속성을 공유). 지도 전체를 처음 감쌀 때만 수백만 정점을 돌고 그 뒤 노드·전체 박스는 껍질 점만 옮긴다. 양자화(정수) 위치는 정수 그대로 묶어 정렬하는 빠른 길을 탄다(`convexHullOfStrided`).
 - 포털은 `target.uuid` key 로 재마운트해야 한다 — R3F `Portal` 이 컨테이너 교체 시 이전 노드에 붙는 문제가 있다(파일 주석). 실루엣 쪽도 같은 이유로 `node.uuid`·`mesh.uuid` 를 key 로 쓴다.
 - 하위에 메시가 없는 리프 Empty 노드는 그릴 것이 없어 아무 표시도 나오지 않는다.
+- **노드 미리보기**: 인스펙터 노드 선택기(`NodeSelect`, 태그 매핑·리깅 탭 — `@crane/ui` `Combobox` 의 `onHighlightChange`/`onOpenChange`)에서 행을 하이라이트(호버·↑↓)하면 `useNodePreviewStore` 에 모델·노드 경로가 실린다. 캔버스의 모델 래퍼는 자기 모델일 때만 받아 `GltfModel` 의 `previewMeshTarget` 으로 넘기고, 그 서브트리에 하늘색 실루엣(`NODE_PREVIEW_OUTLINE_COLOR`)을 두르며 같은 모델의 나머지 메시는 `ModelMesh` 의 `ghostExcept` 로 고스트(`lib/ghost-opacity.ts`, 개별 클론 경로)가 된다. 다른 모델·지도는 손대지 않는다. 루트 행은 실루엣만이고 고스트·클론이 없다. 행 사이로 마우스가 빠진 것은 무시하고 닫힐 때만 끝낸다.
+- 미리보기 동안 그 모델의 선택·상태·평면도 외곽선은 그리지 않는다 — 실루엣 마스크가 캔버스 전역 합집합이라 모델 전체 외곽선이 노드 테두리를 모델 발자국 안에서 지운다.
+- 미리보기 카메라는 `EditorCameraBridge` 가 스토어를 구독해 F 포커스와 같은 프레이밍(`lib/focus-camera.ts` 의 `focusDistance`·`focusPose` — 바운딩 구가 fov 의 좁은 쪽에 들어오는 거리, 보는 방향 유지)으로 핸들 `applyPose` 를 통해 즉시 옮긴다. 거리를 노드 크기로만 정하므로 표면 카메라가 궤도 중심을 시선 위 표면점으로 옮겨 두어도 행마다 같다. 닫혀도 카메라는 그 자리에 남는다(복귀 없음). 키보드로 열면 base-ui 가 현재 선택 행을 바로 하이라이트해 열자마자 간다.
 - 저장 씬의 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 새로 만들지 않는다.
 
 ### 거리 눈금
@@ -192,6 +196,7 @@
 - 루트 맵핑 모델의 배치값을 읽는 새 경로는 `rootDeltas` 를 벗겨야 한다(`readRootPlacement`). 기즈모 자세를 그대로 저장하면 Δ 가 이중 적용된다.
 - 다중 선택 `primary` 피벗의 세컨더리 위치는 배치 프레임(`writeRootPlacement`)으로 써넣고 개별 스냅하지 않는다.
 - 노드 박스·실루엣 포털은 대상 `uuid` 를 key 로 재마운트한다.
+- 노드 미리보기 중에는 그 모델의 다른 전체 외곽선(선택·상태·평면도)을 그리지 않는다 — 실루엣 마스크가 전역 합집합이다. 미리보기 카메라도 `applyPose` 를 거친다.
 - 인스펙터 안의 수치 계산은 `packages/widgets/src/3d/lib/` 로 뺀다(`zone-editor.ts`, `tag-mapping-editor.ts` 선례) — 공통 규칙 "`ui/*.tsx` 안 수치 계산 금지".
 - 씬 객체 종류를 새로 만들면 id 를 모델·텍스트·눈금과 같은 집합에서 발급한다(`sanitizeSceneInfo` 의 `seenIds`). 선택·기즈모·레지스트리가 id 하나로 객체를 찾는다.
 - `SavedRulerInfo`·`SavedRulerGuide` 에 필드를 추가하면 `sanitize-rulers.ts` 와 `scene-snapshot.ts` 의 `isRulerInfoEqual`·`isRulerGuideEqual` 을 함께 고친다. 기본값은 저장하지 않는다(시작 값 0·단위 표시·점과 글자의 기본 크기·보조선 왼쪽·불투명도 1).
@@ -215,6 +220,8 @@
 - 에디터에서 `meshOverrides` 를 새로 만드는 것 — 렌더 전용 데이터.
 - 눈금을 누른 채 끌어서 그리기 — 왼쪽 드래그는 마퀴, 가운데·오른쪽 드래그는 카메라라 겹치고, 긴 레일은 시작점을 찍은 뒤 카메라를 옮겨야 끝점을 찍을 수 있다.
 - 뷰를 계층 목록의 씬 객체(카메라 기즈모)로 두기 — 선택·기즈모·id 발급까지 끌려 들어온다. 뷰 탭의 목록으로 충분하다.
+- 노드 미리보기에서 거리·방향을 두고 궤도 중심만 옮기기(+트윈) — 표면 카메라가 중심을 시선 위 표면점으로 옮겨 두어 다음 호버의 거리가 그 표면점까지의 거리로 제멋대로 바뀌었다. F 포커스 프레이밍으로 즉시 옮긴다.
+- 노드 미리보기가 닫힐 때 열 때 구도로 복귀 — 보던 자리에 그대로 두는 쪽이 자연스럽다.
 - 에디터 안 분할 미리보기 — 축 기즈모(drei Hud)가 렌더를 넘겨받는 캔버스라 분할 렌더러와 충돌한다. 분할은 모니터링에서 본다.
 - 눈금을 지도 GLB 에 굽거나 깊이 테스트 없는 오버레이로 그리기 — 앞쪽은 에디터에서 저작할 수 없고, 뒤쪽은 선이 크레인·선박을 뚫고 보인다.
 - 눈금 보조선에 `polygonOffset` — 로그 깊이에서는 무시된다. 바닥에서 띄운다.

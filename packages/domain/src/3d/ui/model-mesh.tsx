@@ -34,6 +34,8 @@ import {
 } from '../lib/mesh-material-binding';
 import { toLambertMaterials } from '../lib/lambert-material';
 import { toMatteMaterials } from '../lib/matte-material';
+import { isInsideSubtree, resolveGhostOpacity } from '../lib/ghost-opacity';
+import { NODE_PREVIEW_GHOST_OPACITY } from '../lib/selection-style';
 import type { ModelShading } from '../lib/model-shading';
 import { markSceneOpaqueStencils } from '../lib/scene-stencil';
 import { useThree } from '@react-three/fiber';
@@ -105,6 +107,12 @@ interface ModelMeshProps {
    * (bvh-build-queue 주석). 안 켜도 동작은 같고 첫 표시가 그만큼 늦을 뿐이다.
    */
   prepareOutline?: boolean;
+  /**
+   * 노드 미리보기 — 이 서브트리 밖의 메시를 흐리게(원래 opacity ×
+   * NODE_PREVIEW_GHOST_OPACITY) 그린다. 값이 있으면 개별 클론 경로를 탄다.
+   * 기본 null.
+   */
+  ghostExcept?: Object3D | null;
   /**
    * 부모(GltfModel)가 이미 만든 clone 결과. 전달되면 여기서 다시 clone하지
    * 않는다 — useClonedModel 주석 참고.
@@ -359,6 +367,7 @@ export function ModelMesh({
   meshOverrides,
   enableRaycastBvh = true,
   prepareOutline = false,
+  ghostExcept = null,
   clonedModel,
   shading = 'standard',
   onSelect,
@@ -446,7 +455,8 @@ export function ModelMesh({
     //     인스턴스별로 clone 해 모델 수에 비례해 머티리얼·refreshMaterial
     //     비용이 늘었다. **공유본에는 어떤 프로퍼티도 쓰지 않는다.**
     //   원본 공유 — 둘 다 아님. GLTF 원본 reference 그대로.
-    const needsIndividual = opacity < 1 || alarmSeverity !== null;
+    const needsIndividual =
+      opacity < 1 || alarmSeverity !== null || ghostExcept !== null;
 
     const sharedOptions = { sea: seaSubmersion, plan: planView };
     if (!needsIndividual) {
@@ -464,6 +474,14 @@ export function ModelMesh({
     // 개별 클론 경로: 이 instance만 lazy clone하여 mutate.
     for (const binding of meshBindings) {
       const materials = ensureClonedMaterials(binding, seaSubmersion, planView);
+      // 노드 미리보기 — 대상 서브트리 밖만 고스트, 안은 원래 opacity 그대로.
+      const meshOpacity = ghostExcept
+        ? resolveGhostOpacity(
+            opacity,
+            isInsideSubtree(binding.mesh, ghostExcept),
+            NODE_PREVIEW_GHOST_OPACITY,
+          )
+        : opacity;
       for (const material of materials) {
         const mat = material as Material & {
           opacity: number;
@@ -474,9 +492,9 @@ export function ModelMesh({
           needsUpdate: boolean;
         };
 
-        mat.opacity = opacity;
-        mat.transparent = opacity < 1;
-        mat.depthWrite = opacity >= 1;
+        mat.opacity = meshOpacity;
+        mat.transparent = meshOpacity < 1;
+        mat.depthWrite = meshOpacity >= 1;
 
         if (mat.color && mat._originalColor) {
           if (alarmSeverity && alarmSeverity in ALARM_MESH_COLOR) {
@@ -507,6 +525,7 @@ export function ModelMesh({
     meshBindings,
     opacity,
     alarmSeverity,
+    ghostExcept,
     seaSubmersion,
     planView,
     invalidate,
@@ -656,6 +675,8 @@ export function ModelMesh({
     originalTransforms,
     seaSubmersion,
     planView,
+    // 미리보기가 끝나 클론이 원본으로 돌아간 뒤 override opacity 를 다시 건다.
+    ghostExcept,
     invalidate,
   ]);
 

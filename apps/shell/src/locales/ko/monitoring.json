@@ -45,6 +45,8 @@
       "name": "리그 이름",
       "resetValues": "관절 값 초기화",
       "nodesUnavailable": "아직 로드되지 않아 노드 목록을 만들 수 없습니다.",
+      "nodeSearch": "노드 검색",
+      "nodeEmpty": "노드 없음",
       "joints": "관절",
       "addJoint": "관절 추가",
       "removeJoint": "관절 삭제",

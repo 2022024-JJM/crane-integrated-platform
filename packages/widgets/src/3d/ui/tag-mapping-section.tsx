@@ -240,6 +240,7 @@ function MappingCard({
   unresolved,
   tagValue,
   appliedValue,
+  modelId,
   modelCraneId,
   onChange,
   onRemove,
@@ -255,6 +256,8 @@ function MappingCard({
   unresolved: boolean;
   tagValue: number | undefined;
   appliedValue: number | undefined;
+  /** 노드 미리보기 대상 모델. */
+  modelId: string;
   modelCraneId: string | undefined;
   onChange: (patch: Partial<TagMapping>) => void;
   onRemove: () => void;
@@ -342,6 +345,7 @@ function MappingCard({
               value={target.node}
               options={options}
               rootLabel={t('monitoring:inspector.mapping.root')}
+              previewModelId={modelId}
               onChange={(node) => onChange({ target: { ...target, node } })}
               t={t}
             />
@@ -811,6 +815,7 @@ export function TagMappingSection({
                 }
                 tagValue={tagValue}
                 appliedValue={applied}
+                modelId={model.id}
                 modelCraneId={model.craneId}
                 onChange={(patch) => updateMapping(mapping.id, patch)}
                 onRemove={() =>

@@ -200,6 +200,7 @@ function JointCard({
         <NodeSelect
           value={joint.node}
           options={options}
+          previewModelId={modelId}
           onChange={(node) => onChange({ node })}
           t={t}
         />

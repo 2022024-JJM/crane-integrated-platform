@@ -1,13 +1,14 @@
 import { ChevronDown } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { RIG_AXES, type RigAxis } from '@crane/domain/3d';
+import { useNodePreviewStore } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { InputNumber } from '@crane/ui/atoms/input-number';
+import { Combobox, type ComboboxOption } from '@crane/ui/molecules/combobox';
 import type { ModelNodeOption } from '../lib/model-node-tree';
 import {
   FIELD_LABEL,
   FIELD_LABEL_COMPACT,
-  FIELD_SELECT,
   NUMBER_INPUT,
   NUMBER_WRAPPER,
 } from './inspector-field-classes';
@@ -42,46 +43,90 @@ export function Field({
 }
 
 /**
- * GLB 노드 경로 선택. 값이 목록에 없으면(GLB 교체 등) amber 로 표시하고
- * sentinel option 으로 값을 보존한다 — 사용자가 다시 고르기 전엔 지우지 않는다.
+ * GLB 노드 경로 선택 — 검색 가능한 콤보박스. 값이 목록에 없으면(GLB 교체 등)
+ * amber 로 표시하고 값을 보존한다 — 사용자가 다시 고르기 전엔 지우지 않는다.
  * `rootLabel` 을 주면 '' (모델 루트) 항목을 맨 앞에 둔다.
+ *
+ * `previewModelId` 를 주면 행을 하이라이트(호버·↑↓)하는 동안 그 노드를
+ * 미리보기(useNodePreviewStore)로 알린다 — 에디터 캔버스가 실루엣·고스트·
+ * 포커스 이동으로 응답한다. 닫힐 때 끝내며 카메라는 그 자리에 남는다. 행
+ * 사이로 마우스가 빠진 것(null)은 무시한다.
  */
 export function NodeSelect({
   value,
   options,
   onChange,
   rootLabel,
+  previewModelId,
   t,
 }: {
   value: string;
   options: ModelNodeOption[];
   onChange: (path: string) => void;
   rootLabel?: string;
+  previewModelId?: string;
   t: InspectorT;
 }) {
   const known =
     (rootLabel !== undefined && value === '') ||
     options.some((o) => o.path === value);
+  const items = useMemo<ComboboxOption[]>(() => {
+    const list: ComboboxOption[] = [];
+    if (rootLabel !== undefined) list.push({ value: '', label: rootLabel });
+    for (const o of options) {
+      list.push({
+        value: o.path,
+        // 들여쓰기 공백은 HTML 이 접으므로 NBSP 로 바꾼다.
+        label: o.label.replace(/ /g, '\u00a0'),
+        badge: o.kind === 'mesh' ? 'mesh' : undefined,
+      });
+    }
+    return list;
+  }, [options, rootLabel]);
+
+  // 팝업이 열린 채 인스펙터가 바뀌어도 미리보기가 남지 않게.
+  useEffect(() => {
+    if (previewModelId === undefined) return;
+    return () => {
+      useNodePreviewStore.getState().endPreview();
+    };
+  }, [previewModelId]);
+
   return (
-    <select
-      className={cn(FIELD_SELECT, !known && 'border-amber-500 text-amber-500')}
+    <Combobox
       value={value}
-      onChange={(event) => onChange(event.target.value)}
-      title={value}
-    >
-      {!known ? (
-        <option value={value}>
-          {t('monitoring:inspector.rigging.unresolvedNode')}: {value || '—'}
-        </option>
-      ) : null}
-      {rootLabel !== undefined ? <option value="">{rootLabel}</option> : null}
-      {options.map((o) => (
-        <option key={o.path} value={o.path}>
-          {o.label.replace(/ /g, ' ')}
-          {o.kind === 'mesh' ? ' ▪' : ''}
-        </option>
-      ))}
-    </select>
+      options={items}
+      onValueChange={(next) => {
+        if (next !== null) onChange(next);
+      }}
+      invalid={!known}
+      className="h-6 rounded-sm px-1 text-[11px]"
+      renderValue={(selected) =>
+        selected
+          ? selected.label
+          : `${t('monitoring:inspector.rigging.unresolvedNode')}: ${value || '—'}`
+      }
+      searchPlaceholder={t('monitoring:inspector.rigging.nodeSearch')}
+      emptyText={t('monitoring:inspector.rigging.nodeEmpty')}
+      onHighlightChange={
+        previewModelId === undefined
+          ? undefined
+          : (path) => {
+              if (path !== null) {
+                useNodePreviewStore
+                  .getState()
+                  .startPreview(previewModelId, path);
+              }
+            }
+      }
+      onOpenChange={
+        previewModelId === undefined
+          ? undefined
+          : (open) => {
+              if (!open) useNodePreviewStore.getState().endPreview();
+            }
+      }
+    />
   );
 }
 

@@ -45,6 +45,8 @@
       "name": "Rig name",
       "resetValues": "Reset joint values",
       "nodesUnavailable": "Not loaded yet, so the node list is unavailable.",
+      "nodeSearch": "Search nodes",
+      "nodeEmpty": "No nodes",
       "joints": "Joints",
       "addJoint": "Add joint",
       "removeJoint": "Remove joint",

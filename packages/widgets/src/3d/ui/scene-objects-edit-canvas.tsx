@@ -90,6 +90,7 @@ import {
   snapStepFor,
   useIsObjectSelected,
   useLabelPreviewState,
+  useNodePreviewStore,
   useOutlinePreviewState,
   usePlanLookStore,
   usePlanOverlapStore,
@@ -118,6 +119,11 @@ import {
   type OrthoTopViewHandle,
 } from '@crane/ui/organisms/use-ortho-top-view';
 import { collectWorldBounds } from '../lib/world-bounds';
+import {
+  focusDistance,
+  focusPose,
+  resolvePreviewNode,
+} from '../lib/focus-camera';
 import { EditorGroundGrid } from './editor-ground-grid';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
@@ -126,8 +132,6 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
 // 모듈 레벨 상수라 렌더마다 참조가 바뀌지 않는다.
 const EDITOR_DPR: [number, number] = [...SCENE_DEFAULT_DPR];
 const INITIAL_PRELOAD_COUNT = 6;
-/** F 포커스 시 바운딩 스피어 주변 여유 비율. */
-const FOCUS_PADDING = 1.15;
 /**
  * F 포커스 최소 거리 — 휠 줌의 표면 최소 거리(features camera-limits.ts)와
  * 같다. 더 가깝게 잡으면 첫 휠 조작에서 그 거리로 튕겨 나가므로 여기서 미리
@@ -191,6 +195,15 @@ function SelectionAwareGltfModel({
   const selectedMeshTarget = selectedMeshId
     ? (sharedModelObjectRegistry.get(selectedMeshId) ?? null)
     : null;
+  // 인스펙터 노드 선택기가 하이라이트한 노드 — 대상 모델만 경로를 받아
+  // 리렌더되고 나머지 모델은 null 그대로다.
+  const previewNodePath = useNodePreviewStore((state) =>
+    state.preview?.modelId === props.id ? state.preview.nodePath : null,
+  );
+  const previewMeshTarget =
+    previewNodePath === null
+      ? null
+      : (resolvePreviewNode(props.id, previewNodePath) ?? null);
   // 인스펙터 상태 태그 구역에서 고른 미리보기 값 — 대상 모델만 받는다.
   const labelState = useLabelPreviewState(props.id);
   // 같은 미리보기의 외곽선 — 고른 동안 선택 테두리 자리에 상태 색으로 그린다.
@@ -203,6 +216,7 @@ function SelectionAwareGltfModel({
       isSelected={isSelected}
       selectionStyle={selectionStyle}
       selectedMeshTarget={selectedMeshTarget}
+      previewMeshTarget={previewMeshTarget}
     />
   );
 }
@@ -290,6 +304,49 @@ function EditorCameraBridge({
   useEffect(() => {
     onActiveChange?.(handle.active);
   }, [handle.active, onActiveChange]);
+
+  // 노드 미리보기(인스펙터 노드 선택기 하이라이트) — F 포커스와 같은 프레이밍
+  // 으로 그 노드가 화면에 들어오게 즉시 옮긴다(applyPose — 직교 탑뷰·극각
+  // 잠금·cameraStateRef 갱신·invalidate 는 훅 몫). 닫혀도 카메라는 그 자리에
+  // 남는다. 거리를 노드 크기로만 정하므로 표면 카메라가 궤도 중심을 시선 위
+  // 표면점으로 옮겨 두어도 행마다 같다.
+  const applyPose = handle.applyPose;
+  useEffect(() => {
+    return useNodePreviewStore.subscribe((state, previous) => {
+      if (!state.preview || state.preview === previous.preview) return;
+      const controls = controlsRef.current;
+      if (!controls) return;
+      const node = resolvePreviewNode(
+        state.preview.modelId,
+        state.preview.nodePath,
+      );
+      const box = node ? collectWorldBounds([node]) : null;
+      if (!box) return;
+      const cam = controls.object;
+      const direction = new Vector3()
+        .subVectors(cam.position, controls.target)
+        .normalize();
+      const distance = focusDistance(
+        box.getSize(new Vector3()).length() / 2,
+        resolveCameraFov(cam),
+        resolveCameraAspect(cam),
+        FOCUS_MIN_DISTANCE,
+      );
+      const pose = focusPose(
+        box.getCenter(new Vector3()).toArray(),
+        direction.toArray(),
+        distance,
+      );
+      applyPose(pose.position, pose.target);
+    });
+  }, [applyPose, controlsRef]);
+  // 캔버스가 내려가면 남은 미리보기를 끝낸다 — 구독 effect 와 분리해 재구독이
+  // 미리보기를 끊지 않게 한다.
+  useEffect(() => {
+    return () => {
+      useNodePreviewStore.getState().endPreview();
+    };
+  }, []);
   return null;
 }
 
@@ -943,37 +1000,25 @@ export function SceneObjectsEditCanvas({
       box.getCenter(center);
       box.getSize(size);
 
-      // 바운딩 스피어가 세로·가로 fov 중 좁은 쪽에 들어오는 거리. 예전에는
-      // 가장 긴 변 길이를 그대로 거리로 써서 fov·종횡비에 따라 잘리거나
-      // 지나치게 멀었다. 직교 탑뷰도 같은 식이다 — 카메라가 같은 구도의 원근
-      // 높이에 서고(userData 의 fov) applyPose 가 거리로 프러스텀을 잡는다.
+      // 바운딩 스피어가 세로·가로 fov 중 좁은 쪽에 들어오는 거리 — lib/focus-
+      // camera.ts, 노드 미리보기와 같은 식. 직교 탑뷰도 같은 식이다(함수 주석).
       const cam = controls.object;
-      const radius = Math.max(size.length() / 2, 1e-3);
-      let halfFov = Math.PI / 4;
-      const fov = resolveCameraFov(cam);
-      if (fov !== null) {
-        const halfVertical = (fov * Math.PI) / 360;
-        halfFov = Math.min(
-          halfVertical,
-          Math.atan(Math.tan(halfVertical) * (resolveCameraAspect(cam) ?? 1)),
-        );
-      }
-      const distance = Math.max(
-        (radius / Math.sin(halfFov)) * FOCUS_PADDING,
-        FOCUS_MIN_DISTANCE,
-      );
-
       const direction = new Vector3()
         .subVectors(cam.position, controls.target)
         .normalize();
+      const distance = focusDistance(
+        size.length() / 2,
+        resolveCameraFov(cam),
+        resolveCameraAspect(cam),
+        FOCUS_MIN_DISTANCE,
+      );
 
       // 거리 상한은 두지 않는다 — update()가 OrbitControls maxDistance
       // (SceneCameraLimits 가 지도 크기로 정한 값)로 잘라 준다. 지도처럼 큰
       // 객체는 탑뷰 줌 상한과 같은 거리에서 멈춘다.
-      applyCameraPose({
-        position: center.clone().addScaledVector(direction, distance).toArray(),
-        target: center.toArray(),
-      });
+      applyCameraPose(
+        focusPose(center.toArray(), direction.toArray(), distance),
+      );
     },
     [applyCameraPose, orbitControlsRef],
   );

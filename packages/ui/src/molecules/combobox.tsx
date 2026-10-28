@@ -39,6 +39,13 @@ export interface ComboboxProps {
   /** 현재 값이 유효하지 않음을 시각적으로 알린다(amber 테두리). */
   invalid?: boolean;
   popupClassName?: string;
+  /**
+   * 하이라이트된 항목(마우스 호버·키보드 이동)이 바뀔 때 — 항목 밖으로 나가면
+   * null. 인스펙터 노드 선택기가 미리보기에 쓴다.
+   */
+  onHighlightChange?: (value: string | null) => void;
+  /** 팝업 열림·닫힘. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 function optionText(option: ComboboxOption): string {
@@ -57,6 +64,8 @@ export function Combobox({
   renderValue,
   invalid,
   popupClassName,
+  onHighlightChange,
+  onOpenChange,
   'aria-label': ariaLabel,
 }: ComboboxProps) {
   const portalContainer = usePortalContainer();
@@ -73,6 +82,10 @@ export function Combobox({
       filter={(item, query) => contains(item, query, optionText)}
       disabled={disabled}
       modal={false}
+      onItemHighlighted={(item) =>
+        onHighlightChange?.(item ? item.value : null)
+      }
+      onOpenChange={(open) => onOpenChange?.(open)}
     >
       <ComboboxPrimitive.Trigger
         aria-label={ariaLabel}

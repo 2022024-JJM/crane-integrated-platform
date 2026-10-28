@@ -214,6 +214,10 @@ export {
   type SceneSnapStep,
 } from './model/use-scene-editor-view-store';
 export {
+  useNodePreviewStore,
+  type NodePreview,
+} from './model/use-node-preview-store';
+export {
   useSelectedSceneObjectEditor,
   type SelectedMeshInfo,
 } from './model/use-selected-scene-object-editor';
