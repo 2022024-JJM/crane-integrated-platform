@@ -37,8 +37,9 @@ import { InputNumber } from '@crane/ui/atoms/input-number';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
-  type ModelNodeOption,
+  type ModelNodeTreeItem,
 } from '../lib/model-node-tree';
+import { listRigChoices } from '../lib/rig-choices';
 import {
   FIELD_INPUT,
   FIELD_LABEL,
@@ -106,7 +107,8 @@ function jointName(joint: RigJoint | undefined, id: string): string {
 function JointCard({
   modelId,
   joint,
-  options,
+  tree,
+  jointNodePaths,
   unresolved,
   driven,
   appliedValue,
@@ -118,7 +120,9 @@ function JointCard({
 }: {
   modelId: string;
   joint: RigJoint;
-  options: ModelNodeOption[];
+  tree: ModelNodeTreeItem[];
+  /** 이 리그의 관절이 구동하는 노드 경로 — 노드 선택기의 관절 표시. */
+  jointNodePaths: ReadonlySet<string>;
   unresolved: boolean;
   /** 선형 연동의 출력 관절 — 슬라이더가 잠기고 계산값만 보여 준다. */
   driven: boolean;
@@ -199,7 +203,9 @@ function JointCard({
       <Field label={t('monitoring:inspector.rigging.node')}>
         <NodeSelect
           value={joint.node}
-          options={options}
+          tree={tree}
+          jointNodePaths={jointNodePaths}
+          previewModelId={modelId}
           onChange={(node) => onChange({ node })}
           t={t}
         />
@@ -448,14 +454,17 @@ export function RiggingSection({
   }, [model.tagMappings]);
 
   const rig = rigs.find((r) => r.id === model.rigId) ?? null;
-  const candidates = rigs.filter((r) => r.modelPath === model.path);
+  const candidates = listRigChoices(rigs, model);
 
   // registry 의 clone root 는 마운트 후 고정이라 useMemo 가 폴링 리렌더마다
   // 트리를 다시 만들지 않는다.
   const root = modelObjectRegistry.get(model.id) ?? null;
-  const options = useMemo(
-    () => (root ? listModelNodeOptions(buildModelNodeTree(root)) : []),
-    [root],
+  const tree = useMemo(() => (root ? buildModelNodeTree(root) : []), [root]);
+  const options = useMemo(() => listModelNodeOptions(tree), [tree]);
+  // 계층 목록과 같은 관절 노드 표시 — 선형 연동의 출력도 joints 에 있다.
+  const jointNodePaths = useMemo(
+    () => new Set(rig?.joints.map((joint) => joint.node) ?? []),
+    [rig],
   );
   const knownPaths = useMemo(
     () => new Set(options.map((o) => o.path)),
@@ -571,6 +580,8 @@ export function RiggingSection({
           size="icon-xs"
           aria-label={t('monitoring:inspector.rigging.create')}
           title={t('monitoring:inspector.rigging.create')}
+          // 리그는 자산 id 로 매인다 — 자산 참조 없는 모델엔 만들 수 없다.
+          disabled={!model.asset}
           onClick={onCreateRig}
         >
           <Plus className="size-3.5" />
@@ -647,7 +658,8 @@ export function RiggingSection({
                 key={joint.id}
                 modelId={model.id}
                 joint={joint}
-                options={options}
+                tree={tree}
+                jointNodePaths={jointNodePaths}
                 unresolved={
                   root !== null &&
                   (joint.node === '' ? false : !knownPaths.has(joint.node))

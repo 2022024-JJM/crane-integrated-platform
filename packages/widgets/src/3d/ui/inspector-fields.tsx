@@ -1,13 +1,20 @@
-import { ChevronDown } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Bone, Box, ChevronDown, Shapes } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { RIG_AXES, type RigAxis } from '@crane/domain/3d';
+import { useNodePreviewStore } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { InputNumber } from '@crane/ui/atoms/input-number';
-import type { ModelNodeOption } from '../lib/model-node-tree';
+import { Combobox } from '@crane/ui/molecules/combobox';
+import { TreeRow } from '@crane/ui/molecules/tree';
+import {
+  listModelNodeOptions,
+  listNodeAncestorPaths,
+  type ModelNodeTreeItem,
+} from '../lib/model-node-tree';
+import { buildNodeSelectRows } from '../lib/node-select-rows';
 import {
   FIELD_LABEL,
   FIELD_LABEL_COMPACT,
-  FIELD_SELECT,
   NUMBER_INPUT,
   NUMBER_WRAPPER,
 } from './inspector-field-classes';
@@ -42,46 +49,157 @@ export function Field({
 }
 
 /**
- * GLB 노드 경로 선택. 값이 목록에 없으면(GLB 교체 등) amber 로 표시하고
- * sentinel option 으로 값을 보존한다 — 사용자가 다시 고르기 전엔 지우지 않는다.
- * `rootLabel` 을 주면 '' (모델 루트) 항목을 맨 앞에 둔다.
+ * GLB 노드 선택 — 계층 목록(팔레트)과 같은 트리 모양의 검색 콤보박스. 자식이
+ * 있는 노드는 화살표로 펼치고 접으며(선택되지 않는다), 열 때는 현재 값의
+ * 조상만 펼친다. 검색어가 있으면 접힘과 무관하게 전체 노드를 이름으로
+ * 거른다. 값이 목록에 없으면(GLB 교체 등) amber 로 표시하고 값을 보존한다 —
+ * 사용자가 다시 고르기 전엔 지우지 않는다. `rootLabel` 을 주면 '' (모델
+ * 루트) 행을 맨 위 깊이 0 에 둔다. 펼침 상태는 팔레트와 독립이다.
+ *
+ * `previewModelId` 를 주면 행을 하이라이트(호버·↑↓)하는 동안 그 노드를
+ * 미리보기(useNodePreviewStore)로 알린다 — 에디터 캔버스가 실루엣·고스트·
+ * 포커스 이동으로 응답한다. 닫힐 때 끝내며 카메라는 그 자리에 남는다. 행
+ * 사이로 마우스가 빠진 것(null)은 무시한다.
  */
 export function NodeSelect({
   value,
-  options,
+  tree,
   onChange,
   rootLabel,
+  previewModelId,
+  jointNodePaths,
   t,
 }: {
   value: string;
-  options: ModelNodeOption[];
+  tree: ModelNodeTreeItem[];
   onChange: (path: string) => void;
   rootLabel?: string;
+  previewModelId?: string;
+  /** 리그 관절이 구동하는 노드 경로 — 계층 목록과 같은 관절 표시. */
+  jointNodePaths?: ReadonlySet<string>;
   t: InspectorT;
 }) {
+  const knownPaths = useMemo(
+    () => new Set(listModelNodeOptions(tree).map((o) => o.path)),
+    [tree],
+  );
   const known =
-    (rootLabel !== undefined && value === '') ||
-    options.some((o) => o.path === value);
+    (rootLabel !== undefined && value === '') || knownPaths.has(value);
+
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
+    () => new Set(listNodeAncestorPaths(value)),
+  );
+  const [query, setQuery] = useState('');
+  const rows = useMemo(
+    () => buildNodeSelectRows(tree, { rootLabel, query, expanded }),
+    [tree, rootLabel, query, expanded],
+  );
+  const rowByValue = useMemo(
+    () => new Map(rows.map((row) => [row.value, row])),
+    [rows],
+  );
+  const toggleExpanded = (path: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  // 팝업이 열린 채 인스펙터가 바뀌어도 미리보기가 남지 않게.
+  useEffect(() => {
+    if (previewModelId === undefined) return;
+    return () => {
+      useNodePreviewStore.getState().endPreview();
+    };
+  }, [previewModelId]);
+
   return (
-    <select
-      className={cn(FIELD_SELECT, !known && 'border-amber-500 text-amber-500')}
+    <Combobox
       value={value}
-      onChange={(event) => onChange(event.target.value)}
-      title={value}
-    >
-      {!known ? (
-        <option value={value}>
-          {t('monitoring:inspector.rigging.unresolvedNode')}: {value || '—'}
-        </option>
-      ) : null}
-      {rootLabel !== undefined ? <option value="">{rootLabel}</option> : null}
-      {options.map((o) => (
-        <option key={o.path} value={o.path}>
-          {o.label.replace(/ /g, ' ')}
-          {o.kind === 'mesh' ? ' ▪' : ''}
-        </option>
-      ))}
-    </select>
+      options={rows}
+      onValueChange={(next) => {
+        if (next !== null) onChange(next);
+      }}
+      invalid={!known}
+      className="h-6 rounded-sm px-1 text-[11px]"
+      renderValue={(selected) =>
+        selected
+          ? selected.label
+          : `${t('monitoring:inspector.rigging.unresolvedNode')}: ${value || '—'}`
+      }
+      searchPlaceholder={t('monitoring:inspector.rigging.nodeSearch')}
+      emptyText={t('monitoring:inspector.rigging.nodeEmpty')}
+      searchText={(option) => option.label}
+      onSearchChange={setQuery}
+      itemClassName="p-0"
+      renderItem={(option, { selected }) => {
+        const row = rowByValue.get(option.value);
+        if (!row) return option.label;
+        const Icon = row.kind === 'mesh' ? Shapes : Box;
+        const isJoint =
+          row.kind !== 'root' && jointNodePaths?.has(row.path) === true;
+        return (
+          <TreeRow
+            depth={row.depth}
+            hasChildren={row.hasChildren}
+            expanded={row.expanded}
+            onToggle={() => toggleExpanded(row.path)}
+            selected={selected}
+            toggleLabel={t(
+              row.expanded
+                ? 'monitoring:editor.collapseNodes'
+                : 'monitoring:editor.expandNodes',
+            )}
+            title={row.path || undefined}
+            className={cn(
+              'w-full',
+              selected
+                ? 'border-primary/50 bg-primary/15 text-foreground'
+                : 'text-foreground/70',
+            )}
+          >
+            <Icon
+              className={cn(
+                'size-3 shrink-0',
+                selected ? 'text-primary' : 'text-muted-foreground/70',
+              )}
+            />
+            <p className="min-w-0 flex-1 truncate text-[11px] leading-none">
+              {row.label}
+            </p>
+            {isJoint ? (
+              <Bone
+                className="size-3 shrink-0 text-amber-500"
+                aria-label={t('monitoring:editor.jointNode')}
+              />
+            ) : null}
+          </TreeRow>
+        );
+      }}
+      onHighlightChange={
+        previewModelId === undefined
+          ? undefined
+          : (path) => {
+              if (path !== null) {
+                useNodePreviewStore
+                  .getState()
+                  .startPreview(previewModelId, path);
+              }
+            }
+      }
+      onOpenChange={(open) => {
+        if (open) {
+          // 열 때마다 현재 값의 조상만 펼친다 — 값 행이 보이는 최소 상태.
+          setExpanded(new Set(listNodeAncestorPaths(value)));
+          return;
+        }
+        if (previewModelId !== undefined) {
+          useNodePreviewStore.getState().endPreview();
+        }
+      }}
+    />
   );
 }
 

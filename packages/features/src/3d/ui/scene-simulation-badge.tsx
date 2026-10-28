@@ -12,8 +12,9 @@ import { useScenarioStore } from '../model/use-scenario-store';
  *   (캔버스 영역 inset-0)에 직접 마운트해야 한다 — 좌측 상단 열 안에 두면
  *   그 열 크기만 두른다.
  * - 좌측 상단 배지: 재생 중엔 맥동 점 + "시뮬레이션 중", 일시정지면 흐린
- *   "시뮬레이션 일시정지". 시나리오 이름과 배속(1 이 아닐 때)을 잇는다. 표시 전용이고 조작
- *   버튼은 없다 — 종료는 트랜스포트 바의 시뮬레이션 패널 ■ 에서 한다.
+ *   "시뮬레이션 일시정지". 배속이 1 이 아니면 배속을 잇는다(시나리오 이름은
+ *   싣지 않는다 — 트랜스포트 바의 선택 상자에 있다). 표시 전용이고 조작
+ *   버튼은 없다 — 종료는 트랜스포트 바 ▶ 오른쪽 ■ 에서 한다.
  *
  * 실시간 화면에서 독 ▶ 로 켠 시뮬레이션이 실제 값을 덮어쓰는 것을 사용자가
  * 놓치지 않게 하는 것이 목적이다(2026-09-12).
@@ -23,15 +24,7 @@ export function SceneSimulationBadge({ className }: { className?: string }) {
   const hasSession = useScenarioStore((s) => s.hasSession);
   const isRunning = useScenarioStore((s) => s.isRunning);
   const speed = useScenarioStore((s) => s.speed);
-  const scenarioName = useScenarioStore(
-    (s) => s.scenarios.find((x) => x.id === s.activeScenarioId)?.name ?? '',
-  );
   if (!hasSession) return null;
-
-  // 시나리오 이름 · 배속(1 이 아닐 때만).
-  const detail = [scenarioName, speed !== 1 ? `×${speed}` : '']
-    .filter(Boolean)
-    .join(' · ');
 
   return (
     <>
@@ -61,9 +54,9 @@ export function SceneSimulationBadge({ className }: { className?: string }) {
               ? 'monitoring:simulation.badgeRunning'
               : 'monitoring:simulation.badgePaused',
           )}
-          {detail ? (
+          {speed !== 1 ? (
             <span className="ml-1.5 text-[11px] font-normal opacity-90">
-              {detail}
+              ×{speed}
             </span>
           ) : null}
         </span>

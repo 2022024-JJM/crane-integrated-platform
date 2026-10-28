@@ -9,15 +9,15 @@ export type ScenarioTagDefaults = Omit<ScenarioTag, 'id' | 'modelId'>;
 export const SCENARIO_NUMBER_DEFAULT_RANGE = { min: 0, max: 100 } as const;
 
 /**
- * 모델 맵핑 코드 하나로 시나리오 태그의 기본값을 만든다. 상태 태그 역할은
- * 불리언(OFF·수동), 트랜스폼 맵핑 코드는 숫자(0~100·초기 0·수동). 단위는
+ * 모델 맵핑 코드 하나로 시나리오 태그의 기본값을 만든다. 상태 태그 역할과
+ * 훅 부착 태그는 불리언(OFF·수동), 트랜스폼 맵핑 코드는 숫자(0~100·초기 0·수동). 단위는
  * 서버 태그 카탈로그의 메타(없으면 생략). 이름은 비워 두고 표시는 맵핑 대상
  * (노드·채널·축 / 역할)을 쓴다.
  */
 export function createScenarioTagDefaults(
   code: ModelTagCode,
 ): ScenarioTagDefaults {
-  if (code.source === 'status') {
+  if (code.source === 'status' || code.source === 'hook') {
     return {
       code: code.code,
       name: '',

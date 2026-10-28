@@ -108,7 +108,7 @@ function scene(overrides: Partial<SavedSceneInfo> = {}): SavedSceneInfo {
       {
         id: 'rig-a',
         name: 'A',
-        modelPath: '/models/a.glb',
+        assetId: 'a',
         joints: [
           { id: 'luff', node: '[0]Arm', type: 'hinge', axis: 'x' },
           { id: 'upper', node: '[0]Arm/[0]Hand', type: 'hinge', axis: 'x' },

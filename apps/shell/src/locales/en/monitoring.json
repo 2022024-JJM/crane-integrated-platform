@@ -45,6 +45,8 @@
       "name": "Rig name",
       "resetValues": "Reset joint values",
       "nodesUnavailable": "Not loaded yet, so the node list is unavailable.",
+      "nodeSearch": "Search nodes",
+      "nodeEmpty": "No nodes",
       "joints": "Joints",
       "addJoint": "Add joint",
       "removeJoint": "Remove joint",
@@ -142,11 +144,16 @@
       }
     },
     "crane": {
-      "label": "Crane",
+      "label": "Crane ID",
       "placeholder": "Select a crane…",
-      "search": "Search by crane no. or ID",
-      "empty": "No registered cranes.",
-      "unregistered": "unregistered",
+      "search": "Search by crane ID or bay",
+      "empty": "No cranes received from the server yet.",
+      "connecting": "Connecting to the server…",
+      "disconnected": "Disconnected from the server — no crane list.",
+      "loadError": "Failed to load the crane list. Check the connection.",
+      "offline": "offline",
+      "notOnServer": "Not on server",
+      "notOnServerHint": "The server is not sending this crane.\nMappings still use this ID.",
       "missing": "No crane — tag keys cannot be built",
       "clear": "Clear crane"
     },
@@ -661,14 +668,7 @@
     "zoneAlarmLevelStop": "Stop-level zone"
   },
   "simulation": {
-    "title": "Simulation clock",
-    "play": "Play",
-    "pause": "Pause",
-    "reset": "Reset values & time",
-    "speed": "Speed",
-    "time": "Elapsed",
     "stop": "Stop simulation",
-    "stopHint": "Stop simulation — time 0, models back to rest (realtime view resumes live values)",
     "badgeRunning": "Simulating",
     "badgePaused": "Simulation paused",
     "scenario": "Scenario",
@@ -686,13 +686,15 @@
     "name": "Name",
     "namePlaceholder": "Scenario name",
     "duplicate": "Duplicate",
+    "rename": "Rename",
     "remove": "Delete",
     "removeTitle": "Delete scenario",
     "removeDescription": "Delete scenario \"{{name}}\" ({{count}} tags). This cannot be undone once saved.",
     "confirmRemove": "Delete",
     "save": "Save",
     "saveFailed": "Failed to save scenarios.",
-    "addTags": "Add tags",
+    "addModel": "Add crane",
+    "editTags": "Edit tags",
     "removeModel": "Remove model group",
     "emptyTags": "No tags. Pick tags from the models mapped in the scene.",
     "count": "{{tags}} tags · {{models}} models",
@@ -717,9 +719,18 @@
       "pattern": "Pattern",
       "period": "Period (s)",
       "periodHint": "One period in seconds",
-      "remove": "Remove tag",
       "noValue": "No value",
-      "targetMissing": "No mapping"
+      "targetMissing": "No mapping",
+      "range": "Range",
+      "periodLabel": "Period",
+      "seconds": "s",
+      "initialHint": "Value when playback starts",
+      "hookTarget": "Hook {{label}} · attach",
+      "keyframesLabel": "Length",
+      "keyframesSummary": "{{count}} pts · {{total}} s",
+      "keyframesHint": "Timed keyframes — edit points in the scenario file",
+      "loop": "loop",
+      "smooth": "eased"
     },
     "dataTypes": {
       "number": "Number",
@@ -727,26 +738,44 @@
     },
     "patterns": {
       "manual": "Manual",
-      "triangle": "Triangle",
       "sine": "Sine",
       "sawtooth": "Sawtooth",
-      "square": "Square"
+      "square": "Square",
+      "keyframes": "Keyframes"
+    },
+    "patternsShort": {
+      "manual": "Manual",
+      "sine": "Sine",
+      "sawtooth": "Saw",
+      "square": "Square",
+      "keyframes": "Keys"
+    },
+    "sentence": {
+      "sine": "Sine, {{min}} ↔ {{max}}{{unit}} and back every {{period}} s.",
+      "sawtooth": "Sawtooth, rises {{min}} → {{max}}{{unit}} over {{period}} s, then restarts.",
+      "square": "Square, {{max}} for half and {{min}}{{unit}} for half of every {{period}} s.",
+      "squareDuty": "Square, {{max}} for {{duty}}% and {{min}}{{unit}} for the rest of every {{period}} s.",
+      "boolSquare": "ON for half and OFF for half of every {{period}} s.",
+      "boolSquareDuty": "ON for {{duty}}% and OFF for the rest of every {{period}} s."
     },
     "pick": {
       "createTitle": "New scenario",
-      "addTitle": "Add tags",
+      "addModelTitle": "Add crane",
+      "editTitle": "Edit tags",
       "search": "Search models, cranes, tag codes",
       "selected": "{{selected}} / {{total}} selected",
       "selectAll": "Select all",
       "selectNone": "Clear",
       "tagCount": "{{count}} tags",
-      "alreadyAdded": "already added",
       "noMappedModels": "No model in the scene has mapped tags. Link tags in the editor first.",
       "emptyFiltered": "No matches.",
+      "noModelsLeft": "No crane left to add. Every mapped crane in the scene is already in the scenario.",
       "summary": "{{models}} models · {{tags}} tags selected",
       "cancel": "Cancel",
       "create": "Create",
-      "add": "Add"
+      "add": "Add",
+      "apply": "Apply",
+      "changes": "+{{added}} · −{{removed}}"
     }
   },
   "play3d": {

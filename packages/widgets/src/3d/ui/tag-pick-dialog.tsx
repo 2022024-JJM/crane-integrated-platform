@@ -95,7 +95,7 @@ function TagPickDialogBody({
           {t('monitoring:inspector.tagPick.title')}
           {modelCraneId ? (
             <span className="text-muted-foreground ml-2 font-normal">
-              · {t('monitoring:inspector.crane.label')} {modelCraneId}
+              {modelCraneId}
             </span>
           ) : null}
         </DialogTitle>

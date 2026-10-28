@@ -27,6 +27,10 @@ import {
   percentOf,
   rangeBarPercent,
   runEndMs,
+  SCRUB_KEY_BIG_STEP_MS,
+  SCRUB_KEY_STEP_MS,
+  scrubKeyTargetMs,
+  scrubPointerMs,
   statusSharePercents,
   tagRowLabel,
   tickTimes,
@@ -62,6 +66,67 @@ describe('msAtFraction / markerPercent', () => {
     expect(markerPercent(2500, 10_000)).toBe(25);
     expect(markerPercent(20_000, 10_000)).toBe(100);
     expect(markerPercent(500, 0)).toBe(0);
+  });
+});
+
+describe('scrubPointerMs', () => {
+  it('트랙 안 x 는 비율대로, 양 끝 정확값은 0·축 끝', () => {
+    expect(scrubPointerMs(150, 100, 200, 10_000)).toBe(2500);
+    expect(scrubPointerMs(100, 100, 200, 10_000)).toBe(0);
+    expect(scrubPointerMs(300, 100, 200, 10_000)).toBe(10_000);
+  });
+
+  it('트랙 밖으로 끌면 축 범위로 자른다', () => {
+    expect(scrubPointerMs(99, 100, 200, 10_000)).toBe(0);
+    expect(scrubPointerMs(301, 100, 200, 10_000)).toBe(10_000);
+    expect(scrubPointerMs(-1e9, 100, 200, 10_000)).toBe(0);
+  });
+
+  it('폭이 없거나 손상이면 null, 축이 없거나 x 가 숫자가 아니면 0', () => {
+    expect(scrubPointerMs(150, 100, 0, 10_000)).toBeNull();
+    expect(scrubPointerMs(150, 100, -5, 10_000)).toBeNull();
+    expect(scrubPointerMs(150, 100, Number.NaN, 10_000)).toBeNull();
+    expect(scrubPointerMs(150, 100, 200, 0)).toBe(0);
+    expect(scrubPointerMs(Number.NaN, 100, 200, 10_000)).toBe(0);
+  });
+});
+
+describe('scrubKeyTargetMs', () => {
+  it('←/↓ 는 뒤로, →/↑ 는 앞으로 1초, Shift 면 10초', () => {
+    expect(scrubKeyTargetMs('ArrowLeft', false, 5000, 60_000)).toBe(
+      5000 - SCRUB_KEY_STEP_MS,
+    );
+    expect(scrubKeyTargetMs('ArrowDown', false, 5000, 60_000)).toBe(4000);
+    expect(scrubKeyTargetMs('ArrowRight', false, 5000, 60_000)).toBe(6000);
+    expect(scrubKeyTargetMs('ArrowUp', false, 5000, 60_000)).toBe(6000);
+    expect(scrubKeyTargetMs('ArrowRight', true, 5000, 60_000)).toBe(
+      5000 + SCRUB_KEY_BIG_STEP_MS,
+    );
+    expect(scrubKeyTargetMs('ArrowLeft', true, 15_000, 60_000)).toBe(5000);
+  });
+
+  it('Home/End 는 처음·축 끝', () => {
+    expect(scrubKeyTargetMs('Home', false, 30_000, 60_000)).toBe(0);
+    expect(scrubKeyTargetMs('End', true, 30_000, 60_000)).toBe(60_000);
+  });
+
+  it('끝에서 한 칸 더 가면 경계에 멈춘다', () => {
+    expect(scrubKeyTargetMs('ArrowLeft', false, 0, 60_000)).toBe(0);
+    expect(scrubKeyTargetMs('ArrowLeft', false, 500, 60_000)).toBe(0);
+    expect(scrubKeyTargetMs('ArrowRight', false, 60_000, 60_000)).toBe(60_000);
+    expect(scrubKeyTargetMs('ArrowRight', true, 55_000, 60_000)).toBe(60_000);
+  });
+
+  it('처리하지 않는 키는 null', () => {
+    expect(scrubKeyTargetMs('Enter', false, 5000, 60_000)).toBeNull();
+    expect(scrubKeyTargetMs(' ', false, 5000, 60_000)).toBeNull();
+    expect(scrubKeyTargetMs('PageUp', false, 5000, 60_000)).toBeNull();
+  });
+
+  it('축이 없거나 위치가 숫자가 아니면 0 으로 떨어진다', () => {
+    expect(scrubKeyTargetMs('End', false, 5000, 0)).toBe(0);
+    expect(scrubKeyTargetMs('ArrowRight', false, 5000, Number.NaN)).toBe(0);
+    expect(scrubKeyTargetMs('ArrowRight', false, Number.NaN, 60_000)).toBe(0);
   });
 });
 

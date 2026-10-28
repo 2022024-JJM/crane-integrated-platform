@@ -79,8 +79,12 @@ export const RIG_CONSTRAINT_TYPES = [
 export interface RigDefinition {
   id: string;
   name: string;
-  /** 이 리그가 전제하는 GLB 경로(씬 모델의 path). 노드 경로가 이 파일 기준이다. */
-  modelPath: string;
+  /**
+   * 이 리그를 붙일 수 있는 자산(씬 모델의 `asset.id`). 버전이 올라가도 같은
+   * id 라 후보 판정이 흔들리지 않는다. 관절 노드 경로는 그 자산의 GLB 구조
+   * 기준이고, 새 버전에서 안 풀리면 편집 UI 가 amber 로 알린다.
+   */
+  assetId: string;
   joints: RigJoint[];
   constraints: RigConstraint[];
 }

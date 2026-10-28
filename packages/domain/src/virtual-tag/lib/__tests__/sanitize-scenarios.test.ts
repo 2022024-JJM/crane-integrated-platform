@@ -3,6 +3,7 @@ import {
   clampVirtualTagPeriod,
   clampVirtualTagTick,
   createEmptyScenarioSet,
+  sanitizeKeyframes,
   sanitizeScenario,
   sanitizeScenarioList,
   sanitizeScenarioSet,
@@ -17,6 +18,7 @@ import {
   SCENARIO_TAGS_MAX,
   SCENARIOS_MAX,
   VIRTUAL_TAG_CODE_MAX,
+  VIRTUAL_TAG_KEYFRAMES_MAX,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAG_PERIOD_MAX,
@@ -34,7 +36,7 @@ const tag = {
   min: -10,
   max: 10,
   initial: 3,
-  pattern: { kind: 'triangle', periodSec: 2 },
+  pattern: { kind: 'sine', periodSec: 2 },
 };
 
 const scenarioTag = { ...tag, modelId: 'model-1' };
@@ -109,6 +111,22 @@ describe('sanitizeVirtualTagPattern', () => {
       sanitizeVirtualTagPattern({ kind: 'random-walk', stepPct: 5, seed: 1 }),
     ).toEqual({ kind: 'manual' });
   });
+
+  it('제거된 삼각파 저장본은 같은 주기의 사인파로 읽는다 — 주기 클램프·기본값도 사인파 규칙', () => {
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'triangle', periodSec: 20 }),
+    ).toEqual({ kind: 'sine', periodSec: 20 });
+    expect(
+      sanitizeVirtualTagPattern({
+        kind: 'triangle',
+        periodSec: VIRTUAL_TAG_PERIOD_MAX + 1,
+      }),
+    ).toEqual({ kind: 'sine', periodSec: VIRTUAL_TAG_PERIOD_MAX });
+    expect(sanitizeVirtualTagPattern({ kind: 'triangle' })).toEqual({
+      kind: 'sine',
+      periodSec: VIRTUAL_TAG_PERIOD_DEFAULT,
+    });
+  });
 });
 
 describe('sanitizeVirtualTag — 숫자', () => {
@@ -122,7 +140,7 @@ describe('sanitizeVirtualTag — 숫자', () => {
       min: -10,
       max: 10,
       initial: 3,
-      pattern: { kind: 'triangle', periodSec: 2 },
+      pattern: { kind: 'sine', periodSec: 2 },
     });
     expect(sanitizeVirtualTag({ ...tag, dataType: 'float' })?.dataType).toBe(
       'number',
@@ -381,5 +399,84 @@ describe('배포 파일 모양(scenarios.json)', () => {
       ],
     };
     expect(sanitizeScenarioSet(deployed)).toEqual(deployed);
+  });
+});
+
+describe('sanitizeKeyframes / keyframes 패턴', () => {
+  it('깨진 점을 버리고 시각순 정렬, 같은 시각은 첫 점, ms 해상도', () => {
+    expect(
+      sanitizeKeyframes([
+        { atSec: 10, value: 1 },
+        { atSec: 0.00049, value: 2 },
+        { atSec: 10, value: 3 },
+        { atSec: -1, value: 4 },
+        { atSec: 5, value: NaN },
+        { atSec: 'x', value: 1 },
+        null,
+        { atSec: 5, value: 9 },
+      ]),
+    ).toEqual([
+      { atSec: 0, value: 2 },
+      { atSec: 5, value: 9 },
+      { atSec: 10, value: 1 },
+    ]);
+    expect(sanitizeKeyframes('nope')).toEqual([]);
+  });
+
+  it('상한 초과는 잘라낸다 — 정확값은 통과, +1 은 거부', () => {
+    const make = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ atSec: i, value: i }));
+    expect(sanitizeKeyframes(make(VIRTUAL_TAG_KEYFRAMES_MAX))).toHaveLength(
+      VIRTUAL_TAG_KEYFRAMES_MAX,
+    );
+    expect(sanitizeKeyframes(make(VIRTUAL_TAG_KEYFRAMES_MAX + 1))).toHaveLength(
+      VIRTUAL_TAG_KEYFRAMES_MAX,
+    );
+  });
+
+  it('패턴: 점이 없으면 manual, loop 는 true 만 남는다', () => {
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'keyframes', points: [] }),
+    ).toEqual({ kind: 'manual' });
+    expect(
+      sanitizeVirtualTagPattern({
+        kind: 'keyframes',
+        points: [{ atSec: 1, value: 2 }],
+        loop: 'yes',
+      }),
+    ).toEqual({ kind: 'keyframes', points: [{ atSec: 1, value: 2 }] });
+    expect(
+      sanitizeVirtualTagPattern({
+        kind: 'keyframes',
+        points: [{ atSec: 1, value: 2 }],
+        loop: true,
+      }),
+    ).toEqual({
+      kind: 'keyframes',
+      points: [{ atSec: 1, value: 2 }],
+      loop: true,
+    });
+  });
+
+  it('불리언 태그도 keyframes 를 가질 수 있다', () => {
+    const tag = sanitizeVirtualTag({
+      id: 't',
+      code: 'attach',
+      dataType: 'bool',
+      pattern: { kind: 'keyframes', points: [{ atSec: 0, value: 0 }] },
+    });
+    expect(tag?.pattern.kind).toBe('keyframes');
+  });
+});
+
+describe('keyframes ease', () => {
+  it("'smooth' 만 남고 그 밖의 값은 뗀다", () => {
+    const points = [{ atSec: 0, value: 1 }];
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'keyframes', points, ease: 'smooth' }),
+    ).toEqual({ kind: 'keyframes', points, ease: 'smooth' });
+    expect(
+      sanitizeVirtualTagPattern({ kind: 'keyframes', points, ease: 'linear' }),
+    ).toEqual({ kind: 'keyframes', points });
   });
 });

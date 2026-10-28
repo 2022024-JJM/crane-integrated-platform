@@ -258,6 +258,11 @@ export {
   sanitizeZoneOffset,
 } from './lib/sanitize-model-zones';
 export {
+  DEFAULT_HOOK_PICK_RADIUS,
+  sanitizeHookNodes,
+  sanitizeModelHooks,
+} from './lib/sanitize-model-hooks';
+export {
   COLLISION_LINE_COLOR,
   COLLISION_LINE_WIDTH,
   SELECTION_LINE_COLOR,
@@ -319,6 +324,7 @@ export type {
   SavedEnvironmentInfo,
   SavedMapInfo,
   SavedMeshOverride,
+  SavedModelHook,
   SavedModelInfo,
   SavedModelZone,
   SavedModelZoneLevel,

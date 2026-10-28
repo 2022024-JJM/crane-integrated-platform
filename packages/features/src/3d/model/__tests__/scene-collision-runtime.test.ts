@@ -630,9 +630,9 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     moveTo(a.root, 0);
     // 기준선에서 잡힌 BVH 재시도 시각은 그대로다 — 그 전엔 다시 보지 않는다.
     expect(rt.tick(BASELINE_SETTLE_MS + 200, 100)).toBeNull();
-    expect(
-      rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key,
-    ).toBe('a|b');
+    expect(rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key).toBe(
+      'a|b',
+    );
     expect(rt.suppressedKeys.has('a|b')).toBe(false);
   });
 
@@ -739,5 +739,100 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     expect(rt.tick(10, 100)).toBeNull();
     rt.sync(undefined);
     expect(rt.tick(20, 100)).toBeNull();
+  });
+});
+
+describe('SceneCollisionRuntime — 메쉬 쌍 제외(운반 중 훅↔블록)', () => {
+  /** 크레인 = root > [0]Hook(1×1×1, 원점) + [1]Leg(1×1×1, y −3). */
+  function mountCrane(id: string, x: number) {
+    const root = new Group();
+    root.name = id;
+    const hook = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+    hook.name = 'Hook';
+    const leg = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+    leg.name = 'Leg';
+    leg.position.set(0, -3, 0);
+    root.add(hook, leg);
+    root.position.set(x, 0, 0);
+    root.updateMatrixWorld(true);
+    for (const m of [hook, leg]) {
+      (m.geometry as BvhGeometry).boundsTree = new MeshBVH(m.geometry);
+    }
+    modelObjectRegistry.register(id, root);
+    return { root, hook, leg };
+  }
+
+  afterEach(() => {
+    // 제외 판정은 런타임 인스턴스에 붙으므로 전역 정리는 없다.
+  });
+
+  it('제외된 훅 메쉬가 블록에 파고들어도 보고하지 않지만, 같은 크레인의 다리가 닿으면 보고한다', () => {
+    const rt = makeRuntime();
+    const crane = mountCrane('crane', 0);
+    mountModel('block', 5);
+    rt.sync([model('crane'), model('block', 5)]);
+    rt.setMeshPairExclusion(
+      (aId, aPath, bId, bPath) =>
+        (aId === 'crane' && aPath === '[0]Hook' && bId === 'block') ||
+        (bId === 'crane' && bPath === '[0]Hook' && aId === 'block') ||
+        (aPath === '[0]Hook' && bPath === '[0]Body'),
+    );
+    rt.arm();
+    expect(settle(rt)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+
+    // 훅(모델 x 4.5 → 훅 4~5)이 블록(4.5~5.5)에 겹친다 — 제외.
+    moveTo(crane.root, 4.5);
+    expect(rt.tick(10, 100)).toBeNull();
+
+    // 다리를 훅 높이로 올리면 다리↔블록이 겹친다 — 보고. 경로는 다리.
+    crane.leg.position.y = 0;
+    crane.root.updateMatrixWorld(true);
+    const hit = rt.tick(20, 100);
+    expect(hit).not.toBeNull();
+    expect(hit?.key).toBe('block|crane');
+    const craneParty = hit?.a.modelId === 'crane' ? hit.a : hit?.b;
+    expect(craneParty?.nodePath).toBe('[1]Leg');
+  });
+
+  it('제외를 풀면(setMeshPairExclusion(null)) 같은 자세의 훅↔블록도 다음 변화에서 보고된다', () => {
+    const rt = makeRuntime();
+    const crane = mountCrane('crane', 0);
+    mountModel('block', 5);
+    rt.sync([model('crane'), model('block', 5)]);
+    rt.setMeshPairExclusion(() => true);
+    rt.arm();
+    settle(rt);
+    moveTo(crane.root, 4.5);
+    expect(rt.tick(10, 100)).toBeNull();
+    rt.setMeshPairExclusion(null);
+    // 제외 해제만으로는 재검사하지 않는다 — 움직임이 있어야 큐에 든다.
+    expect(rt.tick(20, 100)).toBeNull();
+    moveTo(crane.root, 4.6);
+    expect(rt.tick(30, 100)?.key).toBe('block|crane');
+  });
+
+  it('억제 중인 쌍의 분리 판정도 제외 메쉬 쌍은 세지 않는다 — 훅만 닿아 있으면 떨어진 것', () => {
+    const rt = makeRuntime();
+    const crane = mountCrane('crane', 0);
+    mountModel('block', 5);
+    rt.sync([model('crane'), model('block', 5)]);
+    rt.arm();
+    settle(rt);
+    // 제외 없이 훅이 닿아 hit → suppress.
+    moveTo(crane.root, 4.5);
+    expect(rt.tick(10, 100)?.key).toBe('block|crane');
+    rt.suppress('block|crane');
+    // 이제 훅↔블록을 제외하면 붙어 있어도 "분리" 로 판정돼 억제가 풀리고,
+    // 다리를 올려 닿게 하면 새로 보고된다.
+    rt.setMeshPairExclusion((_a, aPath, _b, bPath) =>
+      [aPath, bPath].includes('[0]Hook'),
+    );
+    moveTo(crane.root, 4.6);
+    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('block|crane')).toBe(false);
+    crane.leg.position.y = 0;
+    crane.root.updateMatrixWorld(true);
+    expect(rt.tick(30, 100)?.key).toBe('block|crane');
   });
 });

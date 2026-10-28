@@ -165,6 +165,7 @@
     "title": "3D Replay",
     "play": "Play",
     "pause": "Pause",
+    "stop": "Stop replay",
     "seekStart": "Go to start",
     "seekEnd": "Go to end",
     "jumpBack": "Back 5s",

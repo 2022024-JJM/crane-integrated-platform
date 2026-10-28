@@ -18,6 +18,9 @@ import {
 import {
   rigLiveReadouts,
   tagLiveValues,
+  useCraneFeedConnection,
+  useCraneSnapshotFeed,
+  useCraneSnapshotStore,
   useLabelPreview,
   useLabelPreviewState,
   useLabelPreviewStore,
@@ -30,11 +33,11 @@ import { Button } from '@crane/ui/atoms/button';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
 import { Combobox } from '@crane/ui/molecules/combobox';
-import { isRegisteredCraneId } from '../lib/crane-id-options';
+import { craneListEmptyReason, isListedCraneId } from '../lib/crane-id-options';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
-  type ModelNodeOption,
+  type ModelNodeTreeItem,
 } from '../lib/model-node-tree';
 import {
   PREVIEW_CHOICES,
@@ -116,11 +119,12 @@ export interface TagMappingSectionProps {
 }
 
 /**
- * 탭 맨 위 크레인 칸 — 레지스트리에서 검색해 고르는 콤보박스(자유 입력 없음)
- * 와 비우기 ×. 레지스트리에 없는 현재값(옛 키 접두어에서 채운 philly 의
- * GC_04 등)은 amber 로 보이되 맵핑은 그 ID 로 동작한다. craneId 가 없는데
- * 맵핑·상태 태그가 있으면 아래 한 줄로 경고한다 — 어느 화면에서도 움직이지
- * 않는다.
+ * 탭 맨 위 크레인 칸 — 서버가 주는 크레인(크레인 스냅샷 스토어)에서 검색해
+ * 고르는 콤보박스(자유 입력 없음)와 비우기 ×. 탭이 열려 있는 동안 피드를
+ * 켠다(태그 연결 다이얼로그와 같은 클라이언트를 세어 쓴다 — 브리지가 없어
+ * 버스로는 가지 않는다). 서버에 없는 현재값(philly 의 GC_04 등)은 amber 로
+ * 보이되 맵핑은 그 ID 로 동작한다. craneId 가 없는데 맵핑·상태 태그가 있으면
+ * 아래 한 줄로 경고한다 — 어느 화면에서도 움직이지 않는다.
  */
 function CraneIdField({
   craneId,
@@ -133,20 +137,24 @@ function CraneIdField({
   onChange: (craneId: string | undefined) => void;
   t: InspectorT;
 }) {
-  const options = useCraneIdOptions();
-  const registered = isRegisteredCraneId(options, craneId);
+  useCraneSnapshotFeed(true);
+  const connection = useCraneFeedConnection();
+  const loadError = useCraneSnapshotStore((s) => s.loadError);
+  const options = useCraneIdOptions(t('monitoring:inspector.crane.offline'));
+  const listed = isListedCraneId(options, craneId);
   const label = t('monitoring:inspector.crane.label');
+  const emptyReason = craneListEmptyReason(connection, loadError);
   return (
     <div className="space-y-1">
       <Field compact label={label}>
         <Combobox
-          value={registered ? (craneId ?? null) : null}
+          value={listed ? (craneId ?? null) : null}
           options={options}
           placeholder={t('monitoring:inspector.crane.placeholder')}
           searchPlaceholder={t('monitoring:inspector.crane.search')}
-          emptyText={t('monitoring:inspector.crane.empty')}
+          emptyText={t(`monitoring:inspector.crane.${emptyReason}`)}
           aria-label={label}
-          invalid={craneId !== undefined && !registered}
+          invalid={craneId !== undefined && !listed}
           className={cn(FIELD_INPUT, 'min-w-0 flex-1 px-1.5')}
           renderValue={(option) =>
             option ? (
@@ -154,7 +162,7 @@ function CraneIdField({
             ) : craneId ? (
               <span
                 className="text-amber-500"
-                title={t('monitoring:inspector.crane.unregistered')}
+                title={t('monitoring:inspector.crane.notOnServer')}
               >
                 {craneId}
               </span>
@@ -182,9 +190,14 @@ function CraneIdField({
           </Button>
         ) : null}
       </Field>
-      {craneId && !registered ? (
-        <p className={cn(FIELD_INDENT_COMPACT, 'text-[10px] text-amber-500')}>
-          {t('monitoring:inspector.crane.unregistered')}
+      {craneId && !listed ? (
+        <p
+          className={cn(
+            FIELD_INDENT_COMPACT,
+            'text-[10px] whitespace-pre-line text-amber-500',
+          )}
+        >
+          {t('monitoring:inspector.crane.notOnServerHint')}
         </p>
       ) : null}
       {!craneId && hasTags ? (
@@ -221,12 +234,14 @@ function MappingCard({
   index,
   mapping,
   rig,
-  options,
+  tree,
+  jointNodePaths,
   nodesReady,
   conflict,
   unresolved,
   tagValue,
   appliedValue,
+  modelId,
   modelCraneId,
   onChange,
   onRemove,
@@ -236,12 +251,16 @@ function MappingCard({
   index: number;
   mapping: TagMapping;
   rig: RigDefinition | undefined;
-  options: ModelNodeOption[];
+  tree: ModelNodeTreeItem[];
+  /** 리그 관절이 구동하는 노드 경로 — 노드 선택기의 관절 표시. */
+  jointNodePaths: ReadonlySet<string>;
   nodesReady: boolean;
   conflict: TagMappingConflict | undefined;
   unresolved: boolean;
   tagValue: number | undefined;
   appliedValue: number | undefined;
+  /** 노드 미리보기 대상 모델. */
+  modelId: string;
   modelCraneId: string | undefined;
   onChange: (patch: Partial<TagMapping>) => void;
   onRemove: () => void;
@@ -327,8 +346,10 @@ function MappingCard({
           <Field compact label={t('monitoring:inspector.mapping.node')}>
             <NodeSelect
               value={target.node}
-              options={options}
+              tree={tree}
+              jointNodePaths={jointNodePaths}
               rootLabel={t('monitoring:inspector.mapping.root')}
+              previewModelId={modelId}
               onChange={(node) => onChange({ target: { ...target, node } })}
               t={t}
             />
@@ -712,9 +733,12 @@ export function TagMappingSection({
   const mappings = model.tagMappings ?? NO_MAPPINGS;
   const statusTags = model.statusTags ?? NO_STATUS_TAGS;
   const root = modelObjectRegistry.get(model.id) ?? null;
-  const options = useMemo(
-    () => (root ? listModelNodeOptions(buildModelNodeTree(root)) : []),
-    [root],
+  const tree = useMemo(() => (root ? buildModelNodeTree(root) : []), [root]);
+  const options = useMemo(() => listModelNodeOptions(tree), [tree]);
+  // 계층 목록과 같은 관절 노드 표시 — 선형 연동의 출력도 joints 에 있다.
+  const jointNodePaths = useMemo(
+    () => new Set(rig?.joints.map((joint) => joint.node) ?? []),
+    [rig],
   );
   const knownPaths = useMemo(
     () => new Set(options.map((o) => o.path)),
@@ -789,7 +813,8 @@ export function TagMappingSection({
                 index={index}
                 mapping={mapping}
                 rig={rig}
-                options={options}
+                tree={tree}
+                jointNodePaths={jointNodePaths}
                 nodesReady={root !== null}
                 conflict={conflicts.get(mapping.id)}
                 unresolved={
@@ -798,6 +823,7 @@ export function TagMappingSection({
                 }
                 tagValue={tagValue}
                 appliedValue={applied}
+                modelId={model.id}
                 modelCraneId={model.craneId}
                 onChange={(patch) => updateMapping(mapping.id, patch)}
                 onRemove={() =>

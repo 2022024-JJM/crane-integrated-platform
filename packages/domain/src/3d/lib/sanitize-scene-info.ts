@@ -30,6 +30,7 @@ import {
 import { normalizeDegrees } from './math-utils';
 import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
 import { sanitizeFloodlightFields } from './sanitize-floodlights';
+import { sanitizeModelHooks } from './sanitize-model-hooks';
 import { sanitizeModelZones } from './sanitize-model-zones';
 import { sanitizeRulerFields } from './sanitize-rulers';
 import {
@@ -107,9 +108,11 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const seenIds = new Set<string>();
 
   // 리그 정의는 모델보다 먼저 — 모델의 rigId 가 존재하는 정의를 가리키는지
-  // 검사해야 하므로.
+  // 검사해야 하므로. 모델 원본은 옛 리그(assetId 없음)의 자산 id 를 유도하는
+  // 데만 쓴다.
   const safeRigs = sanitizeRigDefinitions(
     (sceneInfo as SavedSceneInfo | undefined)?.rigs,
+    (sceneInfo as SavedSceneInfo | undefined)?.models,
   );
 
   const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })
@@ -219,6 +222,8 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             // 무효면 undefined 로 필드가 빠진다.
             zones: sanitizeModelZones(model.zones),
             zoneExempt: model.zoneExempt === true ? true : undefined,
+            hooks: sanitizeModelHooks(model.hooks),
+            carriable: model.carriable === true ? true : undefined,
           },
         ];
       })

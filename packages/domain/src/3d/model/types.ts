@@ -299,6 +299,36 @@ export interface SavedModelInfo {
    * locked 과 같은 true-only 직렬화.
    */
   zoneExempt?: boolean;
+  /**
+   * 크레인 훅 — 운반 가능 모델(`carriable`)이 매달리는 지점. 없으면 필드 생략.
+   * 스키마·방어는 sanitize-model-hooks.ts, 런타임은 features scene-carry.
+   */
+  hooks?: SavedModelHook[];
+  /**
+   * 운반 가능 모델(블록 등) — 훅의 부착 태그가 켜지면 앵커 반경 안의 가장
+   * 가까운 운반 가능 모델이 훅을 따라 움직인다. locked 과 같은 true-only 직렬화.
+   */
+  carriable?: boolean;
+}
+
+/**
+ * 크레인 모델의 훅 하나. 훅 자체는 GLB 노드(로프 끝·훅 블록)이고, 노드가
+ * 여럿이면(두 가닥 로프) 앵커는 그 월드 위치의 평균이다. 부착 태그(불리언
+ * 코드, 키는 모델 craneId 로 조립)가 1 이면 런타임이 앵커의 `pickRadius`
+ * (XZ, 씬 unit) 안에서 가장 가까운 운반 가능 모델을 붙이고, 부착 시점의
+ * 상대 위치를 유지한 채 훅을 따라 옮긴다. 0 이 되면 그 자리에 놓는다.
+ */
+export interface SavedModelHook {
+  id: string;
+  label?: string;
+  /** 훅이 매달린 노드 경로(mesh-path, 1개 이상, 중복 없음). */
+  nodes: string[];
+  /** 앵커의 노드 원점 기준 수직 오프셋(씬 unit, 훅 블록 바닥이면 음수). 생략 0. */
+  anchorOffsetY?: number;
+  /** 부착 태그 코드(불리언). */
+  attachCode: string;
+  /** 부착 판정 반경(XZ, 씬 unit). 생략 시 DEFAULT_HOOK_PICK_RADIUS. */
+  pickRadius?: number;
 }
 
 /**

@@ -4,6 +4,7 @@ import type { SavedModelInfo, SavedSceneInfo } from '@crane/domain/3d';
 import {
   SCENARIO_TAGS_MAX,
   SCENARIOS_MAX,
+  scenarioTagKey,
   type ScenarioSet,
   type ScenarioTag,
   type SimulationScenario,
@@ -14,7 +15,9 @@ import {
   useScenarioStore,
 } from '../use-scenario-store';
 import { virtualTagRuntime } from '../virtual-tag-runner';
-import { setTagIngest, tagLiveValues } from '../tag-value-bus';
+import { makeJointAddress, rigValueStore } from '../rig-value-store';
+import { subscribeSceneSeek } from '../scene-seek-signal';
+import { publishTagValue, setTagIngest, tagLiveValues } from '../tag-value-bus';
 
 /**
  * 영속화 어댑터(scenario-storage)는 도메인에서 따로 테스트한다 — 여기서는
@@ -136,6 +139,8 @@ afterEach(() => {
 });
 
 const store = () => useScenarioStore.getState();
+const key = (modelId: string, code: string) =>
+  scenarioTagKey({ modelId, code });
 
 /** 시나리오 하나를 만들고 id 를 돌려준다(실패하면 throw). */
 function addScenario(
@@ -259,6 +264,79 @@ describe('씬 붙이기·활성 시나리오', () => {
   });
 });
 
+describe('시나리오 전환 — 앞 시나리오가 버스에 남긴 값', () => {
+  const JOINT = makeJointAddress('mA', 'j');
+
+  /** A 를 재생해 live 캐시·리그 값을 남긴다. B 는 다른 키만 낸다. */
+  function playA() {
+    const a = addScenario('A', [tagDef('mA', 'x', { initial: 1 })]);
+    const b = addScenario('B', [tagDef('mB', 'y')]);
+    store().setActiveScenario(a);
+    store().start();
+    vi.advanceTimersByTime(200);
+    rigValueStore.set(JOINT, 5);
+    expect(tagLiveValues.get('A.x')?.value).toBe(1);
+    return { a, b };
+  }
+
+  afterEach(() => rigValueStore.reset());
+
+  it('재생 중 전환: 멈추고 시간 0, live 값·리그 값을 걷어낸다 — 세션·배속은 유지', () => {
+    const { b } = playA();
+    store().setSpeed(2);
+    let seeks = 0;
+    const unsubscribe = subscribeSceneSeek(() => {
+      seeks += 1;
+    });
+    store().setActiveScenario(b);
+    unsubscribe();
+    expect(store().isRunning).toBe(false);
+    expect(store().hasSession).toBe(true);
+    expect(store().speed).toBe(2);
+    expect(virtualTagRuntime.elapsed).toBe(0);
+    expect(tagLiveValues.get('A.x')).toBeUndefined();
+    expect(rigValueStore.has(JOINT)).toBe(false);
+    // seek 신호 — 운반 레이어가 블록을 제자리로 되돌린다.
+    expect(seeks).toBe(1);
+  });
+
+  it('일시정지 중 전환도 같다 — 남은 부착 값이 다음 시나리오로 넘어가지 않는다', () => {
+    const { b } = playA();
+    store().pause();
+    store().setActiveScenario(b);
+    expect(store().hasSession).toBe(true);
+    expect(tagLiveValues.get('A.x')).toBeUndefined();
+    expect(rigValueStore.has(JOINT)).toBe(false);
+  });
+
+  it('재생한 적 없으면 건드리지 않는다', () => {
+    const a = addScenario('A');
+    addScenario('B');
+    publishTagValue('A.x', 3);
+    rigValueStore.set(JOINT, 5);
+    store().setActiveScenario(a);
+    expect(tagLiveValues.get('A.x')?.value).toBe(3);
+    expect(rigValueStore.has(JOINT)).toBe(true);
+  });
+
+  it('같은 시나리오 재선택은 no-op — 재생도 값도 그대로', () => {
+    const { a } = playA();
+    store().setActiveScenario(a);
+    expect(store().isRunning).toBe(true);
+    expect(tagLiveValues.get('A.x')?.value).toBe(1);
+  });
+
+  it('활성 시나리오 삭제도 값을 걷어내고, 다른 시나리오 삭제는 건드리지 않는다', () => {
+    const { a, b } = playA();
+    store().removeScenario(b);
+    expect(store().isRunning).toBe(true);
+    expect(tagLiveValues.get('A.x')?.value).toBe(1);
+    store().removeScenario(a);
+    expect(store().isRunning).toBe(false);
+    expect(tagLiveValues.get('A.x')).toBeUndefined();
+  });
+});
+
 describe('시나리오 CRUD', () => {
   it('추가는 이름을 trim 하고 활성으로 만든다. 빈 이름은 invalid-name, 상한은 limit', () => {
     const id = addScenario('  횡행 중 고장  ');
@@ -340,7 +418,7 @@ describe('태그 CRUD', () => {
     const id = addScenario('S', [tagDef('mA', 'x')]);
     const result = store().addTags(id, [
       tagDef('mA', 'x'), // 중복
-      tagDef('mA', 'tri', { pattern: { kind: 'triangle', periodSec: 1 } }),
+      tagDef('mA', 'tri', { pattern: { kind: 'sine', periodSec: 1 } }),
       { ...tagDef('mB', 'y'), modelId: '' }, // 손상
     ]);
     expect(result).toEqual({ added: 1, skipped: 2 });
@@ -392,21 +470,77 @@ describe('태그 CRUD', () => {
     expect(virtualTagRuntime.getValue('A.x')).toBe(0);
   });
 
-  it('removeTag / removeModelTags: 없는 것은 참조 유지, 있으면 러너에서도 사라진다', () => {
+  it('removeModelTags: 없는 모델은 참조 유지, 있으면 그 모델 태그가 러너에서도 사라진다', () => {
     const id = addScenario('S', [
       tagDef('mA', 'x'),
       tagDef('mA', 'tri'),
       tagDef('mB', 'y'),
     ]);
     const before = store().scenarios;
-    store().removeTag(id, 'ghost');
     store().removeModelTags(id, 'ghost');
     expect(store().scenarios).toBe(before);
-    const [x] = store().scenarios[0].tags;
-    store().removeTag(id, x.id);
-    expect(virtualTagRuntime.getValue('A.x')).toBeUndefined();
     store().removeModelTags(id, 'mA');
+    expect(virtualTagRuntime.getValue('A.x')).toBeUndefined();
     expect(store().entries.map((e) => e.key)).toEqual(['B.y']);
+  });
+
+  it('editTags: 키로 지우고 새 태그를 넣는 것을 commit 한 번에 — 남는 태그 정의는 그대로', () => {
+    const id = addScenario('S', [
+      tagDef('mA', 'x', { unit: 'mm', max: 42 }),
+      tagDef('mA', 'tri'),
+      tagDef('mB', 'y'),
+    ]);
+    const before = store().scenarios;
+    const commits: number[] = [];
+    const unsubscribe = useScenarioStore.subscribe((state, prev) => {
+      if (state.scenarios !== prev.scenarios) commits.push(1);
+    });
+    const result = store().editTags(id, {
+      add: [tagDef('mA', 'saw'), tagDef('mB', 'y')], // mB.y 는 이미 있음
+      removeKeys: [key('mA', 'tri'), key('ghost', 'nope')],
+    });
+    unsubscribe();
+    expect(result).toEqual({ added: 1, removed: 1, skipped: 1 });
+    expect(commits).toHaveLength(1);
+    expect(store().scenarios).not.toBe(before);
+    const tags = store().scenarios[0].tags;
+    expect(tags.map((t) => t.code)).toEqual(['x', 'y', 'saw']);
+    expect(tags[0]).toMatchObject({ unit: 'mm', max: 42 });
+    expect(store().entries.map((e) => e.key)).toEqual(['A.x', 'B.y', 'A.saw']);
+    expect(virtualTagRuntime.getValue('A.tri')).toBeUndefined();
+  });
+
+  it('editTags: 지울 것도 넣을 것도 없으면 참조 유지, 없는 시나리오는 전부 skipped', () => {
+    const id = addScenario('S', [tagDef('mA', 'x')]);
+    const before = store().scenarios;
+    expect(
+      store().editTags(id, {
+        add: [tagDef('mA', 'x')],
+        removeKeys: [key('ghost', 'nope')],
+      }),
+    ).toEqual({ added: 0, removed: 0, skipped: 1 });
+    expect(store().scenarios).toBe(before);
+    expect(
+      store().editTags('ghost', { add: [tagDef('mA', 'x')], removeKeys: [] }),
+    ).toEqual({ added: 0, removed: 0, skipped: 1 });
+    expect(store().scenarios).toBe(before);
+  });
+
+  it('editTags: 지운 자리만큼 상한 안에서 다시 넣을 수 있다', () => {
+    const id = addScenario('S');
+    store().addTags(
+      id,
+      Array.from({ length: SCENARIO_TAGS_MAX }, (_, i) =>
+        tagDef('mA', `k${i}`),
+      ),
+    );
+    expect(
+      store().editTags(id, {
+        add: [tagDef('mA', 'new1'), tagDef('mA', 'new2')],
+        removeKeys: [key('mA', 'k0')],
+      }),
+    ).toEqual({ added: 1, removed: 1, skipped: 1 });
+    expect(store().scenarios[0].tags).toHaveLength(SCENARIO_TAGS_MAX);
   });
 
   it('setTickSec 는 클램프하고 같은 값이면 상태 참조를 유지한다', () => {
@@ -423,7 +557,7 @@ describe('재생(runner)', () => {
     addScenario('S', [
       tagDef('mA', 'tri', {
         max: 100,
-        pattern: { kind: 'triangle', periodSec: 1 },
+        pattern: { kind: 'sine', periodSec: 1 },
       }),
     ]);
     store().start();
@@ -433,8 +567,10 @@ describe('재생(runner)', () => {
     vi.advanceTimersByTime(250);
     const values = received.get('A.tri') ?? [];
     expect(values.length).toBe(1 + 2);
-    expect(values[values.length - 1]).toBeCloseTo(40, 6);
-    expect(tagLiveValues.get('A.tri')?.value).toBeCloseTo(40, 6);
+    // 두 틱 = 씬 시간 0.2초 — 0 에서 상승하는 사인(0.5 − 0.5cos) 위의 값.
+    const expected = 50 - 50 * Math.cos(2 * Math.PI * 0.2);
+    expect(values[values.length - 1]).toBeCloseTo(expected, 6);
+    expect(tagLiveValues.get('A.tri')?.value).toBeCloseTo(expected, 6);
   });
 
   it('pause 후에는 틱이 멈추고, 재개하면 위상이 이어진다', () => {
@@ -465,7 +601,7 @@ describe('재생(runner)', () => {
     store().start();
     vi.advanceTimersByTime(100);
     expect(received.get('A.x')).toEqual([3, 3]);
-    store().removeTag(id, store().scenarios[0].tags[0].id);
+    store().editTags(id, { add: [], removeKeys: [key('mA', 'x')] });
     vi.advanceTimersByTime(300);
     expect(received.get('A.x')).toEqual([3, 3]);
   });
@@ -527,7 +663,7 @@ describe('discard', () => {
     storage.load.mockResolvedValue(loaded);
     await store().load();
     expect(store().updateTag('s', 'a', { initial: 9 })).toBe(true);
-    store().removeTag('s', 'b');
+    store().editTags('s', { add: [], removeKeys: [key('mB', 'y')] });
     expect(store().scenarios[0].tags).toHaveLength(1);
 
     store().discard();

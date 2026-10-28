@@ -134,7 +134,6 @@ export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
 export { SceneStatusHud } from './ui/scene-status-hud';
 export { SceneDangerVignette } from './ui/scene-danger-vignette';
-export { SceneSimulationPanel } from './ui/scene-simulation-panel';
 export { formatSimClock } from './lib/sim-clock';
 export { stopSimulation } from './model/stop-simulation';
 export {
@@ -215,6 +214,10 @@ export {
   type SceneSnapStep,
 } from './model/use-scene-editor-view-store';
 export {
+  useNodePreviewStore,
+  type NodePreview,
+} from './model/use-node-preview-store';
+export {
   useSelectedSceneObjectEditor,
   type SelectedMeshInfo,
 } from './model/use-selected-scene-object-editor';
@@ -232,6 +235,17 @@ export {
 export { makeMeshId, parseMeshId, isMeshId } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
 export { RigDriver } from './ui/rig-driver';
+export { SceneCarryLayer } from './ui/scene-carry-layer';
+export {
+  isCarriedMeshPair,
+  isCarriedPair,
+  sceneCarryState,
+} from './model/scene-carry-state';
+export {
+  SceneCarryRuntime,
+  type CarryResolvers,
+  type CarryStepResult,
+} from './model/scene-carry-runtime';
 export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
 export {
@@ -291,6 +305,7 @@ export {
 } from './lib/scene-warmup-step';
 export {
   sceneCollisionRuntime,
+  type MeshPairExclusion,
   type SceneCollisionRuntimePhase,
 } from './model/scene-collision-runtime';
 export {
@@ -409,6 +424,8 @@ export {
   type ScenarioAddResult,
   type ScenarioDraft,
   type ScenarioTagAddResult,
+  type ScenarioTagEdit,
+  type ScenarioTagEditResult,
 } from './model/use-scenario-store';
 export { virtualTagRuntime } from './model/virtual-tag-runner';
 export {

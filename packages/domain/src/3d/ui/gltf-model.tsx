@@ -26,7 +26,10 @@ import type {
   ModelLabelReading,
   ModelLabelValueReader,
 } from '../lib/label-reading';
-import { SELECTION_LINE_COLOR } from '../lib/selection-style';
+import {
+  NODE_PREVIEW_OUTLINE_COLOR,
+  SELECTION_LINE_COLOR,
+} from '../lib/selection-style';
 import {
   PLAN_VIEW_OUTLINE_COLOR,
   PLAN_VIEW_OUTLINE_OPACITY,
@@ -137,6 +140,13 @@ interface GltfModelProps {
    * 바운딩 박스)의 대상을 이 노드 서브트리로 좁힌다. null이면 모델 전체.
    */
   selectedMeshTarget?: Object3D | null;
+  /**
+   * 인스펙터 노드 선택기가 하이라이트한 노드(미리보기). 그 서브트리에 하늘색
+   * 실루엣을 두르고 같은 모델의 나머지 메시를 고스트로 그리며, 그동안 선택
+   * 테두리·상태 외곽선·평면도 윤곽은 숨긴다. 루트(clone)면 실루엣만 두른다.
+   * null 이면 없음.
+   */
+  previewMeshTarget?: Object3D | null;
   onObjectReady?: (id: string, object: Object3D | null) => void;
   /** event는 Canvas 안 3D 본체 hover에서만 전달 (라벨 등 DOM 호출은 undefined). */
   onHoverStart?: (
@@ -185,6 +195,7 @@ export const GltfModel = memo(function GltfModel({
   selectionStyle = 'box',
   prepareOutline = false,
   selectedMeshTarget = null,
+  previewMeshTarget = null,
   enableRaycastBvh = true,
   onObjectReady,
   onHoverStart,
@@ -209,6 +220,10 @@ export const GltfModel = memo(function GltfModel({
   const outlineObjects = useMemo(() => [outlineTarget], [outlineTarget]);
   // 상태 외곽선은 언제나 모델 전체를 두른다.
   const statusOutlineObjects = useMemo(() => [clone], [clone]);
+  const previewObjects = useMemo(
+    () => (previewMeshTarget ? [previewMeshTarget] : null),
+    [previewMeshTarget],
+  );
   const statusOutline = isStatusOutlineVisible(outlineState)
     ? outlineState
     : null;
@@ -246,6 +261,7 @@ export const GltfModel = memo(function GltfModel({
       meshOverrides={meshOverrides}
       enableRaycastBvh={enableRaycastBvh}
       prepareOutline={prepareOutline}
+      ghostExcept={previewMeshTarget === clone ? null : previewMeshTarget}
       clonedModel={clonedModel}
       onSelect={onSelect}
       onDoubleSelect={onDoubleSelect}
@@ -254,7 +270,15 @@ export const GltfModel = memo(function GltfModel({
       onHoverMove={onHoverMove}
       onHoverEnd={onHoverEnd}
     >
-      {statusOutline ? (
+      {previewObjects ? (
+        // 노드 미리보기 — 실루엣 마스크는 캔버스 전역 합집합이라 모델 전체
+        // 외곽선(상태·평면도·선택)이 함께 있으면 노드 테두리가 모델 발자국
+        // 안에서 지워진다. 미리보기 동안은 그것들을 숨기고 이것만 그린다.
+        <ObjectSilhouetteOutline
+          objects={previewObjects}
+          color={NODE_PREVIEW_OUTLINE_COLOR}
+        />
+      ) : statusOutline ? (
         <ObjectSilhouetteOutline
           objects={statusOutlineObjects}
           color={STATUS_OUTLINE_COLORS[statusOutline]}
@@ -278,7 +302,7 @@ export const GltfModel = memo(function GltfModel({
         />
       ) : null}
       {useOutline ? (
-        selectionReplaced ? null : (
+        selectionReplaced || previewObjects ? null : (
           <ObjectSilhouetteOutline
             objects={outlineObjects}
             color={SELECTION_LINE_COLOR}

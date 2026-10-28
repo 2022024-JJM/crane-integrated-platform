@@ -23,6 +23,10 @@ export interface ComboboxOption {
   disabled?: boolean;
 }
 
+export interface ComboboxItemState {
+  selected: boolean;
+}
+
 export interface ComboboxProps {
   value: string | null;
   onValueChange: (value: string | null) => void;
@@ -39,6 +43,27 @@ export interface ComboboxProps {
   /** 현재 값이 유효하지 않음을 시각적으로 알린다(amber 테두리). */
   invalid?: boolean;
   popupClassName?: string;
+  /**
+   * 하이라이트된 항목(마우스 호버·키보드 이동)이 바뀔 때 — 항목 밖으로 나가면
+   * null. 인스펙터 노드 선택기가 미리보기에 쓴다.
+   */
+  onHighlightChange?: (value: string | null) => void;
+  /** 팝업 열림·닫힘. */
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * 행 내용을 직접 그린다(기본은 체크 표시 + 라벨 + 배지 + 설명). 트리 모양
+   * 목록(인스펙터 노드 선택기)이 쓴다.
+   */
+  renderItem?: (option: ComboboxOption, state: ComboboxItemState) => ReactNode;
+  /** 행 클래스 — renderItem 으로 안쪽 여백을 직접 잡을 때 기본 px/py 를 덮는다. */
+  itemClassName?: string;
+  /** 검색에 쓸 글자(기본은 라벨 + 값 + 설명). */
+  searchText?: (option: ComboboxOption) => string;
+  /**
+   * 검색어 변화. 검색어가 비면 base-ui 가 filter 를 부르지 않으므로, 접힌
+   * 행을 빼는 식의 목록 변화는 options 자체로 해야 한다 — 그때 쓴다.
+   */
+  onSearchChange?: (query: string) => void;
 }
 
 function optionText(option: ComboboxOption): string {
@@ -57,6 +82,12 @@ export function Combobox({
   renderValue,
   invalid,
   popupClassName,
+  onHighlightChange,
+  onOpenChange,
+  renderItem,
+  itemClassName,
+  searchText,
+  onSearchChange,
   'aria-label': ariaLabel,
 }: ComboboxProps) {
   const portalContainer = usePortalContainer();
@@ -70,9 +101,14 @@ export function Combobox({
       onValueChange={(next) => onValueChange(next ? next.value : null)}
       itemToStringLabel={(o) => o.label}
       isItemEqualToValue={(a, b) => a.value === b.value}
-      filter={(item, query) => contains(item, query, optionText)}
+      filter={(item, query) => contains(item, query, searchText ?? optionText)}
       disabled={disabled}
       modal={false}
+      onItemHighlighted={(item) =>
+        onHighlightChange?.(item ? item.value : null)
+      }
+      onOpenChange={(open) => onOpenChange?.(open)}
+      onInputValueChange={(inputValue) => onSearchChange?.(inputValue)}
     >
       <ComboboxPrimitive.Trigger
         aria-label={ariaLabel}
@@ -134,26 +170,33 @@ export function Combobox({
                     'relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors outline-none',
                     'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
                     'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+                    itemClassName,
                   )}
                 >
-                  <ComboboxPrimitive.ItemIndicator className="mt-0.5 flex size-3.5 shrink-0 items-center justify-center">
-                    <Check className="size-3" />
-                  </ComboboxPrimitive.ItemIndicator>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate">{item.label}</span>
-                      {item.badge ? (
-                        <span className="text-muted-foreground border-border shrink-0 rounded border px-1 text-[9px] uppercase">
-                          {item.badge}
+                  {renderItem ? (
+                    renderItem(item, { selected: item.value === value })
+                  ) : (
+                    <>
+                      <ComboboxPrimitive.ItemIndicator className="mt-0.5 flex size-3.5 shrink-0 items-center justify-center">
+                        <Check className="size-3" />
+                      </ComboboxPrimitive.ItemIndicator>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate">{item.label}</span>
+                          {item.badge ? (
+                            <span className="text-muted-foreground border-border shrink-0 rounded border px-1 text-[9px] uppercase">
+                              {item.badge}
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
-                    </span>
-                    {item.description ? (
-                      <span className="text-muted-foreground truncate text-[10px]">
-                        {item.description}
+                        {item.description ? (
+                          <span className="text-muted-foreground truncate text-[10px]">
+                            {item.description}
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                  </span>
+                    </>
+                  )}
                 </ComboboxPrimitive.Item>
               )}
             </ComboboxPrimitive.List>

@@ -45,6 +45,8 @@
       "name": "Nomen articulationis",
       "resetValues": "Valores iuncturarum reponere",
       "nodesUnavailable": "Nondum onustum est; index nodorum non praesto est.",
+      "nodeSearch": "Nodos quaerere",
+      "nodeEmpty": "Nulli nodi",
       "joints": "Iuncturae",
       "addJoint": "Iuncturam addere",
       "removeJoint": "Iuncturam removere",
@@ -142,11 +144,16 @@
       }
     },
     "crane": {
-      "label": "Grus",
+      "label": "ID gruis",
       "placeholder": "Gruem elige…",
-      "search": "Quaere per numerum aut ID gruis",
-      "empty": "Nullae grues inscriptae.",
-      "unregistered": "non inscripta",
+      "search": "Quaere per ID gruis aut regionem",
+      "empty": "Nullae grues a servo adhuc acceptae.",
+      "connecting": "Ad servum conectitur…",
+      "disconnected": "Nexus cum servo ruptus — index gruum deest.",
+      "loadError": "Index gruum accipi non potuit. Nexum inspice.",
+      "offline": "exstincta",
+      "notOnServer": "Non in servo",
+      "notOnServerHint": "Servus hanc gruem non mittit.\nIunctiones hoc ID tamen adhibent.",
       "missing": "Nulla grus — claves signorum fieri non possunt",
       "clear": "Gruem solvere"
     },
@@ -661,14 +668,7 @@
     "zoneAlarmLevelStop": "Regio gradus sistendi"
   },
   "simulation": {
-    "title": "Horologium simulationis",
-    "play": "Age",
-    "pause": "Siste",
-    "reset": "Valores et tempus restitue",
-    "speed": "Celeritas",
-    "time": "Elapsum",
     "stop": "Simulationem finire",
-    "stopHint": "Simulationem finire — tempus 0, exemplaria in statum quietis",
     "badgeRunning": "Simulatio agitur",
     "badgePaused": "Simulatio sistitur",
     "scenario": "Scaenarium",
@@ -686,13 +686,15 @@
     "name": "Nomen",
     "namePlaceholder": "Nomen scaenarii",
     "duplicate": "Duplica",
+    "rename": "Renomina",
     "remove": "Dele",
     "removeTitle": "Scaenarium delere",
     "removeDescription": "Scaenarium \"{{name}}\" ({{count}} signa) deletur. Servatum revocari non potest.",
     "confirmRemove": "Dele",
     "save": "Serva",
     "saveFailed": "Scaenaria servari non potuerunt.",
-    "addTags": "Signa adde",
+    "addModel": "Adde gruem",
+    "editTags": "Signa muta",
     "removeModel": "Exemplaris fasciculum tolle",
     "emptyTags": "Nulla signa. Ex exemplaribus in scaena iunctis signa elige.",
     "count": "{{tags}} signa · {{models}} exemplaria",
@@ -717,9 +719,18 @@
       "pattern": "Forma",
       "period": "Periodus (s)",
       "periodHint": "Una periodus in secundis",
-      "remove": "Signum tolle",
       "noValue": "Nullus valor",
-      "targetMissing": "Nulla iunctio"
+      "targetMissing": "Nulla iunctio",
+      "range": "Ambitus",
+      "periodLabel": "Periodus",
+      "seconds": "s",
+      "initialHint": "Valor initio cursus",
+      "hookTarget": "Hamus {{label}} · adnexio",
+      "keyframesLabel": "Longitudo",
+      "keyframesSummary": "{{count}} puncta · {{total}} s",
+      "keyframesHint": "Puncta temporis — puncta in fasciculo scaenarii muta",
+      "loop": "iteratio",
+      "smooth": "lenis"
     },
     "dataTypes": {
       "number": "Numerus",
@@ -727,26 +738,44 @@
     },
     "patterns": {
       "manual": "Manuale",
-      "triangle": "Triangulum",
       "sine": "Sinus",
       "sawtooth": "Serra",
-      "square": "Quadratum"
+      "square": "Quadratum",
+      "keyframes": "Puncta temporis"
+    },
+    "patternsShort": {
+      "manual": "Manu",
+      "sine": "Sin",
+      "sawtooth": "Ser",
+      "square": "Quad",
+      "keyframes": "Puncta"
+    },
+    "sentence": {
+      "sine": "Sinus, {{min}} ↔ {{max}}{{unit}} et retro singulis {{period}} s.",
+      "sawtooth": "Serra, {{min}} → {{max}}{{unit}} intra {{period}} s, deinde ab initio.",
+      "square": "Quadratum, dimidium {{max}}, dimidium {{min}}{{unit}} singulis {{period}} s.",
+      "squareDuty": "Quadratum, {{duty}}% {{max}}, reliquum {{min}}{{unit}} singulis {{period}} s.",
+      "boolSquare": "Dimidium ON, dimidium OFF singulis {{period}} s.",
+      "boolSquareDuty": "{{duty}}% ON, reliquum OFF singulis {{period}} s."
     },
     "pick": {
       "createTitle": "Novum scaenarium",
-      "addTitle": "Signa adde",
+      "addModelTitle": "Adde gruem",
+      "editTitle": "Signa muta",
       "search": "Quaere exemplaria, grues, codices",
       "selected": "{{selected}} / {{total}} electa",
       "selectAll": "Omnia elige",
       "selectNone": "Omnia solve",
       "tagCount": "{{count}} signa",
-      "alreadyAdded": "iam additum",
       "noMappedModels": "Nullum exemplar in scaena signa iuncta habet. In editore primum signa iunge.",
       "emptyFiltered": "Nihil inventum.",
+      "noModelsLeft": "Nulla grus addenda restat. Omnes grues scaenae signatae iam in scaenario sunt.",
       "summary": "{{models}} exemplaria · {{tags}} signa electa",
       "cancel": "Abrogare",
       "create": "Crea",
-      "add": "Adde"
+      "add": "Adde",
+      "apply": "Applica",
+      "changes": "+{{added}} · −{{removed}}"
     }
   },
   "play3d": {

@@ -323,6 +323,58 @@ export function msAtFraction(fraction: number, axisMs: number): number {
   return Math.min(axisMs, Math.max(0, fraction * axisMs));
 }
 
+/**
+ * 재생바 포인터 x → 씬 시간. 트랙의 왼쪽 끝·폭(px)으로 비율을 내고 축 범위로
+ * 자른다. 폭이 없으면(그려지기 전) null — 이동하지 않는다.
+ */
+export function scrubPointerMs(
+  clientX: number,
+  trackLeft: number,
+  trackWidth: number,
+  axisMs: number,
+): number | null {
+  if (!(trackWidth > 0)) return null;
+  return msAtFraction((clientX - trackLeft) / trackWidth, axisMs);
+}
+
+/** 재생바 손잡이 키보드 이동 폭(ms) — 기본 / Shift. */
+export const SCRUB_KEY_STEP_MS = 1_000;
+export const SCRUB_KEY_BIG_STEP_MS = 10_000;
+
+/**
+ * 재생바 손잡이 키보드 이동 목표 — ←/↓ 뒤로, →/↑ 앞으로(Shift 면 큰 폭),
+ * Home/End 는 처음·축 끝. 그 밖의 키는 null(처리하지 않음). 축 범위로 자른다.
+ */
+export function scrubKeyTargetMs(
+  key: string,
+  shiftKey: boolean,
+  positionMs: number,
+  axisMs: number,
+): number | null {
+  const step = shiftKey ? SCRUB_KEY_BIG_STEP_MS : SCRUB_KEY_STEP_MS;
+  let target: number;
+  switch (key) {
+    case 'ArrowLeft':
+    case 'ArrowDown':
+      target = positionMs - step;
+      break;
+    case 'ArrowRight':
+    case 'ArrowUp':
+      target = positionMs + step;
+      break;
+    case 'Home':
+      target = 0;
+      break;
+    case 'End':
+      target = axisMs;
+      break;
+    default:
+      return null;
+  }
+  const max = axisMs > 0 ? axisMs : 0;
+  return Math.min(max, Math.max(0, Number.isFinite(target) ? target : 0));
+}
+
 /** 검사된 시간 ÷ 창 길이(0~1). 창이 0·NaN 이면 null, 1 상한. */
 export function coverageRatio(
   scannedMs: number,

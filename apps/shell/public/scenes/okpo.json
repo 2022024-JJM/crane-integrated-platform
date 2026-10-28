@@ -1780,7 +1780,7 @@
     {
       "id": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
       "name": "Okpo OC",
-      "modelPath": "/models/okpo_oc.glb",
+      "assetId": "okpo-oc",
       "joints": [
         {
           "id": "joint-dc5f2798",

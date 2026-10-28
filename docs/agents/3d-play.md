@@ -9,7 +9,7 @@
 | 관심사 | 위치 |
 |---|---|
 | 페이지 뷰 조립 | `packages/features/src/3d/ui/play3d-view.tsx` (`Play3dView`) |
-| 소스 탭 / 트랜스포트 바 | `packages/features/src/3d/ui/play3d-source-tabs.tsx`, `ui/play3d-transport-bar.tsx` |
+| 소스 탭 / 트랜스포트 바 / 스크럽(표식 띠 + 삼각형 손잡이) | `packages/features/src/3d/ui/play3d-source-tabs.tsx`, `ui/play3d-transport-bar.tsx`, `ui/transport-scrubber.tsx` |
 | 활성 소스 스토어 | `packages/features/src/3d/model/use-play3d-store.ts` (`usePlay3dStore.source`) |
 | 트랜스포트 어댑터 | `packages/features/src/3d/model/play3d-transport.ts` (`Play3dTransport`), 리플레이 위치 변환 `lib/replay-position.ts` |
 | 실행 통계 집계(순수) | `packages/features/src/3d/lib/play3d-stats.ts` (`computePlay3dStats`, `assignZoneBandsToRows`, `assignCollisionsToRows`), 시간 축·눈금·표식 조립·표시 보조 `lib/play3d-format.ts` (`timelineAxisMs`, `timelineRows`, `transportMarks`, `tagRowLabel`), 집계 범위 `lib/play3d-scope.ts` |
@@ -30,8 +30,8 @@ i18n 은 `monitoring:play3d.*`.
 
 - `Play3dView` 는 `Monitoring3dView mode='play3d'` 위에 소스 탭(리플레이 | 시뮬레이션)과 트랜스포트 바를 **캔버스 위 별도 행**으로 둔다. 오버레이가 아니라 좌상단 열과 겹치지 않는다.
 - 소스 탭은 role=tablist 버튼이다(공용 Tabs 컴포넌트 없음).
-- 트랜스포트 바 구성: 시간 눈금 → 사건 표식 띠 → 스크럽(아래 "시간 축과 표식") · 소스 슬롯(리플레이 = 구간 검색 팝오버 `ReplaySearchForm`, 시뮬레이션 = `SceneSimulationPanel` 팝오버) · 이동/▶ · 배속(소스별 선택지) · 위치.
-- 스크럽은 재생할 내용이 있으면(`hasContent`) 열린 구간(시뮬레이션은 항상 열린 구간)에서도 활성이고 범위는 축 전체다. 열린 구간은 재생 중 손잡이가 오른쪽 끝(닿은 지점)에 붙고, 왼쪽으로 끌면 그 시점부터 이어서 재생된다. 열린 구간에는 ⏭(끝으로)이 없다.
+- 트랜스포트 바 구성: 시간 눈금 → 스크럽(`ui/transport-scrubber.tsx` — 사건 표식 띠가 곧 재생 축, 아래 "시간 축과 표식") · 소스 슬롯(리플레이 = 구간 검색 팝오버 `ReplaySearchForm`, 시뮬레이션 = 시나리오 `<select>`) · 이동/▶ · 종료(▶ 바로 오른쪽, 어댑터 `stop` — 리플레이는 정지 + 첫 프레임, 시뮬레이션은 `stopSimulation`) · 배속(소스별 선택지) · 위치.
+- 스크럽은 띠 세 겹(바닥: 트랙과 지난 구간 채움, 가운데: 표식, 위: 1px 재생선) + 띠 아래 삼각형 손잡이다. 삼각형이나 띠의 빈 곳을 눌러 끌면 끄는 동안 계속 `transport.seek` 하고(같은 시각은 다시 보내지 않는다), 표식을 누르면 끌기 없이 그 사건 시각으로 간다. 끄는 동안의 위치는 폴링이 아니라 포인터를 따르고 재생선 바로 위(띠 밖, 눈금 줄 위)에 시각을 띄운다. 위치는 렌더마다 스토어에서 직접 읽는다 — seek 가 동기라 끌기를 놓는 순간 옛 위치로 튀지 않는다. 포인터 → 시각은 `scrubPointerMs`, 키보드(삼각형 `role="slider"`: ←/→ 1초·Shift 10초·Home/End)는 `scrubKeyTargetMs`(`lib/play3d-format.ts`). 재생할 내용이 있으면(`hasContent`) 열린 구간(시뮬레이션은 항상 열린 구간)에서도 활성이고 범위는 축 전체다. 열린 구간은 재생 중 삼각형이 오른쪽 끝(닿은 지점)에 붙고, 왼쪽으로 끌면 그 시점부터 이어서 재생된다. 열린 구간에는 ⏭(끝으로)이 없다.
 - `replay-monitoring-view.tsx` 가 `ResizablePanelGroup` 우측에 `Play3dSidePanel`(리포트 | 시나리오 탭, role=tablist 버튼)을 둔다. 시나리오 탭은 시뮬레이션 소스에서만 보이고 리플레이로 바꾸면 리포트로 돌아간다.
 
 ### 소스 전환
@@ -46,12 +46,12 @@ i18n 은 `monitoring:play3d.*`.
 
 ### 트랜스포트 어댑터
 
-- `Play3dTransport` 는 isPlaying · durationMs(null = 열린 구간) · speed · play / pause / seek(ms) / stepFrames 를 갖는다. `readPlay3dTransport()` 가 스냅샷, `usePlay3dTransport()` 가 훅이다.
+- `Play3dTransport` 는 isPlaying · durationMs(null = 열린 구간) · speed · play / pause / seek(ms) / stepFrames / stop 을 갖는다. stop 은 소스를 떠날 때 `Play3dView` 가 하는 정리와 같다(리플레이 정지 + 첫 프레임, 프레임은 남김 / 시뮬레이션 `stopSimulation`). `readPlay3dTransport()` 가 스냅샷, `usePlay3dTransport()` 가 훅이다.
 - **위치는 트랜스포트에 포함하지 않는다** — `readPlay3dPositionMs()` 를 폴링한다.
 - 리플레이는 프레임 누적 ms ↔ index 를 `lib/replay-position.ts` 로 변환한다. seek 는 충돌 스토어 `clearActive` 를 불러 옛 자세를 가리키는 pinned 박스가 남지 않게 한다.
 - 리플레이 정상 전진(`tick`)의 publish 스무딩 시간은 들어가는 프레임이 화면에 머무는 벽시계 시간(프레임 길이 ÷ 배속, `lib/replay-smoothing.ts` 의 `resolveReplaySmoothTime`)이다 — 다음 프레임 값이 올 때 정확히 닿아 1초 이력이 연속 운동으로 보인다(시나리오 러너의 `tickMs / speed` 와 같은 규칙). 마지막 프레임(길이 0)·깨진 길이는 직전 프레임 길이, 그것도 없으면 기본 길이를 쓴다. seek 는 즉시 대입(`smoothTime: 0`)으로 그대로다.
 - 시간 축은 **씬 시간**(리플레이 = 프레임 누적 ms, 시뮬레이션 = 러너 경과 ms)이다.
-- 시뮬레이션 seek 는 러너의 재시뮬레이션이라(`docs/agents/tag-mapping-rig.md`) 타임라인 사건 시각으로 옮기면 재생 때 그 시각에 보이던 자세가 나온다. 잔여 오차는 적분 스텝 한 개(`tickMs`)와 정상 전진의 publish 간격 스무딩 한 스텝뿐이다. seek UI 는 트랜스포트 바의 스크럽 하나다 — 시뮬레이션 패널에는 없다.
+- 시뮬레이션 seek 는 러너의 재시뮬레이션이라(`docs/agents/tag-mapping-rig.md`) 타임라인 사건 시각으로 옮기면 재생 때 그 시각에 보이던 자세가 나온다. 운반 중인 블록만 예외다 — seek 하면 배치 위치로 돌아간다(같은 문서 블록 운반). 잔여 오차는 적분 스텝 한 개(`tickMs`)와 정상 전진의 publish 간격 스무딩 한 스텝뿐이다. seek UI 는 트랜스포트 바의 스크럽 하나다 — 시뮬레이션 패널에는 없다.
 - 트랜스포트 바·마커 seek·통계·`scene-collision-hold` 가 전부 이 어댑터 하나만 본다. 충돌·영역 정지 시 어느 러너를 멈추는지(`'play3d'` 러너 = 활성 소스에 따라 리플레이 러너 또는 시나리오 러너)는 `docs/agents/3d-collision.md`.
 
 ### 실행 통계
@@ -100,7 +100,7 @@ i18n 은 `monitoring:play3d.*`.
 
 - **축은 하나**: `timelineAxisMs(길이, 위치, 마지막 사건, 위치가 닿은 가장 먼 지점)` 의 최대(길이가 없으면 바닥값). 시뮬레이션은 길이가 없는 열린 구간이라 길이에 고정할 수 없다. 닿은 지점(`reachedMs`, seek·정지 중 포함)을 넣어 **실행 중 축이 줄지 않는다** — 위치만 따라가면 재생바 손잡이를 뒤로 끌 때 축이 같이 줄어 값이 무너진다. 검사 구간(`scanned`) 끝이 아닌 이유는 정지 중 ⏩ 로 뛴 곳은 검사되지 않아 열린 구간에서 같은 붕괴가 나기 때문이다. 재생바는 원시 사건(기록 순, 뒤로 seek 하면 시각순이 아니다)을 읽으므로 마지막 사건은 `lastEventAtMs`(최댓값)다.
 - **눈금은 둥근 간격**: `niceTickStepMs` 가 후보 목록에서 칸 수 상한에 맞는 가장 작은 간격을 고르고 `tickTimes` 가 그 배수를 낸다(끝 반 칸 안은 빼고 축 끝과 같은 배수는 넣음). 간격이 고정이라 축이 자라도 앞 눈금이 움직이지 않는다. 타임라인은 한 화면 구간 기준(`timelineViewTicks`), 재생바는 축 전체 기준(`transportTicks`). 그리기는 `Play3dTickRow`.
-- **재생바 표식 띠**(`transportMarks`): 영역은 체류 구간 전체를 타임라인과 같은 노란 박스(선보다 낮게)로, 충돌·정지·두절(`PLAY3D_MARKER_KINDS`)은 각진 세로 선으로. 실행 전체를 그리고 현재 위치 뒤의 표식은 흐리게. 열린 띠는 `runEndMs` 까지(`reachedMs` 를 넘겨 뒤로 seek 해도 꼬리로 무너지지 않는다). 클릭 = 그 시각으로 이동(`markerSeekTargetMs`, 누르는 순간의 `readPlay3dTransport` 스냅샷). 바는 위치 폴링으로 계속 리렌더되므로 띠는 memo 자식이다.
+- **재생바 표식 띠**(`transportMarks`): 영역은 체류 구간 전체를 타임라인과 같은 노란 박스(선보다 낮게)로, 충돌·정지·두절(`PLAY3D_MARKER_KINDS`)은 각진 세로 선으로. 실행 전체를 그리고 현재 위치 뒤의 표식은 흐리게. 열린 띠는 `runEndMs` 까지(`reachedMs` 를 넘겨 뒤로 seek 해도 꼬리로 무너지지 않는다). 클릭 = 그 시각으로 이동(`markerSeekTargetMs`, 누르는 순간의 `readPlay3dTransport` 스냅샷). 바는 위치 폴링으로 계속 리렌더되므로 표식 겹은 memo 자식이고 배경이 투명하다 — 재생선·지난 구간 채움만 위치를 따른다.
 - **노란 박스 = 영역 체류**: 채움·링과 미이탈 가장자리는 `PLAY3D_DWELL_BOX_CLASS`·`PLAY3D_DWELL_OPEN_CLASS`, hover 요약의 영역 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS` 한 곳이고 타임라인·재생바·범례·툴팁이 함께 읽는다. 등급은 hover 요약·KPI·영역 표에서 본다. 빨강은 충돌 선에만.
 - **hover 요약은 즉시**: 화면마다 툴팁 하나에 트리거 여럿(base-ui 분리 트리거 — `createTooltipHandle`, 트리거가 `payload` 로 `Play3dHoverPayload` 를 넘긴다, 지연 0, 팝업 애니메이션 없음). 내용은 `Play3dHoverSummary` — 충돌(시각·[장비] ↔ [장비] 배지 쌍 `CollisionPair`·같은 쌍의 순번 `collisionSummaries`), 영역 체류(등급·영역 이름을 단 점선 상자 안에 [침범자] 배지 `ZoneFrame`·구간 `formatBandSpan`), 상태 막대(장비 · 상태·구간), 재생바의 정지·두절(시각·대상). 영역은 포함 관계라 화살표를 쓰지 않고, 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS`. 영역 이름 라벨은 툴팁 글자 그대로이며 흐름 안에서 음수 위 여백으로 테두리에 걸친다(절대 배치면 프레임 폭이 배지 폭으로 정해져 긴 이름이 잘린다). 이름 배지는 프레임과 같은 작은 모서리의 테두리 없는 칩이고, 툴팁 판이 `bg-foreground` 라 판 색을 뒤집은 채움이다. 사건 시각은 `eventTimeLabel` — 리플레이는 그 프레임의 실제 시각. 팝업은 body 로 포털돼 트랙의 `overflow-hidden` 에 잘리지 않는다.
 

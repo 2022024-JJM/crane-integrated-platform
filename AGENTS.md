@@ -24,7 +24,7 @@ pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` �
 - `pnpm test` — vitest
 - `pnpm new-site <slug>` — 새 사이트 plugin scaffold
 - `node scripts/optimize-{glb,map}.mjs --single <입력> <출력>`, `node scripts/add-model-lod.mjs`, `pnpm perf:scene` — 3D 자산 최적화·진단. 최적화는 자산 등록 화면이 돌린다. 절차는 `docs/agents/assets-glb.md`
-- `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채운다. `docs/agents/asset-library.md`
+- `node scripts/migrate-scene-asset-refs.mjs [--check]` — 씬 JSON 에 자산 참조(자산 id·버전)를 채우고 옛 리그에는 `assetId` 를 적는다. `docs/agents/asset-library.md`
 - `pnpm assets:stats [--check|--changed]` — 자산 라이브러리의 배포 파일 통계 표 재생성·검사. 등록 화면은 저장 뒤 `--changed` 로 자동 갱신한다. `docs/agents/asset-library.md`
 
 ### 검증 커맨드의 실제 커버리지 (주의)
@@ -199,10 +199,11 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈·직교 탑뷰 토글 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts`, `packages/ui/src/organisms/use-ortho-top-view.ts` — `docs/agents/3d-editor.md` |
 | 씬에 놓는 조명(투광등) — 스키마·배치·인스펙터 / 밤 점등·SpotLight 슬롯·기구 글로우 | 스키마 `SavedFloodlightInfo`(`packages/domain/src/3d/model/floodlight-types.ts`), 기하 `packages/domain/src/3d/lib/floodlight.ts`, 배치 `packages/widgets/src/3d/ui/use-floodlight-place.ts`, 편집 `packages/widgets/src/3d/lib/floodlight-editor.ts` — `docs/agents/3d-editor.md`; 렌더 `packages/features/src/3d/ui/{scene-floodlights,scene-floodlight-fixture}.tsx`, `lib/floodlight-{spot,slots}.ts` — `docs/agents/rendering-perf.md` |
-| 태그 맵핑 스키마(코드 하나, 키는 모델 `craneId` 로 조립)·방어 / 키 조립 규칙 / 값 버스·활성 소스 게이트 / 편집 UI(크레인 콤보박스·태그 연결 다이얼로그) | `packages/domain/src/3d/model/tag-mapping-types.ts`(`resolveMappingTagKey`), `packages/core/src/lib/crane-tag-key.ts`, `packages/features/src/3d/model/{tag-value-bus,use-active-tag-source}.ts`, `lib/tag-source.ts`, `packages/widgets/src/3d/ui/{tag-mapping-section,tag-code-field,tag-pick-dialog}.tsx` — `docs/agents/tag-mapping-rig.md` |
+| 태그 맵핑 스키마(코드 하나, 키는 모델 `craneId` 로 조립)·방어 / 키 조립 규칙 / 값 버스·활성 소스 게이트 / 편집 UI(크레인 콤보박스·태그 연결 다이얼로그·노드 선택기) | `packages/domain/src/3d/model/tag-mapping-types.ts`(`resolveMappingTagKey`), `packages/core/src/lib/crane-tag-key.ts`, `packages/features/src/3d/model/{tag-value-bus,use-active-tag-source}.ts`, `lib/tag-source.ts`, `packages/widgets/src/3d/ui/{tag-mapping-section,tag-code-field,tag-pick-dialog,inspector-fields}.tsx` — `docs/agents/tag-mapping-rig.md`. 노드 선택기의 호버 미리보기(실루엣·고스트·중심 이동)는 `docs/agents/3d-editor.md` |
 | 시뮬레이션 시나리오(씬에 맵핑된 모델·태그에서 고른 태그별 동작, 씬 파일 단위) 정의·방어·저장 / 스토어·엔트리·러너 / 3D 플레이 우측 시나리오 탭 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-scenario-store,virtual-tag-runner}.ts`, `lib/scenario-entries.ts`, `packages/widgets/src/scenario/` — `docs/agents/tag-mapping-rig.md` |
 | 실시간 태그 피드(크레인 스냅샷 서버 STOMP) / 실시간 태그 탭 / 3D 실시간 모드 값 생산자 / 수신 간격 스무딩 | `packages/core/src/ws/stomp-client.ts`, `packages/domain/src/monitoring/lib/crane-snapshot.ts`, `packages/features/src/3d/model/{use-crane-snapshot-store,use-crane-snapshot-feed,use-crane-snapshot-realtime-bridge,use-realtime-runner}.ts`, `packages/features/src/3d/lib/realtime-smoothing.ts`, `packages/widgets/src/tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
+| 블록 운반(크레인 훅 ↔ 운반 가능 모델) — 훅 스키마·방어 / 런타임·상태·케이블 레이어 / 시나리오 키프레임 패턴 | 스키마 `SavedModelHook`·`carriable`(`types.ts`), `packages/domain/src/3d/lib/sanitize-model-hooks.ts`, `packages/features/src/3d/model/{scene-carry-runtime,scene-carry-state}.ts`, `lib/scene-carry.ts`, `ui/scene-carry-layer.tsx`, 키프레임 `packages/domain/src/virtual-tag/lib/tag-pattern.ts`(`evaluateKeyframes`) — `docs/agents/tag-mapping-rig.md`. 편집 UI 는 없다(씬·시나리오 JSON 에서 적는다) |
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
 | 감지 설정 페이지(메뉴 "설정", 충돌·영역 감지 스위치, localStorage 영속) | `packages/widgets/src/detection-settings/`, `packages/features/src/3d/lib/detection-settings-storage.ts` — 기본값·키는 `docs/agents/3d-collision.md` 가 단일 소스 |
 | 모델 영역(zone) 침범 감지 | 스키마 `SavedModelZone`(`types.ts`), 기하 `packages/domain/src/3d/lib/zone-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-zone-runtime.ts`, 스토어 `model/use-scene-zone-store.ts` — `docs/agents/3d-zone.md` |
@@ -249,7 +250,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - variant 스타일링은 CVA(`class-variance-authority`) 패턴을 따른다.
 - 서체는 Pretendard 하나다(`global.css` 의 `--font-sans`, 캔버스는 같은 스택을 상수로). 화면·앱마다 `fontFamily` 를 따로 지정하지 않고, 고정폭·좁은 글꼴도 두지 않는다. Pretendard 숫자는 비례폭이라 `html` 에 `tabular-nums` 를 전역으로 건다 — 크게 적는 숫자만 `proportional-nums` 로 푼다.
 - 고정 높이 컨트롤의 한 줄 글자는 `text-box-cap`(`global.css`)으로 세로 가운데를 맞춘다 — Chrome 이 서체 높이를 px 로 깎아 Pretendard 가 0.5~1.5px 뜬다. 글자를 직접 감싼 요소에만 걸려서 공용 Button·Badge·Toggle·Kbd·Select·Tabs 는 안에서 글자를 감싸 두었고(`@crane/ui/atoms/cap-text`), 직접 만든 버튼·탭은 글자 span 에 붙인다. 높이가 내용으로 정해지는 요소에 붙이면 그만큼 줄어든다.
-- blur·Enter 로 확정하는 텍스트 입력은 `@crane/core/lib/use-ime-safe-blur` 를 거친다 — blur 는 `useImeSafeBlur`, keydown 은 `isImeComposing`. 한글 조합 중에 값을 바꾸거나 비우면 마지막 글자가 한 번 더 들어간다. 3D 에디터 팔레트의 이름 입력·시나리오 이름 입력은 아직 거치지 않는다.
+- blur·Enter 로 확정하는 텍스트 입력은 `@crane/core/lib/use-ime-safe-blur` 를 거친다 — blur 는 `useImeSafeBlur`, keydown 은 `isImeComposing`. 한글 조합 중에 값을 바꾸거나 비우면 마지막 글자가 한 번 더 들어간다. 3D 에디터 팔레트의 이름 입력은 아직 거치지 않는다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다(`react-refresh/only-export-components` 규칙과도 맞물린다. 선례 `packages/features/src/3d/lib/scene-shadow.ts`).
 
 ### State / Data / i18n
@@ -289,13 +290,15 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 수면 아래 잠김 안개는 바다가 닿는 위치(바다 도달 마스크)에만 낀다. 안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않고, 마스크 유니폼은 `publishSeaReachMask` 로 값만 바꾼다 (rendering-perf).
 - 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
 - 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
-- Canvas 안 마운트 순서는 계약이다: `RigDriver` → 충돌 검출기 → `SceneCollisionHighlight` → 영역 검출기 → `SceneZoneRings`, `SceneSurfaceCamera` 바로 다음 `SceneCameraLimits`. 같은 priority 의 useFrame 은 마운트 순으로 돈다 (3d-collision, 3d-zone, monitoring-ui).
+- Canvas 안 마운트 순서는 계약이다: `RigDriver` → `SceneCarryLayer` → 충돌 검출기 → `SceneCollisionHighlight` → 영역 검출기 → `SceneZoneRings`, `SceneSurfaceCamera` 바로 다음 `SceneCameraLimits`. 같은 priority 의 useFrame 은 마운트 순으로 돈다 (3d-collision, 3d-zone, monitoring-ui, tag-mapping-rig).
+- 운반 중인 블록은 크레인 노드 아래로 재부모화하지 않는다 — 운반 런타임이 매 프레임 블록 루트 position 을 든 훅들의 앵커 평균(탠덤이면 가운데)으로 옮기고, 충돌 감지는 `sceneCarryState` 의 **든 훅 노드 메쉬↔블록** 쌍만 건너뛰고 크레인 다리·거더↔블록은 보고한다 (tag-mapping-rig, 3d-collision).
 - 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다. 탑뷰는 직교 카메라 교체 토글(`useOrthoTopView`)이라 카메라를 옮기는 명령은 훅의 `moveTo`/`applyPose` 를 거치고, fov·aspect 는 `resolveCameraFov`/`resolveCameraAspect` 로 읽는다 (3d-editor).
 - 기즈모 스냅은 `lib/snap-transform.ts` 순수 함수로 저장값 기준으로 한다. three `TransformControls` 의 `*Snap` 은 쓰지 않는다 (3d-editor).
 - 씬 스키마 필드를 추가하면 `sanitize-*` 와 `scene-snapshot.ts` 의 동등 비교(`isZoneListEqual` 류)를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 저장되지 않는다 (3d-editor, 3d-zone).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).
 - 새 dev 저장 미들웨어는 `vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다 (3d-editor).
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
+- 리그는 `assetId` 로 모델에 매인다. 경로·버전으로 맞추지 않는다 — `modelPath` 만 있는 옛 리그는 sanitize 가 그 리그를 쓰는 모델의 자산 id 로 채운다 (tag-mapping-rig).
 - 시뮬레이션 값은 씬 시간의 함수다 — 시나리오 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
 - 값 생산자의 정상 전진 스무딩 시간은 **다음 값이 올 때까지의 벽시계 시간**이다 — 시나리오 러너 `tickMs / speed`, 리플레이 프레임 길이 ÷ 배속(`lib/replay-smoothing.ts`), 실시간은 키별 값 변화 간격(`lib/realtime-smoothing.ts`, publish 간격이 아니다 — 브리지가 스냅샷의 태그 전부를 재발행한다). 바뀌지 않은 재발행은 마지막 스무딩 시간을 이어받는다 — 기본값으로 넘기면 진행 중 스무딩이 잘린다 (tag-mapping-rig, 3d-play).

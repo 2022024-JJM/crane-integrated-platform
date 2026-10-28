@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { SimulationScenario } from '@crane/domain/virtual-tag';
 import {
   buildScenarioTags,
   countSelection,
+  diffPickSelection,
   existingPickKeys,
+  filterModelsNotInScenario,
   filterPickableModels,
   listPickableModels,
   modelPickKeys,
@@ -37,6 +40,12 @@ const scene = {
 } as unknown as SavedSceneInfo;
 
 const models = listPickableModels(scene);
+
+/** 선택 키(`scenarioTagKey`)를 최소 태그로 — filterModelsNotInScenario 입력용. */
+function keyToTag(key: string) {
+  const [modelId, code] = key.split('\u0000');
+  return { modelId, code } as SimulationScenario['tags'][number];
+}
 
 describe('listPickableModels', () => {
   it('씬이 없으면 빈 배열', () => {
@@ -106,15 +115,16 @@ describe('existingPickKeys · buildScenarioTags · countSelection', () => {
     expect(existing.has(pickKey('m1', 'gantry'))).toBe(true);
   });
 
-  it('선택 순서와 무관하게 모델 순 › 코드 순, 이미 있는 것은 건너뛴다', () => {
+  it('선택 순서와 무관하게 모델 순 › 코드 순', () => {
     const selected = new Set([
       pickKey('m3', 'luff'),
       pickKey('m1', 'err'),
       pickKey('m1', 'gantry'),
       pickKey('m1', 'trolley'),
     ]);
-    const tags = buildScenarioTags(selected, models, existing);
+    const tags = buildScenarioTags(selected, models);
     expect(tags.map((t) => `${t.modelId}:${t.code}`)).toEqual([
+      'm1:gantry',
       'm1:trolley',
       'm1:err',
       'm3:luff',
@@ -146,17 +156,61 @@ describe('existingPickKeys · buildScenarioTags · countSelection', () => {
     );
   });
 
-  it('요약은 선택된 태그가 있는 모델 수와 태그 수(이미 있는 것 제외)', () => {
+  it('요약은 선택된 태그가 있는 모델 수와 태그 수 — 모르는 키는 세지 않는다', () => {
     const selected = new Set([
       pickKey('m1', 'gantry'),
       pickKey('m1', 'err'),
       pickKey('m3', 'luff'),
+      pickKey('zz', 'x'),
     ]);
-    expect(countSelection(selected, models, existing)).toEqual({
-      models: 2,
-      tags: 2,
-    });
     expect(countSelection(selected, models)).toEqual({ models: 2, tags: 3 });
     expect(countSelection(new Set(), models)).toEqual({ models: 0, tags: 0 });
+  });
+
+  it('filterModelsNotInScenario: 시나리오에 태그가 하나라도 있는 모델은 빠진다', () => {
+    expect(
+      filterModelsNotInScenario(models, { tags: [...existing].map(keyToTag) }),
+    ).toEqual([models[1]]);
+    expect(filterModelsNotInScenario(models, null)).toEqual(models);
+    expect(filterModelsNotInScenario(models, { tags: [] })).toEqual(models);
+  });
+});
+
+describe('diffPickSelection', () => {
+  const m1Keys = modelPickKeys(models[0]); // gantry · trolley · err
+  const existing = new Set([pickKey('m1', 'gantry'), pickKey('m1', 'err')]);
+
+  it('범위 순으로 새로 체크한 키는 add, 풀린 키는 remove, 그대로는 어느 쪽도 아니다', () => {
+    const selected = new Set([pickKey('m1', 'trolley'), pickKey('m1', 'err')]);
+    expect(diffPickSelection(selected, existing, m1Keys)).toEqual({
+      addKeys: [pickKey('m1', 'trolley')],
+      removeKeys: [pickKey('m1', 'gantry')],
+    });
+  });
+
+  it('변화가 없으면 둘 다 빈 배열 — 전부 풀면 전부 remove', () => {
+    expect(diffPickSelection(existing, existing, m1Keys)).toEqual({
+      addKeys: [],
+      removeKeys: [],
+    });
+    expect(diffPickSelection(new Set(), existing, m1Keys)).toEqual({
+      addKeys: [],
+      removeKeys: [pickKey('m1', 'gantry'), pickKey('m1', 'err')],
+    });
+  });
+
+  it('범위 밖은 건드리지 않는다 — 기존 태그도 선택도', () => {
+    const m3Keys = modelPickKeys(models[1]);
+    expect(diffPickSelection(new Set(), existing, m3Keys)).toEqual({
+      addKeys: [],
+      removeKeys: [],
+    });
+    expect(
+      diffPickSelection(new Set([pickKey('m1', 'trolley')]), existing, m3Keys),
+    ).toEqual({ addKeys: [], removeKeys: [] });
+    expect(diffPickSelection(new Set(), existing, [])).toEqual({
+      addKeys: [],
+      removeKeys: [],
+    });
   });
 });

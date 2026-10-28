@@ -12,7 +12,7 @@ function rig(overrides: Record<string, unknown> = {}): RigDefinition {
   return {
     id: 'rig-llc',
     name: 'LLC',
-    modelPath: '/models/LLC_002.glb',
+    assetId: 'llc-002',
     joints: [
       { id: 'slew', node: '[0]Base/[0]Link_01', type: 'hinge', axis: 'y' },
       {
@@ -76,11 +76,28 @@ describe('sanitizeRigDefinition — 관절', () => {
     expect(out).toEqual(rig());
   });
 
-  it('id·modelPath 가 없으면 리그 자체를 버린다', () => {
+  it('id 가 없거나 자산 id 를 알 수 없으면 리그 자체를 버린다', () => {
     expect(sanitizeRigDefinition(rig({ id: '' }))).toBeNull();
-    expect(sanitizeRigDefinition(rig({ modelPath: 12 }))).toBeNull();
+    expect(sanitizeRigDefinition(rig({ assetId: 12 }))).toBeNull();
+    expect(sanitizeRigDefinition(rig({ assetId: '' }))).toBeNull();
+    expect(sanitizeRigDefinition(rig({ assetId: undefined }))).toBeNull();
     expect(sanitizeRigDefinition(null)).toBeNull();
     expect(sanitizeRigDefinition('rig')).toBeNull();
+  });
+
+  it('assetId 가 없으면 넘겨받은 자산 id 로 채우고 옛 modelPath 는 무시한다', () => {
+    const legacy = {
+      ...rig(),
+      assetId: undefined,
+      modelPath: '/models/LLC_002.glb',
+    };
+    const out = sanitizeRigDefinition(legacy, 'llc-002');
+    expect(out).toEqual(rig());
+    expect(out).not.toHaveProperty('modelPath');
+    // 자기 값이 있으면 그것이 우선이다.
+    expect(sanitizeRigDefinition(rig(), 'other')?.assetId).toBe('llc-002');
+    // 넘겨받은 값도 비어 있으면 버린다.
+    expect(sanitizeRigDefinition(legacy, '')).toBeNull();
   });
 
   it('name 이 문자열이 아니면 빈 문자열로 정규화한다', () => {
@@ -380,5 +397,68 @@ describe('sanitizeSceneInfo — 리그 통합', () => {
         code: 'k',
       },
     ]);
+  });
+});
+
+describe('sanitizeRigDefinitions — 옛 리그의 자산 id 유도', () => {
+  const legacy = () => ({
+    ...rig(),
+    assetId: undefined,
+    modelPath: '/models/LLC_002.glb',
+  });
+
+  it('그 리그를 쓰는 모델의 asset.id 로 채운다', () => {
+    const models = [
+      model({ rigId: 'rig-llc', asset: { id: 'llc-002', version: 2 } }),
+    ];
+    expect(sanitizeRigDefinitions([legacy()], models)).toEqual([rig()]);
+  });
+
+  it('쓰는 모델이 없거나 그 모델에 자산 참조가 없으면 버린다', () => {
+    expect(sanitizeRigDefinitions([legacy()], [])).toBeUndefined();
+    expect(sanitizeRigDefinitions([legacy()], undefined)).toBeUndefined();
+    expect(
+      sanitizeRigDefinitions([legacy()], [model({ rigId: 'rig-llc' })]),
+    ).toBeUndefined();
+    expect(
+      sanitizeRigDefinitions(
+        [legacy()],
+        [model({ rigId: 'other', asset: { id: 'llc-002', version: 1 } })],
+      ),
+    ).toBeUndefined();
+  });
+
+  it('리그마다 자기를 쓰는 첫 모델을 따른다 — 다른 리그의 자산이 섞이지 않는다', () => {
+    const second = { ...legacy(), id: 'rig-tc' };
+    const models = [
+      model({ id: 'm-2', rigId: 'rig-tc', asset: { id: 'tc', version: 1 } }),
+      model({
+        id: 'm-1',
+        rigId: 'rig-llc',
+        asset: { id: 'llc-002', version: 1 },
+      }),
+      model({
+        id: 'm-3',
+        rigId: 'rig-llc',
+        asset: { id: 'wrong', version: 1 },
+      }),
+    ];
+    const out = sanitizeRigDefinitions([legacy(), second], models);
+    expect(out?.map((r) => [r.id, r.assetId])).toEqual([
+      ['rig-llc', 'llc-002'],
+      ['rig-tc', 'tc'],
+    ]);
+  });
+
+  it('씬 로드 경계에서도 같은 규칙 — 모델의 rigId 는 유지된다', () => {
+    const scene = {
+      rigs: [legacy()],
+      models: [
+        model({ rigId: 'rig-llc', asset: { id: 'llc-002', version: 1 } }),
+      ],
+    } as unknown as SavedSceneInfo;
+    const out = sanitizeSceneInfo(scene);
+    expect(out.rigs).toEqual([rig()]);
+    expect(out.models[0].rigId).toBe('rig-llc');
   });
 });

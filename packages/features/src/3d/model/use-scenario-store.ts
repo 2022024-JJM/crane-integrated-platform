@@ -70,6 +70,19 @@ export interface ScenarioTagAddResult {
   skipped: number;
 }
 
+/** 묶음 태그 수정(체크 차집합)을 적용한 결과. */
+export interface ScenarioTagEditResult extends ScenarioTagAddResult {
+  /** 키로 지운 수. 모르는 키는 세지 않는다. */
+  removed: number;
+}
+
+export interface ScenarioTagEdit {
+  /** 새로 체크한 태그 — id 없이 받는다. */
+  add: readonly Omit<ScenarioTag, 'id'>[];
+  /** 체크를 푼 태그의 `(modelId, code)` 키(`scenarioTagKey`). */
+  removeKeys: readonly string[];
+}
+
 interface ScenarioState {
   scenarios: SimulationScenario[];
   /** 재생·편집 대상(세션). 붙은 씬 파일의 시나리오 중 하나이거나 null. */
@@ -114,8 +127,9 @@ interface ScenarioState {
     sceneFile: string | null,
   ) => void;
   /**
-   * 활성 시나리오 변경. 재생 중이면 일시정지하고 시간 0·initial 로 되돌린 뒤
-   * 새 정의로 동기화한다 — 시나리오는 시간 0 에서 시작한다.
+   * 활성 시나리오 변경. 재생한 세션이면(일시정지 포함) 멈추고 시간 0·initial
+   * 로 되돌리고 버스에 남긴 값을 걷어낸 뒤 새 정의로 동기화한다 — 시나리오는
+   * 시간 0·rest 자세에서 시작한다.
    */
   setActiveScenario: (id: string | null) => void;
 
@@ -132,13 +146,21 @@ interface ScenarioState {
     scenarioId: string,
     tags: readonly Omit<ScenarioTag, 'id'>[],
   ) => ScenarioTagAddResult;
+  /**
+   * 묶음 태그 수정 — 체크를 푼 태그를 키로 지우고 새로 체크한 태그를 넣는
+   * 것을 commit 한 번에 한다. 남는 태그의 정의는 그대로다. 모르는 키·중복·
+   * 손상·상한은 건너뛰고, 바뀐 것이 없으면 참조를 유지한다.
+   */
+  editTags: (
+    scenarioId: string,
+    edit: ScenarioTagEdit,
+  ) => ScenarioTagEditResult;
   /** 태그 정의 수정. 손상이면 false 이고 아무것도 적용하지 않는다. */
   updateTag: (
     scenarioId: string,
     tagId: string,
     patch: Partial<Omit<ScenarioTag, 'id' | 'modelId' | 'code'>>,
   ) => boolean;
-  removeTag: (scenarioId: string, tagId: string) => void;
   /** 모델의 태그 전부 제거(패널의 묶음 ✕). */
   removeModelTags: (scenarioId: string, modelId: string) => void;
 
@@ -260,12 +282,23 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
     return { entries, tickMs: Math.round(tickSec * 1000), isRunning, speed };
   };
 
-  /** 재생 중이면 멈추고 시간 0·initial 로 — 시나리오 전환·삭제의 공통 전처리. */
-  const rewindIfRunning = () => {
-    if (!get().isRunning) return;
-    virtualTagRuntime.pause();
-    set({ isRunning: false });
+  /**
+   * 시나리오 전환·삭제의 공통 전처리 — 재생한 세션이면(일시정지 포함) 멈추고
+   * 시간 0·initial 로 되돌린 뒤, 그 시나리오가 버스에 남긴 값을 걷어낸다.
+   * 남기면 새 시나리오가 내지 않는 키(블록 운반의 부착 태그 등)가 마지막 값
+   * 그대로라 블록이 다음 시나리오에서도 훅에 붙어 다닌다. 세션(배지)·배속은
+   * 유지한다 — 끝내는 것은 `stop`.
+   */
+  const rewindSession = () => {
+    const { isRunning, hasSession } = get();
+    if (!isRunning && !hasSession) return;
+    if (isRunning) {
+      virtualTagRuntime.pause();
+      set({ isRunning: false });
+    }
     virtualTagRuntime.resetValues(false);
+    rigValueStore.reset();
+    tagLiveValues.clear();
   };
 
   return {
@@ -344,7 +377,7 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
 
     setActiveScenario: (id) => {
       if (id === get().activeScenarioId) return;
-      rewindIfRunning();
+      rewindSession();
       commit({ activeScenarioId: id });
     },
 
@@ -380,7 +413,7 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
       const { scenarios, activeScenarioId } = get();
       const next = scenarios.filter((s) => s.id !== id);
       if (next.length === scenarios.length) return;
-      if (activeScenarioId === id) rewindIfRunning();
+      if (activeScenarioId === id) rewindSession();
       // 활성이었으면 같은 씬 파일의 첫 것으로(resolveActiveId 가 고른다).
       commit({
         scenarios: next,
@@ -405,13 +438,25 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
     },
 
     addTags: (scenarioId, incoming) => {
+      const { added, skipped } = get().editTags(scenarioId, {
+        add: incoming,
+        removeKeys: [],
+      });
+      return { added, skipped };
+    },
+
+    editTags: (scenarioId, { add, removeKeys }) => {
       const scenario = get().scenarios.find((s) => s.id === scenarioId);
-      if (!scenario) return { added: 0, skipped: incoming.length };
-      const tags = scenario.tags.slice();
+      if (!scenario) return { added: 0, removed: 0, skipped: add.length };
+      const removeSet = new Set(removeKeys);
+      const tags = scenario.tags.filter(
+        (t) => !removeSet.has(scenarioTagKey(t)),
+      );
+      const removed = scenario.tags.length - tags.length;
       const keys = new Set(tags.map(scenarioTagKey));
       let added = 0;
       let skipped = 0;
-      for (const raw of incoming) {
+      for (const raw of add) {
         const tag = sanitizeScenarioTag({ ...raw, id: createId() });
         const key = tag ? scenarioTagKey(tag) : null;
         if (!tag || !key || keys.has(key) || tags.length >= SCENARIO_TAGS_MAX) {
@@ -422,8 +467,9 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
         keys.add(key);
         added += 1;
       }
-      if (added > 0) replaceScenario(scenarioId, (s) => ({ ...s, tags }));
-      return { added, skipped };
+      if (added > 0 || removed > 0)
+        replaceScenario(scenarioId, (s) => ({ ...s, tags }));
+      return { added, removed, skipped };
     },
 
     updateTag: (scenarioId, tagId, patch) =>
@@ -443,14 +489,6 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
         tags[index] = merged;
         return { ...scenario, tags };
       }),
-
-    removeTag: (scenarioId, tagId) => {
-      replaceScenario(scenarioId, (scenario) => {
-        const tags = scenario.tags.filter((t) => t.id !== tagId);
-        if (tags.length === scenario.tags.length) return null;
-        return { ...scenario, tags };
-      });
-    },
 
     removeModelTags: (scenarioId, modelId) => {
       replaceScenario(scenarioId, (scenario) => {

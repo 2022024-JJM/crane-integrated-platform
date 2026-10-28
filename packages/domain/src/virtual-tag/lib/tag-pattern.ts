@@ -1,4 +1,8 @@
-import type { VirtualTagDefinition, VirtualTagPattern } from '../model/types';
+import type {
+  VirtualTagDefinition,
+  VirtualTagKeyframe,
+  VirtualTagPattern,
+} from '../model/types';
 
 /**
  * 가상 태그 값 계산 — 순수 함수. 러너가 틱마다 `stepVirtualTag` 를 부르고
@@ -21,11 +25,6 @@ export function initVirtualTagState(
   return { value: clampToTag(def, def.initial) };
 }
 
-/** 0→1→0 삼각파(0 에서 상승 시작). */
-function triangle(t: number): number {
-  return t < 0.5 ? 2 * t : 2 - 2 * t;
-}
-
 /** 0 에서 상승 시작하는 정규화 사인(0.5 − 0.5cos). */
 function sineWave(t: number): number {
   return 0.5 - 0.5 * Math.cos(2 * Math.PI * t);
@@ -36,12 +35,11 @@ function sineWave(t: number): number {
  * 값이 initial 에서 점프하지 않고 이어진다.
  */
 function phaseForInitial(
-  kind: 'triangle' | 'sine' | 'sawtooth',
+  kind: 'sine' | 'sawtooth',
   normalized: number,
 ): number {
   const n = Math.min(1, Math.max(0, normalized));
   if (kind === 'sawtooth') return n;
-  if (kind === 'triangle') return n / 2;
   return Math.acos(1 - 2 * n) / (2 * Math.PI);
 }
 
@@ -74,18 +72,12 @@ export function stepVirtualTag(
   switch (pattern.kind) {
     case 'manual':
       return state;
-    case 'triangle':
     case 'sine':
     case 'sawtooth': {
       const period = periodOf(pattern);
       const phase = phaseForInitial(pattern.kind, normalizedInitial(def));
       const t = (((elapsed / period + phase) % 1) + 1) % 1;
-      const u =
-        pattern.kind === 'triangle'
-          ? triangle(t)
-          : pattern.kind === 'sine'
-            ? sineWave(t)
-            : t;
+      const u = pattern.kind === 'sine' ? sineWave(t) : t;
       return { value: clampToTag(def, def.min + u * range) };
     }
     case 'square': {
@@ -94,9 +86,60 @@ export function stepVirtualTag(
       const t = (((elapsed / period) % 1) + 1) % 1;
       return { value: t < duty ? def.max : def.min };
     }
+    case 'keyframes':
+      return {
+        value: clampToTag(
+          def,
+          evaluateKeyframes(
+            pattern.points,
+            elapsed / 1000,
+            pattern.loop === true,
+            def.dataType === 'bool',
+            pattern.ease === 'smooth',
+          ),
+        ),
+      };
     default:
       return state;
   }
+}
+
+/**
+ * 키프레임 값 — 점은 `atSec` 오름차순이어야 한다(sanitize 보장). 점이 없으면
+ * 0. `loop` 면 마지막 점의 시각을 주기로 되감고(마지막 시각이 0 이면 되감지
+ * 않는다), `step` 이면 보간 없이 앞 점의 값을 유지한다(불리언). `smooth` 는
+ * 구간마다 smoothstep(3u²−2u³)으로 가감속한다 — 점에서 속도 0.
+ */
+export function evaluateKeyframes(
+  points: readonly VirtualTagKeyframe[],
+  atSec: number,
+  loop: boolean,
+  step: boolean,
+  smooth = false,
+): number {
+  if (points.length === 0) return 0;
+  const first = points[0];
+  const last = points[points.length - 1];
+  let t = Number.isFinite(atSec) ? atSec : 0;
+  if (loop && last.atSec > 0) {
+    t = ((t % last.atSec) + last.atSec) % last.atSec;
+  }
+  if (t <= first.atSec) return first.value;
+  if (t >= last.atSec) return last.value;
+  // 선형 탐색 — 점이 수십 개라 이분 탐색이 이득이 없다.
+  for (let i = 1; i < points.length; i += 1) {
+    const b = points[i];
+    if (t > b.atSec) continue;
+    const a = points[i - 1];
+    // 계단은 점의 시각에 그 점의 값으로 뛴다 — 경계 정확값은 새 값.
+    if (step) return t === b.atSec ? b.value : a.value;
+    const span = b.atSec - a.atSec;
+    if (span <= 0) return b.value;
+    const u = (t - a.atSec) / span;
+    const w = smooth ? u * u * (3 - 2 * u) : u;
+    return a.value + (b.value - a.value) * w;
+  }
+  return last.value;
 }
 
 /** manual 값 설정(슬라이더). 클램프해서 돌려준다. */

@@ -104,10 +104,21 @@ function sanitizeRigConstraint(
   return null;
 }
 
-export function sanitizeRigDefinition(raw: unknown): RigDefinition | null {
+/**
+ * 리그 하나. `assetId` 가 없으면 `fallbackAssetId`(그 리그를 쓰는 모델의 자산
+ * id — collectAssetIdByRigId)로 채운다. 그래도 없으면 붙일 모델도 후보도
+ * 없는 리그라 버린다. 옛 `modelPath` 는 읽지 않는다 — 라이브러리 전환으로
+ * 모델 경로가 바뀐 뒤 아무도 고치지 않아 어긋나 있던 필드다.
+ */
+export function sanitizeRigDefinition(
+  raw: unknown,
+  fallbackAssetId?: string,
+): RigDefinition | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
-  if (!isNonEmptyString(r.id) || !isNonEmptyString(r.modelPath)) return null;
+  if (!isNonEmptyString(r.id)) return null;
+  const assetId = isNonEmptyString(r.assetId) ? r.assetId : fallbackAssetId;
+  if (!isNonEmptyString(assetId)) return null;
 
   const jointIds = new Set<string>();
   const joints = Array.isArray(r.joints)
@@ -129,21 +140,53 @@ export function sanitizeRigDefinition(raw: unknown): RigDefinition | null {
   return {
     id: r.id,
     name: typeof r.name === 'string' ? r.name : '',
-    modelPath: r.modelPath,
+    assetId,
     joints,
     constraints,
   };
 }
 
-/** 씬 상위 rigs[] 정규화. id 중복은 첫 항목만 남긴다. 비면 undefined. */
+/**
+ * 옛 리그(`assetId` 없음)에 채울 자산 id — 그 리그를 가리키는 모델(`rigId`)의
+ * `asset.id`. 리그는 같은 자산의 모델에만 붙으므로 첫 모델로 충분하다. 모델
+ * 원본은 아직 정규화 전이라 모양을 직접 본다.
+ */
+function collectAssetIdByRigId(rawModels: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!Array.isArray(rawModels)) return out;
+  for (const model of rawModels) {
+    if (!model || typeof model !== 'object') continue;
+    const m = model as { rigId?: unknown; asset?: unknown };
+    const asset =
+      m.asset && typeof m.asset === 'object'
+        ? (m.asset as { id?: unknown })
+        : null;
+    if (!isNonEmptyString(m.rigId) || !asset || !isNonEmptyString(asset.id)) {
+      continue;
+    }
+    if (!out.has(m.rigId)) out.set(m.rigId, asset.id);
+  }
+  return out;
+}
+
+/**
+ * 씬 상위 rigs[] 정규화. id 중복은 첫 항목만 남긴다. 비면 undefined.
+ * `rawModels` 는 옛 리그의 자산 id 를 유도할 씬의 모델 원본(sanitize 전).
+ */
 export function sanitizeRigDefinitions(
   raw: unknown,
+  rawModels?: unknown,
 ): RigDefinition[] | undefined {
   if (!Array.isArray(raw)) return undefined;
+  const assetIdByRigId = collectAssetIdByRigId(rawModels);
   const seen = new Set<string>();
   const out: RigDefinition[] = [];
   for (const item of raw) {
-    const rig = sanitizeRigDefinition(item);
+    const rawId = (item as { id?: unknown } | null)?.id;
+    const fallback = isNonEmptyString(rawId)
+      ? assetIdByRigId.get(rawId)
+      : undefined;
+    const rig = sanitizeRigDefinition(item, fallback);
     if (!rig || seen.has(rig.id)) continue;
     seen.add(rig.id);
     out.push(rig);

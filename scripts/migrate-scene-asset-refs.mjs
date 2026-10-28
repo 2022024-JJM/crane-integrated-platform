@@ -16,6 +16,8 @@
 //   - 배경: 옛 `environmentId`(코드 카탈로그 id = 자산 id)를
 //     `environment: { path, asset }` 로 바꾼다. 카탈로그는 그 자산의 버전 1
 //     파일을 가리켰다.
+//   - 리그: `assetId` 가 없으면 그 리그를 쓰는 모델의 `asset.id` 를 적고 옛
+//     `modelPath` 를 지운다.
 //
 // 이미 적혀 있는 값은 건드리지 않는다 — 여러 번 돌려도 결과가 같다. 라이브러리에
 // 없는 경로는 그대로 두고 알린다(그 객체는 "라이브러리가 모르는 파일" 로 계속
@@ -134,13 +136,42 @@ for (const file of listSceneFiles()) {
     });
   }
 
+  if (Array.isArray(scene.rigs)) {
+    // 리그는 자산 id 로 모델에 매인다(rig-types.ts assetId). 옛 리그는 GLB
+    // 경로(modelPath)를 들었는데 라이브러리 전환으로 모델 경로가 바뀌어도 아무도
+    // 고치지 않아 어긋났다 — 그 리그를 쓰는 모델의 asset.id 를 적고 modelPath 는
+    // 지운다. 앱의 sanitize(sanitize-rig.ts)도 로드 때 같은 규칙으로 채운다.
+    scene.rigs = scene.rigs.map((rig) => {
+      if (typeof rig.assetId === 'string' && rig.assetId) return rig;
+      const user = (scene.models ?? []).find(
+        (model) => model.rigId === rig.id && model.asset?.id,
+      );
+      if (!user) {
+        notes.push(
+          `  쓰는 모델이 없어 자산을 모르는 리그: ${rig.name || rig.id}`,
+        );
+        unresolved += 1;
+        return rig;
+      }
+      changed = true;
+      const rest = { ...rig };
+      delete rest.modelPath;
+      return insertAfter(rest, 'name' in rest ? 'name' : 'id', {
+        assetId: user.asset.id,
+      });
+    });
+  }
+
   if ('environmentId' in scene) {
     const environmentId = scene.environmentId;
     let environment = scene.environment;
     if (!environment && typeof environmentId === 'string') {
       const asset = byId.get(environmentId);
       const first = asset?.versions?.find((version) => version.version === 1);
-      if (asset?.kind === 'environment' && first?.file?.ref?.storage === 'public') {
+      if (
+        asset?.kind === 'environment' &&
+        first?.file?.ref?.storage === 'public'
+      ) {
         environment = {
           path: first.file.ref.path,
           asset: { id: asset.id, version: 1 },
@@ -174,9 +205,13 @@ for (const file of listSceneFiles()) {
 }
 
 if (unresolved > 0) {
-  console.log(`라이브러리로 풀지 못한 참조 ${unresolved}개 — 그 객체는 경로만으로 렌더된다.`);
+  console.log(
+    `라이브러리로 풀지 못한 참조 ${unresolved}개 — 그 객체는 경로만으로 렌더된다.`,
+  );
 }
 if (checkOnly && changedFiles > 0) {
-  console.error(`자산 참조를 적어야 하는 씬 ${changedFiles}개. --check 없이 다시 실행.`);
+  console.error(
+    `자산 참조를 적어야 하는 씬 ${changedFiles}개. --check 없이 다시 실행.`,
+  );
   process.exit(1);
 }
