@@ -7,6 +7,7 @@ import { getTechniciansByPerformerType } from '@crane/domain/shared';
 import { KC } from '../../../shared/ui/kc';
 import { KcButton } from '../../../shared/ui/kc-ui';
 import type { TriageRow } from '../lib/triage-rows';
+import type { AssignmentSuggestion } from '../lib/suggest-assignment';
 
 type PerformerType = 'internal' | 'third_party' | 'local';
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -27,14 +28,16 @@ const KIND_ICON = {
 
 /**
  * 접수함 카드 — 보고 내용(왼쪽)과 처리 폼(오른쪽). 수리·점검은 담당자·일정·
- * 우선순위를 정해 [배정], 점검에 이상이 있으면 [수리 요청 생성]이 먼저,
- * 부품은 [승인]/[반려].
+ * 우선순위가 추천값(lib/suggest-assignment)으로 채워져 있어 [배정] 만 누르면
+ * 되고, 점검에 이상이 있으면 [수리로 전환] 이 불량 항목을 그대로 수리 요청으로
+ * 만든다. 부품은 [승인]/[반려], 완료 보고(점검 결과·수리 완료)는 [확인].
  */
 export function TriageCard({
   row,
   photos,
   waitedLabel,
   priorityOptions,
+  suggestion,
   onAssign,
   onParts,
   onCreateRepair,
@@ -44,16 +47,22 @@ export function TriageCard({
   photos: UploadedDocument[];
   waitedLabel: string;
   priorityOptions: Array<{ value: string; label: string }>;
+  /** 배정 추천 — 폼의 초기값. 없으면 기본 자체 인력·오늘. */
+  suggestion?: AssignmentSuggestion | null;
   onAssign: (a: TriageAssignment) => void;
   onParts: (status: 'approved' | 'cancelled') => void;
   onCreateRepair: () => void;
   onAcknowledge: () => void;
 }) {
   const { t } = useTranslation();
-  const [performerType, setPerformerType] = useState<PerformerType>('internal');
+  const [performerType, setPerformerType] = useState<PerformerType>(
+    suggestion?.performerType ?? 'internal',
+  );
   const technicians = getTechniciansByPerformerType(performerType);
-  const [assignedTo, setAssignedTo] = useState(technicians[0]?.name ?? '');
-  const [date, setDate] = useState(todayIso());
+  const [assignedTo, setAssignedTo] = useState(
+    suggestion?.assignedTo ?? technicians[0]?.name ?? '',
+  );
+  const [date, setDate] = useState(suggestion?.scheduledDate ?? todayIso());
   const [priority, setPriority] = useState(
     priorityOptions[row.urgency === 2 ? 0 : row.urgency === 1 ? 1 : 2]?.value ??
       priorityOptions[0]!.value,
@@ -90,6 +99,18 @@ export function TriageCard({
             {row.number}
           </span>
           <span>{t(`mro2:field.kind.${row.kind}`)}</span>
+          {row.completed ? (
+            <span
+              className="rounded px-1.5 py-0.5 text-[12px] font-bold"
+              style={{ background: KC.ok, color: KC.onOk }}
+            >
+              {t(
+                row.kind === 'repair'
+                  ? 'mro2:triage.completedRepair'
+                  : 'mro2:triage.completedInspection',
+              )}
+            </span>
+          ) : null}
           <span>·</span>
           <Link to={`/mro2/assets/${row.craneId}`} style={{ color: KC.link }}>
             {row.craneName}
@@ -138,7 +159,7 @@ export function TriageCard({
         <div className="flex flex-wrap items-start gap-2 lg:justify-end">
           {row.needsRepair ? (
             <KcButton variant="dark" onClick={onCreateRepair}>
-              {t('mro2:triage.createRepair')}
+              {t('mro2:triage.convertRepair')}
             </KcButton>
           ) : null}
           <KcButton variant="teal" onClick={onAcknowledge}>
@@ -205,10 +226,20 @@ export function TriageCard({
               ))}
             </select>
           </div>
+          {suggestion ? (
+            <p className="text-[12px]" style={{ color: KC.muted }}>
+              {t('mro2:triage.suggested', {
+                who: t(`mro2:triage.reason.${suggestion.reason}`, {
+                  name: suggestion.assignedTo,
+                }),
+                when: t(`mro2:triage.dateReason.${suggestion.dateReason}`),
+              })}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             {row.needsRepair ? (
               <KcButton variant="dark" onClick={onCreateRepair}>
-                {t('mro2:triage.createRepair')}
+                {t('mro2:triage.convertRepair')}
               </KcButton>
             ) : null}
             <KcButton

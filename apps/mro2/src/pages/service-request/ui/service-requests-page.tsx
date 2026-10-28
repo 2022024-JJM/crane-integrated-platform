@@ -13,6 +13,8 @@ import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import { useEntityTicks } from '@crane/features/shared';
 import { useBulkWorkUpdate, type WorkTarget } from '@crane/features/triage';
+import { dailyLoad } from '../../triage/lib/suggest-assignment';
+import { spreadSchedule } from '../lib/spread-schedule';
 import { getTechnicians } from '@crane/domain/shared';
 import { toast } from 'sonner';
 import { getAllPartsRequests } from '@crane/domain/inventory';
@@ -45,6 +47,8 @@ import { useAllNotes } from '@crane/features/notes';
 import { useSeen } from '../../../shared/lib/seen-store';
 import { unreadByRef } from '../../../shared/lib/timeline';
 
+/** 담당자별 분배에서 담당자당 하루 상한 건수. */
+const SPREAD_CAP = 2;
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 type Tab = 'active' | SrBucket | 'all';
@@ -187,13 +191,47 @@ export function Mro2ServiceRequestsPage() {
   const runBulk = (
     out: { changed: number; undo: () => void },
     msgKey: string,
+    description?: string,
   ) => {
     toast.success(t(msgKey, { n: out.changed }), {
+      description,
       action: out.changed
         ? { label: t('common:undo'), onClick: out.undo }
         : undefined,
     });
     setSelected(new Set());
+  };
+  /** 지연 건 담당자별 분배 — 오늘부터 평일에 담당자당 하루 SPREAD_CAP 건. */
+  const runSpread = () => {
+    const picked = allRows
+      .filter((r) => selected.has(r.key) && r.kind !== 'parts')
+      .map((r) => ({
+        kind: r.kind as 'repair' | 'inspection',
+        id: r.key.slice(2),
+        assignee: r.assignee,
+      }));
+    const pickedIds = new Set(picked.map((p) => p.id));
+    const load = (who: string, date: string) =>
+      dailyLoad(
+        {
+          repairs: repairs.filter((w) => !pickedIds.has(w.id)),
+          inspections: inspections.filter((w) => !pickedIds.has(w.id)),
+        },
+        who,
+        date,
+      );
+    const today = new Date(now).toISOString().slice(0, 10);
+    const { entries, skipped } = spreadSchedule(
+      picked,
+      today,
+      load,
+      SPREAD_CAP,
+    );
+    runBulk(
+      bulk.rescheduleEach(entries),
+      'mro2:sr.bulk.spreadDone',
+      skipped > 0 ? t('mro2:sr.bulk.spreadSkipped', { n: skipped }) : undefined,
+    );
   };
   const th = 'py-1.5 pr-3 font-semibold whitespace-nowrap';
 
@@ -313,6 +351,18 @@ export function Mro2ServiceRequestsPage() {
               {t('mro2:sr.bulk.apply')}
             </KcButton>
           </label>
+          <span className="flex items-center gap-1.5">
+            <KcButton
+              variant="outline"
+              className="!py-0.5 !text-[12px]"
+              onClick={runSpread}
+            >
+              {t('mro2:sr.bulk.spread')}
+            </KcButton>
+            <span className="text-[11px]" style={{ color: KC.inverseMuted }}>
+              {t('mro2:sr.bulk.spreadHint', { cap: SPREAD_CAP })}
+            </span>
+          </span>
           <label className="flex items-center gap-1.5">
             {t('mro2:sr.bulk.assignee')}
             <select

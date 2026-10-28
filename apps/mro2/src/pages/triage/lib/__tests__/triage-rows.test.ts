@@ -58,6 +58,7 @@ describe('buildTriageRows', () => {
       parts: [
         parts({ fieldReport: fr('2026-01-04T00:00:00Z'), priority: 'urgent' }),
       ],
+      completedRepairs: [],
       total: 4,
     });
     expect(rows.map((r) => r.number)).toEqual([
@@ -76,6 +77,7 @@ describe('buildTriageRows', () => {
           insp({ status: 'completed', result: 'fail', fieldReport: fr('t') }),
         ],
         parts: [],
+        completedRepairs: [],
         total: 1,
       })[0],
     ).toMatchObject({ completed: true, needsRepair: true });
@@ -87,11 +89,18 @@ describe('buildTriageRows', () => {
       repairs: [repair({})],
       inspections: [],
       parts: [],
+      completedRepairs: [],
       total: 1,
     });
     expect(rows[0]!.reportedBy).toBe('');
     expect(
-      buildTriageRows({ repairs: [], inspections: [], parts: [], total: 0 }),
+      buildTriageRows({
+        repairs: [],
+        inspections: [],
+        parts: [],
+        completedRepairs: [],
+        total: 0,
+      }),
     ).toEqual([]);
   });
 });
@@ -102,5 +111,65 @@ describe('waitedMinutes', () => {
     expect(waitedMinutes('2026-01-01T00:30:30Z', now)).toBe(29);
     expect(waitedMinutes('2026-01-01T02:00:00Z', now)).toBe(0);
     expect(waitedMinutes('nope', now)).toBe(0);
+  });
+});
+
+describe('현장 완료 보고(수리)', () => {
+  it('완료 확인 대기 수리는 completed 행으로, 조치 내용이 제목·증상이 부제', () => {
+    const rows = buildTriageRows({
+      repairs: [],
+      inspections: [],
+      parts: [],
+      completedRepairs: [
+        repair({
+          id: 'done',
+          correctiveAction: '팬 교체',
+          fieldCompletion: {
+            reportedBy: '김현장',
+            reportedAt: '2026-01-05T00:00:00Z',
+          },
+        }),
+      ],
+      total: 1,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: 'repair',
+      id: 'done',
+      completed: true,
+      needsRepair: false,
+      urgency: 0,
+      title: '팬 교체',
+      subtitle: '누유',
+      reportedBy: '김현장',
+    });
+  });
+});
+
+describe('점검 제목', () => {
+  it('소견이 없으면 불량 항목 이름을 잇는다', () => {
+    const rows = buildTriageRows({
+      repairs: [],
+      inspections: [
+        insp({
+          fieldReport: fr('t'),
+          findings: '',
+          checklistItems: [
+            {
+              id: 'a',
+              itemName: 'Brake',
+              itemName_ko: '브레이크',
+              judgment: 'fail',
+            },
+            { id: 'b', itemName: 'Rope', judgment: 'pass' },
+            { id: 'c', itemName: 'Limit', judgment: 'fail' },
+          ] as never,
+        }),
+      ],
+      parts: [],
+      completedRepairs: [],
+      total: 1,
+    });
+    expect(rows[0]!.title).toBe('브레이크, Limit');
   });
 });

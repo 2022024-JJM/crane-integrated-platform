@@ -261,15 +261,7 @@
       "11월",
       "12월"
     ],
-    "weekdays": [
-      "월",
-      "화",
-      "수",
-      "목",
-      "금",
-      "토",
-      "일"
-    ],
+    "weekdays": ["월", "화", "수", "목", "금", "토", "일"],
     "noActivities": "{{year}}년 {{month}}에 서비스 활동이 없습니다.",
     "serviceProduct": "서비스 상품",
     "assetName": "자산명"
@@ -373,7 +365,11 @@
       "clear": "선택 해제",
       "select": "{{number}} 선택",
       "rescheduled": "{{n}}건 예정일 변경됨",
-      "reassigned": "{{n}}건 담당자 변경됨"
+      "reassigned": "{{n}}건 담당자 변경됨",
+      "spread": "담당자별 분배",
+      "spreadHint": "오늘부터 평일에 담당자당 하루 {{cap}}건",
+      "spreadDone": "{{n}}건 재일정됨",
+      "spreadSkipped": "담당자 없는 {{n}}건은 건너뜀"
     },
     "tabs": {
       "active": "미완료",
@@ -698,7 +694,13 @@
       "wear": "마모",
       "crack": "균열",
       "loose": "볼트 풀림",
-      "corrosion": "부식"
+      "corrosion": "부식",
+      "trolleyTravel": "트롤리 횡행 이상",
+      "hoist": "권상 이상",
+      "gantryTravel": "주행 이상",
+      "luffing": "기복 이상",
+      "slewing": "선회 이상",
+      "electricalAlarm": "전기실 알람"
     },
     "confirm": {
       "reporter": "보고자",
@@ -737,7 +739,9 @@
       "allPass": "전부 양호",
       "progress": "{{n}} / {{total}} 판정",
       "failedN": "불량 {{n}}건",
-      "failedItems": "불량 항목"
+      "failedItems": "불량 항목",
+      "hint": "기본은 양호입니다. 불량인 항목만 누르세요",
+      "recheck": "지난 점검 불량 — 다시 확인 {{n}}"
     },
     "emergency": {
       "button": "긴급 정지 신고",
@@ -790,6 +794,19 @@
     "badge": {
       "assigned": "새 배정 {{n}}",
       "notes": "메모 {{n}}"
+    },
+    "component": {
+      "trolley": "트롤리",
+      "hoist": "권상 장치",
+      "gantry": "주행 장치",
+      "luffing": "기복 장치",
+      "slewing": "선회 장치",
+      "brake": "브레이크",
+      "wireRope": "와이어 로프",
+      "limitSwitch": "리미트 스위치",
+      "electricalRoom": "전기실",
+      "hydraulics": "유압·윤활",
+      "motor": "모터"
     }
   },
   "triage": {
@@ -813,7 +830,21 @@
     "acknowledged": "{{number}} 확인됨",
     "openField": "현장 화면 열기",
     "fulfillIssued": "재고에서 {{n}}종 출고",
-    "fulfillOrdered": "{{n}}종 발주 초안 {{po}}"
+    "fulfillOrdered": "{{n}}종 발주 초안 {{po}}",
+    "completedRepair": "완료 보고",
+    "completedInspection": "점검 결과",
+    "convertRepair": "수리로 전환",
+    "converted": "{{number}} 수리 생성 · {{name}} {{date}} 배정",
+    "suggested": "추천: {{who}} · {{when}}",
+    "reason": {
+      "lastAssignee": "최근 담당 {{name}}",
+      "reporter": "보고자 본인 {{name}}",
+      "default": "기본 담당 {{name}}"
+    },
+    "dateReason": {
+      "today": "오늘",
+      "nextFree": "다음 빈 날"
+    }
   },
   "timeline": {
     "title": "메모·기록",

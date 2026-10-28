@@ -17,6 +17,10 @@ export interface WorkTarget {
   id: string;
 }
 
+export interface ScheduleEntry extends WorkTarget {
+  date: string;
+}
+
 export interface BulkOutcome {
   changed: number;
   undo: () => void;
@@ -32,14 +36,16 @@ const OFFICE = 'office';
 export function useBulkWorkUpdate() {
   const publish = useDomainEventStore((s) => s.publish);
 
-  const reschedule = useCallback(
-    (targets: readonly WorkTarget[], date: string): BulkOutcome => {
+  /** 건마다 다른 날짜로 — 담당자별 분배(spread) 가 쓴다. */
+  const rescheduleEach = useCallback(
+    (entries: readonly ScheduleEntry[]): BulkOutcome => {
       const restores: Array<() => void> = [];
-      for (const t of targets) {
+      for (const t of entries) {
+        const date = t.date;
         if (t.kind === 'inspection') {
           const prev = getInspectionWOById(t.id)?.scheduledDate;
-          if (prev === undefined || !updateInspectionSchedule(t.id, date))
-            continue;
+          if (prev === undefined || prev === date) continue;
+          if (!updateInspectionSchedule(t.id, date)) continue;
           logActivity({
             kind: 'inspection',
             refId: t.id,
@@ -50,7 +56,7 @@ export function useBulkWorkUpdate() {
           restores.push(() => updateInspectionSchedule(t.id, prev));
         } else {
           const prev = getRepairWOById(t.id);
-          if (!prev) continue;
+          if (!prev || prev.scheduledStart === date) continue;
           // 기간은 유지한다 — 시작만 옮기고 끝은 같은 날수만큼 따라간다
           const days = Math.max(
             0,
@@ -91,6 +97,12 @@ export function useBulkWorkUpdate() {
       };
     },
     [publish],
+  );
+
+  const reschedule = useCallback(
+    (targets: readonly WorkTarget[], date: string): BulkOutcome =>
+      rescheduleEach(targets.map((t) => ({ ...t, date }))),
+    [rescheduleEach],
   );
 
   const reassign = useCallback(
@@ -138,5 +150,5 @@ export function useBulkWorkUpdate() {
     [publish],
   );
 
-  return { reschedule, reassign };
+  return { reschedule, rescheduleEach, reassign };
 }

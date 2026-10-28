@@ -540,6 +540,32 @@ export function triageRepairWO(
   return true;
 }
 
+/** 현장 완료 보고 표식 — 사무실 검수 대기. 이미 표식이 있으면 그대로. */
+export function markRepairFieldCompletion(id: string, by: string): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allRepairWOs[idx];
+  if (wo.fieldCompletion) return true;
+  allRepairWOs[idx] = {
+    ...wo,
+    fieldCompletion: { reportedBy: by, reportedAt: new Date().toISOString() },
+  };
+  return true;
+}
+
+/** 사무실이 현장 완료 보고를 확인 — 접수함에서 빠진다. */
+export function acknowledgeRepairCompletion(id: string, by: string): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allRepairWOs[idx];
+  if (!wo.fieldCompletion) return false;
+  allRepairWOs[idx] = {
+    ...wo,
+    fieldCompletion: markTriaged(wo.fieldCompletion, by),
+  };
+  return true;
+}
+
 /** 수리 WO에 사용 부품 추가 — partsCost/totalCost 재계산. 완료된 WO에는 추가 불가. */
 export function addPartUsedToRepair(
   repairId: string,

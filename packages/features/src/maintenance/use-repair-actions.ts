@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import {
   getRepairWOById,
+  markRepairFieldCompletion,
   restoreRepairStatus,
   updateRepairDetails,
   updateRepairStatus,
@@ -58,7 +59,8 @@ export function useSetRepairStatus() {
 
 /**
  * 현장 작업 진행 — [작업 시작] → 진행 중, [작업 완료] + 조치 내용 → 완료.
- * 사무실 재검사 게이트는 거치지 않는다: 현장 완료 보고가 곧 완료다.
+ * 사무실 재검사 게이트는 거치지 않는다: 현장 완료 보고가 곧 완료다. 대신
+ * 완료 보고 표식(fieldCompletion)이 접수함에 올라가 사무실이 한 번 [확인] 한다.
  */
 export function useRepairWorkProgress() {
   const publish = useDomainEventStore((s) => s.publish);
@@ -86,6 +88,7 @@ export function useRepairWorkProgress() {
       if (correctiveAction.trim())
         updateRepairDetails(id, { correctiveAction: correctiveAction.trim() });
       updateRepairStatus(id, 'completed');
+      markRepairFieldCompletion(id, by ?? wo.assignedTo ?? 'field');
       logActivity({
         kind: 'repair',
         refId: id,

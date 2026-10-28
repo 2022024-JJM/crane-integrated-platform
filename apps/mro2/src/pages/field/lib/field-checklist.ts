@@ -1,6 +1,7 @@
 import type {
   ChecklistItem,
   ChecklistJudgment,
+  InspectionWO,
 } from '@crane/domain/inspection';
 
 /**
@@ -42,6 +43,52 @@ export function setAllJudgments(
   const out: FieldJudgments = {};
   for (const i of template) out[i.id] = judgment;
   return out;
+}
+
+/**
+ * 현장 점검의 시작 상태 — 전부 양호. 작업자는 불량인 항목만 누른다.
+ * "0/12 판정" 에서 시작해 12번 누르던 것을 불량 수만큼으로 줄인다.
+ */
+export function defaultJudgments(
+  template: readonly ChecklistItem[],
+): FieldJudgments {
+  return setAllJudgments(template, 'pass');
+}
+
+/**
+ * 같은 장비의 가장 최근 완료 점검에서 불량이던 항목 — 지금 템플릿의 항목 id 로
+ * 돌려준다(id 가 같으면 id, 아니면 항목 이름으로 맞춘다). 이번 점검에서
+ * "다시 확인" 으로 위에 올린다. `excludeId` 는 지금 수행 중인 점검.
+ */
+export function previousFailures(
+  inspections: readonly InspectionWO[],
+  craneId: string,
+  template: readonly ChecklistItem[],
+  excludeId?: string,
+): string[] {
+  const dateOf = (w: InspectionWO) => w.actualDate ?? w.scheduledDate;
+  const last = inspections
+    .filter(
+      (w) =>
+        w.craneId === craneId &&
+        w.status === 'completed' &&
+        w.id !== excludeId &&
+        w.checklistItems.length > 0,
+    )
+    .sort((a, b) =>
+      dateOf(a) < dateOf(b) ? 1 : dateOf(a) > dateOf(b) ? -1 : 0,
+    )[0];
+  if (!last) return [];
+  const failedIds = new Set<string>();
+  const failedNames = new Set<string>();
+  for (const item of last.checklistItems) {
+    if (item.judgment !== 'fail') continue;
+    failedIds.add(item.id);
+    failedNames.add(item.itemName);
+  }
+  return template
+    .filter((i) => failedIds.has(i.id) || failedNames.has(i.itemName))
+    .map((i) => i.id);
 }
 
 /** 판정을 체크리스트 항목에 입힌다 — 불량은 minor·repair_needed(사무실 submit 규칙과 같다). */

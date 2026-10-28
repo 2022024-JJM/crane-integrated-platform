@@ -20,6 +20,8 @@ export {
   updateRepairSchedule,
   triageRepairWO,
   assignRepairWO,
+  markRepairFieldCompletion,
+  acknowledgeRepairCompletion,
 } from './model/mock-data';
 export type { RepairDetailsUpdate } from './model/mock-data';
 export type { RepairTriageInput } from './model/mock-data';

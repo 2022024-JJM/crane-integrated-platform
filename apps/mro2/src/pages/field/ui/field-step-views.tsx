@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Camera, Minus, Plus, X } from 'lucide-react';
-import type { CraneAsset } from '@crane/domain/asset';
+import type { CraneAsset, CraneType } from '@crane/domain/asset';
 import type { RepairWO } from '@crane/domain/maintenance';
 import type { ChecklistItem } from '@crane/domain/inspection';
 import type { InventoryItem } from '@crane/domain/inventory';
@@ -17,6 +17,11 @@ import {
   type FieldDraft,
 } from '../lib/field-draft';
 import { failedItems } from '../lib/field-checklist';
+import {
+  componentAfterPreset,
+  symptomPresets,
+  type ComponentKey,
+} from '../lib/field-presets';
 import { fieldTicketPath, type FieldKind } from '../lib/field-route';
 import { FieldChecklistStep } from './field-checklist-step';
 import { FieldChip } from './field-shell';
@@ -37,11 +42,14 @@ export function AssetStep({
   recent,
   draft,
   patch,
+  onPick,
 }: {
   assets: CraneAsset[];
   recent: string[];
   draft: FieldDraft;
   patch: Patch;
+  /** 고르면 바로 다음 단계로 — 단일 선택이라 [다음] 을 또 누를 이유가 없다. */
+  onPick?: (assetId: string) => void;
 }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
@@ -77,7 +85,10 @@ export function AssetStep({
             <li key={a.id}>
               <button
                 type="button"
-                onClick={() => patch({ assetId: a.id })}
+                onClick={() => {
+                  patch({ assetId: a.id });
+                  onPick?.(a.id);
+                }}
                 aria-pressed={active}
                 className="flex min-h-14 w-full items-center justify-between rounded px-4 text-left"
                 style={{
@@ -103,14 +114,6 @@ export function AssetStep({
   );
 }
 
-const REPAIR_PRESETS = [
-  'wireDamage',
-  'brakeAbnormal',
-  'noise',
-  'motorStop',
-  'limitFault',
-  'leak',
-] as const;
 const FINDING_PRESETS = ['wear', 'crack', 'loose', 'corrosion'] as const;
 
 export function SymptomStep({
@@ -119,6 +122,7 @@ export function SymptomStep({
   presets,
   placeholder,
   openReports = [],
+  craneType = null,
 }: {
   draft: FieldDraft;
   patch: Patch;
@@ -126,9 +130,13 @@ export function SymptomStep({
   placeholder: string;
   /** 같은 장비에 이미 열린 고장 신고 — 중복 신고 방지 안내. */
   openReports?: RepairWO[];
+  /** 고른 장비 종류 — 증상 칩이 장비에 맞게 바뀐다(lib/field-presets). */
+  craneType?: CraneType | null;
 }) {
   const { t } = useTranslation();
-  const keys = presets === 'repair' ? REPAIR_PRESETS : FINDING_PRESETS;
+  const keys: readonly string[] =
+    presets === 'repair' ? symptomPresets(craneType) : FINDING_PRESETS;
+  const componentLabel = (c: ComponentKey) => t(`mro2:field.component.${c}`);
   return (
     <div className="flex flex-col gap-3">
       {openReports.length > 0 ? (
@@ -181,13 +189,27 @@ export function SymptomStep({
       <div className="flex flex-wrap gap-2">
         {keys.map((k) => {
           const phrase = t(`mro2:field.preset.${k}`);
+          const on = hasSymptomPreset(draft.symptom, phrase);
           return (
             <FieldChip
               key={k}
               label={phrase}
-              active={hasSymptomPreset(draft.symptom, phrase)}
+              active={on}
               onClick={() =>
-                patch({ symptom: toggleSymptomPreset(draft.symptom, phrase) })
+                patch({
+                  symptom: toggleSymptomPreset(draft.symptom, phrase),
+                  // 고장 신고 칩은 부위까지 같이 채운다 — 사람이 적은 부위는 둔다.
+                  ...(presets === 'repair'
+                    ? {
+                        component: componentAfterPreset(
+                          draft.component,
+                          k as Parameters<typeof componentAfterPreset>[1],
+                          !on,
+                          componentLabel,
+                        ),
+                      }
+                    : {}),
+                })
               }
             />
           );
@@ -219,10 +241,13 @@ export function InspectionStep({
   draft,
   patch,
   template,
+  recheck = [],
 }: {
   draft: FieldDraft;
   patch: Patch;
   template: ChecklistItem[];
+  /** 지난 점검에서 불량이던 항목 id — 위에 "다시 확인" 으로 올린다. */
+  recheck?: readonly string[];
 }) {
   const { t } = useTranslation();
   const types = ['frequent', 'periodic', 'emergency', 'special'] as const;
@@ -251,6 +276,7 @@ export function InspectionStep({
         template={template}
         judgments={draft.checklist}
         onChange={(checklist) => patch({ checklist })}
+        recheck={recheck}
       />
       {anyFail ? (
         <div>

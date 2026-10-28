@@ -25,7 +25,7 @@ export interface TriageRow {
   urgency: 0 | 1 | 2;
   /** 점검 결과에 이상이 있어 수리로 이어야 하는지. */
   needsRepair: boolean;
-  /** 이미 완료된 점검(현장 체크리스트) — 배정이 아니라 확인만. */
+  /** 이미 완료된 건(현장 점검 결과·현장 수리 완료 보고) — 배정이 아니라 확인만. */
   completed: boolean;
 }
 
@@ -46,6 +46,13 @@ const PARTS_URGENCY: Record<PartsRequest['priority'], 0 | 1 | 2> = {
   normal: 0,
   scheduled: 0,
 };
+
+function failedItemNames(w: InspectionWO): string {
+  return (w.checklistItems ?? [])
+    .filter((i) => i.judgment === 'fail')
+    .map((i) => i.itemName_ko ?? i.itemName)
+    .join(', ');
+}
 
 export function buildTriageRows(queue: TriageQueue): TriageRow[] {
   const rows: TriageRow[] = [];
@@ -72,7 +79,8 @@ export function buildTriageRows(queue: TriageQueue): TriageRow[] {
       number: w.woNumber,
       craneId: w.craneId,
       craneName: w.craneName,
-      title: w.findings ?? '',
+      // 소견이 없으면 불량 항목 이름이 곧 내용이다(현장 체크리스트 제출).
+      title: w.findings || failedItemNames(w),
       subtitle: w.woType,
       reportedBy: w.fieldReport?.reportedBy ?? '',
       reportedAt: w.fieldReport?.reportedAt ?? '',
@@ -97,6 +105,22 @@ export function buildTriageRows(queue: TriageQueue): TriageRow[] {
       urgency: PARTS_URGENCY[r.priority],
       needsRepair: false,
       completed: false,
+    });
+  }
+  for (const w of queue.completedRepairs) {
+    rows.push({
+      kind: 'repair',
+      id: w.id,
+      number: w.woNumber,
+      craneId: w.craneId,
+      craneName: w.craneName,
+      title: w.correctiveAction ?? '',
+      subtitle: w.failureDescription,
+      reportedBy: w.fieldCompletion?.reportedBy ?? '',
+      reportedAt: w.fieldCompletion?.reportedAt ?? '',
+      urgency: 0,
+      needsRepair: false,
+      completed: true,
     });
   }
   rows.sort(

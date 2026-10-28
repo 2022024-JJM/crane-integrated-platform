@@ -261,15 +261,7 @@
       "Nov",
       "Dec"
     ],
-    "weekdays": [
-      "Lun",
-      "Mar",
-      "Mer",
-      "Iov",
-      "Ven",
-      "Sat",
-      "Sol"
-    ],
+    "weekdays": ["Lun", "Mar", "Mer", "Iov", "Ven", "Sat", "Sol"],
     "noActivities": "Nullae actiones servitii in {{month}} {{year}}.",
     "serviceProduct": "Productum Servitii",
     "assetName": "Nomen Boni"
@@ -373,7 +365,11 @@
       "clear": "Deselige",
       "select": "Selige {{number}}",
       "rescheduled": "{{n}} dies mutati",
-      "reassigned": "{{n}} curatores mutati"
+      "reassigned": "{{n}} curatores mutati",
+      "spread": "ແບ່ງຕາມຜູ້ຮັບຜິດຊອບ",
+      "spreadHint": "ແຕ່ມື້ນີ້, ວັນເຮັດວຽກ, {{cap}}/ມື້ ຕໍ່ຄົນ",
+      "spreadDone": "ປ່ຽນກຳນົດ {{n}} ລາຍການ",
+      "spreadSkipped": "ຂ້າມ {{n}} ລາຍການທີ່ບໍ່ມີຜູ້ຮັບຜິດຊອບ"
     },
     "tabs": {
       "active": "Pendentia",
@@ -698,7 +694,13 @@
       "wear": "Attritus",
       "crack": "Rima",
       "loose": "Clavi laxi",
-      "corrosion": "Rubigo"
+      "corrosion": "Rubigo",
+      "trolleyTravel": "ລົດເລື່ອນຂັດຂ້ອງ",
+      "hoist": "ການຍົກຂັດຂ້ອງ",
+      "gantryTravel": "ການແລ່ນຂັດຂ້ອງ",
+      "luffing": "ການຍົກແຂນຂັດຂ້ອງ",
+      "slewing": "ການໝຸນຂັດຂ້ອງ",
+      "electricalAlarm": "ສັນຍານເຕືອນຫ້ອງໄຟຟ້າ"
     },
     "confirm": {
       "reporter": "Relator",
@@ -737,7 +739,9 @@
       "allPass": "Omnia bene",
       "progress": "{{n}} / {{total}} iudicata",
       "failedN": "{{n}} vitiosa",
-      "failedItems": "Vitiosa"
+      "failedItems": "Vitiosa",
+      "hint": "ຄ່າເລີ່ມຕົ້ນແມ່ນດີ. ກົດສະເພາະລາຍການທີ່ບໍ່ດີ",
+      "recheck": "ບໍ່ດີຄັ້ງກ່ອນ — ກວດຄືນ {{n}}"
     },
     "emergency": {
       "button": "Nuntius sistendi urgentis",
@@ -790,6 +794,19 @@
     "badge": {
       "assigned": "{{n}} nova",
       "notes": "{{n}} notae"
+    },
+    "component": {
+      "trolley": "ລົດເລື່ອນ",
+      "hoist": "ຊຸດຍົກ",
+      "gantry": "ຊຸດແລ່ນ",
+      "luffing": "ຊຸດຍົກແຂນ",
+      "slewing": "ຊຸດໝຸນ",
+      "brake": "ເບຣກ",
+      "wireRope": "ສາຍລວດ",
+      "limitSwitch": "ສະວິດຈຳກັດ",
+      "electricalRoom": "ຫ້ອງໄຟຟ້າ",
+      "hydraulics": "ໄຮໂດຼລິກ/ຫຼໍ່ລື່ນ",
+      "motor": "ມໍເຕີ"
     }
   },
   "triage": {
@@ -813,7 +830,21 @@
     "acknowledged": "{{number}} agnitum",
     "openField": "Aperi tabulam campi",
     "fulfillIssued": "{{n}} e copia emissa",
-    "fulfillOrdered": "{{n}} in ordine {{po}}"
+    "fulfillOrdered": "{{n}} in ordine {{po}}",
+    "completedRepair": "ລາຍງານສຳເລັດ",
+    "completedInspection": "ຜົນກວດ",
+    "convertRepair": "ປ່ຽນເປັນສ້ອມແປງ",
+    "converted": "ສ້າງ {{number}} · {{name}} {{date}}",
+    "suggested": "ແນະນຳ: {{who}} · {{when}}",
+    "reason": {
+      "lastAssignee": "ຜູ້ຮັບຜິດຊອບລ່າສຸດ {{name}}",
+      "reporter": "ຜູ້ລາຍງານ {{name}}",
+      "default": "ຄ່າເລີ່ມຕົ້ນ {{name}}"
+    },
+    "dateReason": {
+      "today": "ມື້ນີ້",
+      "nextFree": "ມື້ວ່າງຖັດໄປ"
+    }
   },
   "timeline": {
     "title": "Notae et acta",

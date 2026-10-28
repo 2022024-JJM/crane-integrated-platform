@@ -263,15 +263,7 @@
       "Nov",
       "Dec"
     ],
-    "weekdays": [
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-      "Sat",
-      "Sun"
-    ],
+    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     "noActivities": "No service activities in {{month}} {{year}}."
   },
   "sr": {
@@ -373,7 +365,11 @@
       "clear": "Clear",
       "select": "Select {{number}}",
       "rescheduled": "{{n}} rescheduled",
-      "reassigned": "{{n}} reassigned"
+      "reassigned": "{{n}} reassigned",
+      "spread": "Spread by assignee",
+      "spreadHint": "from today, weekdays, {{cap}}/day per assignee",
+      "spreadDone": "{{n}} rescheduled",
+      "spreadSkipped": "{{n}} unassigned skipped"
     },
     "tabs": {
       "active": "Open",
@@ -698,7 +694,13 @@
       "wear": "Wear",
       "crack": "Crack",
       "loose": "Loose bolts",
-      "corrosion": "Corrosion"
+      "corrosion": "Corrosion",
+      "trolleyTravel": "Trolley travel fault",
+      "hoist": "Hoist fault",
+      "gantryTravel": "Gantry travel fault",
+      "luffing": "Luffing fault",
+      "slewing": "Slewing fault",
+      "electricalAlarm": "E-room alarm"
     },
     "confirm": {
       "reporter": "Reporter",
@@ -737,7 +739,9 @@
       "allPass": "All OK",
       "progress": "{{n}} / {{total}} judged",
       "failedN": "{{n}} failed",
-      "failedItems": "Failed items"
+      "failedItems": "Failed items",
+      "hint": "Everything starts as OK. Tap only the items that fail",
+      "recheck": "Failed last time — recheck {{n}}"
     },
     "emergency": {
       "button": "Emergency stop report",
@@ -790,6 +794,19 @@
     "badge": {
       "assigned": "{{n}} new",
       "notes": "{{n}} notes"
+    },
+    "component": {
+      "trolley": "Trolley",
+      "hoist": "Hoist",
+      "gantry": "Gantry travel",
+      "luffing": "Luffing gear",
+      "slewing": "Slewing gear",
+      "brake": "Brake",
+      "wireRope": "Wire rope",
+      "limitSwitch": "Limit switch",
+      "electricalRoom": "Electrical room",
+      "hydraulics": "Hydraulics / lubrication",
+      "motor": "Motor"
     }
   },
   "triage": {
@@ -813,7 +830,21 @@
     "acknowledged": "{{number}} acknowledged",
     "openField": "Open field screen",
     "fulfillIssued": "{{n}} issued from stock",
-    "fulfillOrdered": "{{n}} on PO draft {{po}}"
+    "fulfillOrdered": "{{n}} on PO draft {{po}}",
+    "completedRepair": "Completion report",
+    "completedInspection": "Inspection result",
+    "convertRepair": "Convert to repair",
+    "converted": "{{number}} created · {{name}} on {{date}}",
+    "suggested": "Suggested: {{who}} · {{when}}",
+    "reason": {
+      "lastAssignee": "last assignee {{name}}",
+      "reporter": "reporter {{name}}",
+      "default": "default {{name}}"
+    },
+    "dateReason": {
+      "today": "today",
+      "nextFree": "next free day"
+    }
   },
   "timeline": {
     "title": "Notes & log",

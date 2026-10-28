@@ -70,6 +70,8 @@ export interface RepairWO {
   reInspectionResult?: 'pass' | 'fail' | null;
   /** 현장(모바일) 보고로 생성된 경우 — 접수함 판정. */
   fieldReport?: FieldReport;
+  /** 현장이 완료 보고한 경우 — 사무실이 [확인] 할 때까지 접수함에 남는다. */
+  fieldCompletion?: FieldReport;
 }
 
 export interface MaintenanceSummary {

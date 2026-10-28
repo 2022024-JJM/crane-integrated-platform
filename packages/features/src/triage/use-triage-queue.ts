@@ -11,11 +11,15 @@ import { getAllRepairWOs, type RepairWO } from '@crane/domain/maintenance';
 import { isUntriagedFieldReport } from '@crane/domain/shared';
 import { useEntityTicks } from '../shared/use-domain-event-store';
 
-/** 접수함 — 현장 보고 표식이 있고 아직 처리되지 않은 티켓(오래된 것부터). */
+/**
+ * 접수함 — 현장 보고 표식이 있고 아직 처리되지 않은 티켓(오래된 것부터).
+ * `completedRepairs` 는 현장이 완료 보고했고 사무실이 아직 확인하지 않은 수리.
+ */
 export interface TriageQueue {
   repairs: RepairWO[];
   inspections: InspectionWO[];
   parts: PartsRequest[];
+  completedRepairs: RepairWO[];
   total: number;
 }
 
@@ -42,11 +46,19 @@ export function collectTriageQueue(
   const p = parts
     .filter((w) => isUntriagedFieldReport(w.fieldReport))
     .sort(byOldest);
+  const c = repairs
+    .filter((w) => isUntriagedFieldReport(w.fieldCompletion))
+    .sort((a, b) => {
+      const x = a.fieldCompletion?.reportedAt ?? '';
+      const y = b.fieldCompletion?.reportedAt ?? '';
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
   return {
     repairs: r,
     inspections: i,
     parts: p,
-    total: r.length + i.length + p.length,
+    completedRepairs: c,
+    total: r.length + i.length + p.length + c.length,
   };
 }
 

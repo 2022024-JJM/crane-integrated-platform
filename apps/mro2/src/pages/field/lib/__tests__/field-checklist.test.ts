@@ -62,3 +62,57 @@ describe('checklist outcome', () => {
     );
   });
 });
+
+describe('defaultJudgments / previousFailures', () => {
+  it('기본 판정은 전부 양호', async () => {
+    const { defaultJudgments } = await import('../field-checklist');
+    expect(defaultJudgments(T)).toEqual({ a: 'pass', b: 'pass', c: 'pass' });
+    expect(defaultJudgments([])).toEqual({});
+  });
+
+  it('같은 장비의 최근 완료 점검에서 불량이던 항목을 id 또는 이름으로 맞춘다', async () => {
+    const { previousFailures } = await import('../field-checklist');
+    const wo = (o: Record<string, unknown>) =>
+      ({
+        id: 'w',
+        craneId: 'c1',
+        status: 'completed',
+        scheduledDate: '2026-01-01',
+        actualDate: null,
+        checklistItems: [],
+        ...o,
+      }) as never;
+    const older = wo({
+      id: 'old',
+      actualDate: '2026-01-05',
+      checklistItems: [{ ...item('a'), judgment: 'fail' }],
+    });
+    const newer = wo({
+      id: 'new',
+      actualDate: '2026-02-01',
+      checklistItems: [
+        { ...item('zzz'), itemName: 'b', judgment: 'fail' },
+        { ...item('c'), judgment: 'pass' },
+      ],
+    });
+    const other = wo({
+      id: 'x',
+      craneId: 'c2',
+      actualDate: '2026-03-01',
+      checklistItems: [{ ...item('c'), judgment: 'fail' }],
+    });
+    // 최근 것(newer)만 본다 — older 의 a 는 안 올라온다. 이름으로 b 를 맞춘다.
+    expect(previousFailures([older, newer, other], 'c1', T)).toEqual(['b']);
+    // 지금 수행 중인 점검은 제외
+    expect(previousFailures([older, newer], 'c1', T, 'new')).toEqual(['a']);
+    // 완료 아닌 점검·빈 체크리스트·다른 장비는 무시
+    const open = wo({
+      id: 'o',
+      status: 'scheduled',
+      actualDate: '2026-05-01',
+      checklistItems: [{ ...item('c'), judgment: 'fail' }],
+    });
+    expect(previousFailures([open], 'c1', T)).toEqual([]);
+    expect(previousFailures([], 'c1', T)).toEqual([]);
+  });
+});

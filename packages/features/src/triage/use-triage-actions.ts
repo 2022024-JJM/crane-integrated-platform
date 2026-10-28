@@ -10,6 +10,7 @@ import {
   type FulfillOutcome,
 } from '@crane/domain/inventory';
 import {
+  acknowledgeRepairCompletion,
   triageRepairWO,
   type RepairTriageInput,
 } from '@crane/domain/maintenance';
@@ -101,5 +102,27 @@ export function useTriageActions(triagedBy: string) {
     },
     [publish, triagedBy],
   );
-  return { triageRepair, triageInspection, triageParts, acknowledgeInspection };
+  const acknowledgeRepair = useCallback(
+    (id: string) => {
+      const ok = acknowledgeRepairCompletion(id, triagedBy);
+      if (ok) {
+        logActivity({
+          kind: 'repair',
+          refId: id,
+          type: 'acknowledged',
+          by: triagedBy,
+        });
+        publish('repair', id);
+      }
+      return ok;
+    },
+    [publish, triagedBy],
+  );
+  return {
+    triageRepair,
+    triageInspection,
+    triageParts,
+    acknowledgeInspection,
+    acknowledgeRepair,
+  };
 }

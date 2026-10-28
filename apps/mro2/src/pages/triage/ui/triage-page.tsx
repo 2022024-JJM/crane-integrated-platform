@@ -4,35 +4,138 @@ import { Link } from 'react-router-dom';
 import { Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@crane/features/auth';
-import { useDocuments } from '@crane/features/compliance';
+import { useDocuments, useUploadDocument } from '@crane/features/compliance';
+import { useInspectionList } from '@crane/features/inspection';
+import { useMaintenanceList } from '@crane/features/maintenance';
+import { useCreateRepairTicket } from '@crane/features/ticket';
 import { useTriageActions, useTriageQueue } from '@crane/features/triage';
+import { getInspectionWOById } from '@crane/domain/inspection';
+import { getTechnicians, logActivity } from '@crane/domain/shared';
 import { KC } from '../../../shared/ui/kc';
 import { KcEmpty, KcSectionHeading } from '../../../shared/ui/kc-ui';
-import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import { fmtDate } from '../../../shared/lib/service-status';
 import {
   buildTriageRows,
   waitedMinutes,
   type TriageRow,
 } from '../lib/triage-rows';
+import { buildRepairFromInspection } from '../lib/convert-inspection';
+import {
+  suggestAssignment,
+  type AssignmentSuggestion,
+} from '../lib/suggest-assignment';
 import { FIELD_PATH } from '../../field/lib/field-route';
 import { TriageCard, type TriageAssignment } from './triage-card';
 
 /**
  * 접수함(관리자) — 현장에서 올라온 티켓 중 아직 처리하지 않은 것. 처리하면
- * 현장 작업자의 "내 티켓" 상태가 바로 바뀐다. 수리·점검은 담당자·일정·
- * 우선순위 확정, 점검 이상은 수리 요청으로 연결, 부품은 승인/반려.
+ * 현장 작업자의 "내 티켓" 상태가 바로 바뀐다. 수리·점검은 추천값으로 채워진
+ * 담당자·일정·우선순위를 [배정] 으로 확정, 점검 이상은 [수리로 전환] 한 번에
+ * 수리 요청 생성·배정·접수까지, 부품은 승인/반려, 완료 보고는 [확인].
  */
 export function Mro2TriagePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const admin = user?.id ?? 'admin';
   const queue = useTriageQueue();
   const rows = useMemo(() => buildTriageRows(queue), [queue]);
   const { uploads } = useDocuments();
-  const { triageRepair, triageInspection, triageParts, acknowledgeInspection } =
-    useTriageActions(user?.id ?? 'admin');
-  const { openTicket } = useNewTicket();
+  const upload = useUploadDocument();
+  const { repairs } = useMaintenanceList();
+  const { inspections } = useInspectionList();
+  const createRepair = useCreateRepairTicket();
+  const {
+    triageRepair,
+    triageInspection,
+    triageParts,
+    acknowledgeInspection,
+    acknowledgeRepair,
+  } = useTriageActions(admin);
   // 기다린 시간의 기준 시각 — 렌더 중 Date.now() 는 순수하지 않으므로 마운트 때 한 번.
   const [now] = useState(() => Date.now());
+  const today = useMemo(() => new Date(now).toISOString().slice(0, 10), [now]);
+  const suggestions = useMemo(() => {
+    const ctx = { repairs, inspections, technicians: getTechnicians(), today };
+    const out = new Map<string, AssignmentSuggestion | null>();
+    for (const row of rows) {
+      if (row.kind === 'parts' || row.completed) continue;
+      out.set(
+        `${row.kind}-${row.id}`,
+        suggestAssignment(
+          {
+            kind: row.kind,
+            id: row.id,
+            craneId: row.craneId,
+            reportedBy: row.reportedBy,
+            urgency: row.urgency,
+          },
+          ctx,
+        ),
+      );
+    }
+    return out;
+  }, [rows, repairs, inspections, today]);
+
+  /**
+   * 점검 불량 → 수리 한 번에: 불량 항목으로 수리 요청을 만들고 추천 담당·일정으로
+   * 접수까지 끝낸다. 사진은 새 WO 번호로도 보이게 복사하고, 점검은 확인 처리한다.
+   */
+  const convertToRepair = (row: TriageRow) => {
+    const wo = getInspectionWOById(row.id);
+    if (!wo) return;
+    const suggestion = suggestAssignment(
+      {
+        kind: 'repair',
+        id: row.id,
+        craneId: row.craneId,
+        reportedBy: row.reportedBy || wo.assignedTo,
+        urgency: 1,
+      },
+      { repairs, inspections, technicians: getTechnicians(), today },
+    );
+    if (!suggestion) return;
+    const draft = buildRepairFromInspection(wo, suggestion, {
+      now: new Date().toISOString(),
+      triagedBy: admin,
+      ko: i18n.language.startsWith('ko'),
+    });
+    const created = createRepair(draft);
+    logActivity({
+      kind: 'repair',
+      refId: created.id,
+      type: 'triaged',
+      by: admin,
+      detail: suggestion.assignedTo,
+    });
+    for (const d of uploads) {
+      if (d.refWoNumber !== wo.woNumber || !d.objectUrl) continue;
+      upload({
+        fileName: d.fileName,
+        docType: d.docType,
+        craneId: d.craneId,
+        craneName: d.craneName,
+        uploadedBy: d.uploadedBy,
+        sizeBytes: d.sizeBytes,
+        objectUrl: d.objectUrl,
+        refWoNumber: created.woNumber,
+      });
+    }
+    // 점검 쪽은 확인 처리 — 완료 전이면 접수 표식을 찍어 접수함에서 뺀다.
+    if (!acknowledgeInspection(row.id))
+      triageInspection(row.id, {
+        assignedTo: wo.assignedTo,
+        performerType: wo.performerType,
+        priority: wo.priority,
+        scheduledDate: wo.scheduledDate,
+      });
+    toast.success(
+      t('mro2:triage.converted', {
+        number: created.woNumber,
+        name: suggestion.assignedTo,
+        date: fmtDate(suggestion.scheduledDate),
+      }),
+    );
+  };
 
   const repairPriorities = [
     { value: 'emergency', label: t('mro2:ticket.prioEmergency') },
@@ -148,20 +251,18 @@ export function Mro2TriagePage() {
                     : undefined,
                 );
               }}
+              suggestion={suggestions.get(`${row.kind}-${row.id}`) ?? null}
               onAcknowledge={() => {
-                if (acknowledgeInspection(row.id)) {
+                const ok =
+                  row.kind === 'repair'
+                    ? acknowledgeRepair(row.id)
+                    : acknowledgeInspection(row.id);
+                if (ok)
                   toast.success(
                     t('mro2:triage.acknowledged', { number: row.number }),
                   );
-                }
               }}
-              onCreateRepair={() =>
-                openTicket('repair', row.craneId, {
-                  sourceWoNumber: row.number,
-                  failureDescription: row.title,
-                  priority: 'high',
-                })
-              }
+              onCreateRepair={() => convertToRepair(row)}
             />
           ))}
         </div>

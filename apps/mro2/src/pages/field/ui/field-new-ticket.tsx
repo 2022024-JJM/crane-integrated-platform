@@ -6,7 +6,10 @@ import { useAssetList } from '@crane/features/asset';
 import { useInventoryList } from '@crane/features/inventory';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import { useUploadDocument } from '@crane/features/compliance';
-import { useSubmitInspection } from '@crane/features/inspection';
+import {
+  useInspectionList,
+  useSubmitInspection,
+} from '@crane/features/inspection';
 import { getDefaultChecklist } from '@crane/domain/inspection';
 import {
   useCreateInspectionTicket,
@@ -23,7 +26,9 @@ import {
 import {
   buildFieldChecklist,
   checklistOutcome,
+  defaultJudgments,
   failedItems,
+  previousFailures,
 } from '../lib/field-checklist';
 import { FIELD_PATH, type FieldKind } from '../lib/field-route';
 import { useFieldWorker, useRecentAssets } from '../lib/field-storage';
@@ -55,6 +60,7 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
   const { assets } = useAssetList();
   const { items: inventory } = useInventoryList();
   const { repairs } = useMaintenanceList();
+  const { inspections } = useInspectionList();
   const createRepair = useCreateRepairTicket();
   const createInspection = useCreateInspectionTicket();
   const createParts = useCreatePartsTicket();
@@ -68,7 +74,11 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
     const id = params.get('asset');
     return id && assets.some((a) => a.id === id) ? id : null;
   })();
-  const [draft, setDraft] = useState<FieldDraft>(() => emptyDraft(presetAsset));
+  const [draft, setDraft] = useState<FieldDraft>(() => ({
+    ...emptyDraft(presetAsset),
+    // 점검은 전부 양호에서 시작 — 불량만 누른다.
+    checklist: defaultJudgments(getDefaultChecklist('frequent')),
+  }));
   const [index, setIndex] = useState(() => (presetAsset ? 1 : 0));
   const [done, setDone] = useState<string | null>(null);
   const openReports = useMemo(
@@ -80,7 +90,23 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
     () => getDefaultChecklist(draft.inspectionType),
     [draft.inspectionType],
   );
-  const patch = (p: Partial<FieldDraft>) => setDraft((d) => ({ ...d, ...p }));
+  const recheck = useMemo(
+    () =>
+      kind === 'inspection' && draft.assetId
+        ? previousFailures(inspections, draft.assetId, template)
+        : [],
+    [kind, inspections, draft.assetId, template],
+  );
+  const patch = (p: Partial<FieldDraft>) =>
+    setDraft((d) => {
+      const next = { ...d, ...p };
+      // 점검 종류가 바뀌어 판정이 비워졌으면 새 템플릿으로 전부 양호부터.
+      if (p.checklist && Object.keys(p.checklist).length === 0)
+        next.checklist = defaultJudgments(
+          getDefaultChecklist(next.inspectionType),
+        );
+      return next;
+    });
   const step = steps[index]!;
   const asset = useMemo(
     () => assets.find((a) => a.id === draft.assetId) ?? null,
@@ -196,7 +222,10 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
             <FieldBigButton
               onClick={() => {
                 // 같은 URL 이라 라우터가 리마운트하지 않는다 — 상태를 직접 초기화.
-                setDraft(emptyDraft(asset?.id ?? null));
+                setDraft({
+                  ...emptyDraft(asset?.id ?? null),
+                  checklist: defaultJudgments(getDefaultChecklist('frequent')),
+                });
                 setIndex(asset ? 1 : 0);
                 setDone(null);
               }}
@@ -303,6 +332,7 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
           recent={recent}
           draft={draft}
           patch={patch}
+          onPick={() => setIndex(index + 1)}
         />
       ) : null}
       {step === 'symptom' ? (
@@ -312,10 +342,16 @@ export function FieldNewTicket({ kind }: { kind: FieldKind }) {
           presets="repair"
           placeholder={t('mro2:field.symptomPlaceholder')}
           openReports={openReports}
+          craneType={asset?.craneType ?? null}
         />
       ) : null}
       {step === 'inspection' ? (
-        <InspectionStep draft={draft} patch={patch} template={template} />
+        <InspectionStep
+          draft={draft}
+          patch={patch}
+          template={template}
+          recheck={recheck}
+        />
       ) : null}
       {step === 'parts' ? (
         <PartsStep

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import {
   useInspectionDetail,
+  useInspectionList,
   useSubmitAssignedInspection,
 } from '@crane/features/inspection';
 import { useUploadDocument } from '@crane/features/compliance';
@@ -16,7 +17,9 @@ import {
 import {
   buildFieldChecklist,
   checklistOutcome,
+  defaultJudgments,
   failedItems,
+  previousFailures,
   type FieldJudgments,
 } from '../lib/field-checklist';
 import { FIELD_PATH, fieldTicketPath } from '../lib/field-route';
@@ -34,15 +37,31 @@ export function FieldInspect({ id }: { id: string }) {
   const navigate = useNavigate();
   const [worker] = useFieldWorker();
   const { inspection } = useInspectionDetail(id);
+  const { inspections } = useInspectionList();
   const submit = useSubmitAssignedInspection();
   const upload = useUploadDocument();
-  const [judgments, setJudgments] = useState<FieldJudgments>({});
+  // 전부 양호에서 시작 — 불량만 누른다.
+  const [judgments, setJudgments] = useState<FieldJudgments>(() =>
+    defaultJudgments(inspection?.checklistItems ?? []),
+  );
   const [symptom, setSymptom] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const [done, setDone] = useState<string | null>(null);
   const template = useMemo(
     () => inspection?.checklistItems ?? [],
     [inspection],
+  );
+  const recheck = useMemo(
+    () =>
+      inspection
+        ? previousFailures(
+            inspections,
+            inspection.craneId,
+            template,
+            inspection.id,
+          )
+        : [],
+    [inspections, inspection, template],
   );
   const outcome = checklistOutcome(template, judgments);
   const fails = failedItems(template, judgments).length;
@@ -149,6 +168,7 @@ export function FieldInspect({ id }: { id: string }) {
         template={template}
         judgments={judgments}
         onChange={setJudgments}
+        recheck={recheck}
       />
       {fails > 0 ? (
         <div className="mt-4">
