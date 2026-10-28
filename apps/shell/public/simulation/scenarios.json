@@ -254,177 +254,31 @@
             "points": [
               {
                 "atSec": 0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 4.0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 14.79,
-                "value": -12.951
-              },
-              {
-                "atSec": 172.02,
-                "value": -12.951
-              },
-              {
-                "atSec": 222.21,
-                "value": -73.179
-              },
-              {
-                "atSec": 338.21,
-                "value": -73.179
-              },
-              {
-                "atSec": 388.4,
-                "value": -12.951
+                "value": 6.0
               },
               {
                 "atSec": 549.62,
-                "value": -12.951
+                "value": 6.0
               },
               {
                 "atSec": 560.42,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 566.42,
-                "value": 0
+                "value": 0.0
               }
             ],
             "loop": true,
             "ease": "smooth"
-          }
-        },
-        {
-          "id": "bt-s-hoist_height",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "hoist_height",
-          "name": "",
-          "dataType": "number",
-          "unit": "m",
-          "min": -40.0,
-          "max": 5,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 138.82,
-                "value": 0
-              },
-              {
-                "atSec": 153.54,
-                "value": -17.66
-              },
-              {
-                "atSec": 159.54,
-                "value": -17.66
-              },
-              {
-                "atSec": 172.02,
-                "value": -2.68
-              },
-              {
-                "atSec": 226.21,
-                "value": -2.68
-              },
-              {
-                "atSec": 249.09,
-                "value": -30.14
-              },
-              {
-                "atSec": 255.09,
-                "value": -30.14
-              },
-              {
-                "atSec": 280.21,
-                "value": 0
-              },
-              {
-                "atSec": 284.21,
-                "value": 0
-              },
-              {
-                "atSec": 309.33,
-                "value": -30.14
-              },
-              {
-                "atSec": 315.33,
-                "value": -30.14
-              },
-              {
-                "atSec": 338.21,
-                "value": -2.68
-              },
-              {
-                "atSec": 392.4,
-                "value": -2.68
-              },
-              {
-                "atSec": 404.88,
-                "value": -17.66
-              },
-              {
-                "atSec": 410.88,
-                "value": -17.66
-              },
-              {
-                "atSec": 425.6,
-                "value": 0
-              },
-              {
-                "atSec": 566.42,
-                "value": 0
-              }
-            ],
-            "loop": true,
-            "ease": "smooth"
-          }
-        },
-        {
-          "id": "bt-s-block_attached",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "block_attached",
-          "name": "",
-          "dataType": "bool",
-          "min": 0,
-          "max": 1,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 156.54,
-                "value": 1
-              },
-              {
-                "atSec": 252.09,
-                "value": 0
-              },
-              {
-                "atSec": 312.33,
-                "value": 1
-              },
-              {
-                "atSec": 407.88,
-                "value": 0
-              },
-              {
-                "atSec": 566.42,
-                "value": 0
-              }
-            ],
-            "loop": true
           }
         },
         {
@@ -442,43 +296,43 @@
             "points": [
               {
                 "atSec": 0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 4.0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 14.79,
-                "value": -0.925
+                "value": -6.938
               },
               {
                 "atSec": 172.02,
-                "value": -0.925
+                "value": -6.938
               },
               {
                 "atSec": 222.21,
-                "value": -61.153
+                "value": -67.166
               },
               {
                 "atSec": 338.21,
-                "value": -61.153
+                "value": -67.166
               },
               {
                 "atSec": 388.4,
-                "value": -0.925
+                "value": -6.938
               },
               {
                 "atSec": 549.62,
-                "value": -0.925
+                "value": -6.938
               },
               {
                 "atSec": 560.42,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 566.42,
-                "value": 0
+                "value": 0.0
               }
             ],
             "loop": true,
@@ -711,177 +565,31 @@
             "points": [
               {
                 "atSec": 0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 4.0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 18.13,
-                "value": -16.951
-              },
-              {
-                "atSec": 149.08,
-                "value": -16.951
-              },
-              {
-                "atSec": 199.27,
-                "value": -77.179
-              },
-              {
-                "atSec": 317.44,
-                "value": -77.179
-              },
-              {
-                "atSec": 367.63,
-                "value": -16.951
+                "value": 6.0
               },
               {
                 "atSec": 498.49,
-                "value": -16.951
+                "value": 6.0
               },
               {
                 "atSec": 512.62,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 518.62,
-                "value": 0
+                "value": 0.0
               }
             ],
             "loop": true,
             "ease": "smooth"
-          }
-        },
-        {
-          "id": "bt-m-hoist_height",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "hoist_height",
-          "name": "",
-          "dataType": "number",
-          "unit": "m",
-          "min": -40.0,
-          "max": 5,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 125.75,
-                "value": 0
-              },
-              {
-                "atSec": 133.65,
-                "value": -9.49
-              },
-              {
-                "atSec": 139.65,
-                "value": -9.49
-              },
-              {
-                "atSec": 145.33,
-                "value": -2.68
-              },
-              {
-                "atSec": 215.93,
-                "value": -2.68
-              },
-              {
-                "atSec": 232.0,
-                "value": -21.97
-              },
-              {
-                "atSec": 238.0,
-                "value": -21.97
-              },
-              {
-                "atSec": 256.31,
-                "value": 0
-              },
-              {
-                "atSec": 260.31,
-                "value": 0
-              },
-              {
-                "atSec": 278.62,
-                "value": -21.97
-              },
-              {
-                "atSec": 284.62,
-                "value": -21.97
-              },
-              {
-                "atSec": 300.69,
-                "value": -2.68
-              },
-              {
-                "atSec": 371.29,
-                "value": -2.68
-              },
-              {
-                "atSec": 376.96,
-                "value": -9.49
-              },
-              {
-                "atSec": 382.96,
-                "value": -9.49
-              },
-              {
-                "atSec": 390.87,
-                "value": 0
-              },
-              {
-                "atSec": 518.62,
-                "value": 0
-              }
-            ],
-            "loop": true,
-            "ease": "smooth"
-          }
-        },
-        {
-          "id": "bt-m-block_attached",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "block_attached",
-          "name": "",
-          "dataType": "bool",
-          "min": 0,
-          "max": 1,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 136.65,
-                "value": 1
-              },
-              {
-                "atSec": 235.0,
-                "value": 0
-              },
-              {
-                "atSec": 281.62,
-                "value": 1
-              },
-              {
-                "atSec": 379.96,
-                "value": 0
-              },
-              {
-                "atSec": 518.62,
-                "value": 0
-              }
-            ],
-            "loop": true
           }
         },
         {
@@ -899,43 +607,43 @@
             "points": [
               {
                 "atSec": 0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 4.0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 18.13,
-                "value": 3.075
+                "value": -6.938
               },
               {
                 "atSec": 149.08,
-                "value": 3.075
+                "value": -6.938
               },
               {
                 "atSec": 199.27,
-                "value": -57.153
+                "value": -67.166
               },
               {
                 "atSec": 317.44,
-                "value": -57.153
+                "value": -67.166
               },
               {
                 "atSec": 367.63,
-                "value": 3.075
+                "value": -6.938
               },
               {
                 "atSec": 498.49,
-                "value": 3.075
+                "value": -6.938
               },
               {
                 "atSec": 512.62,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 518.62,
-                "value": 0
+                "value": 0.0
               }
             ],
             "loop": true,
@@ -1152,27 +860,27 @@
             "points": [
               {
                 "atSec": 0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 4.0,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 67.16,
-                "value": -75.791
+                "value": -65.778
               },
               {
                 "atSec": 428.6,
-                "value": -75.791
+                "value": -65.778
               },
               {
                 "atSec": 491.76,
-                "value": 0
+                "value": 0.0
               },
               {
                 "atSec": 497.76,
-                "value": 0
+                "value": 0.0
               }
             ],
             "loop": true,
@@ -1273,178 +981,6 @@
           "id": "bt-l-block_attached",
           "modelId": "id-mt0rhrsw-icvq0ukr",
           "code": "block_attached",
-          "name": "",
-          "dataType": "bool",
-          "min": 0,
-          "max": 1,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 168.33,
-                "value": 1
-              },
-              {
-                "atSec": 226.99,
-                "value": 0
-              },
-              {
-                "atSec": 268.77,
-                "value": 1
-              },
-              {
-                "atSec": 327.43,
-                "value": 0
-              },
-              {
-                "atSec": 497.76,
-                "value": 0
-              }
-            ],
-            "loop": true
-          }
-        },
-        {
-          "id": "bt-l-trolley_position_2",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "trolley_position_2",
-          "name": "",
-          "dataType": "number",
-          "unit": "m",
-          "min": -100.0,
-          "max": 30.0,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 4.0,
-                "value": 0
-              },
-              {
-                "atSec": 67.16,
-                "value": -55.765
-              },
-              {
-                "atSec": 428.6,
-                "value": -55.765
-              },
-              {
-                "atSec": 491.76,
-                "value": 0
-              },
-              {
-                "atSec": 497.76,
-                "value": 0
-              }
-            ],
-            "loop": true,
-            "ease": "smooth"
-          }
-        },
-        {
-          "id": "bt-l-hoist_height_2",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "hoist_height_2",
-          "name": "",
-          "dataType": "number",
-          "unit": "m",
-          "min": -40.0,
-          "max": 5,
-          "initial": 0,
-          "pattern": {
-            "kind": "keyframes",
-            "points": [
-              {
-                "atSec": 0,
-                "value": 0
-              },
-              {
-                "atSec": 151.67,
-                "value": 0
-              },
-              {
-                "atSec": 165.33,
-                "value": -16.39
-              },
-              {
-                "atSec": 171.33,
-                "value": -16.39
-              },
-              {
-                "atSec": 184.99,
-                "value": 0.0
-              },
-              {
-                "atSec": 210.33,
-                "value": 0.0
-              },
-              {
-                "atSec": 223.99,
-                "value": -16.39
-              },
-              {
-                "atSec": 229.99,
-                "value": -16.39
-              },
-              {
-                "atSec": 245.88,
-                "value": 0
-              },
-              {
-                "atSec": 252.11,
-                "value": 0
-              },
-              {
-                "atSec": 265.77,
-                "value": -16.39
-              },
-              {
-                "atSec": 271.77,
-                "value": -16.39
-              },
-              {
-                "atSec": 285.43,
-                "value": 0.0
-              },
-              {
-                "atSec": 310.77,
-                "value": 0.0
-              },
-              {
-                "atSec": 324.43,
-                "value": -16.39
-              },
-              {
-                "atSec": 330.43,
-                "value": -16.39
-              },
-              {
-                "atSec": 346.32,
-                "value": 0
-              },
-              {
-                "atSec": 497.76,
-                "value": 0
-              }
-            ],
-            "loop": true,
-            "ease": "smooth"
-          }
-        },
-        {
-          "id": "bt-l-block_attached_2",
-          "modelId": "id-mt0rhrsw-icvq0ukr",
-          "code": "block_attached_2",
           "name": "",
           "dataType": "bool",
           "min": 0,
