@@ -127,8 +127,9 @@ interface ScenarioState {
     sceneFile: string | null,
   ) => void;
   /**
-   * 활성 시나리오 변경. 재생 중이면 일시정지하고 시간 0·initial 로 되돌린 뒤
-   * 새 정의로 동기화한다 — 시나리오는 시간 0 에서 시작한다.
+   * 활성 시나리오 변경. 재생한 세션이면(일시정지 포함) 멈추고 시간 0·initial
+   * 로 되돌리고 버스에 남긴 값을 걷어낸 뒤 새 정의로 동기화한다 — 시나리오는
+   * 시간 0·rest 자세에서 시작한다.
    */
   setActiveScenario: (id: string | null) => void;
 
@@ -281,12 +282,23 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
     return { entries, tickMs: Math.round(tickSec * 1000), isRunning, speed };
   };
 
-  /** 재생 중이면 멈추고 시간 0·initial 로 — 시나리오 전환·삭제의 공통 전처리. */
-  const rewindIfRunning = () => {
-    if (!get().isRunning) return;
-    virtualTagRuntime.pause();
-    set({ isRunning: false });
+  /**
+   * 시나리오 전환·삭제의 공통 전처리 — 재생한 세션이면(일시정지 포함) 멈추고
+   * 시간 0·initial 로 되돌린 뒤, 그 시나리오가 버스에 남긴 값을 걷어낸다.
+   * 남기면 새 시나리오가 내지 않는 키(블록 운반의 부착 태그 등)가 마지막 값
+   * 그대로라 블록이 다음 시나리오에서도 훅에 붙어 다닌다. 세션(배지)·배속은
+   * 유지한다 — 끝내는 것은 `stop`.
+   */
+  const rewindSession = () => {
+    const { isRunning, hasSession } = get();
+    if (!isRunning && !hasSession) return;
+    if (isRunning) {
+      virtualTagRuntime.pause();
+      set({ isRunning: false });
+    }
     virtualTagRuntime.resetValues(false);
+    rigValueStore.reset();
+    tagLiveValues.clear();
   };
 
   return {
@@ -365,7 +377,7 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
 
     setActiveScenario: (id) => {
       if (id === get().activeScenarioId) return;
-      rewindIfRunning();
+      rewindSession();
       commit({ activeScenarioId: id });
     },
 
@@ -401,7 +413,7 @@ export const useScenarioStore = create<ScenarioState>()((set, get) => {
       const { scenarios, activeScenarioId } = get();
       const next = scenarios.filter((s) => s.id !== id);
       if (next.length === scenarios.length) return;
-      if (activeScenarioId === id) rewindIfRunning();
+      if (activeScenarioId === id) rewindSession();
       // 활성이었으면 같은 씬 파일의 첫 것으로(resolveActiveId 가 고른다).
       commit({
         scenarios: next,

@@ -196,6 +196,114 @@ describe('SceneCarryRuntime', () => {
     expect(rt.carrying).toBe(false);
   });
 
+  describe('reset (seek·리셋)', () => {
+    it('들고 있던 블록을 배치 위치로 되돌리고 운반 상태를 비운다 — 움직였으면 true', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      s.values.set('GC_04.attach', 1);
+      rt.step(s.models, s.resolve);
+      s.trolley.position.set(30, 70, 0);
+      rt.step(s.models, s.resolve);
+      expect(s.blockA.position.toArray()).toEqual([31, 16, 1]);
+
+      expect(rt.reset()).toBe(true);
+      expect(s.blockA.position.toArray()).toEqual([1, 6, 1]);
+      expect(sceneCarryState.size).toBe(0);
+      expect(rt.carrying).toBe(false);
+      // 두 번째는 되돌릴 것이 없다.
+      expect(rt.reset()).toBe(false);
+    });
+
+    it('놓아 둔 블록도 배치 위치로 되돌린다', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      s.values.set('GC_04.attach', 1);
+      rt.step(s.models, s.resolve);
+      s.trolley.position.x = 30;
+      rt.step(s.models, s.resolve);
+      s.values.set('GC_04.attach', 0);
+      rt.step(s.models, s.resolve);
+      expect(s.blockA.position.toArray()).toEqual([31, 6, 1]);
+
+      expect(rt.reset()).toBe(true);
+      expect(s.blockA.position.toArray()).toEqual([1, 6, 1]);
+    });
+
+    it('reset 때 부착이 켜져 있던 훅은 반경 안에 블록이 있어도 꺼질 때까지 집지 않는다', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      s.values.set('GC_04.attach', 1);
+      rt.step(s.models, s.resolve);
+      rt.reset();
+
+      // 블록 A 는 앵커 반경 안(rest) — 그래도 안 붙는다.
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.size).toBe(0);
+      s.trolley.position.y = 70;
+      const r = rt.step(s.models, s.resolve);
+      expect(r.moved).toBe(false);
+      expect(s.blockA.position.toArray()).toEqual([1, 6, 1]);
+
+      // 빈 훅이 다른 블록 위를 지나가도 집지 않는다.
+      s.trolley.position.x = 50;
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.isCarried('b')).toBe(false);
+
+      // 한 번 꺼졌다 켜지면 다시 집는다.
+      s.values.set('GC_04.attach', 0);
+      rt.step(s.models, s.resolve);
+      s.values.set('GC_04.attach', 1);
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.carrierOf('b')).toBe(CRANE);
+    });
+
+    it('reset 때 부착이 꺼져 있던 훅은 잠기지 않는다 — 켜지는 즉시 집는다', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      s.values.set('GC_04.attach', 0);
+      rt.step(s.models, s.resolve);
+      expect(rt.reset()).toBe(false);
+      rt.step(s.models, s.resolve);
+      s.values.set('GC_04.attach', 1);
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.carrierOf('a')).toBe(CRANE);
+    });
+
+    it('한 번도 step 하지 않은 훅도 reset 직후 첫 step 의 부착 상태로 잠근다', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      s.values.set('GC_04.attach', 1);
+      rt.reset();
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.size).toBe(0);
+      // 잠금은 reset 직후 한 step 에만 정한다 — 그 뒤 새로 켜진 것과 구분.
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.size).toBe(0);
+    });
+
+    it('훅 노드가 아직 없는 프레임에도 잠그고, 노드가 생겨도 켜진 동안은 집지 않는다', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      const missing: CarryResolvers = { ...s.resolve, node: () => undefined };
+      s.values.set('GC_04.attach', 1);
+      rt.reset();
+      rt.step(s.models, missing);
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.size).toBe(0);
+    });
+
+    it('dispose 는 잠금도 푼다 — 다음 수명은 처음 상태', () => {
+      const s = setup();
+      const rt = new SceneCarryRuntime();
+      s.values.set('GC_04.attach', 1);
+      rt.reset();
+      rt.step(s.models, s.resolve);
+      rt.dispose();
+      rt.step(s.models, s.resolve);
+      expect(sceneCarryState.carrierOf('a')).toBe(CRANE);
+    });
+  });
+
   it('모델 목록이 비면 옮긴 블록을 되돌린다', () => {
     const s = setup();
     const rt = new SceneCarryRuntime();

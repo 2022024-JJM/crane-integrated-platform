@@ -15,7 +15,9 @@ import {
   useScenarioStore,
 } from '../use-scenario-store';
 import { virtualTagRuntime } from '../virtual-tag-runner';
-import { setTagIngest, tagLiveValues } from '../tag-value-bus';
+import { makeJointAddress, rigValueStore } from '../rig-value-store';
+import { subscribeSceneSeek } from '../scene-seek-signal';
+import { publishTagValue, setTagIngest, tagLiveValues } from '../tag-value-bus';
 
 /**
  * 영속화 어댑터(scenario-storage)는 도메인에서 따로 테스트한다 — 여기서는
@@ -259,6 +261,79 @@ describe('씬 붙이기·활성 시나리오', () => {
     expect(useScenarioStore.getState()).toBe(before);
     store().setActiveScenario('ghost');
     expect(store().activeScenarioId).toBe(a);
+  });
+});
+
+describe('시나리오 전환 — 앞 시나리오가 버스에 남긴 값', () => {
+  const JOINT = makeJointAddress('mA', 'j');
+
+  /** A 를 재생해 live 캐시·리그 값을 남긴다. B 는 다른 키만 낸다. */
+  function playA() {
+    const a = addScenario('A', [tagDef('mA', 'x', { initial: 1 })]);
+    const b = addScenario('B', [tagDef('mB', 'y')]);
+    store().setActiveScenario(a);
+    store().start();
+    vi.advanceTimersByTime(200);
+    rigValueStore.set(JOINT, 5);
+    expect(tagLiveValues.get('A.x')?.value).toBe(1);
+    return { a, b };
+  }
+
+  afterEach(() => rigValueStore.reset());
+
+  it('재생 중 전환: 멈추고 시간 0, live 값·리그 값을 걷어낸다 — 세션·배속은 유지', () => {
+    const { b } = playA();
+    store().setSpeed(2);
+    let seeks = 0;
+    const unsubscribe = subscribeSceneSeek(() => {
+      seeks += 1;
+    });
+    store().setActiveScenario(b);
+    unsubscribe();
+    expect(store().isRunning).toBe(false);
+    expect(store().hasSession).toBe(true);
+    expect(store().speed).toBe(2);
+    expect(virtualTagRuntime.elapsed).toBe(0);
+    expect(tagLiveValues.get('A.x')).toBeUndefined();
+    expect(rigValueStore.has(JOINT)).toBe(false);
+    // seek 신호 — 운반 레이어가 블록을 제자리로 되돌린다.
+    expect(seeks).toBe(1);
+  });
+
+  it('일시정지 중 전환도 같다 — 남은 부착 값이 다음 시나리오로 넘어가지 않는다', () => {
+    const { b } = playA();
+    store().pause();
+    store().setActiveScenario(b);
+    expect(store().hasSession).toBe(true);
+    expect(tagLiveValues.get('A.x')).toBeUndefined();
+    expect(rigValueStore.has(JOINT)).toBe(false);
+  });
+
+  it('재생한 적 없으면 건드리지 않는다', () => {
+    const a = addScenario('A');
+    addScenario('B');
+    publishTagValue('A.x', 3);
+    rigValueStore.set(JOINT, 5);
+    store().setActiveScenario(a);
+    expect(tagLiveValues.get('A.x')?.value).toBe(3);
+    expect(rigValueStore.has(JOINT)).toBe(true);
+  });
+
+  it('같은 시나리오 재선택은 no-op — 재생도 값도 그대로', () => {
+    const { a } = playA();
+    store().setActiveScenario(a);
+    expect(store().isRunning).toBe(true);
+    expect(tagLiveValues.get('A.x')?.value).toBe(1);
+  });
+
+  it('활성 시나리오 삭제도 값을 걷어내고, 다른 시나리오 삭제는 건드리지 않는다', () => {
+    const { a, b } = playA();
+    store().removeScenario(b);
+    expect(store().isRunning).toBe(true);
+    expect(tagLiveValues.get('A.x')?.value).toBe(1);
+    store().removeScenario(a);
+    expect(store().isRunning).toBe(false);
+    expect(tagLiveValues.get('A.x')).toBeUndefined();
   });
 });
 

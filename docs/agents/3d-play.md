@@ -51,7 +51,7 @@ i18n 은 `monitoring:play3d.*`.
 - 리플레이는 프레임 누적 ms ↔ index 를 `lib/replay-position.ts` 로 변환한다. seek 는 충돌 스토어 `clearActive` 를 불러 옛 자세를 가리키는 pinned 박스가 남지 않게 한다.
 - 리플레이 정상 전진(`tick`)의 publish 스무딩 시간은 들어가는 프레임이 화면에 머무는 벽시계 시간(프레임 길이 ÷ 배속, `lib/replay-smoothing.ts` 의 `resolveReplaySmoothTime`)이다 — 다음 프레임 값이 올 때 정확히 닿아 1초 이력이 연속 운동으로 보인다(시나리오 러너의 `tickMs / speed` 와 같은 규칙). 마지막 프레임(길이 0)·깨진 길이는 직전 프레임 길이, 그것도 없으면 기본 길이를 쓴다. seek 는 즉시 대입(`smoothTime: 0`)으로 그대로다.
 - 시간 축은 **씬 시간**(리플레이 = 프레임 누적 ms, 시뮬레이션 = 러너 경과 ms)이다.
-- 시뮬레이션 seek 는 러너의 재시뮬레이션이라(`docs/agents/tag-mapping-rig.md`) 타임라인 사건 시각으로 옮기면 재생 때 그 시각에 보이던 자세가 나온다. 잔여 오차는 적분 스텝 한 개(`tickMs`)와 정상 전진의 publish 간격 스무딩 한 스텝뿐이다. seek UI 는 트랜스포트 바의 스크럽 하나다 — 시뮬레이션 패널에는 없다.
+- 시뮬레이션 seek 는 러너의 재시뮬레이션이라(`docs/agents/tag-mapping-rig.md`) 타임라인 사건 시각으로 옮기면 재생 때 그 시각에 보이던 자세가 나온다. 운반 중인 블록만 예외다 — seek 하면 배치 위치로 돌아간다(같은 문서 블록 운반). 잔여 오차는 적분 스텝 한 개(`tickMs`)와 정상 전진의 publish 간격 스무딩 한 스텝뿐이다. seek UI 는 트랜스포트 바의 스크럽 하나다 — 시뮬레이션 패널에는 없다.
 - 트랜스포트 바·마커 seek·통계·`scene-collision-hold` 가 전부 이 어댑터 하나만 본다. 충돌·영역 정지 시 어느 러너를 멈추는지(`'play3d'` 러너 = 활성 소스에 따라 리플레이 러너 또는 시나리오 러너)는 `docs/agents/3d-collision.md`.
 
 ### 실행 통계

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import type { Mesh } from 'three';
 import {
   invalidateShadows,
@@ -12,6 +12,7 @@ import {
   SceneCarryRuntime,
   type CarryResolvers,
 } from '../model/scene-carry-runtime';
+import { subscribeSceneSeek } from '../model/scene-seek-signal';
 import { readTagLiveValue } from '../model/tag-value-bus';
 
 /**
@@ -25,6 +26,11 @@ import { readTagLiveValue } from '../model/tag-value-bus';
  * 빼먹으면 그림자가 안전망 주기까지 멈춘 자리에 남는다. 프레임 자체는
  * 요청하지 않는다: 블록은 훅(태그 값 → 드라이버 스무딩)이 움직이는 프레임에만
  * 움직이고 그 프레임은 드라이버·거버너가 이미 만든다.
+ *
+ * seek·리셋(`subscribeSceneSeek`)은 다음 프레임에 런타임 `reset()` 으로 옮긴
+ * 블록을 배치 위치로 되돌린다 — 이것만은 훅이 안 움직여도 보여야 해서 프레임을
+ * 요청한다. 신호는 프레임 밖(러너 seek)에서 오므로 Object3D 는 useFrame 에서만
+ * 만진다.
  */
 
 /** 케이블 반지름(씬 unit) — 멀리서도 한 가닥으로 읽히는 굵기. */
@@ -47,6 +53,17 @@ export function SceneCarryLayer({
   useEffect(() => {
     modelsRef.current = models;
   }, [models]);
+
+  const invalidate = useThree((s) => s.invalidate);
+  const resetPendingRef = useRef(false);
+  useEffect(
+    () =>
+      subscribeSceneSeek(() => {
+        resetPendingRef.current = true;
+        invalidate();
+      }),
+    [invalidate],
+  );
 
   const runtimeRef = useRef<SceneCarryRuntime | null>(null);
   useEffect(() => {
@@ -75,8 +92,13 @@ export function SceneCarryLayer({
   useFrame(() => {
     const runtime = runtimeRef.current;
     if (!runtime) return;
+    let restored = false;
+    if (resetPendingRef.current) {
+      resetPendingRef.current = false;
+      restored = runtime.reset();
+    }
     const { moved, cables } = runtime.step(modelsRef.current, resolvers);
-    if (moved) invalidateShadows();
+    if (moved || restored) invalidateShadows();
     const meshes = cableRefs.current;
     for (let i = 0; i < meshes.length; i += 1) {
       const mesh = meshes[i];

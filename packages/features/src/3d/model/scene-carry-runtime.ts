@@ -32,8 +32,13 @@ import { sceneCarryState } from './scene-carry-state';
  *
  * 값의 출처는 모른다 — `readValue(key)` 로 버스의 마지막 값을 읽을 뿐이다.
  * 부착 신호가 어느 훅에도 없으면(시뮬레이션 종료로 live 캐시가 비었거나 다른
- * 시나리오) 이 런타임이 옮겼던 블록을 배치 위치로 되돌린다 — 블록 위치는 씬
- * 시간의 순수 함수가 아니라(부착 시점의 상태) 되감기·seek 는 결정론이 아니다.
+ * 시나리오) 이 런타임이 옮겼던 블록을 배치 위치로 되돌린다.
+ *
+ * 블록 위치는 씬 시간의 순수 함수가 아니다(부착 시점의 상태). 그래서 seek·
+ * 리셋(`reset`)은 블록을 배치 위치로 되돌리는 것으로 정한다 — 그 시각에 블록을
+ * 들고 있었어야 해도 다시 만들지 않는다. 그때 이미 부착이 켜져 있던 훅은 한 번
+ * 꺼질 때까지 집지 않는다: 빈 훅이 운반 경로를 지나며 다른 블록을 반경 안에서
+ * 집어 가지 않게 하려는 것이다.
  *
  * three 객체를 받지만 React·R3F 를 모른다. 레이어(ui/scene-carry-layer)가
  * useFrame 에서 부르고 테스트는 Object3D 를 직접 만들어 돌린다.
@@ -87,6 +92,10 @@ export class SceneCarryRuntime {
   private readonly hookStates = new Map<string, HookState>();
   private readonly carried = new Map<string, CarriedBlock>();
   private readonly moved = new Map<string, MovedBlock>();
+  /** 부착이 꺼질 때까지 집지 않는 훅(상태 키). `reset` 이 채운다. */
+  private readonly disarmed = new Set<string>();
+  /** 다음 step 에서 부착이 켜져 있는 훅을 `disarmed` 에 넣는다. */
+  private disarmPending = false;
   private readonly extents: HookNodeExtent[] = [];
   private readonly candidates: CarryCandidate[] = [];
   private readonly result: CarryStepResult = { moved: false, cables: [] };
@@ -119,6 +128,8 @@ export class SceneCarryRuntime {
 
     // (1) 훅마다 앵커·케이블·부착/분리.
     let anySignal = false;
+    const disarm = this.disarmPending;
+    this.disarmPending = false;
     for (const state of this.hookStates.values()) state.resolved = false;
     for (const model of models) {
       if (!model.hooks || model.hooks.length === 0) continue;
@@ -126,7 +137,15 @@ export class SceneCarryRuntime {
         const key = resolveMappingTagKey(model, { code: hook.attachCode });
         const value = key ? resolve.value(key) : undefined;
         if (value !== undefined) anySignal = true;
-        this.stepHook(model, hook, value, models, resolve, result.cables);
+        this.stepHook(
+          model,
+          hook,
+          value,
+          disarm,
+          models,
+          resolve,
+          result.cables,
+        );
       }
     }
     // 어느 훅에도 부착 신호가 없으면 소스가 꺼진 것 — 옮긴 블록을 제자리로.
@@ -170,16 +189,30 @@ export class SceneCarryRuntime {
     return result;
   }
 
+  /**
+   * seek·리셋 — 옮긴 블록을 배치 위치로 되돌리고 운반 상태를 비운다. 다음
+   * step 에서 부착이 켜져 있는 훅은 꺼질 때까지 집지 않는다. 레이어가 seek
+   * 신호(`subscribeSceneSeek`)를 받은 다음 프레임에 부른다. 블록이 하나라도
+   * 움직였으면 true — 그림자 무효화 신호.
+   */
+  reset(): boolean {
+    this.disarmPending = true;
+    return this.restoreAll();
+  }
+
   /** 해체 — 옮긴 블록을 되돌리고 운반 상태를 비운다. 레이어 언마운트가 부른다. */
   dispose(): void {
     this.restoreAll();
     this.hookStates.clear();
+    this.disarmed.clear();
+    this.disarmPending = false;
   }
 
   private stepHook(
     model: SavedModelInfo,
     hook: SavedModelHook,
     value: number | undefined,
+    disarm: boolean,
     models: readonly SavedModelInfo[],
     resolve: CarryResolvers,
     cables: CableSegment[],
@@ -190,6 +223,10 @@ export class SceneCarryRuntime {
       state = { anchor: new Vector3(), resolved: false, carriedId: undefined };
       this.hookStates.set(stateKey, state);
     }
+    // 노드 해석보다 먼저 — 노드가 아직 없는 프레임이어도 reset 직후의 부착
+    // 상태로 잠근다. 꺼지면 언제든 풀린다.
+    if (!isAttachOn(value)) this.disarmed.delete(stateKey);
+    else if (disarm) this.disarmed.add(stateKey);
 
     // 노드 해석 — 매 프레임 registry 조회(O(1)). 하나도 없으면 훅이 없는 것.
     const extents = this.extents;
@@ -220,6 +257,7 @@ export class SceneCarryRuntime {
       return;
     }
     if (state.carriedId !== undefined) return;
+    if (this.disarmed.has(stateKey)) return;
 
     const picked = this.pick(model.id, hook, state.anchor, models, resolve);
     if (!picked) return;
