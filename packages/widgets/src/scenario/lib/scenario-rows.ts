@@ -36,6 +36,8 @@ export interface ScenarioModelGroup {
   craneId: string | undefined;
   present: boolean;
   rows: ScenarioRow[];
+  /** issue 가 있는 행 수 — 접힌 머리줄이 경고를 보이는 근거. */
+  issueCount: number;
 }
 
 /**
@@ -67,14 +69,17 @@ export function groupScenarioRows(
         craneId: model?.craneId,
         present: model !== undefined,
         rows: [],
+        issueCount: 0,
       };
       groups.set(tag.modelId, group);
       if (model) codesByModel.set(tag.modelId, collectModelTagCodes(model));
     }
+    const issue = issueByTagId.get(tag.id);
+    if (issue) group.issueCount += 1;
     group.rows.push({
       tag,
       key: keyByTagId.get(tag.id),
-      issue: issueByTagId.get(tag.id),
+      issue,
       target: codesByModel.get(tag.modelId)?.find((c) => c.code === tag.code),
     });
   }

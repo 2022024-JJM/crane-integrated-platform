@@ -1,13 +1,17 @@
-import { Copy, Plus, Save, Trash2, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  ChevronRight,
+  Copy,
+  PencilLine,
+  Plus,
+  Save,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { isScenarioSetStoredLocallyOnly } from '@crane/domain/virtual-tag';
-import {
-  scenariosOfSceneFile,
-  serializeScenarioSet,
-  useScenarioStore,
-} from '@crane/features/3d';
+import { scenariosOfSceneFile, useScenarioStore } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
@@ -22,9 +26,9 @@ import {
 } from '@crane/ui/molecules/alert-dialog';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import {
-  SceneUnsavedChangesDialog,
-  useSceneUnsavedChangesGuard,
-} from '@crane/widgets/scene-editor';
+  filterModelsNotInScenario,
+  listPickableModels,
+} from '../lib/scenario-pick';
 import {
   groupScenarioRows,
   type ScenarioModelGroup,
@@ -45,22 +49,37 @@ type T = (key: string, options?: Record<string, unknown>) => string;
 const SELECT_CLASS =
   'border-border bg-background h-7 min-w-0 flex-1 rounded-md border px-2 text-xs';
 
+/** 펼친 모델 묶음 — 시나리오별이라 활성이 바뀌면 전부 접힌다. */
+interface ExpandedGroups {
+  scenarioId: string | null;
+  ids: ReadonlySet<string>;
+}
+const NONE_EXPANDED: ExpandedGroups = { scenarioId: null, ids: new Set() };
+
+export interface ScenarioPanelProps {
+  className?: string;
+  isDirty: boolean;
+  isSaving: boolean;
+  onSave: () => Promise<boolean>;
+}
+
 /**
  * 3D 플레이 우측 "시나리오" 탭 — 붙어 있는 씬 파일의 시나리오를 고르고 만들고
- * 고친다. 머리줄(시나리오 선택 · 새로 · 복제 · 삭제 · 저장), 이름 인라인
- * 편집, 본문은 모델별 묶음 아래 태그 행. 씬과 어긋난 행(모델 없음·크레인
- * 없음·키 중복)은 amber 로 남기고 값은 나가지 않는다.
+ * 고친다. 머리줄(시나리오 선택 · 새로 · 복제 · 삭제 · 저장), 이름 줄(이름 ·
+ * 갱신 주기 · 모델 추가), 본문은 모델별 묶음(접고 펼침, 처음엔 전부 접힘)
+ * 아래 태그 행, 바닥 줄은 태그·모델 수와 안내. 씬과 어긋난 행(모델 없음·
+ * 크레인 없음·키 중복)은 amber 로 남기고 값은 나가지 않는다.
  *
- * 편집은 스토어(메모리)를 지나고 저장 버튼이 배포 파일/localStorage 에
- * 기록한다 — 미저장 이탈 경고·Ctrl+S·토스트는 씬 편집과 같은 훅. 스토어가
- * 전역이라 페이지를 떠나도 편집본이 남는다 — 저장하지 않고 나가면 언마운트에서
- * 마지막 저장본으로 되돌린다.
+ * 편집은 스토어(메모리)를 지나고 저장·dirty·이탈 가드·폐기는 사이드 패널의
+ * `useScenarioDraft` 가 든다 — 이 패널은 저장 버튼만 그린다.
  */
-export function ScenarioPanel({ className }: { className?: string }) {
+export function ScenarioPanel({
+  className,
+  isDirty,
+  isSaving,
+  onSave,
+}: ScenarioPanelProps) {
   const { t } = useTranslation();
-  const load = useScenarioStore((s) => s.load);
-  const save = useScenarioStore((s) => s.save);
-  const discard = useScenarioStore((s) => s.discard);
   const scenarios = useScenarioStore((s) => s.scenarios);
   const sceneFile = useScenarioStore((s) => s.sceneFile);
   const sceneInfo = useScenarioStore((s) => s.sceneInfo);
@@ -69,21 +88,21 @@ export function ScenarioPanel({ className }: { className?: string }) {
   const issues = useScenarioStore((s) => s.issues);
   const tickSec = useScenarioStore((s) => s.tickSec);
   const setTickSec = useScenarioStore((s) => s.setTickSec);
-  const savedSnapshot = useScenarioStore((s) => s.savedSnapshot);
-  const isSaving = useScenarioStore((s) => s.isSaving);
   const setActiveScenario = useScenarioStore((s) => s.setActiveScenario);
   const addScenario = useScenarioStore((s) => s.addScenario);
   const renameScenario = useScenarioStore((s) => s.renameScenario);
   const removeScenario = useScenarioStore((s) => s.removeScenario);
   const duplicateScenario = useScenarioStore((s) => s.duplicateScenario);
   const addTags = useScenarioStore((s) => s.addTags);
+  const editTags = useScenarioStore((s) => s.editTags);
   const updateTag = useScenarioStore((s) => s.updateTag);
-  const removeTag = useScenarioStore((s) => s.removeTag);
   const removeModelTags = useScenarioStore((s) => s.removeModelTags);
 
   const [pick, setPick] = useState<ScenarioPickMode | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [nameError, setNameError] = useState(false);
+  const [expandedGroups, setExpandedGroups] =
+    useState<ExpandedGroups>(NONE_EXPANDED);
 
   const candidates = useMemo(
     () => scenariosOfSceneFile(scenarios, sceneFile),
@@ -94,62 +113,31 @@ export function ScenarioPanel({ className }: { className?: string }) {
     () => groupScenarioRows(active, sceneInfo, entries, issues),
     [active, sceneInfo, entries, issues],
   );
-  // dirty 는 스냅샷 비교 — 스토어의 isDirty() 는 구독이 안 되므로 여기서 파생.
-  const isDirty = useMemo(
-    () => serializeScenarioSet({ tickSec, scenarios }) !== savedSnapshot,
-    [savedSnapshot, scenarios, tickSec],
+  // 시나리오에 없는 맵핑 모델이 남아 있을 때만 "모델 추가" 가 산다.
+  const canAddModel = useMemo(
+    () =>
+      filterModelsNotInScenario(listPickableModels(sceneInfo), active).length >
+      0,
+    [sceneInfo, active],
   );
+  const expanded =
+    active && expandedGroups.scenarioId === active.id
+      ? expandedGroups.ids
+      : NONE_EXPANDED.ids;
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useEffect(() => () => discard(), [discard]);
-
-  const handleSaveRef = useRef<() => Promise<boolean>>(() =>
-    Promise.resolve(false),
-  );
-  const handleSave = useCallback(async (): Promise<boolean> => {
-    const ok = await save();
-    if (ok) {
-      if (isScenarioSetStoredLocallyOnly()) {
-        toast.success(t('monitoring:editor.statusSavedLocalOnly'), {
-          description: t('monitoring:editor.statusSavedLocalOnlyHint'),
-        });
-      } else {
-        toast.success(t('monitoring:editor.statusSaved'));
-      }
-      return true;
-    }
-    toast.error(t('monitoring:scenario.saveFailed'), {
-      action: {
-        label: t('monitoring:editor.retry'),
-        onClick: () => {
-          void handleSaveRef.current();
-        },
-      },
+  const toggleExpanded = (modelId: string) => {
+    if (!active) return;
+    setExpandedGroups((prev) => {
+      const ids = new Set(prev.scenarioId === active.id ? prev.ids : []);
+      if (ids.has(modelId)) ids.delete(modelId);
+      else ids.add(modelId);
+      return { scenarioId: active.id, ids };
     });
-    return false;
-  }, [save, t]);
-  useEffect(() => {
-    handleSaveRef.current = handleSave;
-  }, [handleSave]);
+  };
 
-  const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
-    isDirty,
-    isSaving,
-    onSave: handleSave,
-  });
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
-        event.preventDefault();
-        if (isDirty && !isSaving) void handleSave();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, isDirty, isSaving]);
+  const openAddModel = () => {
+    if (active) setPick({ kind: 'add', scenario: active });
+  };
 
   const commitName = (input: HTMLInputElement) => {
     if (!active) return;
@@ -160,13 +148,6 @@ export function ScenarioPanel({ className }: { className?: string }) {
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col text-xs', className)}>
-      <SceneUnsavedChangesDialog
-        open={unsavedChangesPrompt.open}
-        isSaving={isSaving}
-        onSaveAndLeave={() => unsavedChangesPrompt.choose('save')}
-        onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
-        onStay={() => unsavedChangesPrompt.choose('stay')}
-      />
       {pick ? (
         <ScenarioPickDialog
           open
@@ -175,8 +156,9 @@ export function ScenarioPanel({ className }: { className?: string }) {
           }}
           mode={pick}
           sceneInfo={sceneInfo}
-          onConfirm={({ name, tags }) => {
-            if (pick.kind === 'create' && sceneFile) {
+          onConfirm={({ name, tags, removeKeys }) => {
+            if (pick.kind === 'create') {
+              if (!sceneFile) return;
               const result = addScenario({ name, sceneFile, tags });
               if (!result.ok) {
                 toast.error(t(`monitoring:scenario.errors.${result.reason}`));
@@ -184,6 +166,8 @@ export function ScenarioPanel({ className }: { className?: string }) {
               }
             } else if (pick.kind === 'add') {
               addTags(pick.scenario.id, tags);
+            } else {
+              editTags(pick.scenario.id, { add: tags, removeKeys });
             }
             setPick(null);
           }}
@@ -285,7 +269,7 @@ export function ScenarioPanel({ className }: { className?: string }) {
           size="sm"
           className="h-7 gap-1 px-2"
           disabled={!isDirty || isSaving}
-          onClick={() => void handleSave()}
+          onClick={() => void onSave()}
         >
           {isSaving ? (
             <Spinner className="size-3" />
@@ -314,6 +298,7 @@ export function ScenarioPanel({ className }: { className?: string }) {
         </Empty>
       ) : (
         <>
+          {/* 이름 줄 — 이름 · 갱신 주기 · 모델 추가. */}
           <div className="border-border flex items-center gap-2 border-b px-2 py-1.5">
             <span className="text-muted-foreground shrink-0">
               {t('monitoring:scenario.name')}
@@ -339,12 +324,35 @@ export function ScenarioPanel({ className }: { className?: string }) {
                 }
               }}
             />
-            <span className="text-muted-foreground shrink-0 tabular-nums">
-              {t('monitoring:scenario.count', {
-                tags: active.tags.length,
-                models: groups.length,
-              })}
+            <span className="text-muted-foreground shrink-0">
+              {t('monitoring:scenario.tick')}
             </span>
+            <InputNumber
+              value={tickSec}
+              min={0.016}
+              max={5}
+              step={0.01}
+              aria-label={t('monitoring:scenario.tick')}
+              className={cn(CELL_NUMBER_WRAPPER, 'h-7 w-16')}
+              inputClassName={CELL_NUMBER_INPUT}
+              onChange={setTickSec}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="h-7 shrink-0 gap-1 px-1.5 text-[10px]"
+              disabled={!canAddModel}
+              title={t(
+                canAddModel
+                  ? 'monitoring:scenario.addModel'
+                  : 'monitoring:scenario.pick.noModelsLeft',
+              )}
+              onClick={openAddModel}
+            >
+              <Plus className="size-3" />
+              {t('monitoring:scenario.addModel')}
+            </Button>
           </div>
 
           <ScrollArea className="min-h-0 flex-1">
@@ -355,10 +363,11 @@ export function ScenarioPanel({ className }: { className?: string }) {
                   type="button"
                   size="sm"
                   className="mt-2"
-                  onClick={() => setPick({ kind: 'add', scenario: active })}
+                  disabled={!canAddModel}
+                  onClick={openAddModel}
                 >
                   <Plus className="size-3.5" />
-                  {t('monitoring:scenario.addTags')}
+                  {t('monitoring:scenario.addModel')}
                 </Button>
               </Empty>
             ) : (
@@ -367,9 +376,11 @@ export function ScenarioPanel({ className }: { className?: string }) {
                   <ModelGroup
                     key={group.modelId}
                     group={group}
-                    onAddTags={() =>
+                    expanded={expanded.has(group.modelId)}
+                    onToggle={() => toggleExpanded(group.modelId)}
+                    onEditTags={() =>
                       setPick({
-                        kind: 'add',
+                        kind: 'edit',
                         scenario: active,
                         modelId: group.modelId,
                       })
@@ -380,42 +391,22 @@ export function ScenarioPanel({ className }: { className?: string }) {
                     onUpdateTag={(tagId, patch) =>
                       updateTag(active.id, tagId, patch)
                     }
-                    onRemoveTag={(tagId) => removeTag(active.id, tagId)}
                     t={t}
                   />
                 ))}
-                <div className="px-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-full gap-1"
-                    onClick={() => setPick({ kind: 'add', scenario: active })}
-                  >
-                    <Plus className="size-3.5" />
-                    {t('monitoring:scenario.addTags')}
-                  </Button>
-                </div>
               </div>
             )}
           </ScrollArea>
 
-          <div className="border-border text-muted-foreground flex items-center gap-2 border-t px-2 py-1.5">
-            <span>{t('monitoring:scenario.tick')}</span>
-            <InputNumber
-              value={tickSec}
-              min={0.016}
-              max={5}
-              step={0.01}
-              aria-label={t('monitoring:scenario.tick')}
-              className={cn(CELL_NUMBER_WRAPPER, 'h-6 w-16')}
-              inputClassName={CELL_NUMBER_INPUT}
-              onChange={setTickSec}
-            />
-            <span className="flex-1" />
-            <span className="truncate text-[10px]">
-              {t('monitoring:scenario.hint')}
+          <div className="border-border text-muted-foreground flex items-center gap-2 border-t px-2 py-1.5 text-[10px]">
+            <span className="shrink-0 tabular-nums">
+              {t('monitoring:scenario.count', {
+                tags: active.tags.length,
+                models: groups.length,
+              })}
             </span>
+            <span className="flex-1" />
+            <span className="truncate">{t('monitoring:scenario.hint')}</span>
           </div>
         </>
       )}
@@ -433,14 +424,17 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function ModelGroup({
   group,
-  onAddTags,
+  expanded,
+  onToggle,
+  onEditTags,
   onRemoveModel,
   onUpdateTag,
-  onRemoveTag,
   t,
 }: {
   group: ScenarioModelGroup;
-  onAddTags: () => void;
+  expanded: boolean;
+  onToggle: () => void;
+  onEditTags: () => void;
   onRemoveModel: () => void;
   onUpdateTag: (
     tagId: string,
@@ -448,7 +442,6 @@ function ModelGroup({
       ReturnType<typeof useScenarioStore.getState>['updateTag']
     >[2],
   ) => void;
-  onRemoveTag: (tagId: string) => void;
   t: T;
 }) {
   const problem = !group.present || !group.craneId;
@@ -456,27 +449,54 @@ function ModelGroup({
     <div className="border-border border-t">
       <div
         className={cn(
-          'flex items-center gap-2 px-2 py-1.5',
+          'flex items-center gap-1 px-2 py-1.5',
           problem ? 'bg-amber-500/10 text-amber-500' : 'bg-muted/40',
         )}
       >
-        <span className="font-semibold">{group.modelName}</span>
-        <span className="min-w-0 truncate font-mono text-[10px] opacity-80">
-          {!group.present
-            ? t('monitoring:scenario.issue.model-missing-short')
-            : (group.craneId ?? t('monitoring:inspector.crane.missing'))}
-        </span>
-        <span className="flex-1" />
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+          aria-expanded={expanded}
+          onClick={onToggle}
+        >
+          <ChevronRight
+            className={cn(
+              'size-3 shrink-0 transition-transform',
+              expanded && 'rotate-90',
+            )}
+            aria-hidden
+          />
+          <span className="font-semibold">{group.modelName}</span>
+          <span className="min-w-0 truncate font-mono text-[10px] opacity-80">
+            {!group.present
+              ? t('monitoring:scenario.issue.model-missing-short')
+              : (group.craneId ?? t('monitoring:inspector.crane.missing'))}
+          </span>
+          <span className="shrink-0 text-[10px] tabular-nums opacity-80">
+            {t('monitoring:scenario.pick.tagCount', {
+              count: group.rows.length,
+            })}
+          </span>
+          {/* 묶음 자체가 amber 면 행마다 같은 문제라 따로 알리지 않는다. */}
+          {!problem && group.issueCount > 0 ? (
+            <span
+              className="flex shrink-0 text-amber-500"
+              title={t('monitoring:scenario.row.noValue')}
+            >
+              <AlertTriangle className="size-3" aria-hidden />
+            </span>
+          ) : null}
+        </button>
         {group.present ? (
           <Button
             type="button"
             variant="ghost"
             size="xs"
             className="h-6 px-1.5 text-[10px]"
-            onClick={onAddTags}
+            onClick={onEditTags}
           >
-            <Plus className="size-3" />
-            {t('monitoring:scenario.addTags')}
+            <PencilLine className="size-3" />
+            {t('monitoring:scenario.editTags')}
           </Button>
         ) : null}
         <Button
@@ -491,15 +511,16 @@ function ModelGroup({
           <X className="size-3.5" />
         </Button>
       </div>
-      {group.rows.map((row) => (
-        <ScenarioTagRow
-          key={row.tag.id}
-          row={row}
-          onUpdate={(patch) => onUpdateTag(row.tag.id, patch)}
-          onRemove={() => onRemoveTag(row.tag.id)}
-          t={t}
-        />
-      ))}
+      {expanded
+        ? group.rows.map((row) => (
+            <ScenarioTagRow
+              key={row.tag.id}
+              row={row}
+              onUpdate={(patch) => onUpdateTag(row.tag.id, patch)}
+              t={t}
+            />
+          ))
+        : null}
     </div>
   );
 }

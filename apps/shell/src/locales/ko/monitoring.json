@@ -697,7 +697,8 @@
     "confirmRemove": "삭제",
     "save": "저장",
     "saveFailed": "시나리오를 저장하지 못했습니다.",
-    "addTags": "태그 추가",
+    "addModel": "모델 추가",
+    "editTags": "태그 수정",
     "removeModel": "모델 묶음 제거",
     "emptyTags": "태그가 없습니다. 씬에 맵핑된 모델에서 태그를 고르세요.",
     "count": "태그 {{tags}} · 모델 {{models}}",
@@ -722,7 +723,6 @@
       "pattern": "패턴",
       "period": "주기(s)",
       "periodHint": "한 주기(초)",
-      "remove": "태그 제거",
       "noValue": "값 없음",
       "targetMissing": "맵핑 없음"
     },
@@ -739,19 +739,22 @@
     },
     "pick": {
       "createTitle": "새 시나리오",
-      "addTitle": "태그 추가",
+      "addModelTitle": "모델 추가",
+      "editTitle": "태그 수정",
       "search": "모델·크레인·태그 코드 검색",
       "selected": "{{selected}} / {{total}} 선택",
       "selectAll": "전체 선택",
       "selectNone": "전체 해제",
       "tagCount": "태그 {{count}}개",
-      "alreadyAdded": "이미 있음",
       "noMappedModels": "씬에 태그가 맵핑된 모델이 없습니다. 에디터에서 먼저 태그를 연결하세요.",
       "emptyFiltered": "검색 결과가 없습니다.",
+      "noModelsLeft": "추가할 모델이 없습니다. 씬에 맵핑된 모델이 모두 시나리오에 있습니다.",
       "summary": "모델 {{models}} · 태그 {{tags}} 선택",
       "cancel": "취소",
       "create": "만들기",
-      "add": "추가"
+      "add": "추가",
+      "apply": "적용",
+      "changes": "추가 {{added}} · 제거 {{removed}}"
     }
   },
   "play3d": {

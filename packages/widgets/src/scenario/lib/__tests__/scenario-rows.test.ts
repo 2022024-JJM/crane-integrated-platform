@@ -124,6 +124,16 @@ describe('groupScenarioRows', () => {
     });
   });
 
+  it('issueCount 는 묶음 안 issue 행 수 — 없으면 0', () => {
+    const [m1, ghost, m2] = groupScenarioRows(scenario, scene, entries, issues);
+    expect(m1.issueCount).toBe(0);
+    expect(ghost.issueCount).toBe(1);
+    expect(m2.issueCount).toBe(1);
+    expect(
+      groupScenarioRows(scenario, scene, entries, []).map((g) => g.issueCount),
+    ).toEqual([0, 0, 0]);
+  });
+
   it('맵핑 대상은 모델의 맵핑·상태 태그에서, 사라진 코드는 undefined', () => {
     const [m1] = groupScenarioRows(scenario, scene, entries, issues);
     expect(m1.rows[0].target).toMatchObject({

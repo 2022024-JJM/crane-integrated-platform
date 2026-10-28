@@ -697,7 +697,8 @@
     "confirmRemove": "Dele",
     "save": "Serva",
     "saveFailed": "Scaenaria servari non potuerunt.",
-    "addTags": "Signa adde",
+    "addModel": "Exemplar adde",
+    "editTags": "Signa muta",
     "removeModel": "Exemplaris fasciculum tolle",
     "emptyTags": "Nulla signa. Ex exemplaribus in scaena iunctis signa elige.",
     "count": "{{tags}} signa · {{models}} exemplaria",
@@ -722,7 +723,6 @@
       "pattern": "Forma",
       "period": "Periodus (s)",
       "periodHint": "Una periodus in secundis",
-      "remove": "Signum tolle",
       "noValue": "Nullus valor",
       "targetMissing": "Nulla iunctio"
     },
@@ -739,19 +739,22 @@
     },
     "pick": {
       "createTitle": "Novum scaenarium",
-      "addTitle": "Signa adde",
+      "addModelTitle": "Exemplar adde",
+      "editTitle": "Signa muta",
       "search": "Quaere exemplaria, grues, codices",
       "selected": "{{selected}} / {{total}} electa",
       "selectAll": "Omnia elige",
       "selectNone": "Omnia solve",
       "tagCount": "{{count}} signa",
-      "alreadyAdded": "iam additum",
       "noMappedModels": "Nullum exemplar in scaena signa iuncta habet. In editore primum signa iunge.",
       "emptyFiltered": "Nihil inventum.",
+      "noModelsLeft": "Nullum exemplar addendum restat. Omnia exemplaria scaenae signata iam in scaenario sunt.",
       "summary": "{{models}} exemplaria · {{tags}} signa electa",
       "cancel": "Abrogare",
       "create": "Crea",
-      "add": "Adde"
+      "add": "Adde",
+      "apply": "Applica",
+      "changes": "+{{added}} · −{{removed}}"
     }
   },
   "play3d": {

@@ -697,7 +697,8 @@
     "confirmRemove": "Delete",
     "save": "Save",
     "saveFailed": "Failed to save scenarios.",
-    "addTags": "Add tags",
+    "addModel": "Add model",
+    "editTags": "Edit tags",
     "removeModel": "Remove model group",
     "emptyTags": "No tags. Pick tags from the models mapped in the scene.",
     "count": "{{tags}} tags · {{models}} models",
@@ -722,7 +723,6 @@
       "pattern": "Pattern",
       "period": "Period (s)",
       "periodHint": "One period in seconds",
-      "remove": "Remove tag",
       "noValue": "No value",
       "targetMissing": "No mapping"
     },
@@ -739,19 +739,22 @@
     },
     "pick": {
       "createTitle": "New scenario",
-      "addTitle": "Add tags",
+      "addModelTitle": "Add model",
+      "editTitle": "Edit tags",
       "search": "Search models, cranes, tag codes",
       "selected": "{{selected}} / {{total}} selected",
       "selectAll": "Select all",
       "selectNone": "Clear",
       "tagCount": "{{count}} tags",
-      "alreadyAdded": "already added",
       "noMappedModels": "No model in the scene has mapped tags. Link tags in the editor first.",
       "emptyFiltered": "No matches.",
+      "noModelsLeft": "No model left to add. Every mapped model in the scene is already in the scenario.",
       "summary": "{{models}} models · {{tags}} tags selected",
       "cancel": "Cancel",
       "create": "Create",
-      "add": "Add"
+      "add": "Add",
+      "apply": "Apply",
+      "changes": "+{{added}} · −{{removed}}"
     }
   },
   "play3d": {

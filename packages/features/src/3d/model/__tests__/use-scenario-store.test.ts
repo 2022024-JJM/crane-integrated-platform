@@ -4,6 +4,7 @@ import type { SavedModelInfo, SavedSceneInfo } from '@crane/domain/3d';
 import {
   SCENARIO_TAGS_MAX,
   SCENARIOS_MAX,
+  scenarioTagKey,
   type ScenarioSet,
   type ScenarioTag,
   type SimulationScenario,
@@ -136,6 +137,8 @@ afterEach(() => {
 });
 
 const store = () => useScenarioStore.getState();
+const key = (modelId: string, code: string) =>
+  scenarioTagKey({ modelId, code });
 
 /** 시나리오 하나를 만들고 id 를 돌려준다(실패하면 throw). */
 function addScenario(
@@ -392,21 +395,77 @@ describe('태그 CRUD', () => {
     expect(virtualTagRuntime.getValue('A.x')).toBe(0);
   });
 
-  it('removeTag / removeModelTags: 없는 것은 참조 유지, 있으면 러너에서도 사라진다', () => {
+  it('removeModelTags: 없는 모델은 참조 유지, 있으면 그 모델 태그가 러너에서도 사라진다', () => {
     const id = addScenario('S', [
       tagDef('mA', 'x'),
       tagDef('mA', 'tri'),
       tagDef('mB', 'y'),
     ]);
     const before = store().scenarios;
-    store().removeTag(id, 'ghost');
     store().removeModelTags(id, 'ghost');
     expect(store().scenarios).toBe(before);
-    const [x] = store().scenarios[0].tags;
-    store().removeTag(id, x.id);
-    expect(virtualTagRuntime.getValue('A.x')).toBeUndefined();
     store().removeModelTags(id, 'mA');
+    expect(virtualTagRuntime.getValue('A.x')).toBeUndefined();
     expect(store().entries.map((e) => e.key)).toEqual(['B.y']);
+  });
+
+  it('editTags: 키로 지우고 새 태그를 넣는 것을 commit 한 번에 — 남는 태그 정의는 그대로', () => {
+    const id = addScenario('S', [
+      tagDef('mA', 'x', { unit: 'mm', max: 42 }),
+      tagDef('mA', 'tri'),
+      tagDef('mB', 'y'),
+    ]);
+    const before = store().scenarios;
+    const commits: number[] = [];
+    const unsubscribe = useScenarioStore.subscribe((state, prev) => {
+      if (state.scenarios !== prev.scenarios) commits.push(1);
+    });
+    const result = store().editTags(id, {
+      add: [tagDef('mA', 'saw'), tagDef('mB', 'y')], // mB.y 는 이미 있음
+      removeKeys: [key('mA', 'tri'), key('ghost', 'nope')],
+    });
+    unsubscribe();
+    expect(result).toEqual({ added: 1, removed: 1, skipped: 1 });
+    expect(commits).toHaveLength(1);
+    expect(store().scenarios).not.toBe(before);
+    const tags = store().scenarios[0].tags;
+    expect(tags.map((t) => t.code)).toEqual(['x', 'y', 'saw']);
+    expect(tags[0]).toMatchObject({ unit: 'mm', max: 42 });
+    expect(store().entries.map((e) => e.key)).toEqual(['A.x', 'B.y', 'A.saw']);
+    expect(virtualTagRuntime.getValue('A.tri')).toBeUndefined();
+  });
+
+  it('editTags: 지울 것도 넣을 것도 없으면 참조 유지, 없는 시나리오는 전부 skipped', () => {
+    const id = addScenario('S', [tagDef('mA', 'x')]);
+    const before = store().scenarios;
+    expect(
+      store().editTags(id, {
+        add: [tagDef('mA', 'x')],
+        removeKeys: [key('ghost', 'nope')],
+      }),
+    ).toEqual({ added: 0, removed: 0, skipped: 1 });
+    expect(store().scenarios).toBe(before);
+    expect(
+      store().editTags('ghost', { add: [tagDef('mA', 'x')], removeKeys: [] }),
+    ).toEqual({ added: 0, removed: 0, skipped: 1 });
+    expect(store().scenarios).toBe(before);
+  });
+
+  it('editTags: 지운 자리만큼 상한 안에서 다시 넣을 수 있다', () => {
+    const id = addScenario('S');
+    store().addTags(
+      id,
+      Array.from({ length: SCENARIO_TAGS_MAX }, (_, i) =>
+        tagDef('mA', `k${i}`),
+      ),
+    );
+    expect(
+      store().editTags(id, {
+        add: [tagDef('mA', 'new1'), tagDef('mA', 'new2')],
+        removeKeys: [key('mA', 'k0')],
+      }),
+    ).toEqual({ added: 1, removed: 1, skipped: 1 });
+    expect(store().scenarios[0].tags).toHaveLength(SCENARIO_TAGS_MAX);
   });
 
   it('setTickSec 는 클램프하고 같은 값이면 상태 참조를 유지한다', () => {
@@ -465,7 +524,7 @@ describe('재생(runner)', () => {
     store().start();
     vi.advanceTimersByTime(100);
     expect(received.get('A.x')).toEqual([3, 3]);
-    store().removeTag(id, store().scenarios[0].tags[0].id);
+    store().editTags(id, { add: [], removeKeys: [key('mA', 'x')] });
     vi.advanceTimersByTime(300);
     expect(received.get('A.x')).toEqual([3, 3]);
   });
@@ -527,7 +586,7 @@ describe('discard', () => {
     storage.load.mockResolvedValue(loaded);
     await store().load();
     expect(store().updateTag('s', 'a', { initial: 9 })).toBe(true);
-    store().removeTag('s', 'b');
+    store().editTags('s', { add: [], removeKeys: [key('mB', 'y')] });
     expect(store().scenarios[0].tags).toHaveLength(1);
 
     store().discard();

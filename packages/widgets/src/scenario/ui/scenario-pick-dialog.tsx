@@ -1,8 +1,11 @@
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedSceneInfo } from '@crane/domain/3d';
-import type { SimulationScenario } from '@crane/domain/virtual-tag';
+import type { ModelTagCode, SavedSceneInfo } from '@crane/domain/3d';
+import type {
+  ScenarioTag,
+  SimulationScenario,
+} from '@crane/domain/virtual-tag';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
@@ -18,7 +21,9 @@ import {
 import {
   buildScenarioTags,
   countSelection,
+  diffPickSelection,
   existingPickKeys,
+  filterModelsNotInScenario,
   filterPickableModels,
   listPickableModels,
   modelPickKeys,
@@ -26,33 +31,39 @@ import {
   type PickableModel,
 } from '../lib/scenario-pick';
 import { nodeLeafName } from '../lib/scenario-rows';
-import type { ModelTagCode } from '@crane/domain/3d';
 import { CELL_INPUT } from './scenario-cell-styles';
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
 export type ScenarioPickMode =
   | { kind: 'create' }
-  /** 기존 시나리오에 태그 추가 — 모델 하나로 열면 그 모델만 펼쳐 보인다. */
-  | { kind: 'add'; scenario: SimulationScenario; modelId?: string };
+  /** 모델 추가 — 시나리오에 아직 없는 모델만 나열하고 고른 태그를 넣는다. */
+  | { kind: 'add'; scenario: SimulationScenario }
+  /** 태그 수정 — 모델 하나, 기존 태그가 체크된 채 열리고 차집합을 적용한다. */
+  | { kind: 'edit'; scenario: SimulationScenario; modelId: string };
+
+export interface ScenarioPickResult {
+  /** create 만 — 그 밖은 빈 문자열. */
+  name: string;
+  /** 새로 넣을 태그(id 없음). */
+  tags: Omit<ScenarioTag, 'id'>[];
+  /** edit 만 — 체크를 푼 기존 태그의 키(`scenarioTagKey`). */
+  removeKeys: string[];
+}
 
 export interface ScenarioPickDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: ScenarioPickMode;
   sceneInfo: SavedSceneInfo | null;
-  /** 확정 — 새 시나리오면 이름과 태그, 추가면 태그만. */
-  onConfirm: (result: {
-    name: string;
-    tags: ReturnType<typeof buildScenarioTags>;
-  }) => void;
+  onConfirm: (result: ScenarioPickResult) => void;
 }
 
 /**
- * 새 시나리오 · 태그 추가 다이얼로그 — 씬에서 맵핑·상태 태그가 있는 모델만
- * 나열한다. 모델 머리글 체크는 그 모델의 태그 전부, 펼치면 태그마다 고른다.
- * 이미 시나리오에 있는 태그는 체크된 채 비활성. 본문은 열려 있을 때만
- * 마운트해 열 때마다 선택이 빈다.
+ * 새 시나리오 · 모델 추가 · 태그 수정 다이얼로그 — 씬에서 맵핑·상태 태그가
+ * 있는 모델만 나열한다. 모델 머리글 체크는 그 모델의 태그 전부, 펼치면
+ * 태그마다 고른다. 본문은 열려 있을 때만 마운트해 열 때마다 선택이 다시
+ * 선다(create·add 는 빈 선택, edit 는 기존 태그).
  */
 export function ScenarioPickDialog(props: ScenarioPickDialogProps) {
   const { open, onOpenChange } = props;
@@ -77,6 +88,17 @@ function describeCode(code: ModelTagCode, t: T): string {
   return `${node} · ${t(`monitoring:inspector.mapping.channels.${code.target.channel}`)} ${code.target.axis}`;
 }
 
+const TITLE_KEY: Record<ScenarioPickMode['kind'], string> = {
+  create: 'monitoring:scenario.pick.createTitle',
+  add: 'monitoring:scenario.pick.addModelTitle',
+  edit: 'monitoring:scenario.pick.editTitle',
+};
+const CONFIRM_KEY: Record<ScenarioPickMode['kind'], string> = {
+  create: 'monitoring:scenario.pick.create',
+  add: 'monitoring:scenario.pick.add',
+  edit: 'monitoring:scenario.pick.apply',
+};
+
 function DialogBody({
   mode,
   sceneInfo,
@@ -86,34 +108,45 @@ function DialogBody({
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(mode.kind === 'add' && mode.modelId ? [mode.modelId] : []),
-  );
 
   const allModels = useMemo(() => listPickableModels(sceneInfo), [sceneInfo]);
-  const scopedModels = useMemo(
-    () =>
-      mode.kind === 'add' && mode.modelId
-        ? allModels.filter((m) => m.modelId === mode.modelId)
-        : allModels,
-    [allModels, mode],
+  const scopedModels = useMemo(() => {
+    if (mode.kind === 'add')
+      return filterModelsNotInScenario(allModels, mode.scenario);
+    if (mode.kind === 'edit')
+      return allModels.filter((m) => m.modelId === mode.modelId);
+    return allModels;
+  }, [allModels, mode]);
+  const existing = useMemo(
+    () => existingPickKeys(mode.kind === 'edit' ? mode.scenario : null),
+    [mode],
   );
+  const allKeys = useMemo(
+    () => scopedModels.flatMap(modelPickKeys),
+    [scopedModels],
+  );
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(allKeys.filter((key) => existing.has(key))),
+  );
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(mode.kind === 'edit' ? [mode.modelId] : []),
+  );
+
   const models = useMemo(
     () => filterPickableModels(scopedModels, query),
     [scopedModels, query],
   );
-  const existing = useMemo(
-    () => existingPickKeys(mode.kind === 'add' ? mode.scenario : null),
-    [mode],
+  const summary = countSelection(selected, scopedModels);
+  const diff = useMemo(
+    () =>
+      mode.kind === 'edit'
+        ? diffPickSelection(selected, existing, allKeys)
+        : null,
+    [allKeys, existing, mode.kind, selected],
   );
-  const allKeys = useMemo(
-    () => scopedModels.flatMap(modelPickKeys).filter((k) => !existing.has(k)),
-    [scopedModels, existing],
-  );
-  const summary = countSelection(selected, scopedModels, existing);
-  const canConfirm =
-    summary.tags > 0 && (mode.kind === 'add' || name.trim().length > 0);
+  const canConfirm = diff
+    ? diff.addKeys.length + diff.removeKeys.length > 0
+    : summary.tags > 0 && (mode.kind === 'add' || name.trim().length > 0);
 
   const toggleExpanded = (modelId: string) =>
     setExpanded((prev) => {
@@ -123,18 +156,19 @@ function DialogBody({
       return next;
     });
 
-  const title = t(
-    mode.kind === 'create'
-      ? 'monitoring:scenario.pick.createTitle'
-      : 'monitoring:scenario.pick.addTitle',
-  );
+  const emptyKey =
+    allModels.length === 0 || mode.kind === 'edit'
+      ? 'monitoring:scenario.pick.noMappedModels'
+      : scopedModels.length === 0
+        ? 'monitoring:scenario.pick.noModelsLeft'
+        : 'monitoring:scenario.pick.emptyFiltered';
 
   return (
     <>
       <header className="border-border flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {title}
-          {mode.kind === 'add' && mode.modelId ? (
+          {t(TITLE_KEY[mode.kind])}
+          {mode.kind === 'edit' ? (
             <span className="text-muted-foreground ml-2 font-normal">
               · {scopedModels[0]?.equipName ?? mode.modelId}
             </span>
@@ -204,11 +238,7 @@ function DialogBody({
         <div className="px-2 py-1.5 text-xs">
           {models.length === 0 ? (
             <p className="text-muted-foreground px-2 py-6 text-center">
-              {t(
-                allModels.length === 0
-                  ? 'monitoring:scenario.pick.noMappedModels'
-                  : 'monitoring:scenario.pick.emptyFiltered',
-              )}
+              {t(emptyKey)}
             </p>
           ) : null}
           {models.map((model) => (
@@ -216,17 +246,11 @@ function DialogBody({
               key={model.modelId}
               model={model}
               selected={selected}
-              existing={existing}
               expanded={expanded.has(model.modelId)}
               onToggleExpanded={() => toggleExpanded(model.modelId)}
               onToggleAll={(on) =>
                 setSelected((prev) =>
-                  setSelectedCodes(
-                    prev,
-                    allKeys,
-                    modelPickKeys(model).filter((k) => !existing.has(k)),
-                    on,
-                  ),
+                  setSelectedCodes(prev, allKeys, modelPickKeys(model), on),
                 )
               }
               onToggleCode={(key) =>
@@ -239,11 +263,17 @@ function DialogBody({
       </ScrollArea>
 
       <footer className="border-border flex items-center gap-3 border-t px-3 py-2 text-xs">
-        <span className="text-muted-foreground min-w-0 flex-1 truncate">
+        <span className="text-muted-foreground min-w-0 flex-1 truncate tabular-nums">
           {t('monitoring:scenario.pick.summary', {
             models: summary.models,
             tags: summary.tags,
           })}
+          {diff
+            ? ` · ${t('monitoring:scenario.pick.changes', {
+                added: diff.addKeys.length,
+                removed: diff.removeKeys.length,
+              })}`
+            : ''}
         </span>
         <Button
           type="button"
@@ -260,15 +290,15 @@ function DialogBody({
           onClick={() =>
             onConfirm({
               name: name.trim(),
-              tags: buildScenarioTags(selected, scopedModels, existing),
+              tags: buildScenarioTags(
+                diff ? new Set(diff.addKeys) : selected,
+                scopedModels,
+              ),
+              removeKeys: diff?.removeKeys ?? [],
             })
           }
         >
-          {t(
-            mode.kind === 'create'
-              ? 'monitoring:scenario.pick.create'
-              : 'monitoring:scenario.pick.add',
-          )}
+          {t(CONFIRM_KEY[mode.kind])}
         </Button>
       </footer>
     </>
@@ -278,7 +308,6 @@ function DialogBody({
 function ModelRow({
   model,
   selected,
-  existing,
   expanded,
   onToggleExpanded,
   onToggleAll,
@@ -287,14 +316,13 @@ function ModelRow({
 }: {
   model: PickableModel;
   selected: ReadonlySet<string>;
-  existing: ReadonlySet<string>;
   expanded: boolean;
   onToggleExpanded: () => void;
   onToggleAll: (on: boolean) => void;
   onToggleCode: (key: string) => void;
   t: T;
 }) {
-  const keys = modelPickKeys(model).filter((k) => !existing.has(k));
+  const keys = modelPickKeys(model);
   const state =
     keys.length === 0 ? 'none' : groupSelectionState(selected, keys);
   const Chevron = expanded ? ChevronDown : ChevronRight;
@@ -336,18 +364,11 @@ function ModelRow({
         <ul className="pb-1 pl-7">
           {model.codes.map((code) => {
             const key = pickKey(model.modelId, code.code);
-            const already = existing.has(key);
             return (
               <li key={code.code}>
-                <label
-                  className={cn(
-                    'hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1',
-                    already && 'cursor-default opacity-50',
-                  )}
-                >
+                <label className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1">
                   <Checkbox
-                    checked={already || selected.has(key)}
-                    disabled={already}
+                    checked={selected.has(key)}
                     aria-label={code.code}
                     onCheckedChange={() => onToggleCode(key)}
                     className="size-3.5"
@@ -355,9 +376,6 @@ function ModelRow({
                   <span className="font-mono">{code.code}</span>
                   <span className="text-muted-foreground min-w-0 flex-1 truncate text-[10px]">
                     {describeCode(code, t)}
-                    {already
-                      ? ` · ${t('monitoring:scenario.pick.alreadyAdded')}`
-                      : ''}
                   </span>
                 </label>
               </li>

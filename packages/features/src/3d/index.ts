@@ -409,6 +409,8 @@ export {
   type ScenarioAddResult,
   type ScenarioDraft,
   type ScenarioTagAddResult,
+  type ScenarioTagEdit,
+  type ScenarioTagEditResult,
 } from './model/use-scenario-store';
 export { virtualTagRuntime } from './model/virtual-tag-runner';
 export {

@@ -1,4 +1,4 @@
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import {
   VIRTUAL_TAG_BOOL_PATTERN_KINDS,
   VIRTUAL_TAG_DATA_TYPES,
@@ -14,7 +14,6 @@ import {
 import { virtualTagRuntime } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
-import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
 import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
@@ -72,22 +71,21 @@ function describeTarget(row: ScenarioRow, t: T): string {
 
 /**
  * 시나리오 태그 한 행 — 좁은 우측 패널에 맞춘 두 줄. 1줄은 코드·맵핑 대상·
- * 현재값 조작(수동이면 슬라이더·토글, 파형이면 진행 막대)·삭제, 2줄은 형식·
- * 단위·범위·초기값·패턴·주기. 코드는 모델 맵핑에서 온 것이라 고치지 않는다.
+ * 현재값 조작(수동이면 슬라이더·토글, 파형이면 진행 막대), 2줄은 형식·
+ * 단위·범위·초기값·패턴·주기. 코드는 모델 맵핑에서 온 것이라 고치지 않고,
+ * 행을 빼는 것은 묶음 머리줄의 "태그 수정" 다이얼로그다.
  * 키를 못 만드는 행(씬에 모델이 없거나 크레인이 없음)은 amber 이고 값 조작이
  * 없다 — 값이 어디에도 나가지 않는다.
  */
 export function ScenarioTagRow({
   row,
   onUpdate,
-  onRemove,
   t,
 }: {
   row: ScenarioRow;
   onUpdate: (
     patch: Partial<Omit<ScenarioTag, 'id' | 'modelId' | 'code'>>,
   ) => void;
-  onRemove: () => void;
   t: T;
 }) {
   const { tag, key, issue } = row;
@@ -172,17 +170,6 @@ export function ScenarioTagRow({
             </span>
           </>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="text-muted-foreground shrink-0 hover:text-red-300"
-          aria-label={t('monitoring:scenario.row.remove')}
-          title={t('monitoring:scenario.row.remove')}
-          onClick={onRemove}
-        >
-          <X className="size-3.5" />
-        </Button>
       </div>
 
       {issue ? (
