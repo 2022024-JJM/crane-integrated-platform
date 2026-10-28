@@ -97,6 +97,14 @@ interface PairJob {
   baselineDeferred: boolean;
 }
 
+/** 메쉬 쌍 제외 판정 — (모델 id, 루트 기준 mesh-path) 둘. 순서 무관이어야 한다. */
+export type MeshPairExclusion = (
+  aId: string,
+  aPath: string,
+  bId: string,
+  bPath: string,
+) => boolean;
+
 export type SceneCollisionRuntimePhase =
   | 'idle'
   | 'baseline'
@@ -159,6 +167,27 @@ export class SceneCollisionRuntime {
 
   get suppressedKeys(): ReadonlySet<string> {
     return this.suppressed;
+  }
+
+  private excludeMeshPair: MeshPairExclusion | null = null;
+
+  /**
+   * 메쉬 쌍 제외 판정 — true 면 그 메쉬 쌍은 관통·분리 검사에서 뺀다. 운반
+   * 중인 훅 노드 메쉬↔블록(훅 블록이 블록 윗면에 닿은 채 움직인다)을 관통으로
+   * 보고하지 않게 검출기가 `isCarriedMeshPair` 를 꽂는다. 모델 쌍이 아니라
+   * 메쉬 쌍 단위라 같은 크레인의 다리·거더가 운반 중인 블록을 치면 보고된다.
+   * 메쉬 AABB 가 겹친 쌍에만 묻고 쌍 목록을 다시 만들지 않으므로 부착·분리가
+   * 바로 반영된다.
+   */
+  setMeshPairExclusion(fn: MeshPairExclusion | null): void {
+    this.excludeMeshPair = fn;
+  }
+
+  private isExcluded(job: PairJob, ma: MeshEntry, mb: MeshEntry): boolean {
+    return (
+      this.excludeMeshPair?.(job.a.id, ma.nodePath, job.b.id, mb.nodePath) ===
+      true
+    );
   }
 
   /**
@@ -382,6 +411,7 @@ export class SceneCollisionRuntime {
       _marginBox.copy(ma.box).expandByScalar(SEPARATION_MARGIN);
       for (const mb of _candB) {
         if (!_marginBox.intersectsBox(mb.box)) continue;
+        if (this.isExcluded(job, ma, mb)) continue;
         if (!meshObbsIntersect(ma.mesh, mb.mesh, SEPARATION_MARGIN)) continue;
         // OBB 는 실루엣 전체를 감싸므로(단일 메쉬 크레인) 삼각형 거리로 확정한다.
         // BVH 가 아직 없으면 보수적으로 "붙음" — 빌드되면 다음 dirty 틱에 다시 본다.
@@ -406,6 +436,7 @@ export class SceneCollisionRuntime {
     for (const ma of _candA) {
       for (const mb of _candB) {
         if (!ma.box.intersectsBox(mb.box)) continue;
+        if (this.isExcluded(job, ma, mb)) continue;
         if (!meshObbsIntersect(ma.mesh, mb.mesh)) continue;
         const exact = meshesIntersectExact(ma.mesh, mb.mesh);
         if (exact === null) {

@@ -719,7 +719,12 @@
       "periodHint": "One period in seconds",
       "remove": "Remove tag",
       "noValue": "No value",
-      "targetMissing": "No mapping"
+      "targetMissing": "No mapping",
+      "hookTarget": "Hook {{label}} · attach",
+      "keyframesSummary": "{{count}} pts · {{total}}s",
+      "keyframesHint": "Timed keyframes — edit points in the scenario file",
+      "loop": "loop",
+      "smooth": "eased"
     },
     "dataTypes": {
       "number": "Number",
@@ -730,7 +735,8 @@
       "triangle": "Triangle",
       "sine": "Sine",
       "sawtooth": "Sawtooth",
-      "square": "Square"
+      "square": "Square",
+      "keyframes": "Keyframes"
     },
     "pick": {
       "createTitle": "New scenario",

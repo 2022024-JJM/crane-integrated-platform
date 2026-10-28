@@ -719,7 +719,12 @@
       "periodHint": "Una periodus in secundis",
       "remove": "Signum tolle",
       "noValue": "Nullus valor",
-      "targetMissing": "Nulla iunctio"
+      "targetMissing": "Nulla iunctio",
+      "hookTarget": "Hook {{label}} · attach",
+      "keyframesSummary": "{{count}} pts · {{total}}s",
+      "keyframesHint": "Timed keyframes — edit points in the scenario file",
+      "loop": "loop",
+      "smooth": "eased"
     },
     "dataTypes": {
       "number": "Numerus",
@@ -730,7 +735,8 @@
       "triangle": "Triangulum",
       "sine": "Sinus",
       "sawtooth": "Serra",
-      "square": "Quadratum"
+      "square": "Quadratum",
+      "keyframes": "Keyframes"
     },
     "pick": {
       "createTitle": "Novum scaenarium",

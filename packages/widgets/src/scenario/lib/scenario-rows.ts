@@ -7,6 +7,7 @@ import type {
   ScenarioTag,
   SimulationScenario,
   VirtualTagDataType,
+  VirtualTagKeyframe,
 } from '@crane/domain/virtual-tag';
 import type {
   ScenarioTagIssue,
@@ -118,4 +119,11 @@ export function nodeLeafName(path: string): string {
   if (!path) return '';
   const leaf = path.split('/').pop() ?? path;
   return leaf.replace(/^\[\d+\]/, '');
+}
+
+/** 키프레임 총 길이(초) — 마지막 점의 시각. 점이 없으면 0. */
+export function keyframesTotalSec(
+  points: readonly VirtualTagKeyframe[],
+): number {
+  return points.length > 0 ? points[points.length - 1].atSec : 0;
 }

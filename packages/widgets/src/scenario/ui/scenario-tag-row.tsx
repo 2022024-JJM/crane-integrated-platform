@@ -27,6 +27,7 @@ import {
 import {
   formatVirtualValue,
   isBoolOn,
+  keyframesTotalSec,
   nodeLeafName,
   sliderStep,
   valuePercent,
@@ -42,25 +43,39 @@ import { WaveformIcon } from './waveform-icon';
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
-function defaultPattern(kind: VirtualTagPatternKind): VirtualTagPattern {
-  return kind === 'manual'
-    ? { kind }
-    : { kind, periodSec: VIRTUAL_TAG_PERIOD_DEFAULT };
+/**
+ * 패턴 전환의 기본 정의. 키프레임은 초기값 한 점에서 시작한다 — 점 편집 UI 는
+ * 아직 없어 시나리오 파일에서 적는다(scenarios.json).
+ */
+function defaultPattern(
+  kind: VirtualTagPatternKind,
+  initial: number,
+): VirtualTagPattern {
+  if (kind === 'manual') return { kind };
+  if (kind === 'keyframes') {
+    return { kind, points: [{ atSec: 0, value: initial }] };
+  }
+  return { kind, periodSec: VIRTUAL_TAG_PERIOD_DEFAULT };
 }
 
 function withPeriod(
   pattern: VirtualTagPattern,
   periodSec: number,
 ): VirtualTagPattern {
-  return pattern.kind === 'manual' ? pattern : { ...pattern, periodSec };
+  return pattern.kind === 'manual' || pattern.kind === 'keyframes'
+    ? pattern
+    : { ...pattern, periodSec };
 }
 
-/** 코드가 모델에서 가리키는 것 — `루트 · 위치 z`, `Trolley_01 · 위치 x`, `관절 luff`, `고장`. */
+/** 코드가 모델에서 가리키는 것 — `루트 · 위치 z`, `Trolley_01 · 위치 x`, `관절 luff`, `고장`, `훅 upper`. */
 function describeTarget(row: ScenarioRow, t: T): string {
   const target = row.target;
   if (!target) return t('monitoring:scenario.row.targetMissing');
   if (target.source === 'status') {
     return t(`monitoring:inspector.statusTags.roles.${target.role}`);
+  }
+  if (target.source === 'hook') {
+    return t('monitoring:scenario.row.hookTarget', { label: target.label });
   }
   if (target.target.kind === 'joint') {
     return `${t('monitoring:inspector.mapping.joint')} ${target.target.jointId}`;
@@ -263,7 +278,7 @@ export function ScenarioTagRow({
         <Select
           value={tag.pattern.kind}
           onValueChange={(kind: VirtualTagPatternKind) =>
-            onUpdate({ pattern: defaultPattern(kind) })
+            onUpdate({ pattern: defaultPattern(kind, tag.initial) })
           }
         >
           <SelectTrigger
@@ -288,7 +303,22 @@ export function ScenarioTagRow({
             ))}
           </SelectPopup>
         </Select>
-        {tag.pattern.kind === 'manual' ? null : (
+        {tag.pattern.kind === 'manual' ? null : tag.pattern.kind ===
+          'keyframes' ? (
+          <span
+            className="text-muted-foreground truncate"
+            title={t('monitoring:scenario.row.keyframesHint')}
+          >
+            {t('monitoring:scenario.row.keyframesSummary', {
+              count: tag.pattern.points.length,
+              total: keyframesTotalSec(tag.pattern.points),
+            })}
+            {tag.pattern.loop ? ` · ${t('monitoring:scenario.row.loop')}` : ''}
+            {tag.pattern.ease === 'smooth'
+              ? ` · ${t('monitoring:scenario.row.smooth')}`
+              : ''}
+          </span>
+        ) : (
           <>
             <InputNumber
               value={tag.pattern.periodSec}

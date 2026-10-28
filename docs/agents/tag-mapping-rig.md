@@ -28,6 +28,7 @@
 | 실시간 태그 피드 — STOMP 래퍼 / 스냅샷 방어·REST / 스토어·피드 훅·관측치 / 태그 페이지 UI | `packages/core/src/ws/stomp-client.ts`(`craneStompClient`), `packages/domain/src/monitoring/lib/crane-snapshot.ts`, `packages/domain/src/monitoring/api/get-crane-snapshots.ts`, `packages/features/src/3d/model/use-crane-snapshot-store.ts`, `packages/features/src/3d/model/use-crane-snapshot-feed.ts`, `packages/features/src/3d/lib/crane-snapshot-stats.ts`, `packages/widgets/src/tags/ui/realtime-tags-view.tsx` |
 | 실시간 태그 표 헬퍼(행 구성·분류·불리언 표기 / 구역 칩·크레인 필터 / 시계·숫자 표기 / 상태 점·구역 칩 UI) — 태그 페이지와 태그 연결 다이얼로그가 같이 쓴다 | `packages/features/src/3d/lib/tag-rows.ts`, `packages/features/src/3d/lib/crane-filter.ts`, `packages/features/src/3d/lib/format-clock.ts`(셋 다 테스트 대상), `packages/features/src/3d/ui/{crane-live-dot,bay-chip}.tsx`, 벽시계 틱 `packages/core/src/lib/use-now.ts` |
 | 리깅 스키마(관절·구속조건) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
+| 블록 운반 — 훅 스키마·방어 / 순수 계산 / 런타임·상태 / 케이블 레이어 / 키프레임 패턴 | `SavedModelHook`·`carriable`(`types.ts`), `packages/domain/src/3d/lib/sanitize-model-hooks.ts`, `packages/features/src/3d/lib/scene-carry.ts`, `model/{scene-carry-runtime,scene-carry-state}.ts`, `ui/scene-carry-layer.tsx`, `packages/domain/src/virtual-tag/lib/tag-pattern.ts`(`evaluateKeyframes`) |
 | 리깅 런타임(값 저장소·드라이버·readout) | `packages/features/src/3d/model/rig-value-store.ts`, `packages/features/src/3d/model/use-rig-driver.ts`, `packages/features/src/3d/model/rig-live-readouts.ts` |
 | 관절 적용 / 스무딩 / rest 캐시 / 노드 경로 | `packages/features/src/3d/lib/apply-joint.ts`, `packages/features/src/3d/lib/smooth-damp.ts`, `packages/domain/src/3d/lib/rest-pose-cache.ts`, `packages/domain/src/3d/lib/mesh-path.ts` |
 | 리깅 편집 UI(인스펙터 탭·계층 노드 트리) | `packages/widgets/src/3d/ui/rigging-section.tsx`, `packages/widgets/src/3d/lib/model-node-tree.ts` |
@@ -155,6 +156,19 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 - UI: 공용 패널 `scene-simulation-panel.tsx`(시나리오 선택·재생·리셋·종료·배속·경과 시각)를 3D 플레이 트랜스포트 바 팝오버가 쓴다. 재생 위치 이동은 트랜스포트 바의 스크럽 하나다. 경과 시각 문구는 `sim-clock.ts`.
 - **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·시나리오 이름·배속이 1 이 아니면 배속 — 표시 전용, 조작 버튼 없음). `Monitoring3dView` 좌측 상단 열 첫 항목이고 3D 플레이 시뮬레이션 소스에서만 보인다.
 
+### 블록 운반(크레인 훅 ↔ 운반 가능 모델)
+
+골리앗 같은 크레인이 블록을 집어 옮기는 것을 씬 데이터 + 런타임으로 표현한다. 훅은 GLB 노드이고 블록은 씬의 다른 모델이라, 둘을 잇는 것은 부착 태그 하나다.
+
+- 스키마(`types.ts`): 크레인 모델의 `hooks[]`(`SavedModelHook{ id, label?, nodes[], anchorOffsetY?, attachCode, pickRadius? }`)와 블록 모델의 `carriable: true`. 방어는 `sanitize-model-hooks.ts`(노드 1개 이상·코드 유효해야 항목이 남고, 오프셋 0·반경 무효는 생략), 동등 비교는 `scene-snapshot.ts` 의 `isHookListEqual`. 편집 UI 는 없다 — 씬 JSON 에 적는다(philly-2dock: GC_04 의 `hook-upper`(Trolley_01 로프 둘)·`hook-lower`, Block_001·Block_002 가 운반 가능).
+- 훅 앵커는 노드 서브트리의 월드 AABB 바닥(+오프셋), XZ 는 노드들의 평균(`lib/scene-carry.ts`). 훅 블록 높이를 데이터에 적지 않아 새 GLB 버전에서 숫자가 틀어지지 않는다. 측정은 `updateWorldMatrix(true,true)` 뒤에 한다 — useFrame 에서 읽는 matrixWorld 는 한 프레임 전 자세라 배속·저 fps 에서 블록이 훅보다 뒤처져 내려놓을 때마다 높이가 쌓였다.
+- 부착 태그 코드는 `collectModelTagCodes` 가 `source: 'hook'` 으로 펴서 시나리오 선택기·행에 "훅 Upper · 부착" 으로 보인다. 기본 정의는 불리언(`createScenarioTagDefaults`).
+- 런타임 `model/scene-carry-runtime.ts`(`SceneCarryRuntime.step`): 부착 값 ≥ 0.5 가 되는 프레임에 앵커 `pickRadius`(기본 `DEFAULT_HOOK_PICK_RADIUS`) 안 XZ 최근접 운반 가능 모델(다른 크레인이 든 것·자기 자신 제외)을 붙인다. 블록은 **그 블록을 든 훅들의 앵커 평균** + 오프셋을 따라간다(부모 로컬로 변환) — 같은 크레인의 상부·하부 훅이 함께 들면 탠덤이고 가운데를 따라가며, 드는 훅 수가 바뀌는 프레임(첫 부착·합류·한쪽 분리)에 오프셋을 지금 자리 기준으로 다시 잡아 점프하지 않는다. 마지막 훅이 놓으면 그 자리에 남는다. 어느 훅에도 값이 없으면(소스 꺼짐·다른 시나리오·`stopSimulation` 의 live 캐시 비움) 옮긴 블록을 배치 위치로 되돌린다. 높이는 보지 않는다 — 훅이 블록 위에 내려와 있는지는 작업 순서가 보장한다.
+- 상태 `model/scene-carry-state.ts`(`sceneCarryState`, 블록 → 크레인 모델 id + 든 훅들의 노드 경로. 탠덤 합류는 경로를 합친다). 충돌 런타임은 `setMeshPairExclusion(isCarriedMeshPair)` 로 **훅 노드 메쉬↔블록** 쌍만 건너뛴다(`use-scene-collision-detector` 가 꽂는다) — 크레인 다리·거더·트롤리 본체가 운반 중인 블록을 치면 보고된다. 영역 감지는 블록이 `zoneExempt` 라 무관하다.
+- 레이어 `ui/scene-carry-layer.tsx`: `Monitoring3dView` Canvas 의 `RigDriver` 바로 다음(훅 노드가 움직인 뒤 블록이 따라간다). 훅 노드마다 트롤리(부모) 높이에서 노드 서브트리 꼭대기까지 케이블 실린더 하나를 그린다 — GLB 로프 노드는 권상으로 내려가면 트롤리와 사이가 빈다. 블록이 움직인 프레임은 `invalidateShadows()`. 에디터 캔버스에는 없다.
+- 시나리오 키프레임 패턴 `{ kind: 'keyframes', points[{ atSec, value }], loop?, ease? }`(`tag-pattern.ts` 의 `evaluateKeyframes`): 숫자는 점 사이 보간(기본 선형, `ease: 'smooth'` 면 구간마다 smoothstep 가감속 — 점에서 속도 0), 불리언은 계단(점의 시각에 새 값), 첫 점 앞·마지막 점 뒤는 끝값, `loop` 면 마지막 시각을 주기로 되감는다. sanitize 는 점을 시각순 정렬·같은 시각 첫 점·ms 반올림·`VIRTUAL_TAG_KEYFRAMES_MAX` 상한, 점이 없으면 manual, ease 는 `smooth` 만. 행 UI 는 요약("N점 · Ns · 반복 · 가감속")만 보이고 점 편집은 `scenarios.json` 에서 한다. 배포 시나리오는 블록 크기별 셋(philly-2dock, 각 8~9분 루프)이고 **전부 상·하부 두 훅 탠덤**이다 — 소조 블록(Block_002 자산 0.6배)은 훅 간격 ±6, 중조(Block_002)·대조(Block_001)는 ±10. 소조·중조는 안벽에서 드라이도크(x −690~−644, 바닥 −8.89) 안으로 탑재하고 대조는 도크 안에서 옮긴다. 경로는 **장애물을 알고 고른다**: LLC 두 대의 부품 AABB·건물 150/151·운반 대상이 아닌 블록·골리앗 다리(x −704 / −583 안쪽 면)·지면을 상대로, 운반 높이의 블록·로프·트롤리 본체의 구간별 스윕 AABB 가 전부 2 unit 이상 떨어지는 순서(횡행→주행 / 주행→횡행 / 경유점 L 자)를 고르고, 생성 뒤 0.25초 샘플로 전 구간(블록·로프·다리 vs 장애물·지면·거더, 트롤리가 다리 안쪽, 부착 반경)을 다시 검사해 위반 0 일 때만 기록한다. 작업 순서는 z 0 에서 두 트롤리를 블록 폭으로 벌림 → 주행 → 두 훅 하강(깊은 쪽이 먼저 출발해 같이 닿음) → 3초 → 부착 → 3초 → 하부 훅이 rest 가 될 때까지 같은 양만큼 권상(블록 윗면 ≈ 31, 수평) → 계획된 경로 → 목적지 지면 높이까지 하강(도크면 안벽보다 12.5 더) → 분리 → 상승, 되가져온 뒤 z 0 으로 주행 → 트롤리 rest. 시간은 거리 ÷ 속도(주행 2.0 · 횡행 1.2 · 권상 1.2 unit/s, 최소 2초)이고 전 축이 가감속이다. 권상값은 실측 훅 바닥(상부 34.17 · 하부 31.49)과 블록 윗면에서 0.5 띄운 값이라 GLB·블록 배치가 바뀌면 다시 재서 생성한다(생성기는 저장소 밖 스크립트 — 규칙은 여기가 원본).
+- 한계: 블록 위치는 씬 시간의 순수 함수가 아니라(부착 시점 상태) seek·되감기는 결정론이 아니다. 실시간 피드에는 부착 신호가 없다 — 서버 작업 이벤트(크레인·트롤리·블록·attach/detach)나 하중 태그 임계 추론이 붙으면 같은 부착 코드로 흘려보내면 된다.
+
 ### 리깅(관절 연동)
 
 - 정의 `RigDefinition` = 관절 `hinge|slide` + 구속조건 `linear`("출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로). 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다.
@@ -203,7 +217,8 @@ crane-integrated-server(Kafka → Redis → STOMP)가 내보내는 크레인별 
 
 ## 미룬 것
 
-- 시나리오의 시각별 스텝(타임라인) — 지금은 태그별 동작까지다. 구조(시나리오 = 태그별 동작)는 그 위에 얹을 수 있게 둔다.
+- 시나리오 키프레임 점의 편집 UI — 지금은 행에 요약만 보이고 점은 `scenarios.json` 에서 적는다.
+- 블록 운반의 편집 UI(인스펙터의 훅·운반 가능 스위치)와 실시간 부착 신호(서버 작업 이벤트 또는 하중 태그 임계 추론).
 - 시나리오 태그의 초기값·범위를 실시간 값에서 가져오기(피드가 필요하다). 지금은 기본값에서 손으로.
 - 맵핑 `craneId` 덮어쓰기의 편집 UI, 크레인 콤보박스의 region 필터, 태그 페이지에서 시나리오 조회.
 - philly 의 `GC_04`·`LLC_002` 를 크레인 레지스트리에 넣는 것 — 지금은 미등록으로 표시만 한다.

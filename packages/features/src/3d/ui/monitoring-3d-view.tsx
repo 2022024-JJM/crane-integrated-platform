@@ -44,6 +44,7 @@ import {
 import { resolveActiveTagSource } from '../lib/tag-source';
 import { useActiveTagSource } from '../model/use-active-tag-source';
 import { RigDriver } from './rig-driver';
+import { SceneCarryLayer } from './scene-carry-layer';
 import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
@@ -650,8 +651,10 @@ export function Monitoring3dView({
           </Suspense>
           <Suspense fallback={null}>
             <RigDriver sceneInfo={sceneInfo} />
-            {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
-              실행되므로 노드가 움직인 뒤 검사한다. */}
+            {/* 드라이버 바로 다음 — 훅 노드가 움직인 뒤 블록이 따라간다. */}
+            <SceneCarryLayer sceneInfo={sceneInfo} />
+            {/* 운반 레이어 다음 — 같은 priority 의 useFrame 은 마운트 순서로
+              실행되므로 노드·블록이 움직인 뒤 검사한다. */}
             <SceneCollisionDetector
               sceneInfo={sceneInfo}
               enabled={collisionEnabled}

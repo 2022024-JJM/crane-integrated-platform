@@ -719,7 +719,12 @@
       "periodHint": "한 주기(초)",
       "remove": "태그 제거",
       "noValue": "값 없음",
-      "targetMissing": "맵핑 없음"
+      "targetMissing": "맵핑 없음",
+      "hookTarget": "훅 {{label}} · 부착",
+      "keyframesSummary": "{{count}}점 · {{total}}s",
+      "keyframesHint": "시각별 키프레임 — 점 편집은 시나리오 파일에서",
+      "loop": "반복",
+      "smooth": "가감속"
     },
     "dataTypes": {
       "number": "숫자",
@@ -730,7 +735,8 @@
       "triangle": "삼각파",
       "sine": "사인파",
       "sawtooth": "톱니파",
-      "square": "구형파"
+      "square": "구형파",
+      "keyframes": "키프레임"
     },
     "pick": {
       "createTitle": "새 시나리오",

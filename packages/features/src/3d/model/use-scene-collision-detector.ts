@@ -9,6 +9,7 @@ import {
   subscribeRunnerResume,
   type SceneCollisionRunner,
 } from './scene-collision-hold';
+import { isCarriedMeshPair } from './scene-carry-state';
 import { buildCollisionRecord } from './scene-collision-record';
 import { sceneCollisionRuntime } from './scene-collision-runtime';
 import { useActiveTransformStore } from './use-active-transform-store';
@@ -62,6 +63,14 @@ export function useSceneCollisionDetector({
   useEffect(() => {
     sceneCollisionRuntime.sync(models);
   }, [models]);
+
+  // 운반 중인 훅 메쉬↔블록은 관통이 아니다 — 레이어(scene-carry-layer)가
+  // 블록을 훅에 붙여 옮기는 동안 그 메쉬 쌍만 건너뛴다. 크레인의 다리·거더가
+  // 운반 중인 블록을 치는 것은 그대로 보고된다.
+  useEffect(() => {
+    sceneCollisionRuntime.setMeshPairExclusion(isCarriedMeshPair);
+    return () => sceneCollisionRuntime.setMeshPairExclusion(null);
+  }, []);
 
   useEffect(() => {
     runnerRef.current = runner;

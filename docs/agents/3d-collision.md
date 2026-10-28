@@ -80,7 +80,8 @@
 
 - 실루엣 테두리(`ObjectSilhouetteOutline`, `selectionStyle='outline'`, 장비 상태 외곽선)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 여야 한다. 스텐실 없는 캔버스는 `'box'` 로 두고 상태 외곽선을 넘기지 않는다.
 - 상태 외곽선의 헐 렌더 순서는 마스크와 선택·충돌 헐(`SILHOUETTE_OUTLINE_RENDER_ORDER`) 사이다. 같거나 크면 같은 장비의 충돌 테두리 색이 정해지지 않는다.
-- Canvas 마운트 순서를 지킨다: `RigDriver` → 충돌 검출기(`SceneCollisionDetector`) → `SceneCollisionHighlight`(+`SilhouetteOutlineWarmup`) → 영역 검출기(`SceneZoneDetector`) → `SceneZoneRings`. 같은 priority useFrame 은 마운트 순이라 순서가 바뀌면 한 프레임 늦은 자세를 검사한다.
+- Canvas 마운트 순서를 지킨다: `RigDriver` → `SceneCarryLayer` → 충돌 검출기(`SceneCollisionDetector`) → `SceneCollisionHighlight`(+`SilhouetteOutlineWarmup`) → 영역 검출기(`SceneZoneDetector`) → `SceneZoneRings`. 같은 priority useFrame 은 마운트 순이라 순서가 바뀌면 한 프레임 늦은 자세를 검사한다.
+- 운반 중인 **훅 노드 메쉬↔블록** 쌍만 검사에서 뺀다 — 검출기가 런타임에 `setMeshPairExclusion(isCarriedMeshPair)` 를 꽂고, 런타임은 메쉬 AABB 가 겹친 쌍(관통 검사·억제 해제의 분리 판정 모두)에서 묻는다(쌍 목록 재생성 없이 부착·분리가 바로 반영). 훅 블록이 블록 윗면에 닿은 채 움직이는 것은 관통이 아니지만, 같은 크레인의 다리·거더·트롤리 본체가 운반 중인 블록을 치는 것은 관통이라 모델 쌍 단위로 빼지 않는다(`docs/agents/tag-mapping-rig.md` 블록 운반).
 - 값 생산자를 멈추거나 되살리는 코드는 `scene-collision-hold.ts` 의 `holdRunners`/`releaseRunners`/`subscribeRunnerResume` 만 쓴다. 러너 스토어를 직접 pause 하는 새 경로를 만들지 않는다.
 - 실시간 러너(`'realtime'`)는 어떤 감지에서도 자동 정지하지 않는다. 새 정지 조건을 추가해도 `runner === 'realtime'` 은 flash 로 끝낸다.
 - 감지 설정 스위치를 추가하면 `DetectionSettings`·`DETECTION_SETTINGS_DEFAULTS`·`sanitizeDetectionSettings` 와 설정 페이지를 함께 고치고, 스토어는 `readDetectionSettings`/`writeDetectionSettings` 로만 읽고 쓴다.
