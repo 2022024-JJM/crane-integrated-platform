@@ -4,6 +4,7 @@ export type {
   SimulationScenario,
   VirtualTagDataType,
   VirtualTagDefinition,
+  VirtualTagKeyframe,
   VirtualTagPattern,
   VirtualTagPatternKind,
 } from './model/types';
@@ -15,6 +16,7 @@ export {
   VIRTUAL_TAG_BOOL_PATTERN_KINDS,
   VIRTUAL_TAG_CODE_MAX,
   VIRTUAL_TAG_DATA_TYPES,
+  VIRTUAL_TAG_KEYFRAMES_MAX,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
@@ -29,6 +31,7 @@ export {
 export { normalizeVirtualTagCode } from './lib/tag-code';
 export {
   clampToTag,
+  evaluateKeyframes,
   initVirtualTagState,
   setVirtualTagManualValue,
   stepVirtualTag,
@@ -43,6 +46,7 @@ export {
   sanitizeScenarioSet,
   sanitizeScenarioTag,
   sanitizeScenarioTagList,
+  sanitizeKeyframes,
   sanitizeVirtualTag,
   sanitizeVirtualTagPattern,
   scenarioTagKey,

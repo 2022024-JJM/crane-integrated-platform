@@ -724,7 +724,13 @@
       "range": "Ambitus",
       "periodLabel": "Periodus",
       "seconds": "s",
-      "initialHint": "Valor initio cursus"
+      "initialHint": "Valor initio cursus",
+      "hookTarget": "Hamus {{label}} · adnexio",
+      "keyframesLabel": "Longitudo",
+      "keyframesSummary": "{{count}} puncta · {{total}} s",
+      "keyframesHint": "Puncta temporis — puncta in fasciculo scaenarii muta",
+      "loop": "iteratio",
+      "smooth": "lenis"
     },
     "dataTypes": {
       "number": "Numerus",
@@ -734,13 +740,15 @@
       "manual": "Manuale",
       "sine": "Sinus",
       "sawtooth": "Serra",
-      "square": "Quadratum"
+      "square": "Quadratum",
+      "keyframes": "Puncta temporis"
     },
     "patternsShort": {
       "manual": "Manu",
       "sine": "Sin",
       "sawtooth": "Ser",
-      "square": "Quad"
+      "square": "Quad",
+      "keyframes": "Puncta"
     },
     "sentence": {
       "sine": "Sinus, {{min}} ↔ {{max}}{{unit}} et retro singulis {{period}} s.",

@@ -1,23 +1,23 @@
 import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
-  VIRTUAL_TAG_BOOL_PATTERN_KINDS,
   VIRTUAL_TAG_DATA_TYPES,
-  VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_MAX,
   VIRTUAL_TAG_PERIOD_MIN,
   type ScenarioTag,
   type VirtualTagPattern,
-  type VirtualTagPatternKind,
 } from '@crane/domain/virtual-tag';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
 import { InputNumber } from '@crane/ui/atoms/input-number';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import {
+  describeKeyframes,
   describePatternSentence,
   nextPattern,
+  selectablePatternKinds,
   showsInitialValue,
+  type KeyframesSummary,
   type ScenarioRow,
 } from '../lib/scenario-rows';
 import {
@@ -35,12 +35,15 @@ function withPeriod(
   pattern: VirtualTagPattern,
   periodSec: number,
 ): VirtualTagPattern {
-  return pattern.kind === 'manual' ? pattern : { ...pattern, periodSec };
+  return pattern.kind === 'manual' || pattern.kind === 'keyframes'
+    ? pattern
+    : { ...pattern, periodSec };
 }
 
 /**
  * 목록 행을 눌렀을 때 그 아래 펼쳐지는 태그 정의 — 라벨 열 + 입력. 동작(파형
- * 버튼), 주기(파형일 때, 옆에 동작 설명 문장), 범위·단위(숫자), 초기값(뜻이
+ * 버튼), 주기(파형일 때, 옆에 동작 설명 문장) 또는 길이(키프레임 — 점 수·총
+ * 길이·반복·가감속 요약, 점 편집은 시나리오 파일), 범위·단위(숫자), 초기값(뜻이
  * 있는 파형만, `showsInitialValue`), 형식. 현재값 조작은 목록 행이 맡고 여기에는 없다. 행을 빼는 것은 묶음의
  * "태그 수정" 이라 제거 버튼도 없다.
  */
@@ -58,9 +61,7 @@ export function ScenarioTagSettings({
   const { tag, issue } = row;
   const { pattern } = tag;
   const isBool = tag.dataType === 'bool';
-  const kinds: readonly VirtualTagPatternKind[] = isBool
-    ? VIRTUAL_TAG_BOOL_PATTERN_KINDS
-    : VIRTUAL_TAG_PATTERN_KINDS;
+  const kinds = selectablePatternKinds(tag);
   const sentence = describePatternSentence(tag);
 
   return (
@@ -78,7 +79,8 @@ export function ScenarioTagSettings({
           aria-label={t('monitoring:scenario.row.pattern')}
           className={cn(
             'grid w-full auto-cols-fr grid-flow-col gap-1',
-            isBool ? 'max-w-28' : 'max-w-72',
+            // 불리언은 버튼이 둘(키프레임 태그면 셋)이라 좁게.
+            isBool ? (kinds.length > 2 ? 'max-w-40' : 'max-w-28') : 'max-w-72',
           )}
         >
           {kinds.map((kind) => {
@@ -108,7 +110,9 @@ export function ScenarioTagSettings({
         </div>
       </Field>
 
-      {pattern.kind === 'manual' ? null : (
+      {pattern.kind === 'manual' ? null : pattern.kind === 'keyframes' ? (
+        <KeyframesField summary={describeKeyframes(pattern)} t={t} />
+      ) : (
         <Field label={t('monitoring:scenario.row.periodLabel')}>
           <InputNumber
             value={pattern.periodSec}
@@ -203,6 +207,25 @@ export function ScenarioTagSettings({
         </ToggleGroup>
       </Field>
     </div>
+  );
+}
+
+/** 키프레임 요약 줄 — 점 편집 UI 가 없어 보기만 한다. */
+function KeyframesField({ summary, t }: { summary: KeyframesSummary; t: T }) {
+  return (
+    <Field label={t('monitoring:scenario.row.keyframesLabel')}>
+      <span>
+        {t('monitoring:scenario.row.keyframesSummary', {
+          count: summary.count,
+          total: summary.total,
+        })}
+        {summary.loop ? ` · ${t('monitoring:scenario.row.loop')}` : ''}
+        {summary.smooth ? ` · ${t('monitoring:scenario.row.smooth')}` : ''}
+      </span>
+      <span className="text-muted-foreground ml-1">
+        {t('monitoring:scenario.row.keyframesHint')}
+      </span>
+    </Field>
   );
 }
 

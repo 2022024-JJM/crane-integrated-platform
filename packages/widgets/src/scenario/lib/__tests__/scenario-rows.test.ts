@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
+  VIRTUAL_TAG_BOOL_PATTERN_KINDS,
+  VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   type ScenarioTag,
   type SimulationScenario,
@@ -8,6 +10,7 @@ import {
 } from '@crane/domain/virtual-tag';
 import type { ScenarioTagIssue, VirtualTagEntry } from '@crane/features/3d';
 import {
+  describeKeyframes,
   describePatternSentence,
   formatVirtualValue,
   groupScenarioRows,
@@ -15,6 +18,7 @@ import {
   nextPattern,
   nodeLeafName,
   resolveRowControl,
+  selectablePatternKinds,
   showsInitialValue,
   sliderStep,
   valuePercent,
@@ -153,6 +157,42 @@ describe('groupScenarioRows', () => {
     expect(m1.rows[2].target).toBeUndefined();
   });
 
+  it('훅 부착 코드의 대상은 source=hook 과 라벨(없으면 훅 id)', () => {
+    const hookScene = {
+      models: [
+        {
+          id: 'm1',
+          equipName: 'GC-04',
+          craneId: 'GC_04',
+          hooks: [
+            {
+              id: 'hook-upper',
+              label: 'Upper',
+              nodes: ['a'],
+              attachCode: 'up',
+            },
+            { id: 'hook-lower', nodes: ['b'], attachCode: 'low' },
+          ],
+        },
+      ],
+    } as unknown as SavedSceneInfo;
+    const hookScenario: SimulationScenario = {
+      ...scenario,
+      tags: [tag('h1', 'm1', 'up'), tag('h2', 'm1', 'low')],
+    };
+    const [m1] = groupScenarioRows(hookScenario, hookScene, [], []);
+    expect(m1.rows[0].target).toEqual({
+      code: 'up',
+      source: 'hook',
+      hookId: 'hook-upper',
+      label: 'Upper',
+    });
+    expect(m1.rows[1].target).toMatchObject({
+      source: 'hook',
+      label: 'hook-lower',
+    });
+  });
+
   it('씬이 없으면 모든 모델이 present=false', () => {
     const groups = groupScenarioRows(scenario, null, [], []);
     expect(groups.every((g) => !g.present)).toBe(true);
@@ -272,6 +312,37 @@ describe('resolveRowControl', () => {
   });
 });
 
+const KEYFRAMES: VirtualTagPattern = {
+  kind: 'keyframes',
+  points: [
+    { atSec: 0, value: 0 },
+    { atSec: 136.65, value: 1 },
+  ],
+  loop: true,
+};
+
+describe('selectablePatternKinds', () => {
+  it('키프레임이 아닌 태그에는 키프레임 버튼이 없다 — 숫자·불리언 모두', () => {
+    expect(selectablePatternKinds(withPattern({ kind: 'manual' }))).toEqual(
+      VIRTUAL_TAG_PATTERN_KINDS.filter((k) => k !== 'keyframes'),
+    );
+    expect(
+      selectablePatternKinds(
+        withPattern({ kind: 'square', periodSec: 10 }, { dataType: 'bool' }),
+      ),
+    ).toEqual(['manual', 'square']);
+  });
+
+  it('이미 키프레임인 태그는 형식별 전체 목록(키프레임 포함)', () => {
+    expect(selectablePatternKinds(withPattern(KEYFRAMES))).toBe(
+      VIRTUAL_TAG_PATTERN_KINDS,
+    );
+    expect(
+      selectablePatternKinds(withPattern(KEYFRAMES, { dataType: 'bool' })),
+    ).toBe(VIRTUAL_TAG_BOOL_PATTERN_KINDS);
+  });
+});
+
 describe('nextPattern', () => {
   it('같은 종류면 같은 참조 — duty 가 있는 구형파도 그대로', () => {
     const manual: VirtualTagPattern = { kind: 'manual' };
@@ -316,12 +387,32 @@ describe('nextPattern', () => {
     expect(next).toEqual({ kind: 'manual' });
     expect(next).not.toHaveProperty('periodSec');
   });
+
+  it('키프레임에서 파형으로 가면 기본 주기, 수동이면 manual — 점은 버린다', () => {
+    expect(nextPattern(KEYFRAMES, 'square')).toEqual({
+      kind: 'square',
+      periodSec: VIRTUAL_TAG_PERIOD_DEFAULT,
+    });
+    expect(nextPattern(KEYFRAMES, 'manual')).toEqual({ kind: 'manual' });
+  });
+
+  it('키프레임으로는 바꿔 들어가지 않는다 — 같은 참조, 키프레임끼리도 같은 참조', () => {
+    const manual: VirtualTagPattern = { kind: 'manual' };
+    const sine: VirtualTagPattern = { kind: 'sine', periodSec: 40 };
+    expect(nextPattern(manual, 'keyframes')).toBe(manual);
+    expect(nextPattern(sine, 'keyframes')).toBe(sine);
+    expect(nextPattern(KEYFRAMES, 'keyframes')).toBe(KEYFRAMES);
+  });
 });
 
 describe('showsInitialValue', () => {
   it('사인·톱니파만 초기값 줄을 둔다', () => {
     expect(showsInitialValue({ kind: 'sine', periodSec: 40 })).toBe(true);
     expect(showsInitialValue({ kind: 'sawtooth', periodSec: 0.1 })).toBe(true);
+  });
+
+  it('키프레임은 숨긴다 — 값은 점이 정한다', () => {
+    expect(showsInitialValue(KEYFRAMES)).toBe(false);
   });
 
   it('수동과 구형파(duty 와 무관)는 숨긴다', () => {
@@ -340,6 +431,13 @@ describe('describePatternSentence', () => {
       describePatternSentence(
         withPattern({ kind: 'manual' }, { dataType: 'bool' }),
       ),
+    ).toBeNull();
+  });
+
+  it('키프레임은 주기가 없어 null — 숫자·불리언 모두', () => {
+    expect(describePatternSentence(withPattern(KEYFRAMES))).toBeNull();
+    expect(
+      describePatternSentence(withPattern(KEYFRAMES, { dataType: 'bool' })),
     ).toBeNull();
   });
 
@@ -449,6 +547,50 @@ describe('describePatternSentence', () => {
         ),
       ),
     ).toMatchObject({ key: 'boolSquareDuty', values: { duty: '30' } });
+  });
+});
+
+describe('describeKeyframes', () => {
+  it('점 수·총 길이(마지막 점 시각)·반복·가감속', () => {
+    expect(
+      describeKeyframes({
+        kind: 'keyframes',
+        points: [
+          { atSec: 0, value: 0 },
+          { atSec: 18.13, value: 0 },
+          { atSec: 518.62, value: 0 },
+        ],
+        loop: true,
+        ease: 'smooth',
+      }),
+    ).toEqual({ count: 3, total: '518.62', loop: true, smooth: true });
+  });
+
+  it('loop·ease 가 없으면 false, 점 하나면 그 시각이 길이', () => {
+    expect(
+      describeKeyframes({
+        kind: 'keyframes',
+        points: [{ atSec: 0, value: 5 }],
+      }),
+    ).toEqual({ count: 1, total: '0', loop: false, smooth: false });
+  });
+
+  it('점이 없으면 0점 · 0초 — sanitize 를 거치지 않은 값도 던지지 않는다', () => {
+    expect(describeKeyframes({ kind: 'keyframes', points: [] })).toEqual({
+      count: 0,
+      total: '0',
+      loop: false,
+      smooth: false,
+    });
+  });
+
+  it('총 길이는 formatVirtualValue 표기 — 소수 셋째 자리, 꼬리 0 제거', () => {
+    expect(
+      describeKeyframes({
+        kind: 'keyframes',
+        points: [{ atSec: 497.7604, value: 0 }],
+      }).total,
+    ).toBe('497.76');
   });
 });
 

@@ -235,6 +235,17 @@ export {
 export { makeMeshId, parseMeshId, isMeshId } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
 export { RigDriver } from './ui/rig-driver';
+export { SceneCarryLayer } from './ui/scene-carry-layer';
+export {
+  isCarriedMeshPair,
+  isCarriedPair,
+  sceneCarryState,
+} from './model/scene-carry-state';
+export {
+  SceneCarryRuntime,
+  type CarryResolvers,
+  type CarryStepResult,
+} from './model/scene-carry-runtime';
 export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
 export {
@@ -294,6 +305,7 @@ export {
 } from './lib/scene-warmup-step';
 export {
   sceneCollisionRuntime,
+  type MeshPairExclusion,
   type SceneCollisionRuntimePhase,
 } from './model/scene-collision-runtime';
 export {

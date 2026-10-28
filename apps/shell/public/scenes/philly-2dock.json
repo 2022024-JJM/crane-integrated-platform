@@ -163,9 +163,58 @@
             "axis": "x"
           },
           "code": "trolley_position_2"
+        },
+        {
+          "id": "map-hoist-u1",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[1]Goliath_Crane_Trolley_01/[0]Goliath_Crane_Trolley_01_Rope_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "code": "hoist_height"
+        },
+        {
+          "id": "map-hoist-u2",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[1]Goliath_Crane_Trolley_01/[1]Goliath_Crane_Trolley_01_Rope_02",
+            "channel": "position",
+            "axis": "y"
+          },
+          "code": "hoist_height"
+        },
+        {
+          "id": "map-hoist-l1",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[2]Goliath_Crane_Trolley_02/[0]Goliath_Crane_Trolley_02_Rope_01",
+            "channel": "position",
+            "axis": "y"
+          },
+          "code": "hoist_height_2"
         }
       ],
-      "craneId": "GC_04"
+      "craneId": "GC_04",
+      "hooks": [
+        {
+          "id": "hook-upper",
+          "label": "Upper",
+          "nodes": [
+            "[0]Goliath/[1]Goliath_Crane_Trolley_01/[0]Goliath_Crane_Trolley_01_Rope_01",
+            "[0]Goliath/[1]Goliath_Crane_Trolley_01/[1]Goliath_Crane_Trolley_01_Rope_02"
+          ],
+          "attachCode": "block_attached"
+        },
+        {
+          "id": "hook-lower",
+          "label": "Lower",
+          "nodes": [
+            "[0]Goliath/[2]Goliath_Crane_Trolley_02/[0]Goliath_Crane_Trolley_02_Rope_01"
+          ],
+          "attachCode": "block_attached_2"
+        }
+      ]
     },
     {
       "id": "id-mt0riz7x-bxncy0uk",
@@ -291,7 +340,7 @@
     },
     {
       "id": "beccf605-d547-4854-88e3-fc152f999a34",
-      "equipName": "Block-001",
+      "equipName": "대조 블록",
       "path": "/models/Block_001.glb",
       "asset": {
         "id": "block-001",
@@ -314,11 +363,12 @@
         1
       ],
       "labelHidden": true,
-      "zoneExempt": true
+      "zoneExempt": true,
+      "carriable": true
     },
     {
       "id": "94c0e51c-40fb-4859-8818-efdd24f6ac77",
-      "equipName": "Block-002",
+      "equipName": "중조 블록",
       "path": "/models/Block_002.glb",
       "asset": {
         "id": "block-002",
@@ -341,7 +391,36 @@
         1
       ],
       "labelHidden": true,
-      "zoneExempt": true
+      "zoneExempt": true,
+      "carriable": true
+    },
+    {
+      "id": "block-small-assembly",
+      "equipName": "소조 블록",
+      "path": "/models/Block_002.glb",
+      "asset": {
+        "id": "block-002",
+        "version": 1
+      },
+      "opacity": 1,
+      "position": [
+        -606.772,
+        9.6,
+        240.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "labelHidden": true,
+      "zoneExempt": true,
+      "carriable": true
     },
     {
       "id": "id-mtmb9z6j-83ld4mwc",

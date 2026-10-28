@@ -80,6 +80,9 @@ function describeCode(code: ModelTagCode, t: T): string {
   if (code.source === 'status') {
     return t(`monitoring:inspector.statusTags.roles.${code.role}`);
   }
+  if (code.source === 'hook') {
+    return t('monitoring:scenario.row.hookTarget', { label: code.label });
+  }
   if (code.target.kind === 'joint') {
     return `${t('monitoring:inspector.mapping.joint')} ${code.target.jointId}`;
   }

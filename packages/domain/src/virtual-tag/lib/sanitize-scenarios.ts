@@ -3,6 +3,7 @@ import {
   SCENARIO_TAGS_MAX,
   SCENARIOS_MAX,
   VIRTUAL_TAG_BOOL_PATTERN_KINDS,
+  VIRTUAL_TAG_KEYFRAMES_MAX,
   VIRTUAL_TAG_NAME_MAX,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
@@ -17,6 +18,7 @@ import {
   type ScenarioTag,
   type SimulationScenario,
   type VirtualTagDefinition,
+  type VirtualTagKeyframe,
   type VirtualTagPattern,
   type VirtualTagPatternKind,
 } from '../model/types';
@@ -99,7 +101,42 @@ export function sanitizeVirtualTagPattern(raw: unknown): VirtualTagPattern {
       }
       return pattern;
     }
+    case 'keyframes': {
+      const points = sanitizeKeyframes(p.points);
+      // 점이 하나도 없으면 값이 없다 — 수동으로 되돌린다.
+      if (points.length === 0) return { kind: 'manual' };
+      const pattern: VirtualTagPattern = { kind: 'keyframes', points };
+      if (p.loop === true) pattern.loop = true;
+      if (p.ease === 'smooth') pattern.ease = 'smooth';
+      return pattern;
+    }
   }
+}
+
+/**
+ * 키프레임 점 — `atSec` 은 0 이상 유한수(ms 해상도로 반올림), `value` 는
+ * 유한수. 깨진 점은 버리고 `atSec` 오름차순으로 정렬하며 같은 시각은 첫 점만
+ * 남긴다(안정 정렬이라 입력 순서가 곧 우선순위). 상한 초과는 잘라낸다.
+ */
+export function sanitizeKeyframes(raw: unknown): VirtualTagKeyframe[] {
+  if (!Array.isArray(raw)) return [];
+  const points: VirtualTagKeyframe[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const k = item as Record<string, unknown>;
+    if (!isFiniteNumber(k.atSec) || k.atSec < 0 || !isFiniteNumber(k.value)) {
+      continue;
+    }
+    points.push({ atSec: roundSeconds(k.atSec), value: k.value });
+  }
+  points.sort((a, b) => a.atSec - b.atSec);
+  const out: VirtualTagKeyframe[] = [];
+  for (const point of points) {
+    if (out.length > 0 && out[out.length - 1].atSec === point.atSec) continue;
+    out.push(point);
+    if (out.length >= VIRTUAL_TAG_KEYFRAMES_MAX) break;
+  }
+  return out;
 }
 
 /**

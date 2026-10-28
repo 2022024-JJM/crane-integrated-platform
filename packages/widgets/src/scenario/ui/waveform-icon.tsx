@@ -12,6 +12,8 @@ const PATH: Record<VirtualTagPatternKind, string> = {
   sawtooth: 'M0 14 L16 2 L16 14 L32 2 L32 14 L48 2',
   // 구형파
   square: 'M0 8 L0 2 L12 2 L12 14 L24 14 L24 2 L36 2 L36 14 L48 14 L48 8',
+  // 키프레임: 점 사이 직선 — 머무름·경사가 섞인 작업 순서
+  keyframes: 'M0 14 L10 14 L18 3 L30 3 L36 11 L48 11',
   manual: '',
 };
 

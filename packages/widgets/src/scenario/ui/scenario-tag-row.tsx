@@ -26,12 +26,15 @@ type T = (key: string, options?: Record<string, unknown>) => string;
  */
 const LIVE_POLL_MS = 100;
 
-/** 코드가 모델에서 가리키는 것 — `루트 · 위치 z`, `Trolley_01 · 위치 x`, `관절 luff`, `고장`. */
+/** 코드가 모델에서 가리키는 것 — `루트 · 위치 z`, `Trolley_01 · 위치 x`, `관절 luff`, `고장`, `훅 Upper · 부착`. */
 function describeTarget(row: ScenarioRow, t: T): string {
   const target = row.target;
   if (!target) return t('monitoring:scenario.row.targetMissing');
   if (target.source === 'status') {
     return t(`monitoring:inspector.statusTags.roles.${target.role}`);
+  }
+  if (target.source === 'hook') {
+    return t('monitoring:scenario.row.hookTarget', { label: target.label });
   }
   if (target.target.kind === 'joint') {
     return `${t('monitoring:inspector.mapping.joint')} ${target.target.jointId}`;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clampToTag,
+  evaluateKeyframes,
   initVirtualTagState,
   setVirtualTagManualValue,
   stepVirtualTag,
@@ -94,5 +95,96 @@ describe('stepVirtualTag — manual', () => {
     expect(setVirtualTagManualValue(def, s, 30)).toBe(s);
     expect(setVirtualTagManualValue(def, s, 500)).toEqual({ value: 100 });
     expect(setVirtualTagManualValue(def, s, NaN)).toEqual({ value: 0 });
+  });
+});
+
+describe('keyframes', () => {
+  const points = [
+    { atSec: 0, value: 0 },
+    { atSec: 10, value: 100 },
+    { atSec: 20, value: 100 },
+    { atSec: 30, value: 40 },
+  ];
+
+  it('점 사이는 선형 보간, 앞·뒤는 끝값 유지', () => {
+    expect(evaluateKeyframes(points, -5, false, false)).toBe(0);
+    expect(evaluateKeyframes(points, 0, false, false)).toBe(0);
+    expect(evaluateKeyframes(points, 5, false, false)).toBe(50);
+    expect(evaluateKeyframes(points, 15, false, false)).toBe(100);
+    expect(evaluateKeyframes(points, 25, false, false)).toBe(70);
+    expect(evaluateKeyframes(points, 30, false, false)).toBe(40);
+    expect(evaluateKeyframes(points, 1000, false, false)).toBe(40);
+  });
+
+  it('loop 는 마지막 점 시각을 주기로 되감는다 — 경계 정확값은 0 초', () => {
+    expect(evaluateKeyframes(points, 30, true, false)).toBe(0);
+    expect(evaluateKeyframes(points, 35, true, false)).toBe(50);
+    expect(evaluateKeyframes(points, 65, true, false)).toBe(50);
+    // 마지막 시각이 0 이면 되감지 않는다(0 으로 나누기 없음)
+    expect(evaluateKeyframes([{ atSec: 0, value: 7 }], 99, true, false)).toBe(
+      7,
+    );
+  });
+
+  it('step 은 앞 점의 값을 유지한다(불리언)', () => {
+    expect(evaluateKeyframes(points, 5, false, true)).toBe(0);
+    expect(evaluateKeyframes(points, 9.999, false, true)).toBe(0);
+    expect(evaluateKeyframes(points, 10, false, true)).toBe(100);
+    expect(evaluateKeyframes(points, 29.9, false, true)).toBe(100);
+  });
+
+  it('점이 없으면 0, NaN 시각은 0 초로', () => {
+    expect(evaluateKeyframes([], 5, true, false)).toBe(0);
+    expect(evaluateKeyframes(points, Number.NaN, false, false)).toBe(0);
+  });
+
+  it('stepVirtualTag — 숫자는 보간·클램프, 불리언은 계단', () => {
+    const num = tag(
+      { kind: 'keyframes', points, loop: true },
+      { min: 0, max: 80, initial: 0 },
+    );
+    const state = initVirtualTagState(num);
+    expect(stepVirtualTag(num, 5_000, state).value).toBe(50);
+    expect(stepVirtualTag(num, 15_000, state).value).toBe(80); // 범위로 클램프
+    expect(stepVirtualTag(num, 35_000, state).value).toBe(50); // loop
+    const bool = tag(
+      {
+        kind: 'keyframes',
+        points: [
+          { atSec: 0, value: 0 },
+          { atSec: 3, value: 1 },
+          { atSec: 6, value: 0 },
+        ],
+      },
+      { dataType: 'bool', min: 0, max: 1, initial: 0 },
+    );
+    expect(stepVirtualTag(bool, 2_999, state).value).toBe(0);
+    expect(stepVirtualTag(bool, 3_000, state).value).toBe(1);
+    expect(stepVirtualTag(bool, 5_999, state).value).toBe(1);
+    expect(stepVirtualTag(bool, 6_000, state).value).toBe(0);
+    expect(stepVirtualTag(bool, 60_000, state).value).toBe(0); // loop 없음: 끝값
+  });
+});
+
+describe('keyframes — smooth 가감속', () => {
+  const points = [
+    { atSec: 0, value: 0 },
+    { atSec: 10, value: 100 },
+  ];
+  it('구간 중앙은 같고 초입·말미는 선형보다 느리며 끝점은 정확', () => {
+    expect(evaluateKeyframes(points, 5, false, false, true)).toBe(50);
+    expect(evaluateKeyframes(points, 2, false, false, true)).toBeCloseTo(10.4);
+    expect(evaluateKeyframes(points, 8, false, false, true)).toBeCloseTo(89.6);
+    expect(evaluateKeyframes(points, 0, false, false, true)).toBe(0);
+    expect(evaluateKeyframes(points, 10, false, false, true)).toBe(100);
+  });
+  it('계단(불리언)에는 영향이 없다', () => {
+    expect(evaluateKeyframes(points, 5, false, true, true)).toBe(0);
+  });
+  it('stepVirtualTag 가 pattern.ease 를 넘긴다', () => {
+    const def = tag({ kind: 'keyframes', points, ease: 'smooth' });
+    expect(
+      stepVirtualTag(def, 2_000, initVirtualTagState(def)).value,
+    ).toBeCloseTo(10.4);
   });
 });

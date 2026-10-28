@@ -58,3 +58,44 @@ describe('collectModelTagCodes', () => {
     expect(collectModelTagCodes({})).toEqual([]);
   });
 });
+
+describe('collectModelTagCodes — 훅 부착 태그', () => {
+  it('맵핑·상태 다음에 훅 순으로 붙고 라벨이 없으면 id 가 라벨', () => {
+    const out = collectModelTagCodes({
+      tagMappings: [
+        {
+          id: 'm1',
+          target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+          code: 'gantry',
+        },
+      ],
+      hooks: [
+        { id: 'hook-upper', label: 'Upper', nodes: ['n'], attachCode: 'att' },
+        { id: 'hook-lower', nodes: ['n2'], attachCode: 'att2' },
+      ],
+    });
+    expect(out.map((c) => c.code)).toEqual(['gantry', 'att', 'att2']);
+    expect(out[1]).toEqual({
+      code: 'att',
+      source: 'hook',
+      hookId: 'hook-upper',
+      label: 'Upper',
+    });
+    expect(out[2]).toMatchObject({ source: 'hook', label: 'hook-lower' });
+  });
+
+  it('맵핑과 같은 코드의 훅은 건너뛴다(첫 항목 우선)', () => {
+    const out = collectModelTagCodes({
+      tagMappings: [
+        {
+          id: 'm1',
+          target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+          code: 'same',
+        },
+      ],
+      hooks: [{ id: 'h', nodes: ['n'], attachCode: 'same' }],
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0].source).toBe('mapping');
+  });
+});

@@ -7,6 +7,7 @@ import type {
   SavedFloodlightInfo,
   SavedMapInfo,
   SavedMeshOverride,
+  SavedModelHook,
   SavedModelInfo,
   SavedModelZone,
   SavedRulerGuide,
@@ -120,6 +121,39 @@ function isZoneListEqual(
       adz !== bdz
     ) {
       return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * 훅 목록 — id 기준 lookup. anchorOffsetY 는 0, pickRadius 는 undefined 로
+ * 정규화해 비교(sanitize 가 0·무효를 생략하는 규칙과 짝). 노드 목록은 순서까지
+ * 같아야 한다(앵커 평균에는 순서가 없지만 저장본은 순서를 가진다).
+ */
+function isHookListEqual(
+  a: SavedModelHook[] | undefined,
+  b: SavedModelHook[] | undefined,
+): boolean {
+  const aLen = a?.length ?? 0;
+  const bLen = b?.length ?? 0;
+  if (aLen !== bLen) return false;
+  if (aLen === 0) return true;
+  const bMap = new Map((b ?? []).map((h) => [h.id, h]));
+  for (const ah of a ?? []) {
+    const bh = bMap.get(ah.id);
+    if (!bh) return false;
+    if (
+      (ah.label ?? '') !== (bh.label ?? '') ||
+      ah.attachCode !== bh.attachCode ||
+      (ah.anchorOffsetY ?? 0) !== (bh.anchorOffsetY ?? 0) ||
+      ah.pickRadius !== bh.pickRadius ||
+      ah.nodes.length !== bh.nodes.length
+    ) {
+      return false;
+    }
+    for (let i = 0; i < ah.nodes.length; i += 1) {
+      if (ah.nodes[i] !== bh.nodes[i]) return false;
     }
   }
   return true;
@@ -361,7 +395,9 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     isStatusTagsEqual(a.statusTags, b.statusTags) &&
     isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides) &&
     isZoneListEqual(a.zones, b.zones) &&
-    (a.zoneExempt === true) === (b.zoneExempt === true)
+    (a.zoneExempt === true) === (b.zoneExempt === true) &&
+    isHookListEqual(a.hooks, b.hooks) &&
+    (a.carriable === true) === (b.carriable === true)
   );
 }
 

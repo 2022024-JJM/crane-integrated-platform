@@ -724,7 +724,13 @@
       "range": "범위",
       "periodLabel": "주기",
       "seconds": "초",
-      "initialHint": "재생을 시작할 때 값"
+      "initialHint": "재생을 시작할 때 값",
+      "hookTarget": "훅 {{label}} · 부착",
+      "keyframesLabel": "길이",
+      "keyframesSummary": "{{count}}점 · {{total}}초",
+      "keyframesHint": "시각별 키프레임 — 점 편집은 시나리오 파일에서",
+      "loop": "반복",
+      "smooth": "가감속"
     },
     "dataTypes": {
       "number": "숫자",
@@ -734,13 +740,15 @@
       "manual": "수동",
       "sine": "사인파",
       "sawtooth": "톱니파",
-      "square": "구형파"
+      "square": "구형파",
+      "keyframes": "키프레임"
     },
     "patternsShort": {
       "manual": "수동",
       "sine": "사인",
       "sawtooth": "톱니",
-      "square": "구형"
+      "square": "구형",
+      "keyframes": "키프레임"
     },
     "sentence": {
       "sine": "사인파, {{period}}초에 한 번 {{min}} ↔ {{max}}{{unit}} 왕복.",

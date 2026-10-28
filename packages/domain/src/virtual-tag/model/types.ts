@@ -19,7 +19,30 @@ export type VirtualTagPattern =
   /** min→max 톱니. */
   | { kind: 'sawtooth'; periodSec: number }
   /** dutyPct(0~100, 기본 50) 동안 max, 나머지 min. */
-  | { kind: 'square'; periodSec: number; dutyPct?: number };
+  | { kind: 'square'; periodSec: number; dutyPct?: number }
+  /**
+   * 시각별 키프레임 — 작업 순서(접근→하강→부착→권상→이동→하강→분리)처럼
+   * 파형으로 못 적는 흐름. 점 사이는 숫자면 선형 보간, 불리언이면 앞 점의 값을
+   * 유지(계단). 첫 점 앞은 첫 값, 마지막 점 뒤는 마지막 값이고, `loop` 면
+   * 마지막 점의 시각을 주기로 되감는다. 점은 `atSec` 오름차순(sanitize).
+   */
+  | {
+      kind: 'keyframes';
+      points: VirtualTagKeyframe[];
+      loop?: boolean;
+      /**
+       * 점 사이 보간. 생략 = 선형(등속). `smooth` 는 각 구간을 smoothstep 으로
+       * 이어 점마다 속도 0 에서 출발·정지한다 — 크레인 주행·권상의 가감속.
+       * 불리언(계단)에는 영향이 없다.
+       */
+      ease?: 'smooth';
+    };
+
+export interface VirtualTagKeyframe {
+  /** 재생 시작 기준 초(≥ 0). */
+  atSec: number;
+  value: number;
+}
 
 export type VirtualTagPatternKind = VirtualTagPattern['kind'];
 
@@ -28,13 +51,18 @@ export const VIRTUAL_TAG_PATTERN_KINDS = [
   'sine',
   'sawtooth',
   'square',
+  'keyframes',
 ] as const satisfies readonly VirtualTagPatternKind[];
 
 /** 불리언 태그가 가질 수 있는 패턴 — 0/1 사이를 뛰는 것만 의미가 있다. */
 export const VIRTUAL_TAG_BOOL_PATTERN_KINDS = [
   'manual',
   'square',
+  'keyframes',
 ] as const satisfies readonly VirtualTagPatternKind[];
+
+/** 키프레임 점 개수 상한 — 한 작업 순서가 수십 점이면 충분하다. */
+export const VIRTUAL_TAG_KEYFRAMES_MAX = 200;
 
 /**
  * 값 형식. `bool` 은 범위 0~1 고정이고 패턴은 manual·square 만, 단위가 없다.

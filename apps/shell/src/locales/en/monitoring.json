@@ -724,7 +724,13 @@
       "range": "Range",
       "periodLabel": "Period",
       "seconds": "s",
-      "initialHint": "Value when playback starts"
+      "initialHint": "Value when playback starts",
+      "hookTarget": "Hook {{label}} · attach",
+      "keyframesLabel": "Length",
+      "keyframesSummary": "{{count}} pts · {{total}} s",
+      "keyframesHint": "Timed keyframes — edit points in the scenario file",
+      "loop": "loop",
+      "smooth": "eased"
     },
     "dataTypes": {
       "number": "Number",
@@ -734,13 +740,15 @@
       "manual": "Manual",
       "sine": "Sine",
       "sawtooth": "Sawtooth",
-      "square": "Square"
+      "square": "Square",
+      "keyframes": "Keyframes"
     },
     "patternsShort": {
       "manual": "Manual",
       "sine": "Sine",
       "sawtooth": "Saw",
-      "square": "Square"
+      "square": "Square",
+      "keyframes": "Keys"
     },
     "sentence": {
       "sine": "Sine, {{min}} ↔ {{max}}{{unit}} and back every {{period}} s.",

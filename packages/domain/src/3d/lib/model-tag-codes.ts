@@ -4,11 +4,13 @@ import {
   type StatusTagRole,
 } from '../model/status-tag-types';
 import type { TagMapping, TagMappingTarget } from '../model/tag-mapping-types';
+import type { SavedModelHook } from '../model/types';
 
 /**
- * 모델이 참조하는 태그 코드 목록 — 맵핑(움직임)과 상태 태그(라벨·외곽선)를
- * 한 줄로 편 것. 시나리오 선택기가 "이 모델에서 고를 수 있는 태그" 로 보이고,
- * 시나리오 태그 행이 코드 옆에 대상(노드·채널·축 / 역할)을 적는 데 쓴다.
+ * 모델이 참조하는 태그 코드 목록 — 맵핑(움직임)·상태 태그(라벨·외곽선)·훅의
+ * 부착 태그(운반)를 한 줄로 편 것. 시나리오 선택기가 "이 모델에서 고를 수
+ * 있는 태그" 로 보이고, 시나리오 태그 행이 코드 옆에 대상(노드·채널·축 /
+ * 역할 / 훅)을 적는 데 쓴다.
  *
  * 같은 코드가 여러 맵핑에 붙어 있으면(팬아웃) 첫 항목만 남긴다 — 시나리오는
  * 코드 단위로 값을 내므로 하나면 충분하다.
@@ -20,11 +22,13 @@ export type ModelTagCode =
       mappingId: string;
       target: TagMappingTarget;
     }
-  | { code: string; source: 'status'; role: StatusTagRole };
+  | { code: string; source: 'status'; role: StatusTagRole }
+  | { code: string; source: 'hook'; hookId: string; label: string };
 
 export function collectModelTagCodes(model: {
   tagMappings?: readonly TagMapping[];
   statusTags?: ModelStatusTags;
+  hooks?: readonly SavedModelHook[];
 }): ModelTagCode[] {
   const out: ModelTagCode[] = [];
   const seen = new Set<string>();
@@ -46,6 +50,16 @@ export function collectModelTagCodes(model: {
       seen.add(code);
       out.push({ code, source: 'status', role });
     }
+  }
+  for (const hook of model.hooks ?? []) {
+    if (!hook.attachCode || seen.has(hook.attachCode)) continue;
+    seen.add(hook.attachCode);
+    out.push({
+      code: hook.attachCode,
+      source: 'hook',
+      hookId: hook.id,
+      label: hook.label ?? hook.id,
+    });
   }
   return out;
 }
