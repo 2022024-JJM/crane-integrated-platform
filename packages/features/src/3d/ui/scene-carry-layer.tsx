@@ -13,7 +13,7 @@ import {
 } from '../model/scene-carry-runtime';
 import { SceneRopeExtensions } from '../model/scene-rope-extensions';
 import { subscribeSceneSeek } from '../model/scene-seek-signal';
-import { readTagLiveValue } from '../model/tag-value-bus';
+import { readTagLiveNumber } from '../model/tag-value-bus';
 
 /**
  * 운반 레이어 — Canvas 안, **`RigDriver` 바로 다음**에 둔다(같은 priority 의
@@ -37,7 +37,7 @@ import { readTagLiveValue } from '../model/tag-value-bus';
 const resolvers: CarryResolvers = {
   root: (id) => modelObjectRegistry.get(id),
   node: (id, path) => modelObjectRegistry.get(makeMeshId(id, path)),
-  value: readTagLiveValue,
+  value: readTagLiveNumber,
 };
 
 export function SceneCarryLayer({

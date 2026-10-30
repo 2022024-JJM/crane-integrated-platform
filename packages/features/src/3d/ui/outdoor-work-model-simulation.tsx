@@ -18,6 +18,7 @@ import {
   type ModelLabelTitles,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
+import { getCraneScopeByRegion } from '@crane/domain/monitoring';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { usePlanOverlapStore } from '../model/use-plan-overlap-store';
 import { usePlanLookStore } from '../model/use-plan-look-store';
@@ -229,7 +230,9 @@ export function OutdoorWorkModelSimulation({
   // 시나리오는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
   useRealtimeRunner();
-  useCraneSnapshotRealtimeBridge(mode === 'realtime');
+  useCraneSnapshotRealtimeBridge(
+    mode === 'realtime' ? getCraneScopeByRegion(regionId) : null,
+  );
 
   const maps = sceneInfo?.maps ?? [];
   const models = sceneInfo?.models ?? [];

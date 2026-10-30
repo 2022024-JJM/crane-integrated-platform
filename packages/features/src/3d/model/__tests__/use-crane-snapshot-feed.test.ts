@@ -1,19 +1,22 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
+import type { CraneScope } from '@crane/domain/monitoring';
 import { useCraneSnapshotStore } from '../use-crane-snapshot-store';
 import {
+  craneSnapshotTopic,
   getCraneFeedUrl,
   resolveCraneFeedConnection,
   useCraneFeedConnection,
   useCraneSnapshotFeed,
 } from '../use-crane-snapshot-feed';
 
-/** STOMP 클라이언트를 가짜로 바꿔 구독 콜백·상태 리스너를 잡아 둔다. */
+/** STOMP 클라이언트를 가짜로 바꿔 구독 목적지·콜백·상태 리스너를 잡아 둔다. */
 const stomp = vi.hoisted(() => ({
   state: 'idle' as string,
   active: false,
   topicHandler: null as null | ((body: unknown) => void),
+  subscriptions: [] as { destination: string; handler: unknown }[],
   stateListeners: new Set<(state: string) => void>(),
   unsubscribeTopic: vi.fn(),
   acquire: vi.fn(),
@@ -21,7 +24,7 @@ const stomp = vi.hoisted(() => ({
 }));
 
 const rest = vi.hoisted(() => ({
-  getCraneSnapshots: vi.fn<() => Promise<unknown[]>>(),
+  getCraneSnapshots: vi.fn<(scope: string) => Promise<unknown[]>>(),
 }));
 
 vi.mock('@crane/core/ws', () => ({
@@ -29,8 +32,9 @@ vi.mock('@crane/core/ws', () => ({
     getUrl: () => 'ws://test.local/crane_rnd/ws',
     getState: () => stomp.state,
     isActive: () => stomp.active,
-    subscribe: (_destination: string, handler: (body: unknown) => void) => {
+    subscribe: (destination: string, handler: (body: unknown) => void) => {
       stomp.topicHandler = handler;
+      stomp.subscriptions.push({ destination, handler });
       return stomp.unsubscribeTopic;
     },
     subscribeState: (listener: (state: string) => void) => {
@@ -49,13 +53,18 @@ vi.mock('@crane/domain/monitoring', async (importOriginal) => {
     await importOriginal<typeof import('@crane/domain/monitoring')>();
   return {
     ...actual,
-    getCraneSnapshots: () => rest.getCraneSnapshots(),
+    getCraneSnapshots: (scope: string) => rest.getCraneSnapshots(scope),
   };
 });
 
-function crane(craneId: string, value: number) {
+function crane(
+  craneId: string,
+  value: number | null,
+  scope: CraneScope = 'indoor',
+) {
   return {
     craneId,
+    scope,
     stationId: null,
     bay: null,
     snapshotAt: null,
@@ -65,8 +74,8 @@ function crane(craneId: string, value: number) {
   };
 }
 
-function cranes() {
-  return useCraneSnapshotStore.getState().cranes;
+function feed(scope: CraneScope = 'indoor') {
+  return useCraneSnapshotStore.getState().byScope[scope];
 }
 
 function emitSocket(state: string, active = true) {
@@ -76,10 +85,11 @@ function emitSocket(state: string, active = true) {
 }
 
 beforeEach(() => {
-  useCraneSnapshotStore.setState({ cranes: {}, order: [], loadError: false });
+  useCraneSnapshotStore.getState().clear();
   stomp.state = 'idle';
   stomp.active = false;
   stomp.topicHandler = null;
+  stomp.subscriptions = [];
   stomp.stateListeners.clear();
   rest.getCraneSnapshots.mockResolvedValue([]);
 });
@@ -89,45 +99,59 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe('craneSnapshotTopic', () => {
+  it('범위의 묶음 토픽', () => {
+    expect(craneSnapshotTopic('indoor')).toBe('/topic/indoor/cranes');
+    expect(craneSnapshotTopic('outdoor')).toBe('/topic/outdoor/cranes');
+  });
+});
+
 describe('useCraneSnapshotFeed', () => {
-  it('꺼져 있으면 구독도 연결도 REST 조회도 하지 않는다', () => {
-    renderHook(() => useCraneSnapshotFeed(false));
+  it('꺼져 있거나 범위가 없으면 구독도 연결도 REST 조회도 하지 않는다', () => {
+    renderHook(() => useCraneSnapshotFeed('indoor', false));
+    renderHook(() => useCraneSnapshotFeed(null));
+    renderHook(() => useCraneSnapshotFeed(null, true));
     expect(stomp.topicHandler).toBeNull();
     expect(stomp.acquire).not.toHaveBeenCalled();
     expect(rest.getCraneSnapshots).not.toHaveBeenCalled();
   });
 
-  it('켜지면 REST 로 현재 상태를 받아 채우고 구독·연결한다', async () => {
-    rest.getCraneSnapshots.mockResolvedValue([crane('C_1', 1)]);
-    renderHook(() => useCraneSnapshotFeed(true));
+  it('켜지면 그 범위의 REST 로 현재 상태를 받아 그 칸을 채우고 그 범위 토픽을 구독한다', async () => {
+    rest.getCraneSnapshots.mockResolvedValue([crane('GC_01', 1, 'outdoor')]);
+    renderHook(() => useCraneSnapshotFeed('outdoor'));
     expect(stomp.acquire).toHaveBeenCalledTimes(1);
-    expect(stomp.topicHandler).not.toBeNull();
+    expect(rest.getCraneSnapshots).toHaveBeenCalledWith('outdoor');
+    expect(stomp.subscriptions.map((s) => s.destination)).toEqual([
+      '/topic/outdoor/cranes',
+    ]);
     await act(async () => {
       await Promise.resolve();
     });
-    expect(Object.keys(cranes())).toEqual(['C_1']);
-    expect(useCraneSnapshotStore.getState().loadError).toBe(false);
+    expect(Object.keys(feed('outdoor').cranes)).toEqual(['GC_01']);
+    expect(feed('indoor').cranes).toEqual({});
+    expect(feed('outdoor').loadError).toBe(false);
   });
 
-  it('REST 실패는 loadError 만 켜고 구독은 유지하며, 다음 성공이 다시 끈다', async () => {
+  it('REST 실패는 그 범위의 loadError 만 켜고 구독은 유지하며, 다음 성공이 다시 끈다', async () => {
     rest.getCraneSnapshots.mockRejectedValue(new Error('down'));
-    const { unmount } = renderHook(() => useCraneSnapshotFeed(true));
+    const { unmount } = renderHook(() => useCraneSnapshotFeed('indoor'));
     await act(async () => {
       await Promise.resolve();
     });
-    expect(useCraneSnapshotStore.getState().loadError).toBe(true);
+    expect(feed('indoor').loadError).toBe(true);
+    expect(feed('outdoor').loadError).toBe(false);
     expect(stomp.release).not.toHaveBeenCalled();
     unmount();
     rest.getCraneSnapshots.mockResolvedValue([]);
-    renderHook(() => useCraneSnapshotFeed(true));
+    renderHook(() => useCraneSnapshotFeed('indoor'));
     await act(async () => {
       await Promise.resolve();
     });
-    expect(useCraneSnapshotStore.getState().loadError).toBe(false);
+    expect(feed('indoor').loadError).toBe(false);
   });
 
-  it('묶음 메시지의 크레인만 스토어에 반영하고 봉투가 아니면 무시한다', () => {
-    renderHook(() => useCraneSnapshotFeed(true));
+  it('묶음 메시지의 크레인만 그 범위 칸에 반영하고 봉투가 아니면 무시한다', () => {
+    renderHook(() => useCraneSnapshotFeed('indoor'));
     act(() => {
       stomp.topicHandler?.({
         type: 'snapshot',
@@ -137,12 +161,34 @@ describe('useCraneSnapshotFeed', () => {
       stomp.topicHandler?.({ type: 'other', cranes: [crane('C_3', 1)] });
       stomp.topicHandler?.('garbage');
     });
-    expect(Object.keys(cranes())).toEqual(['C_2']);
-    expect(cranes().C_2.snapshot.tags.a.value).toBe(5);
+    expect(Object.keys(feed('indoor').cranes)).toEqual(['C_2']);
+    expect(feed('indoor').cranes.C_2.snapshot.tags.a.value).toBe(5);
+    expect(feed('outdoor').cranes).toEqual({});
+  });
+
+  it('값 없음(null) 태그는 묶음에서도 null 로 들어온다', () => {
+    renderHook(() => useCraneSnapshotFeed('outdoor'));
+    act(() => {
+      stomp.topicHandler?.({
+        type: 'snapshot',
+        sentAt: null,
+        cranes: [crane('GC_01', null, 'outdoor')],
+      });
+    });
+    expect(feed('outdoor').cranes.GC_01.snapshot.tags.a.value).toBeNull();
+  });
+
+  it('같은 범위의 화면 둘은 같은 핸들러를 넘기고, 범위가 다르면 핸들러도 다르다', () => {
+    renderHook(() => useCraneSnapshotFeed('indoor'));
+    renderHook(() => useCraneSnapshotFeed('indoor'));
+    renderHook(() => useCraneSnapshotFeed('outdoor'));
+    const [a, b, c] = stomp.subscriptions;
+    expect(a?.handler).toBe(b?.handler);
+    expect(c?.handler).not.toBe(a?.handler);
   });
 
   it('언마운트 시 구독·참조를 풀되 값은 남긴다', () => {
-    const { unmount } = renderHook(() => useCraneSnapshotFeed(true));
+    const { unmount } = renderHook(() => useCraneSnapshotFeed('indoor'));
     act(() => {
       stomp.topicHandler?.({
         type: 'snapshot',
@@ -153,7 +199,7 @@ describe('useCraneSnapshotFeed', () => {
     unmount();
     expect(stomp.unsubscribeTopic).toHaveBeenCalledTimes(1);
     expect(stomp.release).toHaveBeenCalledTimes(1);
-    expect(Object.keys(cranes())).toEqual(['C_2']);
+    expect(Object.keys(feed('indoor').cranes)).toEqual(['C_2']);
   });
 
   it('언마운트 뒤에 끝난 REST 응답은 버린다', async () => {
@@ -163,18 +209,18 @@ describe('useCraneSnapshotFeed', () => {
         resolve = r;
       }),
     );
-    const { unmount } = renderHook(() => useCraneSnapshotFeed(true));
+    const { unmount } = renderHook(() => useCraneSnapshotFeed('indoor'));
     unmount();
     await act(async () => {
       resolve([crane('C_9', 1)]);
       await Promise.resolve();
     });
-    expect(cranes()).toEqual({});
+    expect(feed('indoor').cranes).toEqual({});
   });
 
   it('enabled 를 껐다 켜면 참조를 놓았다 다시 잡고 REST 부터 다시 받는다', () => {
     const { rerender } = renderHook(
-      ({ enabled }) => useCraneSnapshotFeed(enabled),
+      ({ enabled }) => useCraneSnapshotFeed('indoor', enabled),
       { initialProps: { enabled: true } },
     );
     expect(rest.getCraneSnapshots).toHaveBeenCalledTimes(1);
@@ -183,6 +229,27 @@ describe('useCraneSnapshotFeed', () => {
     rerender({ enabled: true });
     expect(stomp.acquire).toHaveBeenCalledTimes(2);
     expect(rest.getCraneSnapshots).toHaveBeenCalledTimes(2);
+  });
+
+  it('범위가 바뀌면 이전 범위 구독을 풀고 새 범위를 받는다', () => {
+    const { rerender } = renderHook(
+      ({ scope }: { scope: CraneScope | null }) => useCraneSnapshotFeed(scope),
+      { initialProps: { scope: 'indoor' as CraneScope | null } },
+    );
+    rerender({ scope: 'outdoor' });
+    expect(stomp.unsubscribeTopic).toHaveBeenCalledTimes(1);
+    expect(stomp.release).toHaveBeenCalledTimes(1);
+    expect(rest.getCraneSnapshots.mock.calls.map((call) => call[0])).toEqual([
+      'indoor',
+      'outdoor',
+    ]);
+    expect(stomp.subscriptions.map((s) => s.destination)).toEqual([
+      '/topic/indoor/cranes',
+      '/topic/outdoor/cranes',
+    ]);
+    rerender({ scope: null });
+    expect(stomp.release).toHaveBeenCalledTimes(2);
+    expect(stomp.acquire).toHaveBeenCalledTimes(2);
   });
 });
 

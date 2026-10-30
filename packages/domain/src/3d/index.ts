@@ -87,11 +87,13 @@ export {
   buildLabelReadings,
   formatLabelReading,
   LABEL_READING_EMPTY,
+  LABEL_READING_NULL,
 } from './lib/label-reading';
 export type {
   ModelLabelReading,
   ModelLabelValueReader,
 } from './lib/label-reading';
+export { collectSceneCraneIds } from './lib/scene-crane-ids';
 export {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,

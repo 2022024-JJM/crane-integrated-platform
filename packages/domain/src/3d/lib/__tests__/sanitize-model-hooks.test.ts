@@ -45,12 +45,15 @@ describe('sanitizeModelHooks', () => {
     expect(sanitizeModelHooks([null, 1, 'x', {}])).toBeUndefined();
   });
 
-  it('id 없음·노드 없음·코드 무효(공백·점·콜론)는 항목째 버린다', () => {
+  it('id 없음·노드 없음·코드 무효(공백·콜론)는 항목째 버린다', () => {
     expect(sanitizeModelHooks([{ ...valid, id: '' }])).toBeUndefined();
     expect(sanitizeModelHooks([{ ...valid, nodes: [] }])).toBeUndefined();
     expect(sanitizeModelHooks([{ ...valid, nodes: 'x' }])).toBeUndefined();
     expect(
-      sanitizeModelHooks([{ ...valid, attachCode: 'GC_04.attached' }]),
+      sanitizeModelHooks([{ ...valid, attachCode: 'GC_04:attached' }]),
+    ).toBeUndefined();
+    expect(
+      sanitizeModelHooks([{ ...valid, attachCode: 'a b' }]),
     ).toBeUndefined();
     expect(
       sanitizeModelHooks([{ ...valid, attachCode: '  ' }]),

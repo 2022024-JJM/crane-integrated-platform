@@ -147,12 +147,13 @@ describe('sanitizeVirtualTag — 숫자', () => {
     );
   });
 
-  it('id 가 없거나 코드가 비었거나 공백·점·콜론이 있거나 길면 버린다', () => {
+  it('id 가 없거나 코드가 비었거나 공백·콜론이 있거나 길면 버린다', () => {
     expect(sanitizeVirtualTag({ ...tag, id: '' })).toBeNull();
     expect(sanitizeVirtualTag({ ...tag, code: '  ' })).toBeNull();
     expect(sanitizeVirtualTag({ ...tag, code: 'a b' })).toBeNull();
     expect(sanitizeVirtualTag({ ...tag, code: 'a:b' })).toBeNull();
-    expect(sanitizeVirtualTag({ ...tag, code: 'a.b' })).toBeNull();
+    // 점은 된다 — 외업 원본 이름.
+    expect(sanitizeVirtualTag({ ...tag, code: 'a.b' })?.code).toBe('a.b');
     expect(
       sanitizeVirtualTag({ ...tag, code: 'c'.repeat(VIRTUAL_TAG_CODE_MAX) }),
     ).not.toBeNull();

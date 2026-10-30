@@ -11,8 +11,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isTagValue(value: unknown): value is number | boolean {
+/** 숫자(유한)·불리언, 또는 null(서버가 값 없음을 null 로 보낸다). */
+function isTagValue(value: unknown): value is number | boolean | null {
   return (
+    value === null ||
     typeof value === 'boolean' ||
     (typeof value === 'number' && Number.isFinite(value))
   );
@@ -21,7 +23,7 @@ function isTagValue(value: unknown): value is number | boolean {
 function sanitizeFrame(value: unknown): CraneHistoryFrame | null {
   if (!isRecord(value) || typeof value.time !== 'string') return null;
   if (!isRecord(value.values)) return null;
-  const values: Record<string, number | boolean> = {};
+  const values: Record<string, number | boolean | null> = {};
   for (const [tag, raw] of Object.entries(value.values)) {
     if (isTagValue(raw)) values[tag] = raw;
   }
@@ -29,9 +31,10 @@ function sanitizeFrame(value: unknown): CraneHistoryFrame | null {
 }
 
 /**
- * `GET /api/cranes/{id}/history` 응답 방어 — craneId·from·to·frames 가
+ * `GET /api/{scope}/cranes/{id}/history` 응답 방어 — craneId·from·to·frames 가
  * 어긋나면 null. 프레임은 time 이 문자열이 아니거나 values 가 객체가 아니면
- * 버리고, 값은 숫자(유한)·불리언만 남긴다. baseline 은 없거나 깨지면 null.
+ * 버리고, 값은 숫자(유한)·불리언·null(값 없음)만 남긴다. baseline 은 없거나
+ * 깨지면 null.
  */
 export function sanitizeCraneHistoryFrames(
   value: unknown,
@@ -81,7 +84,7 @@ function compareTimestamps(left: string, right: string) {
  * 프레임에서 빠지고, 값이 하나도 없는 크레인(조회 구간에 데이터 없음)은
  * 어느 프레임에도 들어가지 않는다 — 리플레이 스토어는 프레임에 없는 크레인의
  * 값을 건드리지 않으므로 마지막 자세가 유지된다. baseline 은 서버가 이미 첫
- * 프레임에 반영했으므로 쓰지 않는다. 값은 서버 그대로(숫자·불리언) 싣는다.
+ * 프레임에 반영했으므로 쓰지 않는다. 값은 서버 그대로(숫자·불리언·null) 싣는다.
  */
 export function buildReplayFromCraneHistories(
   histories: CraneHistoryFrames[],

@@ -76,7 +76,7 @@ describe('loadFrames', () => {
     expect(received.has('crane_1.NOTE')).toBe(false);
   });
 
-  it("상태 비트('true'/'false')는 1/0 으로 싣고, 숫자 문자열·null 은 버린다", () => {
+  it("상태 비트('true'/'false')는 1/0 으로 싣고, 숫자 문자열은 버리며, null 은 표시 캐시에만 NULL 로 남긴다", () => {
     const bits: ReplayLiteFrame = {
       timestamp: '2026-01-01T00:00:00Z',
       cranes: [
@@ -98,7 +98,10 @@ describe('loadFrames', () => {
     expect(received.get('crane_1.crane_control_on')).toBe(1);
     expect(received.get('crane_1.accs_bypass_on')).toBe(0);
     expect(received.has('crane_1.NUMERIC_TEXT')).toBe(false);
+    expect(tagLiveValues.has('crane_1.NUMERIC_TEXT')).toBe(false);
+    // 값 없음은 소비자(자세)에는 가지 않고 라벨이 읽는 캐시만 null 이다.
     expect(received.has('crane_1.EMPTY')).toBe(false);
+    expect(tagLiveValues.get('crane_1.EMPTY')?.value).toBeNull();
   });
 });
 

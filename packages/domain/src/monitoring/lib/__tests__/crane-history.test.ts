@@ -58,7 +58,7 @@ describe('sanitizeCraneHistoryFrames', () => {
     expect(sanitizeCraneHistoryFrames(response({ frames: {} }))).toBeNull();
   });
 
-  it('깨진 프레임은 버리고 값은 유한한 숫자·불리언만 남긴다', () => {
+  it('깨진 프레임은 버리고 값은 유한한 숫자·불리언·null(값 없음)만 남긴다', () => {
     const result = sanitizeCraneHistoryFrames(
       response({
         frames: [
@@ -83,7 +83,10 @@ describe('sanitizeCraneHistoryFrames', () => {
     );
     expect(result?.frames).toEqual([
       { time: '2026-10-21T00:00:00Z', values: { a: 1 } },
-      { time: '2026-10-21T00:00:10Z', values: { ok: 2, bit: false } },
+      {
+        time: '2026-10-21T00:00:10Z',
+        values: { ok: 2, bit: false, none: null },
+      },
     ]);
   });
 

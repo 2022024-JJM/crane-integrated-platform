@@ -348,7 +348,9 @@ export {
   stepOnGrid,
 } from './lib/snap-transform';
 export {
+  publishTagNull,
   publishTagValue,
+  readTagLiveNumber,
   readTagLiveValue,
   setTagIngest,
   subscribeTagValues,
@@ -363,9 +365,15 @@ export {
 export { useActiveTagSource } from './model/use-active-tag-source';
 export { useTagBindingSource } from './model/use-tag-binding-source';
 export { useRealtimeStore } from './model/use-realtime-store';
-export { useCraneSnapshotStore } from './model/use-crane-snapshot-store';
 export {
-  CRANE_SNAPSHOT_TOPIC,
+  EMPTY_CRANE_FEED,
+  selectCraneFeed,
+  useCraneSnapshotStore,
+  type CraneFeedState,
+} from './model/use-crane-snapshot-store';
+export { CraneScopeContext, useCraneScope } from './model/crane-scope-context';
+export {
+  craneSnapshotTopic,
   getCraneFeedUrl,
   resolveCraneFeedConnection,
   useCraneFeedConnection,
@@ -384,10 +392,12 @@ export {
 } from './lib/crane-snapshot-stats';
 export {
   TAG_CATEGORIES,
+  TAG_VALUE_NULL_TEXT,
   buildTagRows,
   compareTagRows,
   countTagRowsByCategory,
   filterTagRows,
+  hasTagCategories,
   resolveBoolDisplay,
   type BoolDisplay,
   type BoolTone,

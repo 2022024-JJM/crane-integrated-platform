@@ -16,6 +16,29 @@ describe('sanitizeStatusTagEntries', () => {
     });
   });
 
+  it('점이 둘 이상인 문자열은 점이 든 코드(외업 원본 이름)로 읽는다 — 크레인 접두어가 없다', () => {
+    expect(
+      sanitizeStatusTagEntries({
+        controlOn: ' 4_Crane.4_CR01.0_state.01_Control_on_1 ',
+        fault: '4_Crane.4_CR01.0_state.05_Local_PLC_comm_fault_1',
+      }),
+    ).toEqual({
+      controlOn: { code: '4_Crane.4_CR01.0_state.01_Control_on_1' },
+      fault: { code: '4_Crane.4_CR01.0_state.05_Local_PLC_comm_fault_1' },
+    });
+  });
+
+  it('점이 하나면 레거시 키로 읽는다(경계) — 점 둘이 든 코드도 공백·콜론이 있으면 버린다', () => {
+    expect(sanitizeStatusTagEntries({ fault: 'a.b' })).toEqual({
+      fault: { code: 'b', craneKey: 'a' },
+    });
+    expect(sanitizeStatusTagEntries({ fault: 'a.b.c' })).toEqual({
+      fault: { code: 'a.b.c' },
+    });
+    expect(sanitizeStatusTagEntries({ fault: 'a.b c.d' })).toBeUndefined();
+    expect(sanitizeStatusTagEntries({ fault: 'a:b.c.d' })).toBeUndefined();
+  });
+
   it('두 슬롯 객체(레거시)는 실시간 › 가상 › 단일 tagKey 순으로 첫 키를 쓴다', () => {
     expect(
       sanitizeStatusTagEntries({

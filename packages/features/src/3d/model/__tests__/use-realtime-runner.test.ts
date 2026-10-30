@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
-import { publishTagValue } from '../tag-value-bus';
+import { publishTagNull, publishTagValue } from '../tag-value-bus';
 import { useRealtimeRunner } from '../use-realtime-runner';
 import { useRealtimeStore } from '../use-realtime-store';
 
@@ -17,6 +17,7 @@ vi.mock('@react-three/fiber', () => ({
 }));
 
 vi.mock('../tag-value-bus', () => ({
+  publishTagNull: vi.fn(),
   publishTagValue: vi.fn(),
 }));
 
@@ -100,6 +101,24 @@ describe('useRealtimeRunner', () => {
     expect(useRealtimeStore.getState().buffer).toEqual([]);
   });
 
+  it('값 없음(null)은 publishTagNull 로 내보내고, held 중에는 버린다', () => {
+    useRealtimeStore.getState().start();
+    renderHook(() => useRealtimeRunner());
+    useRealtimeStore.getState().pushValue('c1:a', 1);
+    useRealtimeStore.getState().pushValue('c1:a', null);
+    frame();
+    expect(vi.mocked(publishTagValue).mock.calls).toEqual([
+      ['c1:a', 1, { source: 'realtime' }],
+    ]);
+    expect(vi.mocked(publishTagNull).mock.calls).toEqual([
+      ['c1:a', { source: 'realtime' }],
+    ]);
+    act(() => useRealtimeStore.getState().hold());
+    useRealtimeStore.getState().pushValue('c1:a', null);
+    frame();
+    expect(publishTagNull).toHaveBeenCalledTimes(1);
+  });
+
   describe('수신 간격 스무딩', () => {
     it('첫 값은 smoothTime 없이(소비자 기본), 값이 바뀌면 직전 변화와의 간격을 smoothTime 으로 넘긴다', () => {
       useRealtimeStore.getState().start();
@@ -151,6 +170,23 @@ describe('useRealtimeRunner', () => {
       useRealtimeStore.getState().pushValue('c1:b', 7);
       frame();
       expect(publishTagValue).toHaveBeenLastCalledWith('c1:b', 7, {
+        source: 'realtime',
+      });
+    });
+
+    it('값 없음(null)은 간격을 재지 않는다 — 앞뒤 숫자의 변화 간격이 그대로다', () => {
+      useRealtimeStore.getState().start();
+      renderHook(() => useRealtimeRunner());
+      useRealtimeStore.getState().pushValue('c1:a', 1);
+      frame();
+      nowMs = 500;
+      useRealtimeStore.getState().pushValue('c1:a', null);
+      frame();
+      nowMs = 1000;
+      useRealtimeStore.getState().pushValue('c1:a', 2);
+      frame();
+      expect(publishTagValue).toHaveBeenLastCalledWith('c1:a', 2, {
+        smoothTime: 1,
         source: 'realtime',
       });
     });

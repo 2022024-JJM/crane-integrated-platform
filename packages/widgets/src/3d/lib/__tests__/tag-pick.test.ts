@@ -61,7 +61,7 @@ describe('filterPickTags', () => {
 
 describe('describeCodeChip', () => {
   it('코드를 보이고 툴팁에 조립 키·표시명·단위를 적는다', () => {
-    expect(describeCodeChip('tl_distance', 'C-171')).toEqual({
+    expect(describeCodeChip('tl_distance', 'C-171', 'indoor')).toEqual({
       text: 'tl_distance',
       title: 'C_171.tl_distance · TL Distance · m',
       unresolved: false,
@@ -69,9 +69,26 @@ describe('describeCodeChip', () => {
   });
 
   it('craneId 가 없으면 키 없이 unresolved', () => {
-    expect(describeCodeChip('heartbeat', undefined)).toEqual({
+    expect(describeCodeChip('heartbeat', undefined, 'indoor')).toEqual({
       text: 'heartbeat',
       title: 'Heartbeat',
+      unresolved: true,
+    });
+  });
+
+  it('카탈로그는 내업 것이라 외업·범위 없음은 키만 적는다', () => {
+    const code = '4_Crane.4_CR01.4_POS.04_Center_POS_y1';
+    expect(describeCodeChip(code, 'GC-01', 'outdoor')).toEqual({
+      text: code,
+      title: `GC_01.${code}`,
+      unresolved: false,
+    });
+    expect(describeCodeChip('tl_distance', 'C_171', null).title).toBe(
+      'C_171.tl_distance',
+    );
+    expect(describeCodeChip(code, undefined, 'outdoor')).toEqual({
+      text: code,
+      title: '',
       unresolved: true,
     });
   });

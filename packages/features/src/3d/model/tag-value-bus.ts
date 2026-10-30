@@ -12,6 +12,10 @@
  * `tagLiveValues` 는 표시용 마지막 값 캐시다. React 상태가 아니라 mutable
  * Map — 값이 초당 수십 번 오는데 setState 를 태우면 인스펙터·표가 그 속도로
  * 리렌더된다. UI 는 useRigLivePoll(15Hz) 로 폴링해 읽는다.
+ *
+ * 서버가 값 없음(null)을 보내면 생산자는 `publishTagNull` 을 부른다. 캐시에만
+ * null 로 남고(라벨이 `NULL` 을 보인다) 소비자·관찰자에는 가지 않는다 — 모델은
+ * 마지막 자세에 머물고 통계는 숫자만 센다.
  */
 
 /** 값 생산자 종류 — 화면 모드와 짝이다(lib/tag-source.ts). */
@@ -39,7 +43,8 @@ export type TagPublish = (
 ) => void;
 
 export interface TagLiveValue {
-  value: number;
+  /** 마지막 값. 서버가 값 없음을 보냈으면 null(`publishTagNull`). */
+  value: number | null;
   /** performance.now() 기준이 아니라 Date.now() — 표시용이라 정밀도 불필요. */
   at: number;
   /**
@@ -71,11 +76,17 @@ export const tagLiveValues = {
 };
 
 /**
- * 태그의 마지막 값(없으면 undefined). 모델 라벨의 태그 값 줄이 프레임마다
- * 부른다 — 참조가 고정된 함수라 memo 된 모델에 prop 으로 넘겨도 된다.
+ * 태그의 마지막 값 — 아직 없으면 undefined, 서버가 값 없음을 보냈으면 null.
+ * 모델 라벨의 태그 값 줄이 프레임마다 부른다 — 참조가 고정된 함수라 memo 된
+ * 모델에 prop 으로 넘겨도 된다.
  */
-export function readTagLiveValue(key: string): number | undefined {
+export function readTagLiveValue(key: string): number | null | undefined {
   return liveValues.get(key)?.value;
+}
+
+/** 숫자로 계산하는 소비자용 — 값 없음(null)도 아직 없는 것과 같이 undefined. */
+export function readTagLiveNumber(key: string): number | undefined {
+  return liveValues.get(key)?.value ?? undefined;
 }
 
 let activeSource: TagSourceId | null = null;
@@ -139,4 +150,21 @@ export function publishTagValue(
   });
   tagIngest?.(key, value, options);
   for (const listener of listeners) listener(key, value, now);
+}
+
+/**
+ * 서버가 이 태그를 값 없음(null)으로 보냈다 — 표시 캐시만 null 로 바꾼다.
+ * 소비자(값 저장소)·관찰자에는 보내지 않아 모델은 마지막 자세에 머문다. 수신은
+ * 된 것이므로 `at` 은 갱신하고, 값 없음은 움직임이 아니므로 `changedAt` 은
+ * 이어받는다(처음부터 null 이면 움직인 적 없음). 소스 게이트는 숫자와 같다.
+ */
+export function publishTagNull(key: string, options?: TagPublishOptions): void {
+  if (typeof key !== 'string' || key.length === 0) return;
+  if (activeSource !== null && options?.source !== activeSource) return;
+  const prev = liveValues.get(key);
+  liveValues.set(key, {
+    value: null,
+    at: Date.now(),
+    changedAt: prev ? prev.changedAt : Number.NEGATIVE_INFINITY,
+  });
 }

@@ -67,8 +67,9 @@ export interface TagCodeRef {
 }
 
 /**
- * 키 문자열(점 또는 옛 콜론 표기) → 참조. 구분자가 없으면 통째로 코드다.
- * 코드에 금지 글자(공백·점·콜론)가 남으면 null.
+ * 키 문자열(점 또는 옛 콜론 표기) → 참조. 첫 구분자 앞이 크레인, 뒤가 코드다
+ * (코드에는 점이 남을 수 있다). 구분자가 없으면 통째로 코드다. 코드에 금지
+ * 글자(공백·콜론)가 남으면 null.
  */
 export function parseTagKeyRef(raw: unknown): TagCodeRef | null {
   const trimmed = trimKey(raw);

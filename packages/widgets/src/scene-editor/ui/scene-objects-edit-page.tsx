@@ -35,8 +35,10 @@ import {
   useTagBindingSource,
   stopSimulation,
   EDITOR_TAG_SOURCE,
+  CraneScopeContext,
   type SceneTransformMode,
 } from '@crane/features/3d';
+import { getCraneScopeByRegion } from '@crane/domain/monitoring';
 import {
   filterScenePaletteModels,
   listScenePaletteCategories,
@@ -968,36 +970,46 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   </ResizablePanel>
                   <ResizableHandle />
                   <ResizablePanel id="inspector" minSize="10rem">
-                    <div className="flex h-full min-h-0 flex-col">
-                      <SceneObjectInspector
-                        className="rounded-none bg-transparent ring-0"
-                        selectedModel={selectedModel}
-                        selectedText={selectedText}
-                        selectedRuler={selectedRuler}
-                        onRulerChange={updateSelectedRuler}
-                        selectedFloodlight={selectedFloodlight}
-                        onFloodlightChange={updateSelectedFloodlight}
-                        floodlightAiming={
-                          floodlightAimingId !== null &&
-                          floodlightAimingId === selectedFloodlight?.id
-                        }
-                        onFloodlightToggleAiming={handleToggleFloodlightAiming}
-                        floodlightSlotCount={FLOODLIGHT_SLOT_COUNT}
-                        selectedMesh={selectedMesh}
-                        selectedMap={selectedMap}
-                        multiSelectCount={selectedIds.size}
-                        onOpacityChange={updateSelectedOpacity}
-                        onLabelHiddenChange={updateSelectedLabelHidden}
-                        onTransformChange={updateSelectedTransform}
-                        onTextContentChange={updateSelectedTextContent}
-                        onTextColorChange={updateSelectedTextColor}
-                        onMapCameraBoundsChange={updateSelectedMapCameraBounds}
-                        tagMapping={tagMappingHandlers}
-                        rigging={riggingHandlers}
-                        zones={zoneHandlers}
-                        metersPerUnit={metersPerUnit}
-                      />
-                    </div>
+                    {/* 크레인 칸·태그 연결 다이얼로그가 이 region 의 서버 범위
+                        (내업·외업)에서 크레인과 태그를 고른다. */}
+                    <CraneScopeContext.Provider
+                      value={getCraneScopeByRegion(regionId)}
+                    >
+                      <div className="flex h-full min-h-0 flex-col">
+                        <SceneObjectInspector
+                          className="rounded-none bg-transparent ring-0"
+                          selectedModel={selectedModel}
+                          selectedText={selectedText}
+                          selectedRuler={selectedRuler}
+                          onRulerChange={updateSelectedRuler}
+                          selectedFloodlight={selectedFloodlight}
+                          onFloodlightChange={updateSelectedFloodlight}
+                          floodlightAiming={
+                            floodlightAimingId !== null &&
+                            floodlightAimingId === selectedFloodlight?.id
+                          }
+                          onFloodlightToggleAiming={
+                            handleToggleFloodlightAiming
+                          }
+                          floodlightSlotCount={FLOODLIGHT_SLOT_COUNT}
+                          selectedMesh={selectedMesh}
+                          selectedMap={selectedMap}
+                          multiSelectCount={selectedIds.size}
+                          onOpacityChange={updateSelectedOpacity}
+                          onLabelHiddenChange={updateSelectedLabelHidden}
+                          onTransformChange={updateSelectedTransform}
+                          onTextContentChange={updateSelectedTextContent}
+                          onTextColorChange={updateSelectedTextColor}
+                          onMapCameraBoundsChange={
+                            updateSelectedMapCameraBounds
+                          }
+                          tagMapping={tagMappingHandlers}
+                          rigging={riggingHandlers}
+                          zones={zoneHandlers}
+                          metersPerUnit={metersPerUnit}
+                        />
+                      </div>
+                    </CraneScopeContext.Provider>
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </aside>

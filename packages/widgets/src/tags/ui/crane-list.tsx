@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { CraneScope } from '@crane/domain/monitoring';
 import {
   BayChip,
   collectBays,
   countOnline,
   filterCraneIds,
   getCraneFeedUrl,
+  selectCraneFeed,
   useCraneSnapshotStore,
   type CraneFeedConnection,
 } from '@crane/features/3d';
@@ -17,14 +19,17 @@ import { CraneCard } from './crane-card';
 
 /**
  * 크레인 목록 — 검색·구역 칩은 왼쪽, 연결 상태·온라인 수·연결 설정(톱니)은
- * 오른쪽 끝. 구역 묶음 없이 한 격자이고 카드는 서버 목록 순(ID 끝 숫자)이다.
+ * 오른쪽 끝. 구역 묶음 없이 한 격자이고 카드는 서버 목록 순(ID 접두어 → 끝
+ * 숫자)이다. 구역이 하나뿐이면(외업은 모두 PLC 장비 이름 하나) 칩을 그리지 않는다.
  */
 export function CraneList({
+  scope,
   connection,
   enabled,
   onToggleConnection,
   onOpen,
 }: {
+  scope: CraneScope | null;
   connection: CraneFeedConnection;
   /** 사용자가 연결을 켜 둔 상태(연결 해제 버튼의 반대). */
   enabled: boolean;
@@ -32,15 +37,17 @@ export function CraneList({
   onOpen: (craneId: string) => void;
 }) {
   const { t } = useTranslation();
-  const order = useCraneSnapshotStore((s) => s.order);
-  const cranes = useCraneSnapshotStore((s) => s.cranes);
+  const order = useCraneSnapshotStore((s) => selectCraneFeed(s, scope).order);
+  const cranes = useCraneSnapshotStore((s) => selectCraneFeed(s, scope).cranes);
   const now = useNow(500);
   const [bay, setBay] = useState<string>('all');
   const [query, setQuery] = useState('');
   const bays = useMemo(() => collectBays(order, cranes), [order, cranes]);
+  // 칩이 사라지면(구역이 하나뿐) 고른 구역도 풀린다.
+  const bayFilter = bays.length > 1 ? bay : 'all';
   const visible = useMemo(
-    () => filterCraneIds(order, cranes, bay, query),
-    [order, cranes, bay, query],
+    () => filterCraneIds(order, cranes, bayFilter, query),
+    [order, cranes, bayFilter, query],
   );
   const connected = connection === 'open';
 
@@ -54,27 +61,29 @@ export function CraneList({
           aria-label={t('monitoring:tags.searchCrane')}
           className="w-60 max-w-full flex-none"
         />
-        <div
-          role="group"
-          aria-label={t('monitoring:tags.allBays')}
-          className="flex flex-wrap gap-1"
-        >
-          <BayChip
-            label={t('monitoring:tags.allBays')}
-            count={order.length}
-            pressed={bay === 'all'}
-            onClick={() => setBay('all')}
-          />
-          {bays.map((option) => (
+        {bays.length > 1 ? (
+          <div
+            role="group"
+            aria-label={t('monitoring:tags.allBays')}
+            className="flex flex-wrap gap-1"
+          >
             <BayChip
-              key={option.bay}
-              label={option.bay}
-              count={option.count}
-              pressed={bay === option.bay}
-              onClick={() => setBay(option.bay)}
+              label={t('monitoring:tags.allBays')}
+              count={order.length}
+              pressed={bay === 'all'}
+              onClick={() => setBay('all')}
             />
-          ))}
-        </div>
+            {bays.map((option) => (
+              <BayChip
+                key={option.bay}
+                label={option.bay}
+                count={option.count}
+                pressed={bay === option.bay}
+                onClick={() => setBay(option.bay)}
+              />
+            ))}
+          </div>
+        ) : null}
         <span className="flex-1" />
         <ConnectionStatus connection={connection} className="px-1" />
         <span className="inline-flex items-center gap-1.5 px-1">

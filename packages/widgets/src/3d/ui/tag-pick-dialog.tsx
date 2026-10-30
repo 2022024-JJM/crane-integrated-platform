@@ -5,9 +5,12 @@ import { normalizeCraneKey } from '@crane/core/lib/crane-tag-key';
 import { getMonitoringTagMetadata } from '@crane/domain/monitoring';
 import {
   TAG_CATEGORIES,
+  TAG_VALUE_NULL_TEXT,
   buildTagRows,
   formatTagNumber,
   resolveBoolDisplay,
+  selectCraneFeed,
+  useCraneScope,
   useCraneSnapshotFeed,
   useCraneSnapshotStore,
   type TagRow,
@@ -41,9 +44,10 @@ export interface TagPickDialogProps {
  * 넘긴다. 크레인·구역 단계는 없다 — 크레인은 인스펙터의 크레인 칸 한 곳에서
  * 정한다.
  *
- * 데이터는 본문이 켠 `useCraneSnapshotFeed(true)`(REST 전체 + STOMP) — 에디터
- * 에는 다른 참조자가 없어 닫으면 소켓이 닫히고, 브리지가 없어 버스로는 가지
- * 않는다(모델이 움직이지 않는다). 본문은 열려 있을 때만 마운트해 열 때마다
+ * 데이터는 본문이 켠 `useCraneSnapshotFeed(scope)`(REST 전체 + STOMP, 범위는
+ * 화면이 내린 `useCraneScope()`) — 에디터에는 다른 참조자가 없어 닫으면 소켓이
+ * 닫히고, 브리지가 없어 버스로는 가지 않는다(모델이 움직이지 않는다). 카탈로그가
+ * 없는 크레인(외업)은 묶음 없이 원본 이름(코드) 순 한 목록이다. 본문은 열려 있을 때만 마운트해 열 때마다
  * `value` 로 돌아온다. 모델에 craneId 가 없거나 서버에 그 크레인이 없으면
  * 목록 대신 안내만 보이고 연결할 수 없다.
  */
@@ -65,9 +69,12 @@ function TagPickDialogBody({
   onOpenChange,
 }: TagPickDialogProps) {
   const { t } = useTranslation();
-  useCraneSnapshotFeed(true);
-  const cranes = useCraneSnapshotStore((s) => s.cranes);
-  const loadError = useCraneSnapshotStore((s) => s.loadError);
+  const scope = useCraneScope();
+  useCraneSnapshotFeed(scope);
+  const cranes = useCraneSnapshotStore((s) => selectCraneFeed(s, scope).cranes);
+  const loadError = useCraneSnapshotStore(
+    (s) => selectCraneFeed(s, scope).loadError,
+  );
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState(value);
   const dirty = draft !== value;
@@ -82,6 +89,7 @@ function TagPickDialogBody({
     ? rows.find((row) => row.code === draft)
     : undefined;
   const history = useTagValueHistory(
+    scope,
     found?.craneId ?? null,
     draft || null,
     selectedRow !== undefined,
@@ -151,16 +159,18 @@ function TagPickDialogBody({
               </div>
               <ScrollArea className="min-h-0 flex-1">
                 <div className="px-1.5 pb-2">
-                  {TAG_CATEGORIES.map((category) => {
+                  {[...TAG_CATEGORIES, null].map((category) => {
                     const group = tagRows.filter(
                       (row) => row.category === category,
                     );
                     if (group.length === 0) return null;
                     return (
-                      <div key={category}>
-                        <p className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wide">
-                          {t(`monitoring:tags.categories.${category}`)}
-                        </p>
+                      <div key={category ?? 'none'}>
+                        {category === null ? null : (
+                          <p className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wide">
+                            {t(`monitoring:tags.categories.${category}`)}
+                          </p>
+                        )}
                         <ul>
                           {group.map((row) => (
                             <TagPickRow
@@ -191,8 +201,8 @@ function TagPickDialogBody({
               {selectedRow ? (
                 <>
                   <div>
-                    <p className="text-base font-semibold">
-                      {selectedRow.name}
+                    <p className="text-base font-semibold break-all">
+                      {selectedRow.name ?? selectedRow.code}
                     </p>
                     <p className="text-muted-foreground text-[11px]">
                       {craneKey}.{selectedRow.code}
@@ -215,14 +225,19 @@ function TagPickDialogBody({
                       {t('monitoring:inspector.tagPick.dataType')}
                     </dt>
                     <dd>
-                      {getMonitoringTagMetadata(selectedRow.code).dataType ??
+                      {(selectedRow.category !== null &&
+                        getMonitoringTagMetadata(selectedRow.code).dataType) ||
                         '—'}
                     </dd>
                     <dt className="text-muted-foreground">
                       {t('monitoring:inspector.tagPick.category')}
                     </dt>
                     <dd>
-                      {t(`monitoring:tags.categories.${selectedRow.category}`)}
+                      {selectedRow.category === null
+                        ? '—'
+                        : t(
+                            `monitoring:tags.categories.${selectedRow.category}`,
+                          )}
                     </dd>
                     <dt className="text-muted-foreground">
                       {t('monitoring:inspector.tagPick.bay')}
@@ -301,8 +316,12 @@ function Notice({
   );
 }
 
-/** 값 표기 — 불리언은 태그 페이지와 같은 글자(ON/OFF·OK/NG), 계측값은 천 단위. */
+/**
+ * 값 표기 — 불리언은 태그 페이지와 같은 글자(ON/OFF·OK/NG), 계측값은 천 단위,
+ * 값 없음은 `NULL`.
+ */
 function formatRowValue(row: TagRow, t: T): string {
+  if (row.value === null) return TAG_VALUE_NULL_TEXT;
   if (typeof row.value === 'boolean') {
     return t(`monitoring:tags.bool.${resolveBoolDisplay(row, row.value).key}`);
   }
@@ -332,10 +351,16 @@ function TagPickRow({
         )}
       >
         <span className="min-w-0 flex-1 truncate">
-          <span className="font-medium">{row.name}</span>
-          <span className="text-muted-foreground ml-1.5 text-[10px]">
-            {row.code}
-          </span>
+          {row.name === null ? (
+            <span className="font-medium">{row.code}</span>
+          ) : (
+            <>
+              <span className="font-medium">{row.name}</span>
+              <span className="text-muted-foreground ml-1.5 text-[10px]">
+                {row.code}
+              </span>
+            </>
+          )}
         </span>
         <span className="shrink-0 tabular-nums">
           {formatRowValue(row, t)}{' '}

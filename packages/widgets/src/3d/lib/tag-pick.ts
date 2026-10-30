@@ -1,5 +1,8 @@
 import { normalizeCraneKey } from '@crane/core/lib/crane-tag-key';
-import { getMonitoringTagMetadata } from '@crane/domain/monitoring';
+import {
+  getMonitoringTagMetadata,
+  type CraneScope,
+} from '@crane/domain/monitoring';
 import { filterTagRows, type TagRow } from '@crane/features/3d';
 
 /**
@@ -47,17 +50,21 @@ export interface CodeChip {
 
 /**
  * 카드의 코드 칩 — 코드 그대로 보이고, 툴팁에 조립 키(`C_171.tl_distance`)와
- * 서버 카탈로그의 표시명·단위를 적는다. craneId 가 없으면 키가 없다.
+ * 서버 카탈로그의 표시명·단위를 적는다. craneId 가 없으면 키가 없다. 카탈로그는
+ * 내업 태그의 것이라 다른 범위(외업 — 원본 이름이 코드)는 키만 적는다.
  */
 export function describeCodeChip(
   code: string,
   craneId: string | undefined,
+  scope: CraneScope | null,
 ): CodeChip {
-  const meta = getMonitoringTagMetadata(code);
+  const meta = scope === 'indoor' ? getMonitoringTagMetadata(code) : null;
   const key = craneId ? `${normalizeCraneKey(craneId)}.${code}` : undefined;
   return {
     text: code,
-    title: [key, meta.displayName, meta.unit ?? ''].filter(Boolean).join(' · '),
+    title: [key, meta?.displayName, meta?.unit ?? '']
+      .filter(Boolean)
+      .join(' · '),
     unresolved: !craneId,
   };
 }

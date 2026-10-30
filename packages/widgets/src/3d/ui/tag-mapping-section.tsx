@@ -18,7 +18,9 @@ import {
 import {
   rigLiveReadouts,
   tagLiveValues,
+  selectCraneFeed,
   useCraneFeedConnection,
+  useCraneScope,
   useCraneSnapshotFeed,
   useCraneSnapshotStore,
   useLabelPreview,
@@ -137,10 +139,16 @@ function CraneIdField({
   onChange: (craneId: string | undefined) => void;
   t: InspectorT;
 }) {
-  useCraneSnapshotFeed(true);
+  const scope = useCraneScope();
+  useCraneSnapshotFeed(scope);
   const connection = useCraneFeedConnection();
-  const loadError = useCraneSnapshotStore((s) => s.loadError);
-  const options = useCraneIdOptions(t('monitoring:inspector.crane.offline'));
+  const loadError = useCraneSnapshotStore(
+    (s) => selectCraneFeed(s, scope).loadError,
+  );
+  const options = useCraneIdOptions(
+    scope,
+    t('monitoring:inspector.crane.offline'),
+  );
   const listed = isListedCraneId(options, craneId);
   const label = t('monitoring:inspector.crane.label');
   const emptyReason = craneListEmptyReason(connection, loadError);
@@ -257,7 +265,8 @@ function MappingCard({
   nodesReady: boolean;
   conflict: TagMappingConflict | undefined;
   unresolved: boolean;
-  tagValue: number | undefined;
+  /** 버스의 마지막 값 — null 은 서버가 보낸 값 없음, undefined 는 아직 없음. */
+  tagValue: number | null | undefined;
   appliedValue: number | undefined;
   /** 노드 미리보기 대상 모델. */
   modelId: string;

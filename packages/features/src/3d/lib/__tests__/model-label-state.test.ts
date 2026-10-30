@@ -27,8 +27,8 @@ function readings(map: Record<string, TagReading>) {
   return (key: string) => map[key];
 }
 
-/** 방금 받은 비트(값은 오래전에 바뀜). */
-function bit(value: number): TagReading {
+/** 방금 받은 비트(값은 오래전에 바뀜). null 은 서버가 보낸 값 없음. */
+function bit(value: number | null): TagReading {
   return { value, at: NOW, changedAt: LONG_AGO };
 }
 
@@ -141,7 +141,9 @@ describe('readStatusBit', () => {
     const get = readings({
       nan: bit(Number.NaN),
       infinite: bit(Number.POSITIVE_INFINITY),
+      none: bit(null),
     });
+    expect(readStatusBit('none', get)).toBeNull();
     expect(readStatusBit(undefined, get)).toBeNull();
     expect(readStatusBit('', get)).toBeNull();
     expect(readStatusBit('missing', get)).toBeNull();

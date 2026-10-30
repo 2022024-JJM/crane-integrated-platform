@@ -2,7 +2,8 @@ import { create } from 'zustand';
 
 interface RealtimeEntry {
   key: string;
-  value: number;
+  /** null 은 서버가 보낸 값 없음 — 러너가 `publishTagNull` 로 내보낸다. */
+  value: number | null;
 }
 
 interface RealtimeState {
@@ -25,7 +26,7 @@ interface RealtimeState {
   stop: () => void;
   hold: () => void;
   release: () => void;
-  pushValue: (key: string, value: number) => void;
+  pushValue: (key: string, value: number | null) => void;
   drainBuffer: () => RealtimeEntry[];
 }
 

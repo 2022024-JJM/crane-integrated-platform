@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
+import { getCraneScopeByRegion } from '@crane/domain/monitoring';
 import { TagsPage, matchTagsSubRoute } from '@crane/widgets/tags';
 import { DetectionSettingsPage } from '@crane/widgets/detection-settings';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
@@ -41,6 +42,7 @@ export function OutdoorWorkPage() {
       )}
       {tagsRoute && (
         <TagsPage
+          scope={getCraneScopeByRegion(regionId)}
           route={tagsRoute}
           basePath={`/outdoor-work/${regionId}/tags`}
         />

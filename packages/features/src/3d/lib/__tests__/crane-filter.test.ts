@@ -5,6 +5,7 @@ function crane(bay: string | null, online = true) {
   return {
     snapshot: {
       craneId: 'x',
+      scope: 'indoor' as const,
       stationId: null,
       bay,
       snapshotAt: null,

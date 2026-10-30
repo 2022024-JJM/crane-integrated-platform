@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import type { CraneScope } from '@crane/domain/monitoring';
 import {
+  selectCraneFeed,
   useCraneFeedConnection,
   useCraneSnapshotFeed,
   useCraneSnapshotStore,
@@ -16,16 +18,20 @@ import { FeedBanner } from './feed-banner';
  * 마지막 상태로 남아 끊긴 뒤에도 읽을 수 있다.
  */
 export function RealtimeTagsView({
+  scope,
   craneId,
   basePath,
 }: {
+  scope: CraneScope | null;
   craneId: string | null;
   basePath: string;
 }) {
   const [enabled, setEnabled] = useState(true);
-  useCraneSnapshotFeed(enabled);
+  useCraneSnapshotFeed(scope, enabled);
   const connection = useCraneFeedConnection();
-  const loadError = useCraneSnapshotStore((s) => s.loadError);
+  const loadError = useCraneSnapshotStore(
+    (s) => selectCraneFeed(s, scope).loadError,
+  );
   const navigate = useProgressNavigate();
   const connected = connection === 'open';
 
@@ -34,12 +40,14 @@ export function RealtimeTagsView({
       <FeedBanner loadError={loadError} />
       {craneId ? (
         <CraneDetail
+          scope={scope}
           craneId={craneId}
           connected={connected}
           onBack={() => navigate(realtimeTagsPath(basePath))}
         />
       ) : (
         <CraneList
+          scope={scope}
           connection={connection}
           enabled={enabled}
           onToggleConnection={() => setEnabled((value) => !value)}

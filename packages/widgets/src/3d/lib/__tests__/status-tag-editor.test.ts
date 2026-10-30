@@ -24,16 +24,23 @@ describe('setStatusTagCode', () => {
     });
   });
 
-  it('빈 코드·공백·금지 글자(점·콜론)는 그 역할을 뗀다 — 마지막 역할을 떼면 빈 객체', () => {
+  it('빈 코드·공백·금지 글자(공백·콜론)는 그 역할을 뗀다 — 마지막 역할을 떼면 빈 객체', () => {
     const linked: ModelStatusTags = { controlOn: 'on', fault: 'f' };
     expect(setStatusTagCode(linked, 'fault', '')).toEqual({ controlOn: 'on' });
     expect(setStatusTagCode(linked, 'fault', '   ')).toEqual({
       controlOn: 'on',
     });
-    expect(setStatusTagCode(linked, 'fault', 'C_1.f')).toEqual({
+    expect(setStatusTagCode(linked, 'fault', 'a b')).toEqual({
       controlOn: 'on',
     });
     expect(setStatusTagCode({ fault: 'f' }, 'fault', 'a:b')).toEqual({});
+  });
+
+  it('점이 든 외업 원본 이름은 코드로 잇는다', () => {
+    const code = '4_Crane.4_CR01.0_state.05_Local_PLC_comm_fault_1';
+    expect(setStatusTagCode({}, 'commError', code)).toEqual({
+      commError: code,
+    });
   });
 
   it('바뀌는 것이 없으면 같은 참조를 돌려준다', () => {

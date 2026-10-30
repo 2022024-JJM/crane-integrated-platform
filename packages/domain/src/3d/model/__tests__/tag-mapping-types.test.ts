@@ -21,15 +21,35 @@ describe('normalizeTagCode', () => {
     expect(normalizeTagCode('mh1_height')).toBe('mh1_height');
   });
 
-  it('비었거나 공백·점·콜론이 있거나 문자열이 아니면 null', () => {
+  it('비었거나 공백·콜론이 있거나 문자열이 아니면 null', () => {
     expect(normalizeTagCode('')).toBeNull();
     expect(normalizeTagCode('   ')).toBeNull();
     expect(normalizeTagCode('a b')).toBeNull();
-    expect(normalizeTagCode('C_171.tl_distance')).toBeNull();
     expect(normalizeTagCode('GC_04:gantry')).toBeNull();
+    expect(
+      normalizeTagCode('4_Crane.4_CR01.4_POS.04_Center_POS_y1:x'),
+    ).toBeNull();
     expect(normalizeTagCode(3)).toBeNull();
     expect(normalizeTagCode(null)).toBeNull();
     expect(normalizeTagCode(undefined)).toBeNull();
+  });
+});
+
+describe('normalizeTagCode — 점', () => {
+  it('점은 된다 — 외업 원본 이름을 그대로 코드로 쓴다(앞뒤 공백만 뗀다)', () => {
+    expect(normalizeTagCode(' 4_Crane.4_CR01.4_POS.04_Center_POS_y1 ')).toBe(
+      '4_Crane.4_CR01.4_POS.04_Center_POS_y1',
+    );
+    expect(normalizeTagCode('C_171.tl_distance')).toBe('C_171.tl_distance');
+  });
+
+  it('점이 든 코드의 키도 첫 점이 크레인 경계다', () => {
+    expect(
+      resolveMappingTagKey(
+        { craneId: 'GC-01' },
+        mapping({ code: '4_Crane.4_CR01.4_POS.04_Center_POS_y1' }),
+      ),
+    ).toBe('GC_01.4_Crane.4_CR01.4_POS.04_Center_POS_y1');
   });
 });
 

@@ -1,16 +1,19 @@
 import { ArrowLeft, Copy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { parseIsoMs } from '@crane/domain/monitoring';
+import { parseIsoMs, type CraneScope } from '@crane/domain/monitoring';
 import {
   CraneLiveDot,
   TAG_CATEGORIES,
+  TAG_VALUE_NULL_TEXT,
   buildTagRows,
   countTagRowsByCategory,
   filterTagRows,
   formatClock,
   formatTagNumber,
+  hasTagCategories,
   resolveBoolDisplay,
+  selectCraneFeed,
   useCraneSnapshotStore,
   type BoolTone,
   type TagCategory,
@@ -69,29 +72,39 @@ const BOOL_VARIANT: Record<
 /**
  * 크레인 상세 — 머리글(목록 버튼 · 상태 점 · ID · 구역 · 마지막 수신), 태그
  * 검색(목록과 같이 맨 왼쪽)·묶음 선택·JSON 복사, 태그 표. 값은 스토어의 그
- * 크레인 항목이 바뀔 때(스냅샷마다)와 벽시계 틱마다 다시 그린다.
+ * 크레인 항목이 바뀔 때(스냅샷마다)와 벽시계 틱마다 다시 그린다. 카탈로그가
+ * 없는 크레인(외업 — 원본 이름이 코드)은 묶음 선택·머리글·이름 열 없이 코드
+ * 순 한 목록이다. 값 없음(null)은 `NULL` 로 보인다.
  */
 export function CraneDetail({
+  scope,
   craneId,
   connected,
   onBack,
 }: {
+  scope: CraneScope | null;
   craneId: string;
   connected: boolean;
   onBack: () => void;
 }) {
   const { t } = useTranslation();
-  const entry = useCraneSnapshotStore((s) => s.cranes[craneId]);
+  const entry = useCraneSnapshotStore(
+    (s) => selectCraneFeed(s, scope).cranes[craneId],
+  );
   const now = useNow(500);
   const [category, setCategory] = useState<TagCategory | 'all'>('all');
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const rows = useMemo(() => (entry ? buildTagRows(entry) : []), [entry]);
+  const categorized = hasTagCategories(rows);
   const visible = useMemo(
-    () => filterTagRows(rows, category, query),
-    [rows, category, query],
+    () => filterTagRows(rows, categorized ? category : 'all', query),
+    [rows, categorized, category, query],
   );
   const counts = countTagRowsByCategory(visible);
+  const columns = categorized
+    ? COLUMNS
+    : COLUMNS.filter(([column]) => column !== 'name');
 
   useEffect(() => {
     if (!copied) return;
@@ -147,26 +160,28 @@ export function CraneDetail({
               aria-label={t('monitoring:tags.searchTag')}
               className="w-60 max-w-full flex-none"
             />
-            <ToggleGroup
-              value={[category]}
-              onValueChange={(next) => {
-                const picked = next[0] as TagCategory | 'all' | undefined;
-                if (picked) setCategory(picked);
-              }}
-              variant="outline"
-              size="sm"
-              aria-label={t('monitoring:tags.categories.all')}
-            >
-              {CATEGORY_OPTIONS.map((option) => (
-                <ToggleGroupItem
-                  key={option}
-                  value={option}
-                  className="h-7 px-2.5 text-xs"
-                >
-                  {t(`monitoring:tags.categories.${option}`)}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            {categorized ? (
+              <ToggleGroup
+                value={[category]}
+                onValueChange={(next) => {
+                  const picked = next[0] as TagCategory | 'all' | undefined;
+                  if (picked) setCategory(picked);
+                }}
+                variant="outline"
+                size="sm"
+                aria-label={t('monitoring:tags.categories.all')}
+              >
+                {CATEGORY_OPTIONS.map((option) => (
+                  <ToggleGroupItem
+                    key={option}
+                    value={option}
+                    className="h-7 px-2.5 text-xs"
+                  >
+                    {t(`monitoring:tags.categories.${option}`)}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            ) : null}
             <span className="flex-1" />
             <Button
               type="button"
@@ -186,7 +201,7 @@ export function CraneDetail({
               <Table className="min-w-[760px] text-xs">
                 <TableHeader>
                   <TableRow>
-                    {COLUMNS.map(([column, align]) => (
+                    {columns.map(([column, align]) => (
                       <TableHead
                         key={column}
                         className={cn(
@@ -212,10 +227,21 @@ export function CraneDetail({
                       />
                     ),
                   )}
+                  {visible.map((row) =>
+                    row.category === null ? (
+                      <TagTableRow
+                        key={row.code}
+                        row={row}
+                        showName={categorized}
+                        now={now}
+                        t={t}
+                      />
+                    ) : null,
+                  )}
                   {visible.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={COLUMNS.length}
+                        colSpan={columns.length}
                         className="text-muted-foreground py-6 text-center"
                       >
                         {t('monitoring:tags.emptyCranes')}
@@ -257,7 +283,7 @@ function GroupRows({
       </TableRow>
       {rows.map((row) =>
         row.category === group ? (
-          <TagTableRow key={row.code} row={row} now={now} t={t} />
+          <TagTableRow key={row.code} row={row} showName now={now} t={t} />
         ) : null,
       )}
     </>
@@ -279,10 +305,13 @@ function formatRange(row: TagRow): string {
 
 function TagTableRow({
   row,
+  showName,
   now,
   t,
 }: {
   row: TagRow;
+  /** 이름 열을 그리는가 — 카탈로그가 없는 크레인은 열이 없다. */
+  showName: boolean;
   now: number;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
@@ -295,14 +324,20 @@ function TagTableRow({
       <TableCell className="text-[11.5px] whitespace-nowrap">
         {row.code}
       </TableCell>
-      <TableCell className="whitespace-nowrap">{row.name}</TableCell>
+      {showName ? (
+        <TableCell className="whitespace-nowrap">{row.name}</TableCell>
+      ) : null}
       <TableCell
         className={cn(
           'text-right font-medium whitespace-nowrap tabular-nums',
           flash ? 'bg-cyan-500/30' : 'transition-colors duration-700',
         )}
       >
-        {typeof row.value === 'boolean' ? (
+        {row.value === null ? (
+          <span className="text-amber-600 dark:text-amber-400">
+            {TAG_VALUE_NULL_TEXT}
+          </span>
+        ) : typeof row.value === 'boolean' ? (
           <BoolBadge row={row} value={row.value} t={t} />
         ) : (
           formatValue(row, row.value)

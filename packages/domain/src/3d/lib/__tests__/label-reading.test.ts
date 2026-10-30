@@ -3,6 +3,7 @@ import {
   buildLabelReadings,
   formatLabelReading,
   LABEL_READING_EMPTY,
+  LABEL_READING_NULL,
 } from '../label-reading';
 import type { TagMapping } from '../../model/tag-mapping-types';
 
@@ -129,5 +130,12 @@ describe('formatLabelReading', () => {
     expect(formatLabelReading(Number.POSITIVE_INFINITY)).toBe(
       LABEL_READING_EMPTY,
     );
+  });
+
+  it('서버가 값 없음(null)을 보냈으면 마지막 숫자 대신 NULL', () => {
+    expect(LABEL_READING_NULL).toBe('NULL');
+    expect(formatLabelReading(null)).toBe(LABEL_READING_NULL);
+    // 값이 아직 없는 것(undefined)과는 다른 표기다.
+    expect(formatLabelReading(null)).not.toBe(formatLabelReading(undefined));
   });
 });

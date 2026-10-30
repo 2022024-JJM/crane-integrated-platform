@@ -8,11 +8,12 @@ import {
 } from '../crane-snapshot-stats';
 
 function snapshot(
-  tags: Record<string, number | boolean>,
+  tags: Record<string, number | boolean | null>,
   overrides: Partial<CraneSnapshot> = {},
 ): CraneSnapshot {
   const out: CraneSnapshot = {
     craneId: 'C_867',
+    scope: 'indoor',
     stationId: 'isl-ocean-crane',
     bay: 'F5_1_Bay',
     snapshotAt: '2026-10-20T04:21:27.864Z',
@@ -155,7 +156,7 @@ describe('mergeCraneSnapshot', () => {
 
 describe('resolveCraneLiveState', () => {
   const base = {
-    snapshot: snapshot({}),
+    snapshot: snapshot({ heartbeat: true }),
     receivedAt: 10_000,
     heartbeatAt: 10_000,
   };
@@ -191,5 +192,66 @@ describe('resolveCraneLiveState', () => {
   it('창 크기를 바꿀 수 있다', () => {
     expect(resolveCraneLiveState(base, 10_600, true, 500)).toBe('stale');
     expect(resolveCraneLiveState(base, 10_600, true, 5_000)).toBe('live');
+  });
+
+  it('heartbeat 태그가 없는 크레인(외업)은 서버 online 만 본다 — 오래 멈춰 있어도 stale 이 아니다', () => {
+    const outdoor = {
+      snapshot: snapshot(
+        { '4_Crane.4_CR01.4_POS.04_Center_POS_y1': 1 },
+        { scope: 'outdoor', craneId: 'GC_01' },
+      ),
+      receivedAt: 10_000,
+      heartbeatAt: null,
+    };
+    expect(resolveCraneLiveState(outdoor, 10_000 + 600_000, true)).toBe('live');
+    expect(resolveCraneLiveState(outdoor, 10_100, false)).toBe('off');
+    expect(
+      resolveCraneLiveState(
+        {
+          ...outdoor,
+          snapshot: { ...outdoor.snapshot, online: false },
+        },
+        10_100,
+        true,
+      ),
+    ).toBe('off');
+  });
+
+  it('heartbeat 값이 null(값 없음)이어도 태그가 있으면 heartbeat 규칙이다', () => {
+    const nullBeat = {
+      snapshot: snapshot({ heartbeat: null }),
+      receivedAt: 10_000,
+      heartbeatAt: null,
+    };
+    expect(
+      resolveCraneLiveState(nullBeat, 10_000 + HEARTBEAT_STALE_MS, true),
+    ).toBe('stale');
+  });
+});
+
+describe('값 없음(null) 통계', () => {
+  it('null 은 관측 범위에 넣지 않고, 숫자 ↔ null 전환은 변경으로 센다', () => {
+    let entry = createCraneSnapshotEntry(snapshot({ v: null }), 0);
+    expect(entry.stats.v).toEqual({
+      changedAt: null,
+      changeCount: 0,
+      min: null,
+      max: null,
+    });
+    entry = mergeCraneSnapshot(entry, snapshot({ v: 4 }), 1);
+    entry = mergeCraneSnapshot(entry, snapshot({ v: null }), 2);
+    expect(entry.snapshot.tags.v.value).toBeNull();
+    expect(entry.stats.v).toEqual({
+      changedAt: 2,
+      changeCount: 2,
+      min: 4,
+      max: 4,
+    });
+  });
+
+  it('null 이 그대로 다시 오면 변경이 아니고 통계 참조를 유지한다', () => {
+    const first = createCraneSnapshotEntry(snapshot({ v: null }), 0);
+    const next = mergeCraneSnapshot(first, snapshot({ v: null }), 1);
+    expect(next.stats.v).toBe(first.stats.v);
   });
 });

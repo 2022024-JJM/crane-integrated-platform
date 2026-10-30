@@ -42,7 +42,8 @@ import {
 export const STATUS_BIT_ON_THRESHOLD = 0.5;
 
 export interface TagReading extends TagActivity {
-  value: number;
+  /** null 은 서버가 보낸 값 없음 — 비트로는 모름이다. */
+  value: number | null;
 }
 
 /** 모델 하나의 판정 입력 — 씬이 바뀔 때만 다시 만든다. */
@@ -75,15 +76,17 @@ export function collectModelStatusKeys(
   return { motion, liveness, status };
 }
 
-/** 비트 값 — 키가 없거나 아직 못 받았거나 값이 유한수가 아니면 null(모름). */
+/** 비트 값 — 키가 없거나 아직 못 받았거나 값 없음·비유한이면 null(모름). */
 export function readStatusBit(
   key: string | undefined,
   get: (key: string) => TagReading | undefined,
 ): boolean | null {
   if (!key) return null;
-  const reading = get(key);
-  if (!reading || !Number.isFinite(reading.value)) return null;
-  return reading.value >= STATUS_BIT_ON_THRESHOLD;
+  const value = get(key)?.value;
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return null;
+  }
+  return value >= STATUS_BIT_ON_THRESHOLD;
 }
 
 /**

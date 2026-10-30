@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getActiveTagSource,
   hasTagIngest,
+  publishTagNull,
   publishTagValue,
+  readTagLiveNumber,
   readTagLiveValue,
   setActiveTagSource,
   setTagIngest,
@@ -164,5 +166,68 @@ describe('활성 소스 게이트', () => {
     expect(tagLiveValues.size).toBe(0);
     setActiveTagSource(null);
     expect(getActiveTagSource()).toBeNull();
+  });
+});
+
+describe('publishTagNull', () => {
+  it('표시 캐시만 null 로 바꾸고 소비자·관찰자에는 보내지 않는다 — 모델은 마지막 자세', () => {
+    const ingest = vi.fn();
+    const listener = vi.fn();
+    setTagIngest(ingest);
+    const unsubscribe = subscribeTagValues(listener);
+    publishTagValue('k', 7);
+    ingest.mockClear();
+    listener.mockClear();
+    publishTagNull('k');
+    expect(readTagLiveValue('k')).toBeNull();
+    expect(readTagLiveNumber('k')).toBeUndefined();
+    expect(ingest).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('수신 시각은 갱신하고 변화 시각은 이어받는다 — 값 없음은 움직임이 아니다', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    publishTagValue('k', 7);
+    vi.spyOn(Date, 'now').mockReturnValue(5_000);
+    publishTagNull('k');
+    expect(tagLiveValues.get('k')).toEqual({
+      value: null,
+      at: 5_000,
+      changedAt: 1_000,
+    });
+    // 같은 값 없음이 다시 와도 변화가 아니다.
+    vi.spyOn(Date, 'now').mockReturnValue(6_000);
+    publishTagNull('k');
+    expect(tagLiveValues.get('k')?.changedAt).toBe(1_000);
+    // 숫자가 돌아오면 변화다.
+    vi.spyOn(Date, 'now').mockReturnValue(7_000);
+    publishTagValue('k', 7);
+    expect(tagLiveValues.get('k')).toEqual({
+      value: 7,
+      at: 7_000,
+      changedAt: 7_000,
+    });
+    vi.restoreAllMocks();
+  });
+
+  it('처음부터 값 없음이면 움직인 적이 없다(changedAt -Infinity)', () => {
+    publishTagNull('fresh');
+    expect(tagLiveValues.get('fresh')?.changedAt).toBe(
+      Number.NEGATIVE_INFINITY,
+    );
+    expect(readTagLiveValue('fresh')).toBeNull();
+    expect(readTagLiveValue('never')).toBeUndefined();
+  });
+
+  it('빈 키는 무시하고 소스 게이트는 숫자와 같다', () => {
+    publishTagNull('');
+    expect(tagLiveValues.size).toBe(0);
+    setActiveTagSource('realtime');
+    publishTagNull('k', { source: 'replay' });
+    publishTagNull('k');
+    expect(tagLiveValues.has('k')).toBe(false);
+    publishTagNull('k', { source: 'realtime' });
+    expect(readTagLiveValue('k')).toBeNull();
   });
 });

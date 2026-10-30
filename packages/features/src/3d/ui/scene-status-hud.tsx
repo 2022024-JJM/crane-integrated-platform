@@ -10,6 +10,10 @@ import {
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedSceneInfo } from '@crane/domain/3d';
+import {
+  getCraneScopeByRegion,
+  type CraneScope,
+} from '@crane/domain/monitoring';
 import type { WeatherSnapshot } from '@crane/domain/weather';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import { useNow } from '@crane/core/lib/use-now';
@@ -45,7 +49,10 @@ import {
   windGaugeMarks,
 } from '../lib/wind-advisory';
 import { useCraneFeedConnection } from '../model/use-crane-snapshot-feed';
-import { useCraneSnapshotStore } from '../model/use-crane-snapshot-store';
+import {
+  selectCraneFeed,
+  useCraneSnapshotStore,
+} from '../model/use-crane-snapshot-store';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useSceneSunState } from '../model/use-scene-sun-state';
 import { useSceneWeather } from '../model/use-scene-weather';
@@ -149,7 +156,10 @@ export function SceneStatusHud({
               {clock ?? '--:--'}
             </b>
           </span>
-          <FeedLine timeZone={timeZone} />
+          <FeedLine
+            scope={getCraneScopeByRegion(regionId)}
+            timeZone={timeZone}
+          />
         </div>
       </div>
       {listOpen ? (
@@ -499,12 +509,20 @@ const FEED_TONE_TEXT_CLASS: Record<FeedFreshnessTone, string | undefined> = {
  * 수신 줄 — 연결돼 있으면 마지막 묶음의 수신 시각(현장 시간대), 아니면 상태
  * 문구. 1초 틱은 이 줄만 다시 그린다(stale 전환).
  */
-function FeedLine({ timeZone }: { timeZone: string | null }) {
+function FeedLine({
+  scope,
+  timeZone,
+}: {
+  scope: CraneScope | null;
+  timeZone: string | null;
+}) {
   const { t } = useTranslation();
   const now = useNow(1_000);
   const connection = useCraneFeedConnection();
   const held = useRealtimeStore((s) => s.held);
-  const lastReceivedAt = useCraneSnapshotStore((s) => s.lastReceivedAt);
+  const lastReceivedAt = useCraneSnapshotStore(
+    (s) => selectCraneFeed(s, scope).lastReceivedAt,
+  );
   const feed = resolveFeedFreshness(connection, held, lastReceivedAt, now);
   const receivedClock =
     (feed.state === 'live' || feed.state === 'stale') && lastReceivedAt !== null

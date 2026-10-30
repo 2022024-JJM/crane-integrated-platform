@@ -11,16 +11,27 @@ export const TAG_CATEGORIES: readonly TagCategory[] = [
 
 export interface TagRow {
   code: string;
-  /** `getMonitoringTagMetadata` 의 영문 표시명(예: "MH#1 Weight"). */
-  name: string;
-  category: TagCategory;
+  /**
+   * `getMonitoringTagMetadata` 의 영문 표시명(예: "MH#1 Weight"). 카탈로그가
+   * 없는 범위(외업 — 원본 이름이 곧 코드)는 null.
+   */
+  name: string | null;
+  /** 묶음. 카탈로그가 없는 범위는 null(묶지 않는다). */
+  category: TagCategory | null;
   unit: string | null;
   /** 켜지면 알람인 비트(crane_system_error 등). */
   alarm: boolean;
-  value: number | boolean;
+  /** null 은 서버가 보낸 값 없음. */
+  value: number | boolean | null;
   timestamp: string | null;
   stat: CraneTagStat;
 }
+
+/**
+ * 값 없음(null)의 표기 — 마지막 숫자를 남기지 않고 이 글자를 보인다. 모델
+ * 라벨(`LABEL_READING_NULL`)과 같은 글자다.
+ */
+export const TAG_VALUE_NULL_TEXT = 'NULL';
 
 /** 시각 태그는 알파벳이 아니라 큰 단위 → 작은 단위 순. */
 const DATETIME_ORDER = ['year', 'month', 'day', 'hour', 'minute', 'second'];
@@ -36,9 +47,15 @@ function toCategory(value: string): TagCategory {
   return value === 'datetime' || value === 'measurement' ? value : 'status';
 }
 
+/** 묶음 순서 — 묶지 않은 행(null)은 묶음 뒤. */
+function categoryRank(category: TagCategory | null): number {
+  return category === null
+    ? TAG_CATEGORIES.length
+    : TAG_CATEGORIES.indexOf(category);
+}
+
 export function compareTagRows(a: TagRow, b: TagRow): number {
-  const categoryDiff =
-    TAG_CATEGORIES.indexOf(a.category) - TAG_CATEGORIES.indexOf(b.category);
+  const categoryDiff = categoryRank(a.category) - categoryRank(b.category);
   if (categoryDiff !== 0) return categoryDiff;
   if (a.category === 'datetime') {
     const diff =
@@ -51,20 +68,22 @@ export function compareTagRows(a: TagRow, b: TagRow): number {
 /**
  * 스냅샷 한 대분을 표 행으로 — 묶음(시각·계측값·상태) 순, 묶음 안은 코드의
  * 숫자 인식 사전순(ts1 < ts2 < ts10). 이름·단위·묶음은 플랫폼의 태그
- * 카탈로그(영문)에서 온다.
+ * 카탈로그(영문)에서 온다. 카탈로그는 내업 태그의 것이라 외업 크레인은 원본
+ * 이름(코드) 그대로 묶지 않고 코드 순으로 둔다 — 외업 묶음 기준은 정해지지 않았다.
  */
 export function buildTagRows(
   entry: Pick<CraneSnapshotEntry, 'snapshot' | 'stats'>,
 ): TagRow[] {
+  const catalog = entry.snapshot.scope === 'indoor';
   const rows: TagRow[] = [];
   for (const [code, tag] of Object.entries(entry.snapshot.tags)) {
-    const meta = getMonitoringTagMetadata(code);
+    const meta = catalog ? getMonitoringTagMetadata(code) : null;
     rows.push({
       code,
-      name: meta.displayName,
-      category: toCategory(meta.category),
-      unit: meta.unit,
-      alarm: meta.alarm,
+      name: meta ? meta.displayName : null,
+      category: meta ? toCategory(meta.category) : null,
+      unit: meta ? meta.unit : null,
+      alarm: meta ? meta.alarm : false,
       value: tag.value,
       timestamp: tag.timestamp,
       stat: entry.stats[code] ?? EMPTY_STAT,
@@ -85,11 +104,16 @@ export function filterTagRows(
       (category === 'all' || row.category === category) &&
       (!needle ||
         row.code.toLowerCase().includes(needle) ||
-        row.name.toLowerCase().includes(needle)),
+        (row.name?.toLowerCase().includes(needle) ?? false)),
   );
 }
 
-/** 묶음별 행 수(필터 뒤) — 묶음 머리글에 쓴다. */
+/** 묶인 행이 하나라도 있는가 — 없으면(외업) 묶음 선택·머리글을 그리지 않는다. */
+export function hasTagCategories(rows: readonly TagRow[]): boolean {
+  return rows.some((row) => row.category !== null);
+}
+
+/** 묶음별 행 수(필터 뒤) — 묶음 머리글에 쓴다. 묶지 않은 행은 세지 않는다. */
 export function countTagRowsByCategory(
   rows: readonly TagRow[],
 ): Record<TagCategory, number> {
@@ -98,7 +122,9 @@ export function countTagRowsByCategory(
     measurement: 0,
     status: 0,
   };
-  for (const row of rows) counts[row.category] += 1;
+  for (const row of rows) {
+    if (row.category !== null) counts[row.category] += 1;
+  }
   return counts;
 }
 

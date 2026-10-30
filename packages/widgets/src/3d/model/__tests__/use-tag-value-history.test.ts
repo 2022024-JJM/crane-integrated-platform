@@ -14,9 +14,13 @@ vi.mock('@crane/domain/monitoring', async (importOriginal) => ({
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
-function snapshot(craneId: string, value: number | boolean): CraneSnapshot {
+function snapshot(
+  craneId: string,
+  value: number | boolean | null,
+): CraneSnapshot {
   return {
     craneId,
+    scope: 'indoor',
     stationId: null,
     bay: 'F1',
     snapshotAt: null,
@@ -55,22 +59,33 @@ afterEach(() => {
 
 describe('useTagValueHistory', () => {
   it('대상이 없거나 꺼져 있으면 빈 표본·조회 없음', () => {
-    const { result } = renderHook(() => useTagValueHistory(null, null, true));
+    const { result } = renderHook(() =>
+      useTagValueHistory('indoor', null, null, true),
+    );
     expect(result.current).toEqual({ samples: [], loading: false });
-    renderHook(() => useTagValueHistory('C_1', 'tl_distance', false));
+    renderHook(() => useTagValueHistory('indoor', 'C_1', 'tl_distance', false));
+    expect(getCraneHistory).not.toHaveBeenCalled();
+  });
+
+  it('범위가 없으면(미등록 region) 조회도 구독도 없다', () => {
+    const { result } = renderHook(() =>
+      useTagValueHistory(null, 'C_1', 'tl_distance', true),
+    );
+    expect(result.current).toEqual({ samples: [], loading: false });
     expect(getCraneHistory).not.toHaveBeenCalled();
   });
 
   it('이력 API 로 채우고(60초·1s), 로딩 중에는 loading', async () => {
     getCraneHistory.mockResolvedValueOnce(frames([1, 2, 3]));
     const { result } = renderHook(() =>
-      useTagValueHistory('C_1', 'tl_distance', true),
+      useTagValueHistory('indoor', 'C_1', 'tl_distance', true),
     );
     expect(result.current.loading).toBe(true);
     await flush();
     expect(result.current.loading).toBe(false);
     expect(result.current.samples.map((s) => s.v)).toEqual([1, 2, 3]);
     const query = getCraneHistory.mock.calls[0][0];
+    expect(query.scope).toBe('indoor');
     expect(query.craneId).toBe('C_1');
     expect(query.step).toBe('1s');
     expect(Date.parse(query.to) - Date.parse(query.from)).toBe(60_000);
@@ -79,29 +94,50 @@ describe('useTagValueHistory', () => {
   it('스냅샷이 오면 뒤에 붙는다 — 다른 크레인·숫자 아닌 값은 무시', async () => {
     getCraneHistory.mockResolvedValueOnce(frames([1]));
     const { result } = renderHook(() =>
-      useTagValueHistory('C_1', 'tl_distance', true),
+      useTagValueHistory('indoor', 'C_1', 'tl_distance', true),
     );
     await flush();
     // 이력 마지막 표본(1_000_000)에서 5초 뒤 — 60초 창 안이라 이력이 남는다.
     act(() => {
       useCraneSnapshotStore
         .getState()
-        .applySnapshots([snapshot('C_1', 5), snapshot('C_2', 9)], 1_005_000);
+        .applySnapshots(
+          'indoor',
+          [snapshot('C_1', 5), snapshot('C_2', 9)],
+          1_005_000,
+        );
     });
     expect(result.current.samples.map((s) => s.v)).toEqual([1, 5]);
     expect(result.current.samples[1].t).toBe(1_005_000);
   });
 
-  it('창(60초) 밖으로 벗어난 이력 표본은 라이브 표본이 오면 떨어져 나간다', async () => {
-    getCraneHistory.mockResolvedValueOnce(frames([1, 2]));
+  it('다른 범위 칸의 스냅샷과 값 없음(null)은 표본이 아니다', async () => {
+    getCraneHistory.mockResolvedValueOnce(frames([1]));
     const { result } = renderHook(() =>
-      useTagValueHistory('C_1', 'tl_distance', true),
+      useTagValueHistory('indoor', 'C_1', 'tl_distance', true),
     );
     await flush();
     act(() => {
       useCraneSnapshotStore
         .getState()
-        .applySnapshots([snapshot('C_1', 5)], 2_000_000);
+        .applySnapshots('outdoor', [snapshot('C_1', 8)], 1_004_000);
+      useCraneSnapshotStore
+        .getState()
+        .applySnapshots('indoor', [snapshot('C_1', null)], 1_005_000);
+    });
+    expect(result.current.samples.map((s) => s.v)).toEqual([1]);
+  });
+
+  it('창(60초) 밖으로 벗어난 이력 표본은 라이브 표본이 오면 떨어져 나간다', async () => {
+    getCraneHistory.mockResolvedValueOnce(frames([1, 2]));
+    const { result } = renderHook(() =>
+      useTagValueHistory('indoor', 'C_1', 'tl_distance', true),
+    );
+    await flush();
+    act(() => {
+      useCraneSnapshotStore
+        .getState()
+        .applySnapshots('indoor', [snapshot('C_1', 5)], 2_000_000);
     });
     expect(result.current.samples).toEqual([{ t: 2_000_000, v: 5 }]);
   });
@@ -109,14 +145,14 @@ describe('useTagValueHistory', () => {
   it('이력 조회가 실패해도 라이브 표본은 쌓인다', async () => {
     getCraneHistory.mockRejectedValueOnce(new Error('404'));
     const { result } = renderHook(() =>
-      useTagValueHistory('C_1', 'tl_distance', true),
+      useTagValueHistory('indoor', 'C_1', 'tl_distance', true),
     );
     await flush();
     expect(result.current).toEqual({ samples: [], loading: false });
     act(() => {
       useCraneSnapshotStore
         .getState()
-        .applySnapshots([snapshot('C_1', true)], 3_000_000);
+        .applySnapshots('indoor', [snapshot('C_1', true)], 3_000_000);
     });
     expect(result.current.samples).toEqual([{ t: 3_000_000, v: 1 }]);
   });
@@ -124,7 +160,8 @@ describe('useTagValueHistory', () => {
   it('대상이 바뀌면 이전 표본을 보이지 않고 새로 조회한다', async () => {
     getCraneHistory.mockResolvedValueOnce(frames([1, 2]));
     const { result, rerender } = renderHook(
-      ({ code }: { code: string }) => useTagValueHistory('C_1', code, true),
+      ({ code }: { code: string }) =>
+        useTagValueHistory('indoor', 'C_1', code, true),
       { initialProps: { code: 'tl_distance' } },
     );
     await flush();
@@ -148,7 +185,7 @@ describe('useTagValueHistory', () => {
       }),
     );
     const { unmount } = renderHook(() =>
-      useTagValueHistory('C_1', 'tl_distance', true),
+      useTagValueHistory('indoor', 'C_1', 'tl_distance', true),
     );
     unmount();
     resolve(frames([1]));

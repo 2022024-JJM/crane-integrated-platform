@@ -107,6 +107,10 @@ export function mergeCraneSnapshot(
  *   적이 없으니 수신 시각을 기준으로 잠시 live 로 본다.
  * - stale: 값은 오는데 heartbeat 가 그대로 — PLC 나 수집 쪽이 멈췄는데
  *   파이프라인은 마지막 값을 계속 보내는 경우
+ *
+ * heartbeat 태그가 없는 크레인(외업)은 서버의 `online` 만 본다 — 서버는 값이
+ * 바뀐 크레인만 다시 보내므로 수신 시각으로 재면 멈춰 선 크레인이 stale 로
+ * 보인다. 서버는 수신이 끊긴 지 stale 기준이 지나면 `online=false` 를 보낸다.
  */
 export function resolveCraneLiveState(
   entry: Pick<CraneSnapshotEntry, 'snapshot' | 'receivedAt' | 'heartbeatAt'>,
@@ -115,6 +119,7 @@ export function resolveCraneLiveState(
   staleMs = HEARTBEAT_STALE_MS,
 ): CraneLiveState {
   if (!connected || !entry.snapshot.online) return 'off';
+  if (!(HEARTBEAT_TAG in entry.snapshot.tags)) return 'live';
   const reference = entry.heartbeatAt ?? entry.receivedAt;
   return now - reference < staleMs ? 'live' : 'stale';
 }

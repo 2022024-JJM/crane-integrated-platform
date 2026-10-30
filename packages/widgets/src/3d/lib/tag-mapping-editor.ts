@@ -6,6 +6,7 @@ import {
   type TagMappingTarget,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
+import { TAG_VALUE_NULL_TEXT } from '@crane/features/3d';
 
 /**
  * 태그 맵핑 섹션의 순수 로직 — ui/*.tsx 안에서 계산하지 않는다는 규칙
@@ -58,9 +59,9 @@ export function createTagMapping(
 /** 카드 readout: 태그값 → 적용값(offset + value × scale). */
 export function computeAppliedValue(
   mapping: Pick<TagMapping, 'scale' | 'offset'>,
-  tagValue: number | undefined,
+  tagValue: number | null | undefined,
 ): number | undefined {
-  if (tagValue === undefined || !Number.isFinite(tagValue)) return undefined;
+  if (tagValue == null || !Number.isFinite(tagValue)) return undefined;
   return (mapping.offset ?? 0) + tagValue * (mapping.scale ?? 1);
 }
 
@@ -78,7 +79,8 @@ export function switchTargetKind(
 }
 
 /** 값 표시용 — 소수 3자리, 비유한수는 대시. */
-export function formatMappingValue(value: number | undefined): string {
+export function formatMappingValue(value: number | null | undefined): string {
+  if (value === null) return TAG_VALUE_NULL_TEXT;
   if (value === undefined || !Number.isFinite(value)) return '—';
   return Number(value.toFixed(3)).toString();
 }

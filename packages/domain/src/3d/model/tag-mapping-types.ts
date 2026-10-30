@@ -48,7 +48,7 @@ export interface TagMapping {
   /** 모델 안에서 고유. 값 저장소 주소(`${modelId}/${id}`)로도 쓰인다. */
   id: string;
   target: TagMappingTarget;
-  /** 태그 코드 — 키의 뒷부분. 공백·점·콜론 없음(`normalizeTagCode`). */
+  /** 태그 코드 — 키의 뒷부분. 공백·콜론 없음, 점은 된다(`normalizeTagCode`). */
   code: string;
   /**
    * 이 맵핑만 다른 크레인을 읽을 때의 크레인 ID. 편집 UI 가 쓰지 않는 보존용
@@ -75,8 +75,13 @@ export interface TagMapping {
 /** 라벨 값 이름의 최대 길이 — 라벨이 모델을 가리지 않을 만큼만. */
 export const TAG_MAPPING_CAPTION_MAX = 12;
 
-/** 코드에 올 수 없는 글자 — 키 구분자(점)·옛 구분자(콜론)·공백. */
-const TAG_CODE_FORBIDDEN = /[\s.:]/;
+/**
+ * 코드에 올 수 없는 글자 — 옛 구분자(콜론)·공백. 점은 된다: 외업 태그는 원본
+ * 이름(`4_Crane.4_CR01.4_POS.04_Center_POS_y1`)이 점으로 마디를 나눈다. 키
+ * `크레인ID.코드` 는 첫 점에서 나누고 크레인 ID 에는 점이 없으므로 코드의 점과
+ * 겹치지 않는다(`parseCraneTagKey`).
+ */
+const TAG_CODE_FORBIDDEN = /[\s:]/;
 
 /** 태그 코드 정규화 — trim 뒤 비었거나 금지 글자가 있으면 null. */
 export function normalizeTagCode(raw: unknown): string | null {

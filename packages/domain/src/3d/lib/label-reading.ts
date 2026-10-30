@@ -20,11 +20,22 @@ export interface ModelLabelReading {
   tagKey: string;
 }
 
-/** 값을 읽는 함수. 아직 값이 없으면 undefined. */
-export type ModelLabelValueReader = (tagKey: string) => number | undefined;
+/**
+ * 값을 읽는 함수. 아직 값이 없으면 undefined, 서버가 값 없음(null)을 보냈으면
+ * null.
+ */
+export type ModelLabelValueReader = (
+  tagKey: string,
+) => number | null | undefined;
 
 /** 값이 아직 없을 때의 표기. */
 export const LABEL_READING_EMPTY = '—';
+
+/**
+ * 서버가 값 없음(null)을 보냈을 때의 표기 — 마지막 숫자를 남기지 않는다.
+ * 데이터 쪽 문제(태그 미수집·PLC 응답 없음)를 화면에서 바로 알아보게 한다.
+ */
+export const LABEL_READING_NULL = 'NULL';
 
 /** 소수 자릿수 — ACMS 표기(777.2)와 같다. */
 export const LABEL_READING_DECIMALS = 1;
@@ -55,8 +66,9 @@ export function buildLabelReadings(
   return readings.length > 0 ? readings : NO_READINGS;
 }
 
-/** 값 표기 — 소수 1자리. 값이 없거나 비유한이면 `—`. */
-export function formatLabelReading(value: number | undefined): string {
+/** 값 표기 — 소수 1자리. 값 없음(null)은 `NULL`, 아직 없거나 비유한이면 `—`. */
+export function formatLabelReading(value: number | null | undefined): string {
+  if (value === null) return LABEL_READING_NULL;
   if (value === undefined || !Number.isFinite(value)) {
     return LABEL_READING_EMPTY;
   }

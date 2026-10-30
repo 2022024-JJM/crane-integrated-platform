@@ -77,7 +77,7 @@ export const VIRTUAL_TAG_DATA_TYPES = [
 export interface VirtualTagDefinition {
   /** 시나리오 안에서 고유한 행 식별자. 외부(씬)에서 참조하지 않는다. */
   id: string;
-  /** 태그 코드 — 모델 맵핑·상태 태그의 코드와 같다. 공백·점·콜론 없음. */
+  /** 태그 코드 — 모델 맵핑·상태 태그의 코드와 같다. 공백·콜론 없음, 점은 된다. */
   code: string;
   /** 표시명. 비면 맵핑 대상(노드·역할)을 보인다. */
   name: string;
@@ -122,7 +122,8 @@ export const SIMULATION_SPEED_OPTIONS = [0.5, 1, 2, 4, 8] as const;
 export const SCENARIOS_MAX = 50;
 export const SCENARIO_NAME_MAX = 40;
 export const SCENARIO_TAGS_MAX = 500;
-export const VIRTUAL_TAG_CODE_MAX = 48;
+/** 외업 원본 이름(`4_Crane.4_CR20.0_state.05_Local_PLC_comm_fault_17`, 49자)이 들어가는 길이. */
+export const VIRTUAL_TAG_CODE_MAX = 64;
 export const VIRTUAL_TAG_NAME_MAX = 40;
 export const VIRTUAL_TAG_UNIT_MAX = 12;
 /** 갱신 주기(초). 하한은 한 프레임(16ms). */

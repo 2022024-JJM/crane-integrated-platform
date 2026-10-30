@@ -7,7 +7,11 @@ import {
 import { resolveReplaySmoothTime } from '../lib/replay-smoothing';
 import { rigValueStore } from './rig-value-store';
 import { notifySceneSeek } from './scene-seek-signal';
-import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
+import {
+  publishTagNull,
+  publishTagValue,
+  type TagPublishOptions,
+} from './tag-value-bus';
 
 const DEFAULT_REPLAY_FRAME_DURATION_MS = 5_000;
 
@@ -51,6 +55,12 @@ function applyReplayFrame(
 
   for (const crane of frame.cranes) {
     for (const [tagCode, raw] of Object.entries(crane.values)) {
+      const key = buildCraneTagKey(crane.craneId, tagCode);
+      // 서버가 값 없음을 null 로 보낸 태그 — 실시간과 같이 라벨이 NULL 을 보인다.
+      if (raw === null) {
+        publishTagNull(key, options);
+        continue;
+      }
       // 상태 비트는 어댑터가 'true'/'false' 로 싣는다 — 0/1 로 되돌려 실시간과
       // 같은 값이 버스에 흐르게 한다.
       const value = toTagNumber(raw);
@@ -58,7 +68,7 @@ function applyReplayFrame(
         continue;
       }
 
-      publishTagValue(buildCraneTagKey(crane.craneId, tagCode), value, options);
+      publishTagValue(key, value, options);
     }
   }
 }

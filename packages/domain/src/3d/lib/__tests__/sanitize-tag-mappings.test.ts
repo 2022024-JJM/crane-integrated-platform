@@ -63,12 +63,15 @@ describe('parseTagKeyRef', () => {
     expect(parseTagKeyRef(' luff ')).toEqual({ code: 'luff' });
   });
 
+  it('첫 점 앞이 크레인, 뒤가 코드다 — 코드에 점이 남아도 된다', () => {
+    expect(parseTagKeyRef('A.b.c')).toEqual({ craneKey: 'A', code: 'b.c' });
+  });
+
   it('비었거나 문자열이 아니거나 코드에 금지 글자가 남으면 null', () => {
     expect(parseTagKeyRef('')).toBeNull();
     expect(parseTagKeyRef('   ')).toBeNull();
     expect(parseTagKeyRef(3)).toBeNull();
     expect(parseTagKeyRef(null)).toBeNull();
-    expect(parseTagKeyRef('A.b.c')).toBeNull();
     expect(parseTagKeyRef('A.b c')).toBeNull();
     expect(parseTagKeyRef(':x')).toBeNull();
     expect(parseTagKeyRef('x:')).toBeNull();

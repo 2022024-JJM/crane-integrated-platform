@@ -2,6 +2,7 @@ export type {
   CraneHistoryFrame,
   CraneHistoryFrames,
   CraneHistoryQuery,
+  CraneScope,
   CraneSnapshot,
   CraneSnapshotBatch,
   CraneSnapshotTag,
@@ -10,6 +11,8 @@ export type {
   ReplayLiteFrame,
   ReplayLiteResponse,
 } from './model/types';
+export { CRANE_SCOPES } from './model/types';
+export { getCraneScopeByRegion } from './config/crane-scope';
 export {
   DEFAULT_REPLAY_DURATION,
   DEFAULT_REPLAY_RANGE_MS,
@@ -38,6 +41,7 @@ export { getCraneHistory } from './api/get-crane-history';
 export { getCraneSnapshots } from './api/get-crane-snapshots';
 export {
   compareCraneIds,
+  isCraneScope,
   isCraneSnapshot,
   isCraneSnapshotBatch,
   isCraneSnapshotTag,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   compareCraneIds,
+  isCraneScope,
   isCraneSnapshot,
   isCraneSnapshotBatch,
   isCraneSnapshotTag,
@@ -10,6 +11,7 @@ import {
 
 const VALID = {
   craneId: 'C_867',
+  scope: 'indoor',
   stationId: 'isl-ocean-crane',
   bay: 'F5_1_Bay',
   snapshotAt: '2026-10-20T04:21:27.864Z',
@@ -30,7 +32,7 @@ const VALID = {
 };
 
 describe('isCraneSnapshotTag', () => {
-  it('숫자·불리언 값만 받고 문자열·null 값은 거부한다', () => {
+  it('숫자·불리언·null(값 없음)을 받고 문자열·undefined 값은 거부한다', () => {
     expect(isCraneSnapshotTag({ value: 1, quality: 0, timestamp: null })).toBe(
       true,
     );
@@ -42,7 +44,12 @@ describe('isCraneSnapshotTag', () => {
     );
     expect(
       isCraneSnapshotTag({ value: null, quality: 0, timestamp: 't' }),
+    ).toBe(true);
+    // 서버는 값 없음을 JSON null 로만 보낸다 — 문자열 "NULL" 은 깨진 값이다.
+    expect(
+      isCraneSnapshotTag({ value: 'NULL', quality: 0, timestamp: 't' }),
     ).toBe(false);
+    expect(isCraneSnapshotTag({ quality: 0, timestamp: 't' })).toBe(false);
     expect(isCraneSnapshotTag({ value: 1, quality: '0', timestamp: 't' })).toBe(
       false,
     );
@@ -56,6 +63,39 @@ describe('isCraneSnapshot / sanitizeCraneSnapshot', () => {
   it('서버 형식을 통과시킨다', () => {
     expect(isCraneSnapshot(VALID)).toBe(true);
     expect(sanitizeCraneSnapshot(VALID)).toEqual(VALID);
+  });
+
+  it('외업 스냅샷 — 원본 이름(점) 태그와 값 없음(null)을 그대로 남긴다', () => {
+    const outdoor = {
+      ...VALID,
+      craneId: 'GC_01',
+      scope: 'outdoor',
+      bay: 'ACS_PLC',
+      tags: {
+        '4_Crane.4_CR01.4_POS.04_Center_POS_y1': {
+          value: 12.5,
+          quality: 0,
+          timestamp: null,
+        },
+        '4_Crane.4_CR01.2_slow.52_TL_FW_slow_1': {
+          value: null,
+          quality: 0,
+          timestamp: null,
+        },
+      },
+    };
+    expect(sanitizeCraneSnapshot(outdoor)).toEqual(outdoor);
+  });
+
+  it('scope 가 없는 옛 JSON 은 indoor 로 읽고, 모르는 scope 는 통째로 거부한다', () => {
+    const legacy: Record<string, unknown> = { ...VALID };
+    delete legacy.scope;
+    expect(isCraneSnapshot(legacy)).toBe(true);
+    expect(sanitizeCraneSnapshot(legacy)?.scope).toBe('indoor');
+    expect(isCraneSnapshot({ ...VALID, scope: 'yard' })).toBe(false);
+    expect(isCraneSnapshot({ ...VALID, scope: null })).toBe(false);
+    expect(isCraneSnapshot({ ...VALID, scope: 'INDOOR' })).toBe(false);
+    expect(sanitizeCraneSnapshot({ ...VALID, scope: 'yard' })).toBeNull();
   });
 
   it('stationId·bay·snapshotAt·lastReceivedAt 은 null 을 허용한다', () => {
@@ -103,6 +143,17 @@ describe('isCraneSnapshot / sanitizeCraneSnapshot', () => {
   it('빈 태그 맵은 그대로 통과한다', () => {
     const empty = { ...VALID, tags: {} };
     expect(sanitizeCraneSnapshot(empty)?.tags).toEqual({});
+  });
+});
+
+describe('isCraneScope', () => {
+  it('indoor·outdoor 만 범위다', () => {
+    expect(isCraneScope('indoor')).toBe(true);
+    expect(isCraneScope('outdoor')).toBe(true);
+    expect(isCraneScope('Indoor')).toBe(false);
+    expect(isCraneScope('')).toBe(false);
+    expect(isCraneScope(undefined)).toBe(false);
+    expect(isCraneScope(null)).toBe(false);
   });
 });
 
@@ -167,6 +218,27 @@ describe('compareCraneIds', () => {
       'C_2',
       'A',
       'Z',
+    ]);
+  });
+
+  it('접두어로 묶고 그 안에서 숫자 순 — 외업 타입이 섞이지 않는다', () => {
+    const ids = [
+      'TC_104',
+      'OC_01',
+      'GC_03',
+      'TTC_02',
+      'GC_01',
+      'TC_54',
+      'CC_51',
+    ];
+    expect(ids.slice().sort(compareCraneIds)).toEqual([
+      'CC_51',
+      'GC_01',
+      'GC_03',
+      'OC_01',
+      'TC_54',
+      'TC_104',
+      'TTC_02',
     ]);
   });
 

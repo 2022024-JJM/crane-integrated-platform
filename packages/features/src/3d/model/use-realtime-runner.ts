@@ -5,7 +5,11 @@ import {
   type RealtimeCadenceTracker,
 } from '../lib/realtime-smoothing';
 import { useRealtimeStore } from './use-realtime-store';
-import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
+import {
+  publishTagNull,
+  publishTagValue,
+  type TagPublishOptions,
+} from './tag-value-bus';
 
 /** 모든 publish 가 싣는 소스 — 버스 게이트가 실시간 화면에서만 통과시킨다. */
 const REALTIME_SOURCE: TagPublishOptions = { source: 'realtime' };
@@ -19,7 +23,8 @@ const REALTIME_SOURCE: TagPublishOptions = { source: 'realtime' };
  *
  * `held`(충돌 정지·기록 복원) 중에는 drain 만 하고 내보내지 않는다 — 버퍼가
  * 보류 동안 무한히 쌓이지 않고, 풀리면 다음 수신 값부터 반영된다. 버린 값은
- * 간격 측정에도 들어가지 않는다.
+ * 간격 측정에도 들어가지 않는다. 값 없음(null)은 `publishTagNull` 로 내보내고
+ * 간격 측정에 넣지 않는다 — 값이 아니라 수신 사실만 남긴다.
  *
  * publish 스무딩 시간은 **키별 값 변화 간격**이다(lib/realtime-smoothing.ts) —
  * 1초마다 바뀌는 값은 1초 동안 미끄러져 다음 값에 닿고, 첫 값은 소비자 기본,
@@ -48,6 +53,10 @@ export function useRealtimeRunner() {
     const cadence = (cadenceRef.current ??= createRealtimeCadenceTracker());
     const now = performance.now();
     for (const { key, value } of entries) {
+      if (value === null) {
+        publishTagNull(key, REALTIME_SOURCE);
+        continue;
+      }
       const smoothTime = cadence.observe(key, value, now);
       if (smoothTime === undefined) {
         publishTagValue(key, value, REALTIME_SOURCE);

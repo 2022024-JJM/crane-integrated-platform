@@ -1,20 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import type { CraneSnapshotEntry, CraneTagStat } from '../crane-snapshot-stats';
 import {
+  TAG_VALUE_NULL_TEXT,
   buildTagRows,
   countTagRowsByCategory,
   filterTagRows,
+  hasTagCategories,
   resolveBoolDisplay,
 } from '../tag-rows';
 
 const STAT: CraneTagStat = { changedAt: 5, changeCount: 2, min: 1, max: 9 };
 
 function entry(
-  tags: Record<string, number | boolean>,
+  tags: Record<string, number | boolean | null>,
   stats: Record<string, CraneTagStat> = {},
+  scope: CraneSnapshotEntry['snapshot']['scope'] = 'indoor',
 ): Pick<CraneSnapshotEntry, 'snapshot' | 'stats'> {
   const snapshot: CraneSnapshotEntry['snapshot'] = {
     craneId: 'C_867',
+    scope,
     stationId: null,
     bay: null,
     snapshotAt: null,
@@ -90,6 +94,44 @@ describe('buildTagRows', () => {
   it('빈 스냅샷은 빈 배열', () => {
     expect(buildTagRows(entry({}))).toEqual([]);
   });
+
+  it('외업 크레인은 카탈로그를 쓰지 않는다 — 이름·묶음·단위 없이 원본 이름(코드) 순', () => {
+    const rows = buildTagRows(
+      entry(
+        {
+          '4_Crane.4_CR01.4_POS.10_Gantry_POS_1': 3,
+          '4_Crane.4_CR01.4_POS.04_Center_POS_y1': 2,
+          // 내업 카탈로그에 있는 이름이어도 외업이면 묶지 않는다.
+          e_stop_on: true,
+        },
+        {},
+        'outdoor',
+      ),
+    );
+    expect(rows.map((r) => r.code)).toEqual([
+      '4_Crane.4_CR01.4_POS.04_Center_POS_y1',
+      '4_Crane.4_CR01.4_POS.10_Gantry_POS_1',
+      'e_stop_on',
+    ]);
+    for (const row of rows) {
+      expect(row).toMatchObject({
+        name: null,
+        category: null,
+        unit: null,
+        alarm: false,
+      });
+    }
+    expect(hasTagCategories(rows)).toBe(false);
+    expect(hasTagCategories(buildTagRows(entry({ year: 1 })))).toBe(true);
+    expect(hasTagCategories([])).toBe(false);
+  });
+
+  it('값 없음(null)은 행으로 남고 값이 null 이다', () => {
+    const rows = buildTagRows(entry({ mh1_weight: null }));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.value).toBeNull();
+    expect(TAG_VALUE_NULL_TEXT).toBe('NULL');
+  });
 });
 
 describe('filterTagRows', () => {
@@ -110,6 +152,20 @@ describe('filterTagRows', () => {
       'ts1_status',
     ]);
     expect(filterTagRows(rows, 'datetime', 'weight')).toEqual([]);
+  });
+
+  it('이름이 없는 행(외업)은 코드로만 거르고, 묶음을 고르면 빠진다', () => {
+    const outdoor = buildTagRows(
+      entry({ '4_Crane.4_CR01.2_slow.52_TL_FW_slow_1': 1 }, {}, 'outdoor'),
+    );
+    expect(filterTagRows(outdoor, 'all', 'tl_fw')).toHaveLength(1);
+    expect(filterTagRows(outdoor, 'all', 'weight')).toEqual([]);
+    expect(filterTagRows(outdoor, 'status', '')).toEqual([]);
+    expect(countTagRowsByCategory(outdoor)).toEqual({
+      datetime: 0,
+      measurement: 0,
+      status: 0,
+    });
   });
 
   it('countTagRowsByCategory 는 세 묶음을 항상 돌려준다', () => {

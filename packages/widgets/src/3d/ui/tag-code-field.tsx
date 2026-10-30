@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronDown, X } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@crane/core/lib/utils';
+import { useCraneScope } from '@crane/features/3d';
 import { describeCodeChip, splitChipTail } from '../lib/tag-pick';
 import { FIELD_INPUT } from './inspector-field-classes';
 import { Field, type InspectorT } from './inspector-fields';
@@ -27,7 +28,8 @@ export function TagCodeField({
   t: InspectorT;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const chip = code ? describeCodeChip(code, modelCraneId) : null;
+  const scope = useCraneScope();
+  const chip = code ? describeCodeChip(code, modelCraneId, scope) : null;
   const tail = chip ? splitChipTail(chip.text) : null;
   const fieldLabel = t('monitoring:inspector.tagPick.tag');
 

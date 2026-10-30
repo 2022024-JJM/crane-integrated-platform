@@ -1,5 +1,5 @@
 import { RestClientError } from '@crane/core/api';
-import { getCraneIdsByRegion } from '../../shared';
+import { getCraneScopeByRegion } from '../config/crane-scope';
 import { getDefaultReplayInterval } from '../config/replay-defaults';
 import { buildReplayFromCraneHistories } from '../lib/crane-history';
 import type {
@@ -11,20 +11,31 @@ import type {
 import { getCraneHistory } from './get-crane-history';
 
 /**
- * region 의 리플레이 — 레지스트리의 크레인마다 `GET /api/cranes/{id}/history`
- * 를 같은 from·to·step 으로 받아 한 시간 축으로 합친다
- * (`buildReplayFromCraneHistories`). 서버가 모르는 크레인(404)은 빼고, 그 밖의
- * 실패는 그대로 던진다 — 일부만 빠진 리플레이를 정상처럼 보이지 않게 한다.
+ * region 의 리플레이 — 씬 모델의 크레인(`query.craneIds`)마다
+ * `GET /api/{scope}/cranes/{id}/history` 를 같은 from·to·step 으로 받아 한 시간
+ * 축으로 합친다(`buildReplayFromCraneHistories`). 범위는 region 으로 정하고
+ * (`getCraneScopeByRegion`), 미등록 region 이나 크레인이 없는 씬은 빈 리플레이다.
+ * 서버가 모르는 크레인(404)은 빼고, 그 밖의 실패는 그대로 던진다 — 일부만 빠진
+ * 리플레이를 정상처럼 보이지 않게 한다.
  */
 export async function getMonitoringReplayLite(
   query: MonitoringReplayLiteQuery,
 ): Promise<ReplayLiteResponse> {
+  const scope = getCraneScopeByRegion(query.regionId);
   const step = getDefaultReplayInterval();
-  const histories = await Promise.all(
-    getCraneIdsByRegion(query.regionId).map((craneId) =>
-      loadCraneHistory({ craneId, from: query.from, to: query.to, step }),
-    ),
-  );
+  const histories = scope
+    ? await Promise.all(
+        query.craneIds.map((craneId) =>
+          loadCraneHistory({
+            scope,
+            craneId,
+            from: query.from,
+            to: query.to,
+            step,
+          }),
+        ),
+      )
+    : [];
   return buildReplayFromCraneHistories(
     histories.filter((history): history is CraneHistoryFrames => !!history),
     query,
