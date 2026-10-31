@@ -13,6 +13,17 @@ export interface NavItem {
    * 그 이상에서만 — 눌러도 리다이렉트로 못 가는 메뉴를 보여 주지 않기 위한 것.
    */
   viewport?: 'mobile' | 'desktop';
+  /**
+   * 헤더 가로 메뉴(`usesHeaderNav`)에서 항목 아래로 펴는 갈래 — 같은 화면을 쿼리로 나눈다
+   * (예: `?view=performance`). 사이드바는 그리지 않는다.
+   */
+  children?: NavSubItem[];
+}
+
+export interface NavSubItem {
+  label: string;
+  /** 쿼리까지 포함한 경로 */
+  path: string;
 }
 
 export interface NavGroup {

@@ -190,6 +190,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 번역 리소스 | `apps/shell/src/locales/{ko,en,la}/*.json` — namespace 추가 시 `apps/shell/src/i18n-init.ts` 에 함께 등록 |
 | 테마 / 사이드바 / 헤더 표시 옵션 | `packages/core/src/lib/{theme,sidebar,header-display-settings}-context.tsx` |
 | 네비게이션 구성 | `packages/widgets/src/layout/config/navigation.ts` |
+| 헤더 가로 메뉴(사이드바 대신, Indoorshop.OT 만) | 판정 `packages/widgets/src/layout/lib/header-nav.ts`(`usesHeaderNav`), 메뉴 `ui/app-header-nav.tsx`. 항목은 사이드바와 같은 `navigation.ts` 에서 오고, `NavItem.children`(현황·실적 갈래)은 헤더 드롭다운·펼친 사이드바에 선다. md(휴대폰 폭) 미만에서만 사이드바 드로어가 같은 항목을 낸다 — 브라우저 확대로 폭이 줄어도 md 이상이면 헤더 메뉴를 유지한다 |
 | 공용 3D viewer shell | `packages/ui/src/organisms/three-scene-viewer.tsx` |
 | 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx` (base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
 | 모달 다이얼로그 / 밑줄 탭 / 검색 입력 | `packages/ui/src/molecules/dialog.tsx`(shadcn Base UI 판 — `DialogPopup` 이 Portal+Backdrop+Popup, `usePortalContainer`·`z-9999` 규약, 백드롭 클릭으로 닫힘; 확인창은 `alert-dialog.tsx`), `packages/ui/src/molecules/tabs.tsx`(Base UI `Tabs`, 에디터 팔레트 탭 모양 — flex-auto·h-9, 비활성 패널은 마운트하지 않는다), `packages/ui/src/molecules/search-field.tsx`(에디터 팔레트 검색창 모양 — 돋보기 + h-6 상자. 팔레트·태그 페이지·태그 연결 다이얼로그가 같이 쓴다) |

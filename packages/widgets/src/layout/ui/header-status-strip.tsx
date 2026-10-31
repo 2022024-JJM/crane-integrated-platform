@@ -10,7 +10,11 @@ import {
 import { useHeaderDisplaySettings } from '@crane/core/lib/header-display-settings-context';
 import { cn } from '@crane/core/lib/utils';
 
-export function HeaderStatusStrip() {
+/**
+ * `compact` — 헤더 가로 메뉴가 같은 줄에 선 계정. 메뉴에 자리를 주려고 lg 미만에서는
+ * 날씨·날짜를 빼고 시계만 남긴다(브라우저 확대로 폭이 줄 때 칸이 잘리지 않게).
+ */
+export function HeaderStatusStrip({ compact = false }: { compact?: boolean }) {
   const { i18n } = useTranslation();
   const { showDate, showTime, showWeather } = useHeaderDisplaySettings();
   const currentDateTime = useCurrentDateTime();
@@ -26,14 +30,16 @@ export function HeaderStatusStrip() {
     <div className="flex min-w-0">
       <div className="ml-auto flex max-w-full items-center gap-2 overflow-x-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {showWeather ? (
-          <HeaderWeatherInfoPill className="max-md:hidden" />
+          <HeaderWeatherInfoPill
+            className={compact ? 'max-lg:hidden' : 'max-md:hidden'}
+          />
         ) : null}
 
         {showDate ? (
           <HeaderInfoPill
             icon={CalendarDays}
             value={formatLocalizedDate(currentDateTime, i18n.language)}
-            className="max-md:hidden"
+            className={compact ? 'max-lg:hidden' : 'max-md:hidden'}
           />
         ) : null}
 

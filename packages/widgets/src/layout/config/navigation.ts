@@ -144,6 +144,23 @@ function getIndoorshopItGroup(): NavGroup {
   };
 }
 
+/**
+ * 내업 공정 화면의 갈래 [현황 · 실적] — 원본 대시보드 헤더 드롭다운과 같은 쿼리(`?view=`).
+ * 헤더 가로 메뉴가 항목 아래로 편다.
+ */
+function indoorshopViews(path: string) {
+  return [
+    {
+      label: i18n.t('common:nav.indoorshopViewStatus'),
+      path: `${path}?view=status`,
+    },
+    {
+      label: i18n.t('common:nav.indoorshopViewPerformance'),
+      path: `${path}?view=performance`,
+    },
+  ];
+}
+
 /** Indoorshop.OT — 통합 대시보드 (게더링은 IT 계정 몫이라 여기 없다) */
 function getIndoorshopOtGroups(): NavGroup[] {
   return [
@@ -174,16 +191,19 @@ function getIndoorshopOtGroups(): NavGroup[] {
         {
           label: i18n.t('common:nav.indoorshopAssembly'),
           path: '/indoorshop/zones/assembly',
+          children: indoorshopViews('/indoorshop/zones/assembly'),
           icon: Boxes,
         },
         {
           label: i18n.t('common:nav.indoorshopOutfitting'),
           path: '/indoorshop/zones/outfitting',
+          children: indoorshopViews('/indoorshop/zones/outfitting'),
           icon: Wrench,
         },
         {
           label: i18n.t('common:nav.indoorshopPainting'),
           path: '/indoorshop/zones/painting',
+          children: indoorshopViews('/indoorshop/zones/painting'),
           icon: Brush,
         },
       ],

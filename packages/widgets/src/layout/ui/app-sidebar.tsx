@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AppNavLink } from '@crane/ui/atoms/app-link';
+import { AppLink, AppNavLink } from '@crane/ui/atoms/app-link';
 import { SCENE_DOCK_RAIL_COLUMN_WIDTH } from '@crane/ui/organisms/scene-dock';
 import { Separator } from '@crane/ui/atoms/separator';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
@@ -17,6 +17,7 @@ import { useSiteType } from '@crane/core/lib/site-type-context';
 import { useIsMobile } from '@crane/core/lib/use-is-mobile';
 import { getNavigationConfig } from '../config/navigation';
 import { sidebarRailMinWidth } from '../lib/sidebar-breakpoint';
+import { activeSubItem, usesHeaderNav } from '../lib/header-nav';
 
 /**
  * 사이드바는 접힘(rail)/펼침 두 상태다. 접히면 레일 선(`sidebarRailMinWidth`, 기본 lg) 이상에서 아이콘만 남는
@@ -31,7 +32,7 @@ export function AppSidebar() {
   const { t, i18n } = useTranslation('common');
   const { isOpen, close } = useSidebar();
   const { siteType } = useSiteType();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const navGroups = getNavigationConfig(pathname, siteType, user?.role).map(
@@ -74,6 +75,8 @@ export function AppSidebar() {
             ? 'max-md:fixed max-md:top-14 max-md:bottom-0 max-md:left-0 max-md:z-50 max-md:h-auto max-md:shadow-xl'
             : 'max-lg:fixed max-lg:top-14 max-lg:bottom-0 max-lg:left-0 max-lg:z-50 max-lg:h-auto max-lg:shadow-xl',
           collapsed ? (railFromMd ? 'max-md:hidden' : 'max-lg:hidden') : 'w-64',
+          // 헤더 가로 메뉴가 서는 폭부터는 같은 항목이 헤더에 있다
+          usesHeaderNav(user?.role) && 'md:hidden',
         )}
         style={collapsed ? { width: SCENE_DOCK_RAIL_COLUMN_WIDTH } : undefined}
       >
@@ -166,6 +169,37 @@ export function AppSidebar() {
                             ) : (
                               link
                             )}
+                            {/* 갈래(현황·실적) — 펼친 사이드바에서만, 항목 바로 아래 들여 세운다 */}
+                            {!collapsed && item.children?.length ? (
+                              <ul className="mt-0.5 ml-7 flex flex-col gap-0.5 border-l pl-2">
+                                {item.children.map((child) => {
+                                  const current =
+                                    activeSubItem(
+                                      item.children ?? [],
+                                      pathname,
+                                      search,
+                                    ) === child;
+                                  return (
+                                    <li key={child.path}>
+                                      <AppLink
+                                        to={child.path}
+                                        aria-current={
+                                          current ? 'page' : undefined
+                                        }
+                                        className={cn(
+                                          'block rounded-md px-2 py-1 text-[12px] transition-colors',
+                                          current
+                                            ? 'text-sidebar-accent-foreground font-medium'
+                                            : 'text-sidebar-foreground/70 hover:text-sidebar-accent-foreground',
+                                        )}
+                                      >
+                                        {child.label}
+                                      </AppLink>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : null}
                           </li>
                         );
                       })}
