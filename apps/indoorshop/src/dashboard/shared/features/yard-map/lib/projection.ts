@@ -94,6 +94,20 @@ function flatOffset(view: YardView, lat: number, lon: number): { fx: number; fy:
 }
 
 /**
+ * **높이 과장 배율** — 실제 높이(11~12m)로 세우면 야드 전경에서 벽이 몇 px 에 그쳐 공장이 평면으로
+ * 읽힌다(사용자 확정: 공정·공장 목록에서는 건물로 보이게). 그래서 모든 높이를 이 배수로 세운다.
+ *
+ * 배율(확대)과 **상관없는 상수**다(사용자 확정) — 확대할 때마다 지붕 높이가 달라지면 같은 건물이
+ * 늘었다 줄었다 하는 것으로 읽힌다. 건물의 가로·세로·높이 비율은 어느 배율에서나 같다.
+ *
+ * 평면이 되는 것은 배율이 아니라 **단계**다: 공장을 고르면 카메라가 바로 위로 서고
+ * (`DRILL_PITCH = 0`), 기울기 0 에서는 높이가 화면에 닿지 않는다.
+ *
+ * 높이는 측정치가 아닌 표현 상수다(`relief.ts`).
+ */
+export const RELIEF_EXAGGERATION = 4
+
+/**
  * 위경도(+ 고도)를 화면으로.
  *
  * `altitude` 는 미터다 — 지면에서 얼마나 띄울지. 2D 에서는 무시한다: 평면은 원근이
@@ -118,7 +132,7 @@ export function project(
   const sinP = Math.sin(p)
   const cosP = Math.cos(p)
   const d = cameraDistance(viewport)
-  const altPx = (altitude / METERS_PER_LAT_DEGREE) * view.scale
+  const altPx = ((altitude * RELIEF_EXAGGERATION) / METERS_PER_LAT_DEGREE) * view.scale
 
   /* 카메라로부터의 깊이 — 북쪽(fy < 0)일수록 멀고, 높이 뜬 점일수록 가깝다 */
   const raw = d - fy * sinP - altPx * cosP

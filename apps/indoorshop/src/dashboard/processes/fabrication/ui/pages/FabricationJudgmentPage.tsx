@@ -7,7 +7,6 @@ import { StatusChip } from '../../../../shared/ui/atoms/StatusChip'
 import { ToggleButton } from '../../../../shared/ui/atoms/ToggleButton'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { useTimeFormat } from '../../../../shared/lib/i18n/useTimeFormat'
-import { cn } from '../../../../shared/lib/utils'
 import { FABRICATION_API_BASE, JUDGMENT_LIMIT, fetchDashboardSnapshot } from '../../api/fabricationApi'
 import { useIntervalTick } from '../../lib/useIntervalTick'
 import { SummaryTiles } from '../SummaryTiles'
@@ -53,12 +52,24 @@ export function FabricationJudgmentPage() {
           <ToggleButton pressed={autoRefresh} onPressedChange={setAutoRefresh}>
             {t('fabrication.judgment.autoRefresh')}
           </ToggleButton>
-          <Button size="sm" onClick={bump} disabled={loading}>
+          <Button size="sm" onClick={bump}>
             {t('fabrication.judgment.refreshNow')}
           </Button>
           {data && (
-            <span className="text-inshop-xs text-foreground/58" title={absolute(data.fetchedAt.toISOString())}>
+            <span
+              className="inline-flex items-center gap-1.5 text-inshop-xs text-foreground/58"
+              title={absolute(data.fetchedAt.toISOString())}
+            >
               {t('fabrication.judgment.fetchedAt', { time: relative(data.fetchedAt.toISOString()) })}
+              {/*
+               * 백그라운드 갱신 표시는 이 점 하나뿐이다 — 본문 전체의 투명도를 건드리면
+               * 5초마다 화면이 흐려졌다 돌아오며 깜빡인다. 자리를 항상 차지해 레이아웃도 안 흔들린다.
+               */}
+              <span
+                aria-hidden="true"
+                className={loading ? 'h-1.5 w-1.5 rounded-full bg-accent motion-safe:animate-pulse' : 'h-1.5 w-1.5 rounded-full bg-transparent'}
+              />
+              {loading && <span className="sr-only">{t('fabrication.judgment.refreshing')}</span>}
             </span>
           )}
         </div>
@@ -82,7 +93,8 @@ export function FabricationJudgmentPage() {
       )}
 
       {data && (
-        <div className={cn('space-y-6 transition-opacity', loading && 'opacity-70')}>
+        /* 재조회 중에도 이전 데이터를 그대로 둔다 — 갱신은 조용히 값만 바뀐다 */
+        <div className="space-y-6">
           <SummaryTiles summary={data.summary} />
 
           <div className="grid gap-5 lg:grid-cols-2">

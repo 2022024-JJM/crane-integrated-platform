@@ -108,10 +108,14 @@ describe('뷰포트 안 나가는 문', () => {
 
   it.each(WORKSPACES)('%s 는 나가는 문이 전부 같은 목적지를 쓴다', (_name, path) => {
     const source = read(path)
-    /* 목적지를 여러 곳에서 따로 지으면 한쪽만 고쳐져 두 문이 다른 데로 나가는 날이 온다 */
-    expect(source).toContain('const backLink =')
+    /*
+     * 공장으로 나가는 칩(`<BackLink>`)은 지금 두지 않는다(사용자 확정 — 탭 줄의 '전체' 가 같은 자리로 간다).
+     * 다시 생기면 그때부터 이 계약이 선다: 목적지를 여러 곳에서 따로 지으면 한쪽만 고쳐져 두 문이
+     * 다른 데로 나가는 날이 온다 — 목적지는 `const backLink` 하나에서만 짓는다.
+     */
     const doors = (source.match(/<BackLink/g) ?? []).length
-    expect(doors).toBeGreaterThan(0)
+    if (doors === 0) return
+    expect(source).toContain('const backLink =')
     expect(source.match(/backLink\.to/g)?.length).toBe(doors)
   })
 

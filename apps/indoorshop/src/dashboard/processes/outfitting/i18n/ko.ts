@@ -162,6 +162,9 @@ export const outfittingKo = {
       noBayBlocks: '이 베이에 배정된 블록이 없습니다.',
       sensorSummaryTitle: 'LiDAR 센서',
       /* ── 워크스페이스 축 탭 (W7-10 — 조립과 같은 문법) ── */
+      viewAria: '화면 갈래 선택',
+      viewPerformance: '실적',
+      viewStatus: '현황',
       tabAria: '화면 축 선택',
       tabViewer: '3D 뷰어',
       tabStatus: '현황',

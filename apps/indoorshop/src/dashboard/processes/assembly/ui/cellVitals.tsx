@@ -1,7 +1,7 @@
 import { AimDial } from '../../../shared/ui/atoms/AimDial'
 import { CellLamp, type EquipmentLamp } from '../../../shared/features/equipment-grid'
 import type { LinkState, TiltModuleStatus } from '../../../shared/entities/equipment'
-import { meaningOfTiltMode, TILT_MODE_TEXT } from '../lib/equipmentCells'
+import { meaningOfTilt, TILT_MODE_TEXT } from '../lib/equipmentCells'
 
 /*
  * 조립 셀의 **활력 지표** — 그리드 셀 둘째 줄 앞머리에 서는 그림.
@@ -56,7 +56,8 @@ export function LidarVitals({
       panDeg={tilt.panDeg}
       tiltDeg={tilt.tiltDeg}
       target={tilt.atTarget ? null : { panDeg: tilt.targetPanDeg, tiltDeg: tilt.targetTiltDeg }}
-      meaning={meaningOfTiltMode(tilt.mode)}
+      /* 끊긴 틸팅의 다이얼은 마지막 각도일 뿐 — 색이 통신 상태를 말한다 */
+      meaning={meaningOfTilt(tilt)}
       glass={glass}
       label={aimLabel(tilt)}
     />
@@ -82,6 +83,8 @@ export function LampVitals({
 
 /** 다이얼의 접근성 이름 — 그림을 못 읽는 경로에는 이 말이 전부다 */
 export function aimLabel(tilt: TiltModuleStatus): string {
-  const head = `틸팅 ${TILT_MODE_TEXT[tilt.mode]} · 방위 ${tilt.panDeg}도 · 고도 ${tilt.tiltDeg}도`
+  /* 끊긴 틸팅은 모드 대신 통신 상태를 말한다 — 각도는 마지막으로 받은 값이다 */
+  const state = tilt.link === 'offline' ? '오프라인' : tilt.link === 'error' ? '통신 오류' : TILT_MODE_TEXT[tilt.mode]
+  const head = `틸팅 ${state} · 방위 ${tilt.panDeg}도 · 고도 ${tilt.tiltDeg}도`
   return tilt.atTarget ? head : `${head} · 목표 ${tilt.targetPanDeg}도 ${tilt.targetTiltDeg}도`
 }

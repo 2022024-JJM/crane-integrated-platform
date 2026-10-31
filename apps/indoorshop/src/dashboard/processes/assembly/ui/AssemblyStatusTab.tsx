@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import { useSearchParams } from 'react-router-dom'
 import { equipmentFocusOf } from '../../../shared/lib/equipmentFocus'
@@ -13,8 +13,10 @@ import {
   equipmentPanelOf,
   linkIn,
   pairIdOf,
+  pairOf,
   panelStatusIn,
   tiltStatusIn,
+  yardEquipmentOf,
   type YardEquipment,
 } from '../../../shared/entities/equipment'
 import { useFactoryEquipmentStatus } from '../../../shared/entities/equipment/useEquipmentStatus'
@@ -28,6 +30,7 @@ import {
   edgePcCell,
   lidarPairCell,
   meaningOfLink,
+  pairLinkOf,
   panelCell,
   tiltCell,
 } from '../lib/equipmentCells'
@@ -53,6 +56,15 @@ const LINK_TEXT = { online: '온라인', offline: '오프라인', error: '통신
  * 있다"고 부른 설비가 도착 화면에 없는 일이 없도록. 접힘 자체를 끄지는 않는다: 알람 하나
  * 때문에 화면 전체가 평소와 다른 모양이 되면 왜 다른지 설명할 수 없다.
  */
+/** 짚을 칸의 id — 짝이 있는 틸팅이면 그 라이다(그리드는 틸팅을 라이다 칸에 접는다) */
+function focusCellIdOf(id: string | null): string | null {
+  if (!id) return null
+  const equipment = yardEquipmentOf(id)
+  if (equipment?.typeId !== 'TILT') return id
+  const mate = pairOf(equipment)
+  return mate?.typeId === 'LIDAR' && mate.factory === equipment.factory ? mate.id : id
+}
+
 function gridEquipmentOf(factory: string, focusId: string | null): YardEquipment[] {
   const inFactory = YARD_EQUIPMENT.filter((e) => e.factory === factory)
   const lidarIds = new Set(inFactory.filter((e) => e.typeId === 'LIDAR').map((e) => e.id))
@@ -90,6 +102,8 @@ export function AssemblyStatusTab({
   selectedFactory,
   onSelectFactory,
   focusBay = null,
+  mainOverride,
+  mainHeader,
   className,
 }: {
   /** 지금 보고 있는 공장 이름 — 탭 사이에서 공유되는 선택 */
@@ -103,6 +117,13 @@ export function AssemblyStatusTab({
    * 잃을 이유는 없다 — 공장을 펴 놓되 그 베이는 골라 둔다.
    */
   focusBay?: string | null
+  /**
+   * 오른쪽 칸에 대신 세울 것 — 3D·블록 탭의 내용. 왼쪽 공장 목록은 그대로 남는다(사용자 확정:
+   * 탭을 눌러도 내용은 오른쪽에). 안 주면 설비 현황(버드뷰·그리드)
+   */
+  mainOverride?: ReactNode
+  /** 오른쪽 칸 맨 위 줄 — 축 탭이 공장 목록 바로 오른쪽에 선다 */
+  mainHeader?: ReactNode
   /** 바깥이 정하는 자리 — 뷰포트에 맞춘 화면에서 남는 높이를 받는다 */
   className?: string
 }) {
@@ -110,7 +131,12 @@ export function AssemblyStatusTab({
   const typeLabelOf = useEquipmentTypeLabel()
   /* 알람에서 넘어온 당사자 — 접힘 예외이자 하이라이트 대상 (equipmentFocus.ts) */
   const [searchParams] = useSearchParams()
-  const focusEquipmentId = equipmentFocusOf(searchParams)
+  /*
+   * 짝 틸팅을 짚고 들어오면(야드 맵 문제 BAY 의 PT-…) **짝 라이다 칸**을 짚는다 — 그 칸이
+   * 틸팅의 통신까지 대표한다. 틸팅을 따로 펼치면 같은 장애가 라이다 칸과 틸팅 칸에 두 번
+   * 서서 '점검 필요' 수가 문제 BAY 목록과 어긋난다.
+   */
+  const focusEquipmentId = focusCellIdOf(equipmentFocusOf(searchParams))
   const { snapshot } = useFactoryEquipmentStatus(selectedFactory)
   /* 셀 안의 경과는 셀이 직접 흘린다 — 여기 시계는 문구 계산에만 쓴다 */
   const now = useClock(30_000)
@@ -220,21 +246,25 @@ export function AssemblyStatusTab({
     [parcels, selectedFactory]
   )
 
-  const points = useMemo(
-    () =>
-      birdviewPointsOf(selectedFactory, {
-        severityOf: (equipment: YardEquipment): StatusMeaning =>
-          meaningOfLink(linkIn(snapshot, equipment.id) ?? 'offline'),
+  const points = useMemo(() => {
+    /* 라이다 점은 그리드 칸처럼 짝 틸팅까지 대표한다 — 둘 중 나쁜 쪽 링크 */
+    const linkOfPoint = (equipment: YardEquipment) => {
+      const link = linkIn(snapshot, equipment.id) ?? 'offline'
+      if (equipment.typeId !== 'LIDAR') return link
+      const tiltId = pairIdOf(equipment)
+      return pairLinkOf(link, tiltId ? tiltStatusIn(snapshot, tiltId) : null)
+    }
+    return birdviewPointsOf(selectedFactory, {
+        severityOf: (equipment: YardEquipment): StatusMeaning => meaningOfLink(linkOfPoint(equipment)),
         tooltipOf: (equipment: YardEquipment) => ({
           title: `${equipment.id} · ${typeLabelOf(equipment.typeId)}`,
-          status: LINK_TEXT[linkIn(snapshot, equipment.id) ?? 'offline'],
+          status: LINK_TEXT[linkOfPoint(equipment)],
           freshness: equipment.bay
             ? t('assembly.mapEntry.bayHeading', { bay: equipment.bay })
             : t('assembly.status.unassignedBay'),
         }),
-      }),
-    [selectedFactory, snapshot, t, typeLabelOf]
-  )
+      })
+  }, [selectedFactory, snapshot, t, typeLabelOf])
 
   return (
     <EquipmentStatusBoard
@@ -256,6 +286,8 @@ export function AssemblyStatusTab({
       focusEquipmentId={focusEquipmentId}
       /* 정반에서 건너왔으면 그 베이를 골라 둔 채로 (베이 → 현황 승계) */
       focusGroupKey={focusBay}
+      mainOverride={mainOverride}
+      mainHeader={mainHeader}
       className={className}
       headerExtra={
         <Link

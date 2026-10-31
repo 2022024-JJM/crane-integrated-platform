@@ -110,11 +110,12 @@ export const paintingKo = {
       },
     },
     factoryStatus: {
+      viewAria: '화면 갈래 선택',
+      viewPerformance: '실적',
+      viewStatus: '현황',
       tabAria: '화면 축 선택',
       tabStatus: '현황',
-      tabFactory: '공장 현황',
-      /* 공장 레일 — 맵 진입 화면을 대신해 공장을 갈아타는 자리 (R22) */
-      factoryRail: '도장공장 고르기',
+      tabBlocks: '블록·실적',
       backToZone: '선행도장 공정 현황',
       notFound: '알 수 없는 도장공장입니다.',
       backToMap: '선행도장 공정 현황',

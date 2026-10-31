@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Route, Routes } from 'react-router-dom'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../../shared/lib/testing/renderWithProviders'
 
@@ -27,12 +27,17 @@ i18n.addResourceBundle('en', 'inshop', paintingEn, true, true)
 
 const { PaintingFactoryStatusPage } = await import('../pages/PaintingFactoryStatusPage')
 
-function renderPage(path = '/indoorshop/zones/painting/pnt-1dock') {
+/*
+ * 기본 갈래는 실적이다 — 축 탭을 보는 검사들은 현황 갈래(`?view=status`)에서 출발한다.
+ * 기본 갈래 자체를 보는 검사만 `asIs` 로 주소를 그대로 둔다.
+ */
+function renderPage(path = '/indoorshop/zones/painting/pnt-1dock', { asIs = false }: { asIs?: boolean } = {}) {
+  const route = asIs || path.includes('view=') ? path : `${path}${path.includes('?') ? '&' : '?'}view=status`
   return renderWithProviders(
     <Routes>
       <Route path="/indoorshop/zones/painting/:factoryId" element={<PaintingFactoryStatusPage />} />
     </Routes>,
-    { route: path }
+    { route }
   )
 }
 
@@ -44,12 +49,12 @@ function renderPage(path = '/indoorshop/zones/painting/pnt-1dock') {
  * 배치 옆 손잡이가 뷰어를 세우는가, 그리고 **이 공장의** 대기를 넘기는가.
  */
 describe('PaintingFactoryStatusPage — 축 탭', () => {
-  it('[현황 | 공장 현황] 이 서고 기본은 현황이다 — 3D 는 탭이 아니라 배치 안의 손잡이다', async () => {
+  it('[현황 | 블록·실적] 이 서고 기본은 현황이다 — 3D 는 탭이 아니라 배치 안의 손잡이다', async () => {
     renderPage()
     const tablist = await screen.findByRole('tablist', { name: '화면 축 선택' })
     const tabs = [...tablist.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)
-    expect(tabs).toEqual(['현황', '공장 현황'])
-    expect(screen.getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
+    expect(tabs).toEqual(['현황', '블록·실적'])
+    expect(within(screen.getByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByRole('tab', { name: '가동 뷰' })).toBeNull()
   })
 
@@ -77,7 +82,7 @@ describe('PaintingFactoryStatusPage — 축 탭', () => {
      */
     expect(await screen.findByRole('button', { name: /2D 도면/ })).toBeInTheDocument()
     expect(container.querySelector('svg[role="img"]')).toBeNull()
-    expect(screen.getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(screen.getByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
     /* 받아 오는 동안에도 빈 화면으로 두지 않는다 — 무엇을 하는 중인지 말한다 */
     expect(screen.getAllByText(/3D 화 진행 중/).length).toBeGreaterThan(0)
 
@@ -105,13 +110,32 @@ describe('PaintingFactoryStatusPage — 축 탭', () => {
     expect(await screen.findByText('9개 베이')).toBeInTheDocument()
   })
 
-  it('공장 현황 탭 — 스텝 진행·블록 목록이 그대로 남아 있다 (딥링크 보존)', async () => {
+  it('블록·실적 탭(옛 공장 현황) — 스텝 진행·블록 목록이 오른쪽 칸에 서고 공장 목록은 남는다', async () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('tablist', { name: '화면 축 선택' })
 
-    await user.click(screen.getByRole('tab', { name: '공장 현황' }))
+    await user.click(screen.getByRole('tab', { name: '블록·실적' }))
     expect(screen.getByRole('heading', { name: /스텝 진행/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /블록 목록|재공 블록/ })).toBeInTheDocument()
+    /* 조립·의장과 같은 배치 — 왼쪽 공장 목록은 탭을 옮겨도 그대로다 */
+    expect(screen.getByRole('list', { name: '공장 목록' })).toBeInTheDocument()
+  })
+
+  /* 화면 안의 [현황 | 실적] 탭은 걷었다(사용자 확정) — 갈래는 헤더 메뉴 드롭다운이 `?view=` 로 고른다 */
+  it('화면 안에 갈래 탭은 없고, 기본은 현황(축 탭 화면), ?view=performance 는 도장 공정만', async () => {
+    const { unmount } = renderPage('/indoorshop/zones/painting/pnt-1dock', { asIs: true })
+    expect(await screen.findByRole('tablist', { name: '화면 축 선택' })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '화면 갈래 선택' })).not.toBeInTheDocument()
+    unmount()
+
+    renderPage('/indoorshop/zones/painting/pnt-1dock?view=performance', { asIs: true })
+    expect(await screen.findByText('호선 번호를 선택하세요')).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '화면 축 선택' })).not.toBeInTheDocument()
+  })
+
+  it('실적 갈래 — 주소에 실린 호선·블록으로 곧바로 도장 스텝 절점을 낸다', async () => {
+    renderPage('/indoorshop/zones/painting/pnt-1dock?view=performance&vessel=7004&block=530')
+    expect(await screen.findByRole('heading', { name: /도장 — 스텝 절점/ })).toBeInTheDocument()
   })
 })

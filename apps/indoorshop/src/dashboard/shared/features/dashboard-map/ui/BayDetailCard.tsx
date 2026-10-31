@@ -10,6 +10,7 @@ import type { ProcessMapLocation } from '../../../model/processMapDrilldown'
 import { cn } from '../../../lib/utils'
 import { CloseIcon, PinIcon } from '../../../ui/icons'
 import type { BaySummary } from '../lib/bayDetail'
+import { StatusJumpButton } from './StatusJumpButton'
 import { toggleSpottedLot } from '../lib/lotSpot'
 
 /**
@@ -17,10 +18,8 @@ import { toggleSpottedLot } from '../lib/lotSpot'
  *
  * 공장을 누르면 그 공장이 베이로 갈라지고, 베이를 **한 번** 누르면 여기까지다. 한 번의
  * 클릭이 곧장 공정 상세 화면으로 나가 버리면 지도에서 베이를 훑어볼 수가 없다 — 눌러
- * 보는 것이 곧 화면을 떠나는 일이 되기 때문이다. 그래서 첫 클릭은 여기서 멈추고, 나가는
- * 문은 카드 안의 명시적인 링크와 **같은 베이를 한 번 더 누르는 것**이 맡는다
- * (`mapSpotlight.bayClickIntent`). 그 문이 없는 베이도 있다 — 지도의 베이와 공정의 작업
- * 위치는 다른 자료라 짝이 없을 수 있고, 그때는 재클릭도 여느 때처럼 선택 해제다.
+ * 보는 것이 곧 화면을 떠나는 일이 되기 때문이다. 그래서 클릭은 여기서 멈추고(같은 베이를
+ * 다시 눌러도 그대로다 — 사용자 확정), 나가는 문은 카드 안의 명시적인 링크('현황' 등)가 맡는다.
  *
  * 그 베이에 블록이 서 있으면 나가는 문이 하나 더 붙는다 — **통합실적**. 공정 상세는
  * "이 정반에서 지금 무엇을 하고 있나"를, 통합실적은 "그 블록이 어디까지 왔나"를
@@ -45,7 +44,13 @@ export function BayDetailCard({
   onSelectLot,
   onHoverLot,
   onBack,
+  trail,
   onClose,
+  statusHref = null,
+  onOpenStatus,
+  viewerHref = null,
+  blocksHref = null,
+  headerBadge,
   showLotList = true,
   showMetrics = true,
   children,
@@ -77,9 +82,22 @@ export function BayDetailCard({
   /** 지번 줄 호버 — 벗어나면 null. 짚기의 미리보기다 */
   onHoverLot?: (lot: string | null) => void
   /** 공장 요약으로 되돌아가기 (베이 선택만 푼다) */
-  onBack: () => void
-  /** 공장 선택까지 통째로 닫기 */
-  onClose: () => void
+  /** 머리의 '← 공장' — `trail` 을 주면 그것이 대신 선다 */
+  onBack?: () => void
+  /** 머리의 뎁스 경로(야드 맵: `공장 목록 › 조립 › PBS`) — 주면 '← 공장' 대신 선다 */
+  trail?: ReactNode
+  /** 공장 선택까지 통째로 닫기 — 주면 머리에 × 를 세운다(야드 맵은 두지 않는다 — 사용자 확정) */
+  onClose?: () => void
+  /** 머리의 '현황' 문 — 이 베이의 공정 현황 화면. 없으면 문을 세우지 않는다 */
+  statusHref?: string | null
+  /** '현황' 열기 — 화면 창으로 띄운다 (주소·제목을 넘긴다) */
+  onOpenStatus?: (href: string, title: string) => void
+  /** 머리의 '3D' 문 — 이 베이의 3D 뷰어. 없으면(3D 가 없는 공정) 문을 세우지 않는다 */
+  viewerHref?: string | null
+  /** 머리의 '실적' 문 — 이 베이의 블록·실적 탭. 없으면 세우지 않는다 */
+  blocksHref?: string | null
+  /** 제목·'현황' 옆에 붙는 표식 (예: 설비 장애) */
+  headerBadge?: ReactNode
   /**
    * 지번 표면(카운트 타일·지번 목록)을 그릴지. 총괄 대시보드는 **끈다** — 그 화면의
    * 드릴다운은 공장→베이까지이고, 지번 단위 정보는 야드 현황의 몫이다(사용자 확정).
@@ -109,27 +127,70 @@ export function BayDetailCard({
 
       {/* 머리글이 이 카드의 드래그 손잡이 — 아래 본문은 스크롤이 제 일이라 잡히지 않는다 */}
       <div data-drag-handle className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-3">
-        <div className="min-w-0 space-y-1">
-          <button
-            type="button"
-            onClick={onBack}
-            className="-ml-1 flex max-w-full items-center gap-1 rounded-inshop-sm px-1 py-0.5 text-2xs text-white/55 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-          >
-            <span aria-hidden="true">←</span>
-            <span className="truncate">{bay.factory}</span>
-          </button>
-          <h3 className="truncate text-inshop-xl font-semibold leading-tight tracking-[-0.03em]">
-            {bay.label}
-          </h3>
+        <div className="min-w-0 space-y-1.5">
+          {/* 뎁스 경로가 있으면 그것이, 없으면 '← 공장' 한 계단 문이 선다 */}
+          {trail ?? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="-ml-1.5 inline-flex items-center gap-1.5 whitespace-nowrap rounded-inshop-md px-1.5 py-1 text-inshop-base font-medium leading-normal text-white/70 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <span aria-hidden="true">←</span>
+              <span>{bay.factory}</span>
+            </button>
+          )}
+          {/* 제목 옆이 '현황' 의 자리 — 무엇의 현황인지가 바로 옆 이름이다 */}
+          {/* 제목 줄 — 제목은 잘리지 않는다, 옆에는 점검 필요 배지 */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2">
+            <h3 className="shrink-0 whitespace-nowrap text-inshop-2xl font-semibold leading-tight tracking-[-0.03em]">
+              {bay.label}
+            </h3>
+            {headerBadge}
+          </div>
+          {/* 제목 아래 — 현황·3D·실적 창 열기 버튼 줄(사용자 확정) */}
+          <div className="flex flex-wrap items-center gap-2 pt-1.5">
+            {statusHref && onOpenStatus && (
+              <StatusJumpButton
+                title={t('dashboard.map.statusJump.bayHint', { bay: bay.label })}
+                onOpen={() =>
+                  onOpenStatus(statusHref, t('dashboard.map.preview.statusTitle', { name: bay.label }))
+                }
+              />
+            )}
+            {viewerHref && onOpenStatus && (
+              <StatusJumpButton
+                label={t('dashboard.map.occupant.open3d')}
+                icon="viewer"
+                title={t('dashboard.map.occupant.viewerHint', { block: bay.label })}
+                onOpen={() =>
+                  onOpenStatus(viewerHref, t('dashboard.map.preview.viewerTitle', { block: bay.label }))
+                }
+              />
+            )}
+            {blocksHref && onOpenStatus && (
+              <StatusJumpButton
+                label={t('dashboard.map.occupant.openPerformance')}
+                icon="performance"
+                title={t('dashboard.map.preview.blocksTitle', { name: bay.label })}
+                onOpen={() =>
+                  onOpenStatus(blocksHref, t('dashboard.map.preview.blocksTitle', { name: bay.label }))
+                }
+              />
+            )}
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t('dashboard.map.close')}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-inshop-lg border border-white/8 text-white/48 transition-colors hover:border-white/15 hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        >
-          <CloseIcon size={16} />
-        </button>
+        {onClose && (
+          <div className="flex shrink-0 items-center">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('dashboard.map.close')}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-inshop-lg border border-white/8 text-white/48 transition-colors hover:border-white/15 hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <CloseIcon size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/*
@@ -140,20 +201,20 @@ export function BayDetailCard({
       {/* 세로가 빠듯한 화면(≤900px)에서는 이 요약 칸이 여백과 숫자를 한 단계 줄여
           아래 목록에 줄을 내준다 — 스크롤로 밀어내기 전에 먼저 자리를 만든다 */}
       {showMetrics && (
-      <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
+      <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-sm [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
         {showLotList && (
           <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
-            <dt className="text-2xs text-white/45">{t('dashboard.map.lots')}</dt>
-            <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
+            <dt className="text-inshop-xs text-white/45">{t('dashboard.map.lots')}</dt>
+            <dd className="mt-1 text-3xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-2xl">
               {bay.lots.length}
             </dd>
           </div>
         )}
         <div className={cn('rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2', !showLotList && 'col-span-2')}>
-          <dt className="text-2xs text-white/45">{t('dashboard.map.area')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
+          <dt className="text-inshop-xs text-white/45">{t('dashboard.map.area')}</dt>
+          <dd className="mt-1 text-3xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-2xl">
             {Math.round(bay.area).toLocaleString()}
-            <span className="ml-1 text-2xs font-normal text-white/42">m²</span>
+            <span className="ml-1 text-inshop-xs font-normal text-white/42">m²</span>
           </dd>
         </div>
         <div className="flex items-center justify-between px-2 py-1">
@@ -172,7 +233,7 @@ export function BayDetailCard({
           모자란 높이는 칸을 줄여서가 아니라 바깥 본문 스크롤로 낸다. */}
       {showLotList && (
       <div className="flex shrink-0 flex-col px-3 py-3">
-        <p className="mb-2 shrink-0 px-1 text-2xs font-medium text-white/55">
+        <p className="mb-2 shrink-0 px-1 text-inshop-xs font-medium text-white/55">
           {t('dashboard.map.bayLotList')}
           <span className="ml-1.5 font-mono text-white/30">{bay.lots.length}</span>
         </p>
@@ -192,7 +253,7 @@ export function BayDetailCard({
                   />
                   <span
                     className={cn(
-                      'min-w-0 flex-1 truncate text-inshop-xs font-medium',
+                      'min-w-0 flex-1 truncate text-inshop-sm font-medium',
                       spotted ? 'text-white' : 'text-white/88'
                     )}
                   >
@@ -204,7 +265,7 @@ export function BayDetailCard({
                   )}
                   <span
                     className={cn(
-                      'shrink-0 rounded border px-1 py-px font-mono text-2xs leading-4',
+                      'shrink-0 rounded border px-1 py-px font-mono text-inshop-xs leading-4',
                       spotted ? 'bg-white/12 text-white' : 'text-white/62'
                     )}
                     style={{ borderColor: spotted ? '#ffffff8c' : `${processColor}4d` }}
@@ -212,7 +273,7 @@ export function BayDetailCard({
                     {lot.lot}
                   </span>
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 pl-3.5 text-2xs text-white/48">
+                <div className="mt-0.5 flex items-center gap-1.5 pl-3.5 text-inshop-xs text-white/48">
                   <span className="tabular-nums">{Math.round(lot.area).toLocaleString()} m²</span>
                   {lot.place && (
                     <>
@@ -272,7 +333,7 @@ export function BayDetailCard({
           <>
             <Link
               to={linkedLocation.detailPath}
-              className="flex items-center gap-2 rounded-inshop-md px-2 py-1.5 text-inshop-xs font-medium text-white/78 transition-colors hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              className="flex items-center gap-2 rounded-inshop-md px-2 py-1.5 text-inshop-sm font-medium text-white/78 transition-colors hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               style={{ boxShadow: `inset 0 0 0 1px ${processColor}59` }}
             >
               <span className="min-w-0 flex-1 truncate">
@@ -281,7 +342,7 @@ export function BayDetailCard({
                   name: linkedLocation.displayName,
                 })}
               </span>
-              <span aria-hidden="true" className="shrink-0 text-2xs text-white/45">
+              <span aria-hidden="true" className="shrink-0 text-inshop-xs text-white/45">
                 →
               </span>
             </Link>
@@ -294,19 +355,19 @@ export function BayDetailCard({
                     projNo={block.projNo}
                     blockNo={block.blockNo}
                     tone="onDark"
-                    className="text-2xs"
+                    className="text-inshop-xs"
                   />
                 </div>
               ) : null
             })()}
             {/* 지도에서 같은 베이를 한 번 더 누르면 같은 곳으로 간다 — 눈에 보이지 않는
                 동작이라 여기서 말해 준다 (링크가 있을 때만 참인 말이다) */}
-            <p className="mt-1.5 px-2 text-2xs text-white/38">
+            <p className="mt-1.5 px-2 text-inshop-xs text-white/38">
               {t('dashboard.map.bayReopenHint')}
             </p>
           </>
         ) : (
-          <p className="px-2 text-2xs text-white/45">
+          <p className="px-2 text-inshop-xs text-white/45">
             {t('dashboard.map.bayNoLinkedLocation', { noun: locationNoun })}
           </p>
         )}

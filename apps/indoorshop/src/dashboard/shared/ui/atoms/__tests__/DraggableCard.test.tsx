@@ -128,6 +128,26 @@ describe('DraggableCard', () => {
     expect(clicks).toBe(2)
   })
 
+  it('손잡이 안의 버튼(←·닫기)은 클릭이 살아 있고 드래그를 시작하지 않는다', async () => {
+    let clicks = 0
+    const { card } = setup(
+      <DraggableCard cardKey="detail">
+        <div data-drag-handle>
+          <span>머리글</span>
+          <button type="button" onClick={() => (clicks += 1)}>
+            닫기
+          </button>
+        </div>
+        <p>본문</p>
+      </DraggableCard>,
+    )
+    const button = screen.getByRole('button', { name: '닫기' })
+    await userEvent.setup().click(button)
+    expect(clicks).toBe(1)
+    await drag(button, 80, 40)
+    expect(offsetOf(card)).toBe('')
+  })
+
   it('손잡이 더블클릭이 제자리로 되돌린다 — 저장된 자리도 함께 지운다', async () => {
     const { card } = setup(
       <DraggableCard cardKey="detail">

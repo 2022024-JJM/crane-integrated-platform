@@ -1,3 +1,4 @@
+import { parseDrilldown } from './drilldownUrl'
 import { WORKSPACE_TAB_PARAM } from './workspaceTabUrl'
 
 /*
@@ -24,6 +25,17 @@ export function equipmentFocusOf(search: URLSearchParams | string): string | nul
   const params = typeof search === 'string' ? new URLSearchParams(search) : search
   const raw = params.get(EQUIPMENT_FOCUS_PARAM)?.trim()
   return raw ? raw : null
+}
+
+/**
+ * URL 이 가리키는 **베이 키** — 드릴다운 `bay`(`{공장}#{베이}`)의 베이 부분(`NP1`, `3`).
+ * 현황 보드의 구획 키가 이 베이 이름이라, 도착 화면이 그 구획을 고른 채로 선다.
+ */
+export function bayFocusOf(search: URLSearchParams | string): string | null {
+  const bay = parseDrilldown(search).bay
+  if (!bay) return null
+  const key = bay.slice(bay.lastIndexOf('#') + 1).trim()
+  return key ? key : null
 }
 
 /** 이 경로에 설비 초점을 실어 준다 — 이미 쿼리가 붙어 있으면 이어 붙인다 */

@@ -261,17 +261,7 @@ export function LocationTabs({
                 className={isActive && !glass ? 'text-on-accent/80' : undefined}
               />
               <span className="whitespace-nowrap">{bay.name}</span>
-              {/* 정반코드는 현재 항목에서만 — 늘 붙어 있으면 줄이 코드로 가득 찬다 */}
-              {isActive && (
-                <span
-                  className={cn(
-                    'font-mono text-2xs',
-                    glass ? 'text-glass-foreground/60' : 'text-on-accent/70',
-                  )}
-                >
-                  {bay.workCntr}
-                </span>
-              )}
+              {/* 정반코드는 붙이지 않는다(사용자 확정) — 이름만으로 고르고, 코드는 title 과 머리글이 말한다 */}
             </Link>
           )
         })}

@@ -37,6 +37,7 @@ import {
  * ## 어디를 잡으면 끌리는가
  *
  * 1. 카드 안에 `data-drag-handle` 이 있으면 **거기만** 손잡이다 (보통 카드 머리글).
+ *    손잡이 안이라도 조작 요소(아래 2의 목록)는 손잡이가 아니다.
  * 2. 없으면 카드 아무 데나 잡아도 되지만, 조작 요소(버튼·링크·입력·캔버스)와
  *    스크롤 영역(`.scroll-thin`), 그리고 `data-drag-ignore` 를 붙인 자리는 뺀다 —
  *    목록을 굴리려다 카드가 딸려 오면 안 된다.
@@ -100,12 +101,15 @@ function isDragOrigin(card: HTMLElement, target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   if (!card.contains(target)) return false
 
+  /* 조작 요소는 손잡이 안에 있어도 제 일(클릭)을 한다 — 머리글의 ←·닫기 버튼을
+     드래그 시작으로 삼키면 pointer capture 에 클릭이 빼앗겨 버튼이 죽는다 */
+  const blocked = target.closest(NON_DRAGGABLE)
+  if (blocked != null && card.contains(blocked)) return false
+
   const handle = target.closest(HANDLE_SELECTOR)
   /* 손잡이를 명시한 카드 — 그 안에서 시작한 것만 인정한다 */
   if (card.querySelector(HANDLE_SELECTOR)) return handle != null && card.contains(handle)
-
-  const blocked = target.closest(NON_DRAGGABLE)
-  return blocked == null || !card.contains(blocked)
+  return true
 }
 
 export function DraggableCard({

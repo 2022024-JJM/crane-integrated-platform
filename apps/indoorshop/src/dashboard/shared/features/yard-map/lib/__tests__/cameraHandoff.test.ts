@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearCameraHandoff,
+  recallYardCamera,
+  rememberYardCamera,
   stashCameraHandoff,
   takeCameraHandoff,
 } from '../cameraHandoff'
@@ -52,5 +54,22 @@ describe('cameraHandoff — 화면 간 카메라 승계 저장소', () => {
     const first = takeCameraHandoff(1_100)
     if (first) first.bearing = 999
     expect(takeCameraHandoff(1_200)?.bearing).toBe(VIEW.bearing)
+  })
+})
+
+describe('cameraHandoff — 야드 맵 마지막 화각', () => {
+  beforeEach(clearCameraHandoff)
+
+  it('같은 주소로 돌아오면 마지막 화각을, 다른 주소면 null 을 준다', () => {
+    rememberYardCamera(VIEW, '?factory=asm-pbs')
+    expect(recallYardCamera('?factory=asm-pbs')).toEqual(VIEW)
+    expect(recallYardCamera('?factory=asm-gbs')).toBeNull()
+    expect(recallYardCamera('')).toBeNull()
+  })
+
+  it('가져가도 비우지 않는다 — 몇 번을 다녀와도 같은 자리', () => {
+    rememberYardCamera(VIEW, '')
+    recallYardCamera('')
+    expect(recallYardCamera('')).toEqual(VIEW)
   })
 })

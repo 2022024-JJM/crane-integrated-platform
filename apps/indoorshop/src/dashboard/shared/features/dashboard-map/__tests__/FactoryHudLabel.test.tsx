@@ -8,7 +8,7 @@ import {
   FactoryHudLabel,
   type FactoryHudLabelHandle,
 } from '../ui/FactoryHudLabel'
-import { ZoneJumpButton } from '../ui/ZoneJumpButton'
+import { Link } from 'react-router-dom'
 
 /*
  * 드릴인한 공장의 인씬 이름패 (R11 정정) — 지도 위 그 공장 위에 떠서 카메라를 따라다니고,
@@ -79,11 +79,9 @@ describe('FactoryHudLabel — 인씬 앵커', () => {
     expect(container.innerHTML).not.toContain('scale(')
   })
 
-  it("문(action)이 붙으면 그 조각만 클릭을 받는다 — 주소는 드릴다운 슬러그", () => {
-    const { container } = renderHud(
-      <ZoneJumpButton process="조립" factory="GBS" onStash={vi.fn()} />,
-    )
-    const link = screen.getByRole('link', { name: /조립 공정 화면 열기/ })
+  it('문(action)이 붙으면 그 조각만 클릭을 받는다', () => {
+    const { container } = renderHud(<Link to="/indoorshop/zones/assembly?factory=asm-gbs">문</Link>)
+    const link = screen.getByRole('link', { name: '문' })
     expect(link).toHaveAttribute('href', '/indoorshop/zones/assembly?factory=asm-gbs')
     /* 층 루트는 지도 조작을 통과시키고(pointer-events-none), 문 래퍼만 받는다 */
     const root = container.firstElementChild as HTMLElement

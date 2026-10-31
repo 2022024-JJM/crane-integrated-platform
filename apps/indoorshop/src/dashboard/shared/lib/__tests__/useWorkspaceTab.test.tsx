@@ -22,6 +22,21 @@ function wrapperAt(url: string) {
 const useHarness = () => ({ ...useWorkspaceTab(TABS, 'status'), location: useLocation() })
 
 describe('useWorkspaceTab', () => {
+  it('누른 탭이 즉시 선다 — 주소(트랜지션)를 기다리지 않고, 주소가 따라와도 같은 탭이다', () => {
+    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/z') })
+    act(() => result.current.setTab('blocks'))
+    expect(result.current.tab).toBe('blocks')
+    expect(new URLSearchParams(result.current.location.search).get(WORKSPACE_TAB_PARAM)).toBe('blocks')
+  })
+
+  it('주소가 다른 탭으로 바뀌면(뒤로가기·링크) 주소가 이긴다', () => {
+    const useNav = () => ({ ...useHarness(), navigate: useNavigate() })
+    const { result } = renderHook(useNav, { wrapper: wrapperAt('/z') })
+    act(() => result.current.setTab('blocks'))
+    act(() => result.current.navigate(`/z?${WORKSPACE_TAB_PARAM}=viewer`))
+    expect(result.current.tab).toBe('viewer')
+  })
+
   it('URL 이 착지 탭을 정한다 (R28 그대로)', () => {
     const { result } = renderHook(useHarness, { wrapper: wrapperAt('/z?tab=viewer') })
     expect(result.current.tab).toBe('viewer')

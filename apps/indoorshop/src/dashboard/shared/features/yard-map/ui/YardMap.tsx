@@ -8,7 +8,7 @@ import { dragActionOf } from '../../../lib/mapInteraction'
 import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { SEA_COLOR, type BasemapLayer, type MapTheme, type Ring } from '../lib/basemapStyle'
 import {
-  BAY_GABLE_SCALE,
+  LIT_BUILDING_SCALE,
   BAY_ROOF,
   BAY_ROOF_ALPHA,
   BAY_WALL_ALPHA,
@@ -49,6 +49,7 @@ import {
   MAX_PITCH,
   MIN_TILTED_PITCH,
   TILTED_PITCH,
+  clampPitch,
   clampScale,
   containsPoint,
   easeInOutCubic,
@@ -205,6 +206,52 @@ export interface YardParcelLayer {
    */
   relatedDimFactor?: number
   /**
+   * **베이를 고른 상태**(3D 다중 스팬 공장)에서 같은 공장의 **다른 베이**를 이 배율(0~1)
+   * 만큼 흐리게 물리고, 고른 베이는 가라앉히는 대신 한 단 밝힌다. 안 주면 기존 그대로
+   * (고른 베이가 눌린 듯 어두워지고 나머지는 평상) — 야드·도장 화면의 룩을 바꾸지 않는다.
+   */
+  bayFocusDim?: number
+  /**
+   * 호버를 **강하게** 띄운다 — 손이 얹힌 공장·베이는 디밍(`relatedDimFactor`·`bayFocusDim`)을
+   * 벗고 한 단 더 밝아지며, 베이는 흰 윤곽을 두른다. 안 주면 기존의 은은한 호버 그대로.
+   */
+  strongHover?: boolean
+  /**
+   * **짚은 칸** — 이 지번코드들을 공장·선택과 무관하게 맨 위에 흰 윤곽 + 붉은 후광으로
+   * 띄운다(대시보드: 오른쪽 장애 목록에 손을 얹은 베이). 3D 에서 세운 공장의 칸이면 지붕
+   * 높이에, 평면으로 남은 칸이면 지면에 그린다. 안 주면 아무것도 없다.
+   */
+  spotLots?: readonly string[]
+  /**
+   * **늘 짚어 두는 칸 묶음들** — 묶음마다 `spotLots` 와 같은 표시(흰 윤곽 + 붉은 후광 + 핀)를
+   * 한다(대시보드: 점검이 필요한 베이 전부). 손을 얹은 하나(`spotLots`)와 달리, 화면 밖 묶음의
+   * 핀을 가장자리에 붙이지 않는다 — 여럿이 가장자리에 몰리면 무엇을 가리키는지 흐려진다.
+   */
+  spotGroups?: readonly (readonly string[])[]
+  /** `spotGroups` 의 **핀**을 세우는가 — 기본 true (대시보드: 핀 토글 버튼) */
+  spotPins?: boolean
+  /** 핀 머리 주위에 **깜빡이는 고리**를 두른다 — 기본 false (대시보드: 점검 필요를 눈에 띄게) */
+  spotPinBlink?: boolean
+  /** `spotGroups` 의 **칸 하이라이트**(흰 윤곽 + 붉은 후광)를 그리는가 — 기본 true (하이라이트 토글) */
+  spotHighlight?: boolean
+  /**
+   * `spotGroups` 의 핀이나 하이라이트에 손이 얹혔다 — 몇 번째 묶음인지, 지도 상자 기준 좌표,
+   * 그리고 **핀인지 하이라이트인지**(`via`). 벗어나면 null. 대시보드는 핀일 때만 그 베이와 점검이
+   * 필요한 장비를 띄운다.
+   */
+  onHoverSpotGroup?: (
+    index: number | null,
+    at: { x: number; y: number } | null,
+    via?: 'pin' | 'highlight'
+  ) => void
+  /** `spotGroups` 의 핀이나 하이라이트를 눌렀다 — 몇 번째 묶음인지. 주면 그 아래 지도 클릭보다 먼저다 */
+  onSelectSpotGroup?: (index: number) => void
+  /**
+   * 짚은 칸의 핀이 피할 가장자리 여백(px) — 지도 위에 패널이 겹친 화면이 준다. 칸이 화면
+   * 밖이면 핀이 가장자리에 붙는데, 그 가장자리가 패널 밑이면 핀이 안 보이기 때문이다.
+   */
+  spotSafeArea?: { left?: number; right?: number; top?: number; bottom?: number }
+  /**
    * process 모드에서 모든 지번(무소속·dim 포함)에 이 불투명도의 얇은 흰 윤곽을 남겨
    * 구역이 나뉘어 있는 형태가 연하게 읽히게 한다. 3D 에서도 껍질(한 동) 아래 **바닥에**
    * 같은 윤곽을 깔아 2D 와 동일하게 구역이 읽힌다. 안 주면 기존 그대로(무소속·dim 은
@@ -256,7 +303,18 @@ export interface YardParcelLayer {
    * 안 주면 지금까지처럼 고른 베이의 이름이 지붕에 새겨진다(도장 배치도).
    */
   floatingSelectedBayLabel?: boolean
-  onSelectFactory?: (name: string | null) => void
+  /**
+   * 공장 이름줄을 지붕에 눕히지 않고 **늘 화면 정면으로** 세운다(핀처럼 — 카메라를 돌리거나
+   * 기울여도 똑바로 읽힌다). 안 주면 지금까지처럼 3D 에서 지붕 평면에 눕는다.
+   */
+  billboardLabels?: boolean
+  /**
+   * 고른 공장 칠의 **공정별 세기 배율**(공정 → 0~1) — 밝은 공정색(주황·분홍)은 같은 불투명도로
+   * 칠해도 더 진해 보여서, 화면이 공정마다 따로 눌러 준다. 없는 공정은 1(그대로).
+   */
+  selectedFillScale?: Readonly<Record<string, number>>
+  /** 공장 클릭 — 두 번째 인자는 누른 자리의 지번코드(그 자리의 베이를 알고 싶은 쪽이 쓴다) */
+  onSelectFactory?: (name: string | null, lot?: string) => void
   onHoverFactory?: (name: string | null) => void
   /** 스포트라이트한 공장 안의 베이(지번) 클릭 — 그 공장 소속 지번을 눌렀을 때만 온다 */
   onSelectLot?: (lot: string) => void
@@ -352,6 +410,27 @@ export interface YardMapProps {
    * "원위치" 성격의 이동이 0 을 준다. null(기본)이면 지금 자세를 그대로 지킨다(기존 동작).
    */
   focusBoundsBearing?: number | null
+  /**
+   * `focusBounds` 로 굴러갈 때 함께 맞출 **기울기**(도). 주면 그 기울기로 미끄러지듯 바뀐다
+   * (대시보드: 야드 전경은 기본 기울기, 공정·공장·베이로 들어가면 위에서 내려다보는 버드뷰).
+   * null(기본)이면 `focusBoundsBearing` 규칙을 따른다(주면 뷰 모드 기본값, 아니면 지금 그대로).
+   */
+  focusBoundsPitch?: number | null
+  /**
+   * 처음 열 때의 기울기(도) — `initialBounds` 로 맞출 때 쓴다. 딥링크로 하위 단계에 바로
+   * 들어왔을 때 첫 화면부터 그 단계의 기울기로 서게 한다. null(기본)이면 뷰 모드 기본값.
+   */
+  initialPitch?: number | null
+  /**
+   * 사용자의 **돌리기·기울이기**를 막는다(대시보드: 카메라 각도는 화면이 단계별로 정한다).
+   * 켜면 Shift·오른쪽 버튼 드래그도 이동(팬)으로 동작한다. 확대·이동은 그대로다.
+   */
+  orbitLocked?: boolean
+  /**
+   * 처음 열 때의 방위(도) — `initialBounds` 로 맞출 때 쓴다(대시보드: 야드를 30° 돌려 본다).
+   * null(기본)이면 북쪽이 위(0°).
+   */
+  initialBearing?: number | null
   /** 공장·공정 스포트라이트 진입·해제 시간(ms). 0이면 즉시 반영한다 */
   parcelSpotlightDuration?: number
   /** 외부 탐색 UI(미니맵 등)가 요청한 중심 좌표. 새 객체가 들어올 때마다 이동한다 */
@@ -389,6 +468,30 @@ export interface YardMapProps {
  * 시스템 sans 폴백으로 두면 지도 글씨만 다른 앱처럼 보인다.
  */
 const CANVAS_SANS = "'Pretendard Variable', Pretendard, system-ui, sans-serif"
+/** 짚은 칸(점검 필요 베이)의 색 — 노란 계열(사용자 확정). 핀 머리는 진한 노랑, 아이콘은 어둡게 */
+const SPOT_PIN = '#f5c242'
+const SPOT_PIN_INK = '#2b2100'
+/** 물방울 핀 — 머리(원) 중심이 끝점(짚는 자리)에서 위로 이만큼, 머리 반지름 */
+const SPOT_PIN_HEAD_Y = 26
+const SPOT_PIN_HEAD_R = 12
+/**
+ * 핀 크기 배율 — **작은 건물 한 채의 크기**를 따라 지도와 같은 비율로 커지고 작아진다(사용자 확정).
+ * 위 치수는 배율 `SPOT_PIN_REF_SCALE` 에서의 크기로, 머리 지름 24px ≒ 지면 25m — 작은 건물 한 채쯤이다
+ * (야드 전경 ≈ 54,000 에서는 그 절반인 12px). 지도와 같이 움직이므로 어느 배율에서나 그 정도 건물
+ * 크기로 선다. 너무 작아 못 보거나 너무 커서 칸을 다 덮지 않게 0.5~3 배 안에 묶는다.
+ */
+const SPOT_PIN_REF_SCALE = 108_000
+function spotPinScale(scale: number): number {
+  return Math.min(3, Math.max(0.5, scale / SPOT_PIN_REF_SCALE))
+}
+const SPOT_FILL = 'rgba(245, 194, 66, 0.16)'
+const SPOT_LINE = 'rgba(250, 214, 110, 0.75)'
+/** 움직임을 줄여 달라고 한 사람 — 깜빡임을 끈다 */
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+}
+/** 핀 아이콘 깜빡임 반주기(ms) — 켜짐·꺼짐이 이만큼씩 */
+const SPOT_BLINK_MS = 600
 const CANVAS_MONO = CANVAS_SANS // 셸은 고정폭 서체를 싣지 않는다 — 코드·수치도 Pretendard
 
 /** 블록 점 반지름(px) — 배율과 무관하게 일정해야 멀리서도 "여기 있다"가 보인다 */
@@ -588,6 +691,10 @@ export function YardMap({
   focusBoundsDuration = CAMERA_FLY_MS,
   focusBoundsPadding = 0.35,
   focusBoundsBearing = null,
+  focusBoundsPitch = null,
+  initialPitch = null,
+  orbitLocked = false,
+  initialBearing = null,
   parcelSpotlightDuration = SPOTLIGHT_DURATION,
   navigationTarget = null,
   initialView = null,
@@ -607,8 +714,8 @@ export function YardMap({
     centerLat: 34.874,
     centerLon: 128.709,
     scale: 100_000,
-    pitch: viewMode === '3d' ? TILTED_PITCH : 0,
-    bearing: 0,
+    pitch: viewMode === '3d' ? (initialPitch != null ? clampPitch(initialPitch) : TILTED_PITCH) : 0,
+    bearing: initialBearing ?? 0,
   })
   const clampViewScale = useCallback(
     (view: YardView): YardView => ({
@@ -639,6 +746,18 @@ export function YardMap({
   const [, bumpChips] = useReducer((tick: number) => tick + 1, 0)
   /** 카메라가 지금 움직이는 중인가 — 그리기가 이걸 보고 한 단 가볍게 그린다 (아래 markMoving) */
   const movingRef = useRef(false)
+  /* `undefined` = 아직 한 번도 안 봤다(마운트) — 그때는 굴리지 않는다. 크기 측정이 이미
+   * 전체를 맞춰 두므로, 여기서 또 움직이면 두 번 움직인다. 그 뒤로 값이 바뀔 때만 굴린다.
+   * (아래 focusBounds 효과가 쓴다 — 데이터 다시 그리기도 이걸 보고 비행 직전 그리기를 건너뛴다) */
+  const prevFocusBounds = useRef<LatLonBounds | null | undefined>(undefined)
+  /**
+   * 범위 비행(`focusBounds`) 중인가 — 그동안은 지번 네온 글로우(shadowBlur)를 건너뛴다.
+   * 글로우는 지번마다 블러를 한 겹씩 깔아 GPU 가 가장 비싸게 치르는 칠이다: 공정을 고른
+   * 평면 화각에서 야드 전경으로 돌아오는 첫 프레임은 스포트라이트가 풀려 지번 ~550개가
+   * 한꺼번에 빛나는데, 그 한 장에 100~200ms 가 들어 카메라가 출발하다 멈칫했다(측정).
+   * 도착하면(settle) 글로우를 되살려 한 번 더 그린다.
+   */
+  const flyingRef = useRef(false)
 
   /* 콜백은 ref 로 받는다 — 부모가 매번 새 함수를 넘겨도 캔버스를 다시 묶지 않는다 */
   const handlers = useRef({
@@ -654,6 +773,8 @@ export function YardMap({
     onParcelHover: parcels?.onHoverFactory,
     onParcelLotSelect: parcels?.onSelectLot,
     onParcelLotHover: parcels?.onHoverLot,
+    onSpotGroupHover: parcels?.onHoverSpotGroup,
+    onSpotGroupSelect: parcels?.onSelectSpotGroup,
   })
   handlers.current = {
     onSelectBlock,
@@ -668,7 +789,25 @@ export function YardMap({
     onParcelHover: parcels?.onHoverFactory,
     onParcelLotSelect: parcels?.onSelectLot,
     onParcelLotHover: parcels?.onHoverLot,
+    onSpotGroupHover: parcels?.onHoverSpotGroup,
+    onSpotGroupSelect: parcels?.onSelectSpotGroup,
   }
+  /**
+   * 마지막 그림에서 `spotGroups` 가 선 자리(화면 px) — 손이 핀·하이라이트에 얹혔는지 이걸로 본다.
+   * 그릴 때마다 새로 채운다(카메라가 움직이면 자리도 바뀐다).
+   */
+  /**
+   * 짚은 칸 묶음의 **바깥 외곽선**(위경도) — 지번 코드 묶음 → 인접 토막마다 한 링. 지번마다
+   * 그리면 베이 안의 지번 경계가 선으로 남는다(사용자 지적: 안쪽 선을 지워 달라). 합치는 계산이
+   * 가볍지 않아 묶음마다 한 번만 하고, 지번 도형이 바뀌면 통째로 비운다.
+   */
+  const spotOutlineCacheRef = useRef<{
+    source: unknown
+    byKey: Map<string, LatLon[][]>
+  }>({ source: null, byKey: new Map() })
+  const spotHitsRef = useRef<
+    { index: number; rings: ScreenPoint[][]; pin: { x: number; y: number; r: number } | null }[]
+  >([])
 
   /** 건물 층 — 테마 두 벌이 같은 링 배열을 공유하므로 참조로 중복을 걷어낸다 */
   const parcelBuildingLayers = useMemo(() => {
@@ -1166,6 +1305,16 @@ export function YardMap({
         opacity: parcels?.opacity ?? 0.55,
         dimOpacity: parcels?.dimOpacity ?? null,
         relatedDimFactor: parcels?.relatedDimFactor ?? null,
+        bayFocusDim: parcels?.bayFocusDim ?? null,
+        strongHover: parcels?.strongHover ?? false,
+        spotLots: parcels?.spotLots ?? null,
+        spotGroups: parcels?.spotGroups ?? null,
+        spotPins: parcels?.spotPins ?? true,
+        spotPinBlink: parcels?.spotPinBlink ?? false,
+        billboardLabels: parcels?.billboardLabels ?? false,
+        selectedFillScale: parcels?.selectedFillScale ?? null,
+        spotHighlight: parcels?.spotHighlight ?? true,
+        spotSafeArea: parcels?.spotSafeArea ?? null,
         lotOutlineOpacity: parcels?.lotOutlineOpacity ?? null,
         selectedLot: parcels?.selectedLot ?? null,
         hoveredLot: parcels?.hoveredLot ?? null,
@@ -1551,11 +1700,17 @@ export function YardMap({
       /** 공장 안에서 몇 번째 베이인가 — 이웃 베이와 색조를 어긋나게 하는 데 쓴다 */
       spanIndex?: number
       /** 그 베이가 지금 고른/얹힌 베이인가 — 드릴다운(lotGroups)의 상태를 옮겨 받은 것 */
-      spanState?: { pressed: boolean; hovered: boolean }
+      spanState?: { pressed: boolean; hovered: boolean; dimmed: boolean }
     }[] = []
     /* 공장 기단 — 스팬이 딛고 설 OSM 건물 발자국. 회색 건물 층에서 뺀 링을 여기서 세운다 */
     const parcelPodiums: { rings: readonly Ring[]; color: string; alpha: number }[] = []
     let deferredParcelLabels: (() => void) | null = null
+    /*
+     * 베이 이름 — 칸을 그리는 자리에서 바로 쓰지 않고 모았다가 **짚은 칸(하이라이트) 위에**
+     * 쓴다(사용자 확정: 공장·베이 이름이 하이라이트에 덮이지 않게). 순서는 하이라이트 → 베이
+     * 이름 → 공장 이름 → 핀이다.
+     */
+    const deferredBayLabels: (() => void)[] = []
     /*
      * 베이 한 칸을 그리는 붓 — 2D 는 제자리에서 바로 쓰지만, 3D 는 지붕이 세워진 **뒤에**
      * 그 위에 얹혀야 해서 프리즘 블록까지 들고 가야 한다. 지번 레이어(process 모드)에서만
@@ -1669,19 +1824,24 @@ export function YardMap({
           const span = Math.min(maxX - minX, maxY - minY)
           if (span < 22) return
           const size = Math.max(9, Math.min(14, span * 0.34))
-          ctx.save()
-          ctx.font = `650 ${size}px ${CANVAS_SANS}`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.lineJoin = 'round'
-          ctx.globalAlpha = (strong ? 1 : 0.78) * alpha
-          ctx.lineWidth = 3
-          ctx.strokeStyle = 'rgba(0,0,0,0.55)'
-          ctx.strokeText(label, cx / points.length, cy / points.length)
-          ctx.fillStyle = '#ffffff'
-          ctx.fillText(label, cx / points.length, cy / points.length)
-          ctx.restore()
-          ctx.globalAlpha = 1
+          const lx = cx / points.length
+          const ly = cy / points.length
+          /* 하이라이트 위에 쓰도록 미룬다 — 위 `deferredBayLabels` */
+          deferredBayLabels.push(() => {
+            ctx.save()
+            ctx.font = `650 ${size}px ${CANVAS_SANS}`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.lineJoin = 'round'
+            ctx.globalAlpha = (strong ? 1 : 0.78) * alpha
+            ctx.lineWidth = 3
+            ctx.strokeStyle = 'rgba(0,0,0,0.55)'
+            ctx.strokeText(label, lx, ly)
+            ctx.fillStyle = '#ffffff'
+            ctx.fillText(label, lx, ly)
+            ctx.restore()
+            ctx.globalAlpha = 1
+          })
         }
 
         /**
@@ -1825,6 +1985,40 @@ export function YardMap({
                 : 'dim'
               : 'dim'
 
+        /**
+         * 고른 공장의 네온 — 지금 그은 경로(지번 한 장 또는 베이 외곽 한 장)에 공정색 헤일로 + 채움.
+         * `soften` 은 공정별 세기(`selectedFillScale`) — 밝은 공정색은 눌러 칠한다.
+         */
+        const paintSelected = (color: string, soften: number) => {
+          ctx.strokeStyle = color
+          ctx.lineWidth = 3
+          ctx.globalAlpha = 0.75 * progress * soften
+          /* 헤일로는 블러를 다섯 겹 까는 가장 비싼 칠이다 — 범위 비행 중에는 건너뛰고 도착하면
+             켠다(위 `flyingRef`). 공장 목록에서 공장을 누를 때 이 칠이 매 프레임 GPU 를 붙잡아
+             카메라가 끊겼다(측정: 프레임 67~133ms → 17ms) */
+          const halo = progress > 0.02 && !flyingRef.current
+          if (halo) {
+            for (const b of [30, 22, 12]) {
+              ctx.shadowColor = color
+              ctx.shadowBlur = b
+              ctx.stroke()
+            }
+          }
+          ctx.globalAlpha = (ON_FILL + (0.6 - ON_FILL) * progress) * soften
+          ctx.fillStyle = color
+          if (halo) {
+            for (const b of [26, 12]) {
+              ctx.shadowColor = color
+              ctx.shadowBlur = b
+              ctx.fill()
+            }
+          } else {
+            ctx.fill()
+          }
+          ctx.shadowBlur = 0
+          ctx.globalAlpha = 1
+        }
+
         for (const lot of parcels.lots) {
           if (!intersects(lot.bounds, window_)) continue
           tracePolygon(lot.polygon)
@@ -1875,35 +2069,13 @@ export function YardMap({
               strokeLotOutline()
               continue
             }
-            ctx.strokeStyle = color
-            ctx.lineWidth = 3
-            ctx.globalAlpha = 0.85 * progress
-            if (progress > 0.02) {
-              for (const b of [36, 22, 12]) {
-                ctx.shadowColor = color
-                ctx.shadowBlur = b
-                ctx.stroke()
-              }
-            }
-            ctx.globalAlpha = ON_FILL + (0.6 - ON_FILL) * progress
-            ctx.fillStyle = color
-            if (progress > 0.02) {
-              for (const b of [26, 12]) {
-                ctx.shadowColor = color
-                ctx.shadowBlur = b
-                ctx.fill()
-              }
-            } else {
-              ctx.fill()
-            }
-            ctx.shadowBlur = 0
-            ctx.globalAlpha = 1
             /*
-             * 베이 묶음(그룹)에 든 지번은 여기서 낱장 테두리·상호작용을 그리지 않는다 —
-             * 채움(네온)만 깔고, 외곽·이름·호버·눌림은 아래 그룹 패스가 **한 칸으로** 그린다.
-             * 그렇지 않으면 한 베이 안에 지번 경계선이 남아 칸이 셋으로 쪼개져 보인다.
+             * 베이 묶음(그룹)에 든 지번은 여기서 칠하지 않는다 — 아래 그룹 패스가 베이 외곽 한 장으로
+             * 네온을 칠한다. 지번마다 헤일로 테두리를 그으면 한 베이 안에 지번 경계가 가로줄로 비쳤다
+             * (사용자 지적: 구분선은 베이 기준으로만).
              */
             if (parcels.lotGroupOf.has(lot.lot)) continue
+            paintSelected(color, parcels.selectedFillScale?.[proc] ?? 1)
             ctx.strokeStyle = '#ffffff'
             ctx.lineWidth = 2.4 * progress
             if (progress > 0.02) ctx.stroke()
@@ -1964,10 +2136,11 @@ export function YardMap({
           let strokeA = a.strokeA + (b.strokeA - a.strokeA) * progress
           let glow = a.glow + (b.glow - a.glow) * progress
           if (hovered) {
-            /* dim 이라도 손이 얹히면 누를 수 있음을 살짝 알린다 */
-            fillA = Math.min(0.5, fillA + (state === 'on' ? 0.14 : 0.1))
-            strokeA = Math.max(strokeA, state === 'on' ? 0.95 : 0.35)
-            glow = Math.max(glow, state === 'on' ? 14 : 6)
+            /* dim 이라도 손이 얹히면 누를 수 있음을 살짝 알린다 — `strongHover` 면 'on' 만큼 */
+            const strong = parcels.strongHover || state === 'on'
+            fillA = Math.min(0.5, fillA + (strong ? 0.14 : 0.1))
+            strokeA = Math.max(strokeA, strong ? 0.95 : 0.35)
+            glow = Math.max(glow, strong ? 14 : 6)
           }
           /* 2D 구역 윤곽 — dim 이라도 지번 경계는 이만큼은 남는다 */
           if (lotOutline != null) strokeA = Math.max(strokeA, lotOutline)
@@ -1982,7 +2155,8 @@ export function YardMap({
             continue
           }
 
-          if (glow > 0) {
+          /* 비행 중에는 글로우를 건너뛴다 — 위 `flyingRef` */
+          if (glow > 0 && !flyingRef.current) {
             ctx.shadowColor = color
             ctx.shadowBlur = glow
           }
@@ -2003,14 +2177,18 @@ export function YardMap({
          * 넘긴 자리다: 여기서 그룹 외곽 하나와 이름, 호버·눌림을 그린다. (3D 는 이 그림이
          * 지붕 위로 올라가므로 아래 프리즘 블록이 같은 `drawBayCell` 로 다시 그린다.)
          */
-        if (!tilted && focusedFactory && progress > 0.02) {
-          const focusedColor = processColor(factoryProcess.get(focusedFactory) ?? '')
+        /* 진행률과 상관없이 연다 — 묶인 지번의 네온을 여기서만 칠하므로, 막 골랐을 때도 칸이 비지 않게 */
+        if (!tilted && focusedFactory) {
+          const focusedProc = factoryProcess.get(focusedFactory) ?? ''
+          const focusedColor = processColor(focusedProc)
           for (const group of parcels.lotGroupShapes.values()) {
             if (!intersects(group.bounds, window_)) continue
             /* 고른 공장 밖의 그룹은 지금 그릴 자리가 아니다 — 그 공장은 낱장으로 남는다 */
             if (!(focusSet?.has(group.lotCodes[0]) ?? false)) continue
-            /* 토막마다 한 칸 — 이름은 가장 큰 토막에만 얹는다 */
+            /* 토막마다 한 칸 — 이름은 가장 큰 토막에만 얹는다. 네온도 칸 외곽 한 장으로 칠한다(위 지번 루프가 건너뛴 자리) */
             group.polygons.forEach((polygon, index) => {
+              tracePolygon(polygon)
+              paintSelected(focusedColor, parcels.selectedFillScale?.[focusedProc] ?? 1)
               drawBayCell(
                 polygon,
                 index === group.labelAt ? group.label : null,
@@ -2062,7 +2240,13 @@ export function YardMap({
           const spanStateOf = (span: BaySpanShape) => {
             const shares = (group: { lotCodes: string[] } | undefined) =>
               group != null && group.lotCodes.some((code) => span.lotCodes.includes(code))
-            return { pressed: shares(pressedGroup), hovered: shares(hoveredGroup) }
+            const pressed = shares(pressedGroup)
+            return {
+              pressed,
+              hovered: shares(hoveredGroup),
+              /* 고른 베이가 있을 때 그 밖의 베이 — `bayFocusDim` 을 켠 소비자에서만 물러난다 */
+              dimmed: parcels.bayFocusDim != null && pressedGroup != null && !pressed,
+            }
           }
           for (const factory of parcels.factories) {
             const proc = factoryProcess.get(factory.name) ?? factory.process ?? ''
@@ -2082,8 +2266,9 @@ export function YardMap({
             const spans = parcels.baySpans.get(factory.name) ?? null
             const podium = parcels.podium.byFactory.get(factory.name)
             if (state === 'selected') {
-              /* 바탕(채움)은 ~1/3 — 지도(지형)가 비쳐야 "지도 위의 모형"으로 남는다 */
-              const alpha = 0.32
+              /* 바탕(채움)은 ~1/3 — 지도(지형)가 비쳐야 "지도 위의 모형"으로 남는다. 밝은 공정색은
+                 공정별 세기(`selectedFillScale`)만큼 더 눌러 칠한다 */
+              const alpha = 0.32 * (parcels.selectedFillScale?.[proc] ?? 1)
               if (podium) parcelPodiums.push({ rings: podium, color, alpha: 0.5 })
               if (spans) {
                 for (const span of spans) {
@@ -2123,8 +2308,10 @@ export function YardMap({
             const fromFill = fillOf(fromState)
             const fillA = fromFill + (fillOf(state) - fromFill) * progress
             /* 바탕(채움) ~1/3 — 페이드 진행률만 여기에 실어 켜고 끈다 */
-            const alpha = Math.min(0.34, (fillA / ON_FILL) * 0.32)
             const hovered = parcels.hoveredFactory === factory.name
+            /* 강한 호버 — 눌려 있던 공장도 손이 얹히면 고른 공장만큼 선다 */
+            const alpha =
+              hovered && parcels.strongHover ? 0.32 : Math.min(0.34, (fillA / ON_FILL) * 0.32)
             if (podium)
               parcelPodiums.push({ rings: podium, color, alpha: Math.min(0.5, alpha + 0.16) })
             if (spans) {
@@ -2215,7 +2402,8 @@ export function YardMap({
              * 그대로다.
              */
             let plane: [number, number, number, number] | null = null
-            if (tilted) {
+            /* 정면 라벨(`billboardLabels`)이면 눕히지 않는다 — 앵커(지붕 높이)에 화면과 나란히 선다 */
+            if (tilted && !parcels.billboardLabels) {
               const eps = 0.0004
               const axis = parcels.factoryAxis.get(factory.name)
               const be = axis?.be ?? Math.cos((35 * Math.PI) / 180)
@@ -2293,10 +2481,8 @@ export function YardMap({
           }
           ctx.globalAlpha = 1
         }
-        if (parcels.showLabels) {
-          if (tilted) deferredParcelLabels = drawProcessLabels
-          else drawProcessLabels()
-        }
+        /* 2D 도 미룬다 — 이름이 짚은 칸(하이라이트) 위에 서야 한다(위 `deferredBayLabels`) */
+        if (parcels.showLabels) deferredParcelLabels = drawProcessLabels
       } else {
         /* ── 분류색 모드 (기존, 도장 화면·야드 룩) ── */
         const neon = parcels.focusedFactory != null
@@ -2356,6 +2542,219 @@ export function YardMap({
       }
     }
 
+    /*
+     * 짚은 칸(`spotLots`) — 고른 공장 밖의 칸도 짚을 수 있어야 하므로
+     * 스포트라이트·디밍과 무관하게 같은 세기로 선다. 칸은 늘 **바닥(지면)** 에 그린다(사용자 확정) —
+     * 지붕 높이에 얹으면 박공·처마와 겹쳐 떠 있는 판처럼 어색하다. 핀이 그 자리를 위로 짚는다.
+     */
+    const drawSpot = (
+      codes: readonly string[],
+      edgePin: boolean,
+      /** 늘 짚어 두는 묶음이면 그 번호 — 핀·하이라이트 토글을 따르고, 손이 닿는 자리를 남긴다 */
+      groupIndex: number | null = null
+    ): (() => void) | null => {
+      if (!parcels) return null
+      const showHighlight = groupIndex == null || parcels.spotHighlight
+      const showPin = groupIndex == null || parcels.spotPins
+      const hitRings: ScreenPoint[][] = []
+      const spotPoints: ScreenPoint[] = []
+      /* 묶음의 바깥 외곽선 — 지번 경계(안쪽 선)는 그리지 않는다 (`spotOutlineCacheRef`) */
+      const cache = spotOutlineCacheRef.current
+      if (cache.source !== parcels.lotPolygon) {
+        cache.source = parcels.lotPolygon
+        cache.byKey.clear()
+      }
+      const key = codes.join('|')
+      let outlines = cache.byKey.get(key)
+      if (!outlines) {
+        const polys: LatLon[][] = []
+        for (const code of codes) {
+          const polygon = parcels.lotPolygon.get(code)
+          if (polygon && polygon.length >= 3) polys.push(polygon)
+        }
+        outlines = adjacentLotGroups(polys).map((indices) => {
+          const member = indices.map((k) => polys[k])
+          return outlineOf(member) ?? convexHull(member.flat())
+        })
+        cache.byKey.set(key, outlines)
+      }
+      /* 바닥에 — 세운 공장의 칸도 지면 높이로 그린다 */
+      const altitude = 0
+      ctx.save()
+      ctx.lineJoin = 'round'
+      for (const outline of outlines) {
+        const ring = outline.map((pt) => at(pt.lat, pt.lon, altitude))
+        spotPoints.push(...ring)
+        if (!showHighlight) continue
+        hitRings.push(ring)
+        /* 하이라이트 — 옅은 노란 외곽선 한 줄 + 안쪽 옅은 노란 칠(사용자 확정). 진하게 덮으면
+           그 아래 공장·베이 색이 묻힌다 */
+        traceScreen(ring)
+        ctx.closePath()
+        ctx.fillStyle = SPOT_FILL
+        ctx.fill()
+        ctx.strokeStyle = SPOT_LINE
+        ctx.lineWidth = 1.3
+        ctx.stroke()
+      }
+      ctx.restore()
+      const hit = groupIndex == null ? null : { index: groupIndex, rings: hitRings, pin: null as { x: number; y: number; r: number } | null }
+      if (hit) spotHits.push(hit)
+
+      /*
+       * 핀 — 멀리서 보면 칸 윤곽만으로는 작아서 놓친다. 칸 **한가운데**에 핀을 세우고(사용자
+       * 확정), 칸이 화면 밖이면 핀을 **화면 가장자리**에 붙여 그쪽을 가리킨다(손을 얹었는데
+       * 아무 일도 없어 보이면 목록이 고장 난 것처럼 읽힌다).
+       *
+       * 핀은 바로 그리지 않고 **그리는 함수로 돌려준다** — 부르는 쪽이 모든 하이라이트를 깐 뒤에
+       * 핀을 한꺼번에 올린다. 그래야 이웃 베이의 하이라이트가 앞 베이의 핀을 덮지 않는다.
+       */
+      if (spotPoints.length === 0 || !showPin) return null
+      {
+        let minSx = Infinity
+        let maxSx = -Infinity
+        let minSy = Infinity
+        let maxSy = -Infinity
+        for (const pt of spotPoints) {
+          minSx = Math.min(minSx, pt.sx)
+          maxSx = Math.max(maxSx, pt.sx)
+          minSy = Math.min(minSy, pt.sy)
+          maxSy = Math.max(maxSy, pt.sy)
+        }
+        /* 핀 끝(바늘 아래)이 짚는 자리 — 베이 화면 범위의 한가운데 */
+        const cx = (minSx + maxSx) / 2
+        const top = (minSy + maxSy) / 2
+        const margin = 18
+        /* 핀 치수 — 지금 배율에 맞춘다 */
+        const ps = spotPinScale(view.scale)
+        const headY = SPOT_PIN_HEAD_Y * ps
+        const headR = SPOT_PIN_HEAD_R * ps
+        const safe = parcels.spotSafeArea ?? {}
+        const minX = (safe.left ?? 0) + margin
+        const maxX = viewport.width - (safe.right ?? 0) - margin
+        const minY = (safe.top ?? 0) + margin + headY + headR - 4
+        const maxY = viewport.height - (safe.bottom ?? 0) - margin
+        const inside = cx >= minX && cx <= maxX && top >= minY && top <= maxY
+        /* 늘 짚어 둔 묶음은 화면 안일 때만 핀을 세운다(가장자리에 몰리지 않게) */
+        if (!inside && !edgePin) return null
+        const px = Math.min(maxX, Math.max(minX, cx))
+        const py = Math.min(maxY, Math.max(minY, top))
+        if (hit) hit.pin = { x: px, y: py - headY, r: headR }
+        return () => {
+          ctx.save()
+          ctx.shadowColor = 'rgba(0,0,0,0.6)'
+          ctx.shadowBlur = 6
+          const hy = py - headY
+          if (!inside) {
+            /* 칸 쪽으로 기운 꼬리 — 화면 밖 방향을 가리킨다 */
+            const angle = Math.atan2(top - py, cx - px)
+            ctx.fillStyle = SPOT_PIN
+            ctx.beginPath()
+            ctx.moveTo(px + Math.cos(angle) * 20 * ps, hy + Math.sin(angle) * 20 * ps)
+            ctx.lineTo(px + Math.cos(angle + 2.4) * 9 * ps, hy + Math.sin(angle + 2.4) * 9 * ps)
+            ctx.lineTo(px + Math.cos(angle - 2.4) * 9 * ps, hy + Math.sin(angle - 2.4) * 9 * ps)
+            ctx.closePath()
+            ctx.fill()
+          }
+          /*
+           * 핀 = **물방울 모양**(사용자 확정 — 지도 앱의 위치 핀처럼): 둥근 머리가 아래 끝점으로
+           * 좁아지며 그 끝이 짚는 자리를 찌른다. 머리는 노랑으로 채우고 그 위에 어두운 선으로
+           * **점검 필요 아이콘**(경고 삼각형 + 느낌표, `StatusWarningIcon` 과 같은 모양 — 왼쪽 카드의
+           * 표식과 같은 기호)을 얹는다. 흰 안쪽 원은 두지 않는다(사용자 확정).
+           * 화면 밖 칸을 가리킬 때(가장자리 핀)는 끝점 대신 위의 꼬리가 방향을 말한다.
+           */
+          /*
+           * 깜빡임(`spotPinBlink`) — 핀은 그대로 두고 **핀 머리 주위의 옅은 노란 빛**이 깜빡인다(사용자
+           * 확정 — 테두리 선은 두지 않는다). 시계로 켜짐/꺼짐을 정해 모든 핀이 함께 깜빡인다. 다시 그리기는 아래 깜빡임
+           * 타이머가 반주기마다 부른다.
+           */
+          if (
+            parcels.spotPinBlink &&
+            !prefersReducedMotion() &&
+            Math.floor(performance.now() / SPOT_BLINK_MS) % 2 === 0
+          ) {
+            ctx.save()
+            ctx.shadowColor = SPOT_PIN
+            ctx.shadowBlur = 8 * ps
+            ctx.beginPath()
+            /* 머리 밖으로 반지름의 절반(전경에서 6px)만 번진다 */
+            ctx.arc(px, hy, headR * 1.5, 0, Math.PI * 2)
+            ctx.fillStyle = 'rgba(245, 194, 66, 0.32)'
+            ctx.fill()
+            ctx.restore()
+          }
+          /* 물방울 — 끝점에서 머리 원에 닿는 두 접선 + 위쪽 호 */
+          const r = headR
+          /* 끝점→머리 중심 방향과 접점 사이의 각 — acos(r / 거리). 배율이 같아 각도 같다 */
+          const tangent = Math.acos(SPOT_PIN_HEAD_R / SPOT_PIN_HEAD_Y)
+          ctx.beginPath()
+          if (inside) {
+            ctx.moveTo(px, py)
+            ctx.arc(px, hy, r, Math.PI / 2 - tangent, Math.PI / 2 + tangent, true)
+            ctx.closePath()
+          } else {
+            ctx.arc(px, hy, r, 0, Math.PI * 2)
+          }
+          ctx.fillStyle = SPOT_PIN
+          ctx.fill()
+          ctx.shadowBlur = 0
+          ctx.lineJoin = 'round'
+          ctx.lineWidth = 2 * Math.min(1, ps)
+          ctx.strokeStyle = '#ffffff'
+          ctx.stroke()
+          ctx.strokeStyle = SPOT_PIN_INK
+          /* 아이콘(24 격자)을 노란 머리 안 17px(전경 배율) 로 — 머리(지름 24px)를 거의 채운다 */
+          const k = (17 / 24) * ps
+          const ix = (x: number) => px + (x - 12) * k
+          const iy = (y: number) => hy + (y - 12.5) * k
+          ctx.lineJoin = 'round'
+          ctx.lineCap = 'round'
+          ctx.lineWidth = 2 * ps
+          ctx.beginPath()
+          ctx.moveTo(ix(12), iy(3.5))
+          ctx.lineTo(ix(21), iy(19.5))
+          ctx.lineTo(ix(3), iy(19.5))
+          ctx.closePath()
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(ix(12), iy(9.5))
+          ctx.lineTo(ix(12), iy(13.5))
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.arc(ix(12), iy(16.5), 1.25 * ps, 0, Math.PI * 2)
+          ctx.fillStyle = SPOT_PIN_INK
+          ctx.fill()
+          ctx.restore()
+        }
+      }
+    }
+    /*
+     * 늘 짚어 두는 묶음들(점검 필요 베이 전부) 먼저, 손을 얹은 칸은 그 위에 한 번 더. 하이라이트를
+     * 전부 깐 다음 핀을 올린다 — 핀이 어느 하이라이트보다도 위에 선다(사용자 확정).
+     */
+    const spotHits: (typeof spotHitsRef.current)[number][] = []
+    const pins: (() => void)[] = []
+    const drawSpots = () => {
+      ;(parcels?.spotGroups ?? []).forEach((group, index) => {
+        if (group.length === 0) return
+        const pin = drawSpot(group, false, index)
+        if (pin) pins.push(pin)
+      })
+      spotHitsRef.current = spotHits
+      const spotLots = parcels?.spotLots
+      if (spotLots && spotLots.length > 0) {
+        const pin = drawSpot(spotLots, true)
+        if (pin) pins.push(pin)
+      }
+    }
+
+    /*
+     * 3D — 점검 필요 하이라이트는 **건물보다 먼저** 바닥에 깐다(사용자 확정). 캔버스에는 깊이 버퍼가
+     * 없어 그리는 순서가 곧 가림이다 — 먼저 깔면 세운 공장이 그 위를 덮고, 반투명 지붕 너머로만
+     * 비친다. 핀은 맨 마지막에 올리므로(아래 `pins`) 건물에 가리지 않는다.
+     */
+    if (tilted) drawSpots()
+
     // ── 건물 세우기 (3D 에서만) ──
     /*
      * 뒤에서부터 그린다 — 앞 건물이 뒷 건물을 가려야 어느 쪽이 가까운지 읽힌다.
@@ -2407,7 +2806,7 @@ export function YardMap({
          * 11ms), 그 크기에서는 어차피 면이 몇 px 이라 갈라도 보이지 않는다. 배율이 오르면
          * 세우는 채수가 뷰포트 컬링으로 줄고, 그때부터 벽 하나하나가 형태를 말한다.
          */
-        const litBuildings = view.scale >= BAY_GABLE_SCALE.massed && !movingRef.current
+        const litBuildings = view.scale >= LIT_BUILDING_SCALE && !movingRef.current
         for (const { ring } of visible) {
           const world = ring.map(([lon, lat]) => ({ lat, lon }))
           const base = ring.map(([lon, lat]) => at(lat, lon))
@@ -2529,20 +2928,11 @@ export function YardMap({
         .sort((a, b) => b.depth - a.depth)
 
       /**
-       * 박공이 선 정도(0~1) — **카메라 거리 하나**로 정한다 (`BAY_GABLE_SCALE`).
-       *
-       * 0이면 공장은 평지붕 한 덩어리, 1이면 베이마다 박공이 선 공장동이다. 그 사이는
-       * 자라는 중이라, 확대하는 손짓을 따라 지붕이 솟고 축소하면 도로 눕는다 — 단이
-       * 지지 않아야 같은 건물이 가까워진 것으로 읽힌다. 한 프레임에 한 번만 잰다.
+       * 박공이 선 정도(0~1) — 기울여 볼 때는 **늘 선다**(사용자 확정: 공정·공장 목록까지는 건물로).
+       * 평면이 되는 것은 배율이 아니라 단계다 — 공장을 고르면 카메라가 바로 위로 서서(`DRILL_PITCH`)
+       * 이 분기 자체를 지나지 않는다. 값(0 = 누운 지붕, 1 = 다 선 박공)은 아래 식들이 그대로 받는다.
        */
-      const gable = Math.max(
-        0,
-        Math.min(
-          1,
-          (view.scale - BAY_GABLE_SCALE.massed) /
-            (BAY_GABLE_SCALE.gabled - BAY_GABLE_SCALE.massed)
-        )
-      )
+      const gable: number = 1
 
       /**
        * 같은 공장에서 맞닿은 베이는 **한 면**으로 다룬다 — 그 판단의 근거가 여기 모인다.
@@ -2560,6 +2950,10 @@ export function YardMap({
           alpha: number
           /** 이 공장에 고른/얹힌 베이가 있나 — 지붕 한 면에 실을 후광의 세기 */
           glow: number
+          /** 고른 공장인가 — 테두리를 그 공장만 굵고 밝게 남긴다 */
+          selected: boolean
+          /** 손이 얹힌 공장인가 — 강한 호버에서 테두리를 물리지 않는다 */
+          hovered: boolean
           edges: Map<string, BoundaryEdge>
         }
       >()
@@ -2580,9 +2974,18 @@ export function YardMap({
               : 0
         let acc = bayFences.get(prism.factory)
         if (!acc) {
-          acc = { color: prism.color, height: eaveH, alpha: prism.alpha, glow, edges: new Map() }
+          acc = {
+            color: prism.color,
+            height: eaveH,
+            alpha: prism.alpha,
+            glow,
+            selected: prism.kind === 'selected',
+            hovered: false,
+            edges: new Map(),
+          }
           bayFences.set(prism.factory, acc)
         } else if (glow > acc.glow) acc.glow = glow
+        if (prism.hovered) acc.hovered = true
         for (let i = 0; i < span.roof.outline.length; i++) {
           const a = span.roof.outline[i]
           const b = span.roof.outline[(i + 1) % span.roof.outline.length]
@@ -2610,7 +3013,10 @@ export function YardMap({
         const base = prism.polygon.map((p) => at(p.lat, p.lon))
         const top = prism.polygon.map((p) => at(p.lat, p.lon, height))
         /* 호버는 도색이 한 단 밝아진다 — 누를 수 있음을 색으로 말한다 */
-        const lift = prism.hovered || prism.spanState?.hovered ? 1.18 : 1
+        const hoverOn = prism.hovered || (prism.spanState?.hovered ?? false)
+        /* 강한 호버는 한 단 더 — 디밍된 이웃 사이에서도 손이 얹힌 곳이 먼저 보이게 */
+        const strongHover = hoverOn && (parcels?.strongHover ?? false)
+        const lift = hoverOn ? (strongHover ? 1.4 : 1.18) : 1
         const roofColor = shadeColor(prism.color, 0.88 * lift * FLAT_ROOF_LIGHT)
         const roofEdge = shadeColor(prism.color, 1.22 * lift)
         const wallEdge = shadeColor(prism.color, 0.38)
@@ -2642,7 +3048,7 @@ export function YardMap({
           /* 덩어리는 지번 높이(`parcel`) 그대로 — 박공이 없으니 처마로 낮출 이유가 없다.
              박공이 자라는 동안(0<gable<1) 처마도 함께 제자리를 찾아간다 */
           const eaveH = RELIEF_METERS.parcel * (1 + (BAY_ROOF.eaveFactor * grow - 1) * gable)
-          const riseH = roof.rise * grow * gable
+          const riseH = roof.rise * BAY_ROOF.riseScale * grow * gable
           const pressed = prism.spanState?.pressed ?? false
           /** 이 베이의 색조 — 베이 하나에 하나. 이웃 베이와만 결이 다르다.
            *  덩어리로 설 때는 하나(1)이고, 박공이 자라는 동안 제 색조로 갈라진다 */
@@ -2663,11 +3069,34 @@ export function YardMap({
             return (seamEdges?.get(key)?.count ?? 1) > 1
           }
 
-          /* 눌린 베이는 도색이 가라앉는다 — 색만으로 "이것을 골랐다"가 되게 */
-          const faceK = (k: number) => (pressed ? k * 0.62 : k) * lift * tint
+          /*
+           * 고른 베이의 도색. 기본은 가라앉힌다(눌린 형태). `bayFocusDim` 을 켜면 반대로
+           * 고른 베이를 한 단 밝히고 나머지 베이를 어둡게 물린다 — 대비가 고른 쪽에 선다.
+           */
+          const bayFocusDim = parcels?.bayFocusDim ?? null
+          /* 손이 얹힌 베이는 강한 호버에서 물러나지 않는다 */
+          const dimmedBay = (prism.spanState?.dimmed ?? false) && !strongHover
+          const pressK = bayFocusDim != null ? 1.18 : 0.62
+          const faceK = (k: number) =>
+            (pressed ? k * pressK : dimmedBay ? k * 0.55 : k) * lift * tint
+          /*
+           * 물린 정도의 불투명도 배율 — 벽·지붕·선에 같은 값을 건다. 고른 공장 안의 다른
+           * 베이(`bayFocusDim`), 그리고 공장을 고른 상태의 **다른 공장**(`relatedDimFactor`).
+           * 뒤쪽은 채움 알파만 눌러서는 모자란다 — 다가갈수록 지붕 알파에 고정 가산(gable)이
+           * 붙어 고른 공장과 같은 진하기로 되돌아오기 때문이다. 하한(0.35)은 같은 공정이
+           * 어디인지 잃지 않을 만큼이다.
+           */
+          const relatedK =
+            prism.kind !== 'selected' &&
+            !strongHover &&
+            parcels?.focusedFactory &&
+            parcels.relatedDimFactor != null
+              ? Math.max(0.35, parcels.relatedDimFactor)
+              : 1
+          const dimK = (dimmedBay ? (bayFocusDim ?? 1) : 1) * relatedK
           const face = (k: number) => shadeColor(prism.color, faceK(k))
 
-          ctx.globalAlpha = prism.alpha
+          ctx.globalAlpha = prism.alpha * (dimmedBay ? (bayFocusDim ?? 1) : 1)
           /*
            * 벽 — 옆면 전부. 뒷벽은 뒤이어 그리는 지붕·앞벽이 덮는다.
            *
@@ -2767,7 +3196,7 @@ export function YardMap({
           /* 지붕은 벽보다 조금 진하되 **여전히 비친다** — 지면이 비쳐야 채도가 눌린다.
              다만 다가가 박공이 설수록 불투명해진다: 그 거리에서 지면이 지붕을 뚫고 비치면
              부피가 도로 사라져, 애써 세운 면들이 색유리처럼 읽힌다 */
-          const roofAlpha = Math.min(1, prism.alpha + 0.06 + 0.24 * gable)
+          const roofAlpha = Math.min(1, prism.alpha + 0.06 + 0.24 * gable) * dimK
           ctx.globalAlpha = roofAlpha
           const isNear = (item: (typeof patches)[number]) => item.patch.side === nearSide
           /*
@@ -2823,7 +3252,7 @@ export function YardMap({
           if (gable > 0) {
             /* 용마루 — 능선 한 줄. 여기가 밝아야 두 면이 갈라져 지붕으로 읽힌다.
                구획선과 마찬가지로 박공이 자라는 만큼 짙어진다 */
-            ctx.globalAlpha = Math.min(1, prism.alpha + 0.5) * gable
+            ctx.globalAlpha = Math.min(1, prism.alpha + 0.5) * gable * dimK
             ctx.strokeStyle = shadeColor(prism.color, 1.35)
             ctx.lineWidth = 1.2
             ctx.beginPath()
@@ -2846,9 +3275,19 @@ export function YardMap({
            * 톱니가 사라지고 지붕이 줄무늬 판으로 읽히던 것이 그 때문이다.
            */
           if (gable > 0) {
-            ctx.globalAlpha = Math.min(1, prism.alpha + 0.18) * gable
+            ctx.globalAlpha = Math.min(1, prism.alpha + 0.18) * gable * dimK
             ctx.strokeStyle = shadeColor(prism.color, 0.46 * lift)
             ctx.lineWidth = 1.1
+            traceScreen(wallTop)
+            ctx.closePath()
+            ctx.stroke()
+          }
+
+          /* 강한 호버의 베이는 옅은 흰 윤곽 — 고른 베이(진한 흰 윤곽)보다 한 단 낮다 */
+          if (strongHover && !pressed && prism.spanState?.hovered) {
+            ctx.globalAlpha = 0.7
+            ctx.strokeStyle = '#ffffff'
+            ctx.lineWidth = 1.3
             traceScreen(wallTop)
             ctx.closePath()
             ctx.stroke()
@@ -3115,7 +3554,17 @@ export function YardMap({
           }
 
           if (factoryFenceAlpha > 0.02) {
-            ctx.globalAlpha = factoryFenceAlpha
+            /*
+             * 공장을 고른 상태에서 고르지 않은 공장의 테두리는 `relatedDimFactor` 만큼
+             * 물린다 — 채움만 눌러 두면 밝은 테두리가 그대로 남아 고른 공장과 같아 보인다.
+             * 너무 지우면 같은 공정이 어디인지 잃으므로 하한(0.3)을 둔다.
+             */
+            const fenceK =
+              fence.selected || !parcels?.focusedFactory || (fence.hovered && parcels.strongHover)
+                ? 1
+                : Math.max(0.3, parcels.relatedDimFactor ?? 1)
+            ctx.globalAlpha = factoryFenceAlpha * fenceK
+            ctx.lineWidth = fence.selected && parcels?.relatedDimFactor != null ? 2 : 1.2
             ctx.strokeStyle = shadeColor(fence.color, 1.35)
             for (const path of paths) ctx.stroke(path)
           }
@@ -3179,8 +3628,13 @@ export function YardMap({
         drawLotSpotRef(highlightPatches, parcels.highlightedLot)
       }
     }
-    /* 이름줄은 세운 것들 위에 — 2D 에서는 이미 제자리에서 그려졌다(deferred 는 null) */
+
+    /* 평면(2D)에서는 칠한 지번·공장 위에 그린다. 3D 는 건물보다 먼저 바닥에 깔았다(위) */
+    if (!tilted) drawSpots()
+    /* 이름은 세운 것들과 하이라이트 위에, 핀 아래에 — 베이 이름, 그다음 공장 이름줄 */
+    for (const label of deferredBayLabels) label()
     deferredParcelLabels?.()
+    for (const pin of pins) pin()
 
     // ── 공장·샵 ──
     /*
@@ -3600,6 +4054,12 @@ export function YardMap({
   const initialViewRef = useRef(initialView)
   const initialBoundsRef = useRef(initialBounds)
   const initialBoundsPaddingRef = useRef(initialBoundsPadding)
+  /* 돌리기 잠금 — 입력 처리기(effect)가 다시 걸리지 않고 최신 값을 읽게 ref 로 */
+  const orbitLockedRef = useRef(orbitLocked)
+  orbitLockedRef.current = orbitLocked
+  /* 뷰 모드 — 3D 면 평면(기울기 0)으로 내려다보는 중에도 돌리기·기울이기를 받는다 */
+  const viewModeRef = useRef(viewMode)
+  viewModeRef.current = viewMode
 
   const fitToYard = useCallback(() => {
     if (viewportRef.current.width === 0) return
@@ -3641,7 +4101,7 @@ export function YardMap({
             initialBoundsRef.current,
             viewportRef.current,
             initialBoundsPaddingRef.current,
-            { pitch: viewRef.current.pitch, bearing: 0 }
+            { pitch: viewRef.current.pitch, bearing: viewRef.current.bearing }
           ))
         } else {
           fitToYard()
@@ -3657,10 +4117,46 @@ export function YardMap({
     return () => observer.disconnect()
   }, [draw, publishView, fitToYard, clampViewScale])
 
+  /*
+   * 이 커밋에서 범위 비행이 곧 시작되는가(아래 focusBounds 효과 — 같은 커밋에서 다른 효과들
+   * 다음에 돈다). 그렇다면 그 앞의 효과들은 그리지 않는다 — 비행의 첫 프레임이 새 데이터로
+   * 그린다. 옛 화각에 한 번 더 그리면 같은 프레임에 두 장을 그리고, 그 한 장이 공정 화각(평면)에
+   * 스포트라이트가 풀린 야드 전체 네온이라 GPU 가 출발 프레임을 붙잡았다(공정 → 야드 전경 복귀가
+   * 끊김, 측정).
+   */
+  const latestFocusBounds = useRef(focusBounds)
+  latestFocusBounds.current = focusBounds
+  const flightPending = useCallback(
+    () =>
+      prevFocusBounds.current !== undefined &&
+      prevFocusBounds.current !== latestFocusBounds.current &&
+      viewportRef.current.width > 0,
+    []
+  )
+
+  /*
+   * 핀 아이콘 깜빡임 — 반주기마다 한 번 다시 그린다(그림은 시계를 읽어 켜짐/꺼짐을 정한다).
+   * 카메라가 움직이는 중에는 그 프레임들이 이미 그리므로 건너뛰고, 탭이 가려져 있으면 쉰다.
+   */
+  const blinkPins =
+    (parcels?.spotPinBlink ?? false) &&
+    (parcels?.spotPins ?? true) &&
+    ((parcels?.spotGroups?.length ?? 0) > 0 || (parcels?.spotLots?.length ?? 0) > 0)
+  useEffect(() => {
+    if (!blinkPins || prefersReducedMotion()) return
+    const timer = window.setInterval(() => {
+      if (document.hidden || movingRef.current || flyingRef.current) return
+      draw()
+    }, SPOT_BLINK_MS)
+    return () => window.clearInterval(timer)
+  }, [blinkPins, draw])
+
   // 데이터·표시 설정이 바뀌면 다시 그린다
   useEffect(() => {
+    if (flightPending()) return
     draw()
   }, [
+    flightPending,
     draw,
     lots,
     blocks,
@@ -3692,7 +4188,12 @@ export function YardMap({
    * 자리를 눈으로 다시 찾아야 한다. 반 초 동안 기울어지는 동안 눈이 그 자리를 따라간다.
    * 3D 를 벗어날 때는 방위도 북쪽으로 되돌린다 — 2D 는 "북쪽이 위"인 지도라는 약속이다.
    */
+  /* 직전 뷰 모드 — 2D↔3D 가 **실제로 바뀔 때만** 굴린다. 첫 마운트에 돌면 처음 기울기
+     (`initialPitch`)를 기본 기울기로 덮어쓴다 */
+  const prevViewModeRef = useRef(viewMode)
   useEffect(() => {
+    if (prevViewModeRef.current === viewMode) return
+    prevViewModeRef.current = viewMode
     const targetPitch = viewMode === '3d' ? TILTED_PITCH : 0
     const targetBearing = viewMode === '3d' ? viewRef.current.bearing : 0
     const fromPitch = viewRef.current.pitch
@@ -3757,6 +4258,7 @@ export function YardMap({
        된다) — `parcelState` 를 직접 넣으면 진입/해제 boolean 이 아니라 어느 공장·공정이든
        바뀔 때마다 이 효과가 다시 걸려, 같은 스포트라이트 안에서의 재타깃까지 다시 페이드해
        버린다(의도한 "카메라 비행 안에서 묻힌다" 설계와 어긋난다). */
+    const pending = flightPending()
     const liveFocus = {
       focusedFactory: data.current.parcels?.focusedFactory ?? null,
       focusedProcesses: data.current.parcels?.focusedProcesses?.length ? data.current.parcels.focusedProcesses : null,
@@ -3767,7 +4269,8 @@ export function YardMap({
       parcelFadeProgressRef.current = 1
       /* 도착했으니 다음 전환의 출발점을 지금 자리로 옮겨 둔다 */
       parcelFadeFromRef.current = liveFocus
-      draw()
+      /* 범위 비행이 곧 시작되면 그 첫 프레임에 맡긴다 — 위 `flightPending` */
+      if (!pending) draw()
     }
 
     if (
@@ -3789,7 +4292,7 @@ export function YardMap({
     }
     frame = requestAnimationFrame(step)
     return () => cancelAnimationFrame(frame)
-  }, [parcelSpotlightActive, parcelSpotlightDuration, draw])
+  }, [parcelSpotlightActive, parcelSpotlightDuration, draw, flightPending])
 
   useEffect(() => {
     if (resetSignal === 0) return
@@ -3884,9 +4387,6 @@ export function YardMap({
    * 넘긴다 — 마운트 직후 크기 측정이 이미 전체를 맞춰 두므로, 여기서 또 굴리면 두 번
    * 움직인다. 움직임을 줄여 달라고 한 사람에게는 굴리지 않고 바로 놓는다.
    */
-  /* `undefined` = 아직 한 번도 안 봤다(마운트) — 그때는 굴리지 않는다. 크기 측정이 이미
-   * 전체를 맞춰 두므로, 여기서 또 움직이면 두 번 움직인다. 그 뒤로 값이 바뀔 때만 굴린다. */
-  const prevFocusBounds = useRef<LatLonBounds | null | undefined>(undefined)
   useEffect(() => {
     const first = prevFocusBounds.current === undefined
     const changed = prevFocusBounds.current !== focusBounds
@@ -3908,7 +4408,7 @@ export function YardMap({
      * 0° 으로 갈 때 한 바퀴(350° 역회전)를 돌지 않고 10° 만 돌게. fitView 도 이 방위
      * 기준으로 범위를 맞춰야 도착 화면과 맞는다.
      */
-    const baseView =
+    const withBearing =
       focusBounds && focusBoundsBearing != null
         ? {
             ...viewRef.current,
@@ -3920,6 +4420,11 @@ export function YardMap({
             pitch: viewMode === '3d' ? TILTED_PITCH : 0,
           }
         : viewRef.current
+    /* 기울기 요청이 있으면 그 기울기로 — 3D 에서만(평면은 늘 0) */
+    const baseView =
+      focusBounds && focusBoundsPitch != null && viewMode === '3d'
+        ? { ...withBearing, pitch: clampPitch(focusBoundsPitch) }
+        : withBearing
     const target = clampViewScale(focusBounds
       ? fitView(focusBounds, viewportRef.current, focusBoundsPadding, baseView)
       : fitView(data.current.extent, viewportRef.current, 0.05, {
@@ -3931,6 +4436,7 @@ export function YardMap({
     const settle = () => {
       /* 등가각으로 돌았으면 도착 후 표준 범위로 감아 둔다 — 다음 회전 계산이 어긋나지 않게 */
       viewRef.current = { ...target, bearing: wrapBearing(target.bearing) }
+      flyingRef.current = false
       publishView()
       draw()
     }
@@ -3944,8 +4450,10 @@ export function YardMap({
 
     let frame = 0
     const start = performance.now()
+    flyingRef.current = true
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / focusBoundsDuration)
+      /* 첫 프레임의 시각이 출발 시각보다 앞설 수 있다 — 음수 진행률로 뒤로 튀지 않게 */
+      const t = Math.max(0, Math.min(1, (now - start) / focusBoundsDuration))
       viewRef.current = lerpView(from, target, easeInOutCubic(t))
       publishView()
       draw()
@@ -3953,8 +4461,11 @@ export function YardMap({
       else settle()
     }
     frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [focusBounds, focusBoundsDuration, focusBoundsPadding, focusBoundsBearing, viewMode, draw, publishView, clampViewScale])
+    return () => {
+      cancelAnimationFrame(frame)
+      flyingRef.current = false
+    }
+  }, [focusBounds, focusBoundsDuration, focusBoundsPadding, focusBoundsBearing, focusBoundsPitch, viewMode, draw, publishView, clampViewScale])
 
   /* 미니맵 등 외부 탐색 UI에서 고른 위치로 이동한다. 확대·기울기·방위는 그대로 둔다. */
   useEffect(() => {
@@ -4151,11 +4662,11 @@ export function YardMap({
     const pickParcelLot = (
       sx: number,
       sy: number
-    ): { bay: string; factory: string } | null => {
+    ): { bay: string; factory: string; lot: string } | null => {
       const parcels = data.current.parcels
       if (!parcels) return null
       const { lat, lon } = screenToWorld(viewRef.current, viewportRef.current, sx, sy)
-      let best: { bay: string; factory: string } | null = null
+      let best: { bay: string; factory: string; lot: string } | null = null
       let bestArea = Infinity
       for (const lot of parcels.lots) {
         if (!containsPoint(lot.bounds, lat, lon)) continue
@@ -4166,10 +4677,31 @@ export function YardMap({
           (lot.bounds.maxLat - lot.bounds.minLat) * (lot.bounds.maxLon - lot.bounds.minLon)
         if (area < bestArea) {
           bestArea = area
-          best = { bay: parcels.lotGroupOf.get(lot.lot) ?? lot.lot, factory }
+          best = { bay: parcels.lotGroupOf.get(lot.lot) ?? lot.lot, factory, lot: lot.lot }
         }
       }
       return best
+    }
+
+    /** 손 아래의 늘 짚어 둔 묶음 — 핀(동그라미 근처)이 먼저, 그다음 하이라이트한 칸 */
+    const pickSpotGroup = (sx: number, sy: number): { index: number; via: 'pin' | 'highlight' } | null => {
+      const hits = spotHitsRef.current
+      for (const hit of hits) {
+        if (hit.pin && Math.hypot(sx - hit.pin.x, sy - hit.pin.y) <= hit.pin.r) return { index: hit.index, via: 'pin' }
+      }
+      const inside = (ring: readonly ScreenPoint[]) => {
+        let yes = false
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const a = ring[i]
+          const b = ring[j]
+          if (a.sy > sy !== b.sy > sy && sx < ((b.sx - a.sx) * (sy - a.sy)) / (b.sy - a.sy) + a.sx) {
+            yes = !yes
+          }
+        }
+        return yes
+      }
+      for (const hit of hits) if (hit.rings.some(inside)) return { index: hit.index, via: 'highlight' }
+      return null
     }
 
     const localPoint = (event: PointerEvent | WheelEvent | MouseEvent) => {
@@ -4177,16 +4709,24 @@ export function YardMap({
       return { sx: event.clientX - rect.left, sy: event.clientY - rect.top }
     }
 
-    /** 돌리기는 기울어져 있을 때만 뜻이 있다 — 평면을 돌리면 북쪽만 잃는다.
-        어떤 손이 돌리기인가는 전 화면 공통 문법(mapInteraction)이 정한다 */
+    /** 돌리기는 기울어져 있을 때만 뜻이 있다 — 평면(2D)을 돌리면 북쪽만 잃는다. 3D 모드에서는
+        바로 위에서 내려다보는 중(기울기 0 — 대시보드의 하위 단계)에도 받는다: 거기서 끌어
+        기울이는 것이 3D 로 들어가는 길이다. 어떤 손이 돌리기인가는 전 화면 공통 문법
+        (mapInteraction)이 정한다 */
     const wantsOrbit = (event: PointerEvent) =>
-      viewRef.current.pitch > 0 && dragActionOf(event.button, event) === 'rotate'
+      !orbitLockedRef.current &&
+      (viewRef.current.pitch > 0 || viewModeRef.current === '3d') &&
+      dragActionOf(event.button, event) === 'rotate'
+    /* 이번 돌리기에서 내려갈 수 있는 가장 낮은 기울기 — 평소엔 MIN_TILTED_PITCH, 바로 위에서
+       시작했으면 거기(0)까지. 시작하자마자 12° 로 튀지 않게 */
+    let orbitFloor = MIN_TILTED_PITCH
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 && event.button !== 2) return
       canvas.setPointerCapture(event.pointerId)
       dragging = true
       orbiting = wantsOrbit(event)
+      orbitFloor = Math.min(MIN_TILTED_PITCH, viewRef.current.pitch)
       moved = false
       lastX = event.clientX
       lastY = event.clientY
@@ -4210,7 +4750,7 @@ export function YardMap({
             /* 3D 안에서는 완전히 눕지도 완전히 서지도 못한다 — 그러면 모드와 화면이 어긋난다 */
             pitch: Math.min(
               MAX_PITCH,
-              Math.max(MIN_TILTED_PITCH, view.pitch - dy * ORBIT_PITCH_PER_PX)
+              Math.max(orbitFloor, view.pitch - dy * ORBIT_PITCH_PER_PX)
             ),
           }
         } else {
@@ -4234,6 +4774,16 @@ export function YardMap({
       handlers.current.onHoverBay?.(bay?.locationId ?? null)
       handlers.current.onHoverFacility?.(facility?.name ?? null)
       handlers.current.onParcelHover?.(parcelHit?.factory ?? null)
+      if (handlers.current.onSpotGroupHover || handlers.current.onSpotGroupSelect) {
+        const spot = pickSpotGroup(sx, sy)
+        handlers.current.onSpotGroupHover?.(
+          spot?.index ?? null,
+          spot == null ? null : { x: sx, y: sy },
+          spot?.via
+        )
+        /* 누르면 현황이 열린다 — 손가락 커서로 알린다 */
+        if (spot != null && handlers.current.onSpotGroupSelect) setCursor('pointer')
+      }
       /* 스포트라이트한 공장 **안**의 지번만 베이 호버로 친다 — 밖은 공장 호버일 뿐이다 */
       handlers.current.onParcelLotHover?.(
         parcelHit && parcelHit.factory === data.current.parcels?.focusedFactory
@@ -4257,6 +4807,14 @@ export function YardMap({
        * 정반 위에 세워진 블록은 영원히 못 누른다. 빈 곳을 누르면 전부 해제다.
        */
       const { sx, sy } = localPoint(event)
+      /* 점검 필요 핀·하이라이트가 맨 위에 서 있으니 그것부터 — 그 아래 공장·베이 선택보다 먼저다 */
+      if (handlers.current.onSpotGroupSelect) {
+        const spot = pickSpotGroup(sx, sy)
+        if (spot != null) {
+          handlers.current.onSpotGroupSelect(spot.index)
+          return
+        }
+      }
       const block = pickBlock(sx, sy)
       if (block) {
         handlers.current.onSelectBlock?.(block.id)
@@ -4289,7 +4847,7 @@ export function YardMap({
         ) {
           handlers.current.onParcelLotSelect(parcelHit.bay)
         } else {
-          handlers.current.onParcelSelect?.(parcelHit.factory)
+          handlers.current.onParcelSelect?.(parcelHit.factory, parcelHit.lot)
         }
         return
       }
@@ -4300,12 +4858,16 @@ export function YardMap({
       handlers.current.onSelectBay?.(null)
     }
 
+    /* 캔버스를 떠나면(지도 밖 · 지도 위 카드로) 손이 얹혔던 것을 전부 걷는다 — 공장 호버를 빼면
+       카드 위로 손을 옮겨도 그 아래 공장·베이가 계속 밝고 hover 카드가 남았다(사용자 지적) */
     const onPointerLeave = () => {
       if (dragging) return
       handlers.current.onHoverLot?.(null)
       handlers.current.onHoverBay?.(null)
       handlers.current.onHoverFacility?.(null)
+      handlers.current.onParcelHover?.(null)
       handlers.current.onParcelLotHover?.(null)
+      handlers.current.onSpotGroupHover?.(null, null)
     }
 
     const onWheel = (event: WheelEvent) => {
@@ -4332,7 +4894,7 @@ export function YardMap({
 
     /* 오른쪽 끌기가 돌리기이므로 메뉴는 막는다 — 안 막으면 한 번 돌리고 메뉴가 뜬다 */
     const onContextMenu = (event: MouseEvent) => {
-      if (viewRef.current.pitch > 0) event.preventDefault()
+      if (viewRef.current.pitch > 0 || viewModeRef.current === '3d') event.preventDefault()
     }
 
     canvas.addEventListener('pointerdown', onPointerDown)

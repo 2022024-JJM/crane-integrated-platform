@@ -61,7 +61,7 @@ const POINTS: BirdviewPoint[] = [
   },
 ]
 
-function renderBoard(props: { focusGroupKey?: string | null } = {}) {
+function renderBoard(props: { focusGroupKey?: string | null; hideFactoryList?: boolean } = {}) {
   return renderWithProviders(
     <EquipmentStatusBoard
       {...props}
@@ -83,6 +83,12 @@ function renderBoard(props: { focusGroupKey?: string | null } = {}) {
 }
 
 describe('EquipmentStatusBoard', () => {
+  it('공장 목록을 숨기면(임베드 창 기본) 목록 없이 본문만 선다', () => {
+    renderBoard({ hideFactoryList: true })
+    expect(screen.queryByRole('list', { name: '공장 목록' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /LD-B/ })).toBeInTheDocument()
+  })
+
   it('공장 목록이 왼쪽에 서고 현재 공장이 눌려 있다 (공장 탭바를 대신한다)', async () => {
     renderBoard()
     const list = await screen.findByRole('list', { name: '공장 목록' })

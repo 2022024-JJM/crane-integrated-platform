@@ -1,5 +1,7 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { useSearchParams } from 'react-router-dom'
+import { bayFocusOf, equipmentFocusOf } from '../../../shared/lib/equipmentFocus'
 import { useAsyncData } from '../../../shared/lib/useAsyncData'
 import { useClock } from '../../../shared/lib/useClock'
 import { loadYardParcels } from '../../../shared/entities/yard-parcels'
@@ -52,15 +54,31 @@ function isIssue(status: PaintingEquipmentStatus): boolean {
 export function PaintingStatusTab({
   selectedFactory,
   onSelectFactory,
+  mainOverride,
+  mainHeader,
   className,
 }: {
   selectedFactory: string
   onSelectFactory: (factory: string) => void
+  /**
+   * 오른쪽 칸에 대신 세울 것 — 블록·실적 탭의 내용. 왼쪽 공장 목록은 그대로 남는다(조립·의장과
+   * 같은 배치 — 사용자 확정). 안 주면 설비 현황(버드뷰·그리드)
+   */
+  mainOverride?: ReactNode
+  /** 오른쪽 칸 맨 위 줄 — 축 탭이 공장 목록 바로 오른쪽에 선다 */
+  mainHeader?: ReactNode
   /** 바깥이 정하는 자리 — 뷰포트에 맞춘 화면에서 남는 높이를 받는다 */
   className?: string
 }) {
   const { t } = useTranslation()
   const typeLabelOf = useEquipmentTypeLabel()
+  /*
+   * 딥링크 승계 — 야드 맵의 문제 BAY·알람이 `?bay=`·`?equip=` 를 실어 보낸다. 도착하면
+   * 그 구획(과 설비)을 고른 채로 선다. 조립·의장 현황 탭과 같은 계약이다.
+   */
+  const [searchParams] = useSearchParams()
+  const focusEquipmentId = equipmentFocusOf(searchParams)
+  const focusBay = bayFocusOf(searchParams)
   /* 이관 설비(PNL·EDGE…)의 링크는 공용 계약에서 온다 — 도장 공장은 아직 0대지만
      도면이 데려오는 날 화면을 손대지 않으려고 축을 미리 이어 둔다 */
   const { snapshot } = useFactoryEquipmentStatus(selectedFactory)
@@ -285,6 +303,8 @@ export function PaintingStatusTab({
       namedLamps
       colorByType
       sideBySide
+      focusEquipmentId={focusEquipmentId}
+      focusGroupKey={focusBay}
       /* 도면 위 기류 — 이 그림이 정지 화면이 아니게 하는 한 겹 (R45) */
       birdviewOverlay={(context) => (
         <PaintingPlanFlow context={context} units={flowUnits} bays={flowBays} />
@@ -349,6 +369,8 @@ export function PaintingStatusTab({
             )
           : undefined
       }
+      mainOverride={mainOverride}
+      mainHeader={mainHeader}
       className={className}
     />
   )

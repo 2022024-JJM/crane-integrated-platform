@@ -60,11 +60,32 @@ describe('뷰포트 표면', () => {
     expect(body).toContain('--color-background: var(--viewport)')
   })
 
+  /*
+   * 탭줄과 탭 본문은 이제 공통 부품이 판을 깐다(사용자 확정: 현황 하위 탭을 폴더 탭으로) —
+   * 축 탭은 폴더 탭(`FolderTabs`), 그 아래 본문은 보드의
+   * 내용 칸(`FolderPanel`). 그래서 워크스페이스가 그 부품을 쓰는지, 부품이 판을 까는지를 함께 지킨다.
+   */
   it.each(WORKSPACES)('%s 워크스페이스의 탭줄과 탭 본문이 그 판 위에 선다', (_zone, path) => {
     const source = readFileSync(path, 'utf8')
-    const uses = source.split('viewport-surface').length - 1
-    /* 탭줄 하나 + 탭 본문 하나 — 줄만 밝으면 같은 반전이 작게 되풀이된다 */
-    expect(uses).toBeGreaterThanOrEqual(2)
-    expect(source).toContain('role="tablist"')
+    /* 맨 위 갈래 [현황 | 실적] 알약 탭은 걷었다(사용자 확정) — 헤더 메뉴 드롭다운이 고른다 */
+    expect(source).not.toContain('<PillTabs')
+    expect(source).toContain('<FolderTabs')
+    /* 축 탭을 보드의 머리로 넘긴다 — 보드(`EquipmentStatusBoard`)가 그 아래 내용 칸(`FolderPanel`)을 판으로 깐다 */
+    expect(source).toContain('mainHeader={axisTabs}')
+  })
+
+  it('공통 탭 부품이 판을 깐다 — 알약 탭 줄 · 고른 폴더 탭 · 내용 칸', () => {
+    const pill = readFileSync('src/dashboard/shared/ui/atoms/PillTabs.tsx', 'utf8')
+    const folder = readFileSync('src/dashboard/shared/ui/atoms/FolderTabs.tsx', 'utf8')
+    const board = readFileSync('src/dashboard/shared/features/equipment-status-board/ui/EquipmentStatusBoard.tsx', 'utf8')
+    expect(pill).toContain('viewport-surface')
+    expect(pill).toContain('role="tablist"')
+    /* 고른 탭은 내용 칸과 같은 판 색으로 칸의 윗변을 덮는다 — 줄만 밝으면 같은 반전이 작게 되풀이된다 */
+    expect(folder).toContain('bg-[var(--viewport)]')
+    expect(folder).toContain("surface && 'viewport-surface'")
+    expect(folder).toMatch(/surface = true/)
+    /* 보드의 내용 칸은 판을 끄지 않는다 */
+    expect(board).toContain('<FolderPanel')
+    expect(board).not.toMatch(/<FolderPanel[^>]*surface=\{false\}/)
   })
 })

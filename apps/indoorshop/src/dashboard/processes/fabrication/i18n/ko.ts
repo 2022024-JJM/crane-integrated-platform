@@ -25,6 +25,7 @@ export const fabricationKo = {
       autoRefresh: '자동 갱신 5초',
       refreshNow: '지금 갱신',
       fetchedAt: '조회 {{time}}',
+      refreshing: '갱신 중',
       loading: '판별 실적을 불러오는 중',
       apiUnreachable: '판별 서비스 조회 API 에 연결할 수 없습니다.',
       apiHint:

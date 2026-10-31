@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useMemo } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
@@ -22,7 +22,10 @@ import {
   PAINTING_FACTORY_ROUTE_IDS,
 } from '../../lib/factoryRoutes'
 import { PaintingStatusTab } from '../PaintingStatusTab'
+import { PaintingPerformanceView } from '../PaintingPerformanceView'
+import { useWorkspaceTab, useWorkspaceTabCarry } from '../../../../shared/lib/useWorkspaceTab'
 import { useBaseDate } from '../../../../shared/lib/useBaseDate'
+import { FolderTabs } from '../../../../shared/ui/atoms/FolderTabs'
 
 /*
  * 선행도장 **공장 현황** — 맵 진입의 공장 카드에서 들어오는 화면.
@@ -44,18 +47,24 @@ import { useBaseDate } from '../../../../shared/lib/useBaseDate'
  */
 
 /*
- * 축 탭 — ①현황 / ②공장 현황.
+ * 축 탭 — ①현황 / ②블록·실적(옛 '공장 현황', 이름만 바꿨다 — 사용자 확정).
  *
  * 한때 가운데에 **가동 뷰**(3D) 탭이 따로 있었다. 지금 그 3D 는 ①현황의 설비 배치
  * **그 자리에서** 뒤집혀 선다(R45) — 배치도와 3D 가 같은 액자를 쓰므로, 탭을 하나 더
  * 두면 같은 그림으로 가는 문이 둘이 되고 둘 중 어느 쪽이 '지금 보는 것'인지 흐려진다.
  * 그래서 문을 하나로 줄였다: 배치 옆의 손잡이.
  */
-type FactoryTab = 'status' | 'factory'
+type FactoryTab = 'status' | 'blocks'
 const FACTORY_TABS: { key: FactoryTab; labelKey: InshopKey }[] = [
   { key: 'status', labelKey: 'painting.factoryStatus.tabStatus' },
-  { key: 'factory', labelKey: 'painting.factoryStatus.tabFactory' },
+  { key: 'blocks', labelKey: 'painting.factoryStatus.tabBlocks' },
 ]
+/** URL 이 실어 온 착지 탭을 이 화면의 축으로 알아보는 목록 (R28 — 조립·의장과 같은 규칙) */
+const FACTORY_TAB_KEYS = FACTORY_TABS.map((tab) => tab.key)
+
+/** 맨 위 갈래 — [실적 | 현황] (조립·의장과 같은 틀, 사용자 확정) */
+type PageView = 'performance' | 'status'
+const PAGE_VIEW_PARAM = 'view'
 
 const STEP_NAME_KEY: Record<PaintingStepId, InshopKey> = {
   SP: 'performance.pnt.step.SP',
@@ -147,7 +156,7 @@ export function PaintingFactoryStatusPage() {
   const [searchParams] = useSearchParams()
 
   /*
-   * 이 공정의 공장들 — 좌측(머리) 레일이자 대문의 기본값 재료 (R22).
+   * 이 공정의 공장들 — 왼쪽 공장 목록이자 대문의 기본값 재료 (R22).
    * 맵 진입 화면을 걷으면서 `/indoorshop/zones/painting` 이 이 화면의 대문이 됐다.
    */
   const factories = useMemo(
@@ -161,11 +170,37 @@ export function PaintingFactoryStatusPage() {
   })
   const factory = factoryId ? paintingFactoryNameOf(factoryId) : null
 
-  /* 공장을 옮기면 기본(현황)으로 돌아온다 — 탭은 그 공장의 것이다 */
-  const [tab, setTab] = useState<FactoryTab>('status')
-  useEffect(() => {
-    setTab('status')
-  }, [factoryId])
+  /*
+   * 맨 위 갈래 — [실적 | 현황](사용자 확정, 조립·의장과 같은 규칙). 현황은 지금까지의 화면
+   * 전체이고 실적은 통합실적의 도장 공정만이다. 축 탭(`?tab=`)과 다른 층이라 `?view=` 에 싣는다.
+   *
+   * 기본은 **실적**이다. 다만 주소가 축 탭(`?tab=`)을 말하면 현황으로 선다.
+   * 야드 맵의 창(임베드)에서는 갈래 탭을 걷고, `?view=performance` 가 오지 않는 한 현황이다.
+   */
+  const rawPageView = searchParams.get(PAGE_VIEW_PARAM)
+  /* 기본은 **현황**이다(사용자 확정 — 탭도 [현황 | 실적] 순). `?view=performance` 일 때만 실적으로 선다 —
+     야드 맵 창(임베드)도, 작업 카드의 실적 문도 같은 규칙이다 */
+  /* 화면 안의 [현황 | 실적] 탭은 걷었다(사용자 확정) — 갈래는 헤더 메뉴의 드롭다운이 `?view=` 로 고른다 */
+  const pageView: PageView = rawPageView === 'performance' ? 'performance' : 'status'
+
+  /* 축 탭 — 지금 서 있는 축은 주소가 말한다 (R28·R30, 조립·의장과 같은 규칙) */
+  const { tab: selectedTab, setTab } = useWorkspaceTab(FACTORY_TAB_KEYS, 'status')
+  /*
+   * 탭 강조는 누르는 즉시(`selectedTab`), 오른쪽 내용은 **한 박자 뒤에** 그린다(사용자 확정: 탭을 먼저
+   * 전환하고 그리기). 3D 장면·배치 그림처럼 무거운 내용을 급하지 않은 업데이트로 미뤄, 그 사이에도
+   * 탭 줄은 바로 반응한다. 그리는 동안은 이전 탭 내용이 그대로 남아 있다.
+   */
+  const tab = useDeferredValue(selectedTab)
+  /* 공장을 옮겨도 보던 축과 갈래를 들고 간다 — 현황에서 공장을 바꿨는데 실적으로 튕기면 안 된다 */
+  const carryAxisTab = useWorkspaceTabCarry()
+  const carryTab = useCallback(
+    (path: string) => {
+      const next = carryAxisTab(path)
+      if (pageView !== 'status') return next
+      return `${next}${next.includes('?') ? '&' : '?'}${PAGE_VIEW_PARAM}=status`
+    },
+    [carryAxisTab, pageView]
+  )
 
   /* 이관 설비 상태는 공용 설비 계약에서 구독한다 — 공장을 못 찾은 경우에도 훅은 부른다
      (조건부 훅 금지). 빈 문자열이면 빈 스냅샷이 온다. */
@@ -185,6 +220,20 @@ export function PaintingFactoryStatusPage() {
 
   if (!factory || !collection || !inventory) return <NotFoundNotice />
 
+  /*
+   * 축 탭 — 공장 목록 **바로 오른쪽**, 탭 내용 칸의 맨 위에 선다(사용자 확정). 폴더 탭이라 고른 탭과
+   * 아래 내용 칸이 한 테두리로 이어진다(`FolderTabs` · 보드의 `FolderPanel`).
+   * 헤더 줄에는 맨 위 갈래 [현황 | 실적] 만 남는다.
+   */
+  const axisTabs = (
+    <FolderTabs
+      ariaLabel={t('painting.factoryStatus.tabAria')}
+      items={FACTORY_TABS.map(({ key, labelKey }) => ({ key, label: t(labelKey) }))}
+      value={selectedTab}
+      onChange={setTab}
+    />
+  )
+
   return (
     /*
      * 이 화면은 문서가 아니라 계기판이다 — 조립·의장 워크스페이스와 같은 골격으로,
@@ -195,197 +244,150 @@ export function PaintingFactoryStatusPage() {
     <div className="flex flex-col gap-4 md:h-full md:min-h-0 md:gap-3">
       <FixedViewport />
 
-      <div className="shrink-0">
-        {/* 공장 레일 — 이 공정의 공장을 여기서 갈아탄다 (R22: 맵 진입 화면을 대신한다) */}
-        <nav aria-label={t('painting.factoryStatus.factoryRail')} className="flex flex-wrap gap-1">
-          {factories.map((entry) => (
-            <Link
-              key={entry.id}
-              to={`/indoorshop/zones/painting/${entry.id}`}
-              aria-current={entry.id === factoryId ? 'page' : undefined}
-              className={cn(
-                'rounded-inshop-md px-2.5 py-1 text-inshop-xs font-medium transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                entry.id === factoryId
-                  ? 'bg-accent text-on-accent'
-                  : 'text-foreground/60 hover:bg-surface-secondary hover:text-foreground'
-              )}
-            >
-              {entry.name}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-inshop-xl font-semibold text-foreground">{factory}</h1>
-          <span className="text-inshop-xs text-foreground/63">
-            {t('painting.factoryStatus.blockSummary', {
-              total: collection.blockCount,
-              inProgress: collection.inProgressBlocks,
-            })}
-          </span>
-          <span className="font-mono text-inshop-xs text-foreground/55">
-            {t('painting.factoryStatus.stepSummary', {
-              done: collection.stepsDone,
-              total: collection.stepsTotal,
-            })}
-          </span>
-        </div>
-        <p className="mt-1 text-2xs text-foreground/45">
-          {collection.progressAsOf
-            ? t('performance.pnt.dailyRateAsOf', { date: collection.progressAsOf })
-            : t('performance.pnt.dailyRateNone')}
-        </p>
-      </div>
-
-      {/* 축 탭 — ①현황 / ②가동 뷰(자리) / ③공장 현황. 조립·의장과 같은 프레임 */}
-      <div
-        role="tablist"
-        aria-label={t('painting.factoryStatus.tabAria')}
-        /* 붙임(sticky)은 페이지가 흐르던 시절의 것이다 — 이제 흐르는 것은 아래 판 안쪽뿐이다 */
-        className="viewport-surface flex w-fit shrink-0 items-center gap-1 rounded-inshop-lg border border-border bg-surface-secondary p-1"
-      >
-        {FACTORY_TABS.map(({ key, labelKey }) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={cn(
-              'rounded-inshop-md px-3 py-1 text-inshop-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-              tab === key
-                ? 'bg-accent text-on-accent shadow-sm'
-                : 'text-foreground/60 hover:bg-surface-secondary hover:text-foreground'
-            )}
-          >
-            {t(labelKey)}
-          </button>
-        ))}
-      </div>
-
       {/*
-        탭 본문 — ①현황·②가동 뷰·③공장 현황이 **같은 어두운 판** 위에 선다(감사 A10).
-        3D(가동 뷰)만 어둡고 나머지가 흰 종이면 탭을 옮길 때마다 같은 화면 안에서 명암이
-        뒤집힌다. 조립·의장 워크스페이스가 쓰는 판을 그대로 쓴다 — 토큰만 바꾸는 판이라
-        아래 컴포넌트의 마크업·레이아웃은 그대로다.
+        머리글 한 줄 — 조립·의장과 같은 문법: 맨 위 갈래 [실적 | 현황] 바로 옆에 축 탭(좌),
+        요약(우). 축 탭과 오른쪽은 현황 갈래에만 선다.
+
+        머리의 공장 레일은 없앴다 — 공장을 고르는 자리는 현황의 왼쪽 공장 목록 하나다
+        (조립·의장과 같은 배치). 고르는 자리가 둘이면 지금 무엇을 보는지가 흐려진다.
       */}
-      <div className="viewport-surface flex min-w-0 flex-col gap-4 rounded-inshop-lg p-3 md:min-h-0 md:flex-1">
-      {tab === 'status' ? (
-        /* ① 현황 — 공장 목록 + 버드뷰 + 베이별 설비 그리드 (공용 보드).
-           보드가 남는 높이를 통째로 받고 **목록만 그 안에서 흐른다** — 배치 그림은
-           스크롤을 굴려도 제자리에 남아야 두 층이 함께 일한다(R29). */
-        <PaintingStatusTab
-          className="md:min-h-0 md:flex-1"
-          selectedFactory={factory}
-          onSelectFactory={(next) => {
-            const id = paintingFactoryIdOf(next)
-            if (id) navigate(`/indoorshop/zones/painting/${id}`)
-          }}
-        />
-      ) : (
-        /* ③ 공장 현황 — 문서형 카드라 여기만 스스로 흐른다 */
-        <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
-          {/* ── 스텝 진행 — 절점 축. 계획한 블록이 없는 스텝은 자리를 비우고 그렇다고 말한다 ── */}
-          <section className="rounded-inshop-lg border border-border bg-surface p-3">
-            <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
-              {t('painting.factoryStatus.stepProgressTitle')}
-            </h2>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {rollup.map((row) => (
-                <div key={row.step} className="rounded-inshop-md bg-surface-secondary/40 p-3">
-                  {/* 이 카드가 답하는 것은 '몇 개 통과했나' 하나다 — 그 수를 스텝 이름보다
-                      크게 세운다(3m 판독). 분모는 같은 줄에 작게 붙여 분자와 가르고,
-                      스텝 이름은 그 위에 라벨 크기로 물러선다. 자리는 그대로다. */}
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-2xs font-semibold uppercase tracking-[0.06em] text-foreground/55">
-                      {t(STEP_NAME_KEY[row.step])}
-                    </span>
-                    <span className="font-mono text-inshop-2xl font-semibold tabular-nums text-foreground">
-                      {row.done}
-                      <span className="text-inshop-sm font-normal text-foreground/45">/{row.blocks}</span>
-                    </span>
-                  </div>
-                  {row.blocks === 0 ? (
-                    <p className="mt-1.5 text-2xs text-foreground/45">
-                      {t('painting.factoryStatus.stepNotPlanned')}
-                    </p>
-                  ) : (
-                    <>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-secondary">
-                        <span
-                          className="block h-full rounded-full bg-status-healthy"
-                          style={{ width: `${Math.round((row.done / row.blocks) * 100)}%` }}
-                        />
-                      </div>
-                      <p className="mt-1.5 text-2xs text-foreground/55">
-                        {t('painting.factoryStatus.stepInProgress', { count: row.inProgress })}
-                        {row.progressPct != null && (
-                          <span className="ml-1.5 font-mono tabular-nums">{row.progressPct}%</span>
+      {/* 화면 안의 [현황 | 실적] 탭은 걷었다(사용자 확정) — 헤더 메뉴의 드롭다운이 갈래를 고른다.
+          탭이 빠진 머리 줄에 오른쪽 요약만 남으면 화면 위가 비어 보여(사용자 지적) 줄째 걷었다 */}
+
+      {pageView === 'status' ? (
+        /*
+          탭 본문 — **같은 어두운 판** 위에 선다(감사 A10). 왼쪽 공장 목록은 **모든 탭에 남고**,
+          탭의 내용은 오른쪽 칸에 선다(조립·의장과 같은 배치 — 사용자 확정). ①현황은 설비 현황
+          (버드뷰·그리드 — 보드가 남는 높이를 받고 목록만 그 안에서 흐른다, R29),
+          ②블록·실적은 그 자리를 바꿔 끼운다(`mainOverride`).
+        */
+        <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:flex-1">
+          <PaintingStatusTab
+            className="md:min-h-0 md:flex-1"
+            selectedFactory={factory}
+            onSelectFactory={(next) => {
+              const id = paintingFactoryIdOf(next)
+              /* 보던 탭을 들고 간다 — 블록·실적을 보다가 공장을 바꾸면 그 공장의 블록·실적으로 */
+              if (id) navigate(carryTab(`/indoorshop/zones/painting/${id}`))
+            }}
+            mainHeader={axisTabs}
+            mainOverride={
+              tab === 'status' ? undefined : (
+              /* ② 블록·실적 — 문서형 카드라 여기만 스스로 흐른다 */
+              <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+                {/* ── 스텝 진행 — 절점 축. 계획한 블록이 없는 스텝은 자리를 비우고 그렇다고 말한다 ── */}
+                <section className="rounded-inshop-lg border border-border bg-surface p-3">
+                  <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
+                    {t('painting.factoryStatus.stepProgressTitle')}
+                  </h2>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {rollup.map((row) => (
+                      <div key={row.step} className="rounded-inshop-md bg-surface-secondary/40 p-3">
+                        {/* 이 카드가 답하는 것은 '몇 개 통과했나' 하나다 — 그 수를 스텝 이름보다
+                            크게 세운다(3m 판독). 분모는 같은 줄에 작게 붙여 분자와 가르고,
+                            스텝 이름은 그 위에 라벨 크기로 물러선다. 자리는 그대로다. */}
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-2xs font-semibold uppercase tracking-[0.06em] text-foreground/55">
+                            {t(STEP_NAME_KEY[row.step])}
+                          </span>
+                          <span className="font-mono text-inshop-2xl font-semibold tabular-nums text-foreground">
+                            {row.done}
+                            <span className="text-inshop-sm font-normal text-foreground/45">/{row.blocks}</span>
+                          </span>
+                        </div>
+                        {row.blocks === 0 ? (
+                          <p className="mt-1.5 text-2xs text-foreground/45">
+                            {t('painting.factoryStatus.stepNotPlanned')}
+                          </p>
+                        ) : (
+                          <>
+                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-secondary">
+                              <span
+                                className="block h-full rounded-full bg-status-healthy"
+                                style={{ width: `${Math.round((row.done / row.blocks) * 100)}%` }}
+                              />
+                            </div>
+                            <p className="mt-1.5 text-2xs text-foreground/55">
+                              {t('painting.factoryStatus.stepInProgress', { count: row.inProgress })}
+                              {row.progressPct != null && (
+                                <span className="ml-1.5 font-mono tabular-nums">{row.progressPct}%</span>
+                              )}
+                            </p>
+                          </>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                  {/* ── 블록 목록 (BTS 귀속) ── */}
+                  <section className="min-w-0 flex-1 rounded-inshop-lg border border-border bg-surface p-3">
+                    <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
+                      {t('painting.factoryStatus.blockListTitle')}
+                    </h2>
+                    {collection.blocks.length === 0 ? (
+                      <p className="px-2 py-6 text-center text-inshop-sm text-foreground/45">
+                        {t('painting.factoryStatus.noBlocks')}
                       </p>
-                    </>
-                  )}
+                    ) : (
+                      <ul>
+                        {collection.blocks.map((block) => (
+                          <BlockRow key={block.key} block={block} />
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-2 px-2 text-2xs leading-relaxed text-foreground/40">
+                      {t('painting.factoryStatus.btsNote')}
+                    </p>
+                  </section>
+
+                  {/* ── 설비 요약 — 지도의 설비 상태 단과 같은 인벤토리 ── */}
+                  <aside className="rounded-inshop-lg border border-border bg-surface p-3 md:w-72 md:shrink-0">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h2 className="text-inshop-sm font-semibold text-foreground">
+                        {t('painting.factoryStatus.equipmentTitle')}
+                      </h2>
+                      <span className="font-mono text-inshop-xs tabular-nums text-foreground/68">
+                        {inventory.scadaTotal + inventory.transferredTotal}
+                      </span>
+                    </div>
+                    <ul className="space-y-1">
+                      {[...inventory.scada, ...inventory.transferred].map((row) => (
+                        <li key={row.typeId} className="flex items-center gap-2 px-1 py-1 text-inshop-xs">
+                          <EquipmentSymbolChip typeId={row.typeId} size={15} />
+                          <span className="min-w-0 flex-1 truncate text-foreground/68">{row.name}</span>
+                          <span className="font-mono tabular-nums text-foreground">{row.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {inventory.transferredTotal === 0 && (
+                      <p className="mt-1.5 px-1 text-2xs leading-relaxed text-foreground/45">
+                        {t('painting.mapEntry.equipment.noTransferred')}
+                      </p>
+                    )}
+                    {inventory.transferredIssues > 0 && (
+                      <p className="mt-1.5 px-1 text-2xs font-medium text-status-degraded">
+                        {t('painting.mapEntry.equipment.issueCount', { count: inventory.transferredIssues })}
+                      </p>
+                    )}
+                  </aside>
                 </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="flex flex-col gap-4 md:flex-row md:items-start">
-            {/* ── 블록 목록 (BTS 귀속) ── */}
-            <section className="min-w-0 flex-1 rounded-inshop-lg border border-border bg-surface p-3">
-              <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
-                {t('painting.factoryStatus.blockListTitle')}
-              </h2>
-              {collection.blocks.length === 0 ? (
-                <p className="px-2 py-6 text-center text-inshop-sm text-foreground/45">
-                  {t('painting.factoryStatus.noBlocks')}
-                </p>
-              ) : (
-                <ul>
-                  {collection.blocks.map((block) => (
-                    <BlockRow key={block.key} block={block} />
-                  ))}
-                </ul>
-              )}
-              <p className="mt-2 px-2 text-2xs leading-relaxed text-foreground/40">
-                {t('painting.factoryStatus.btsNote')}
-              </p>
-            </section>
-
-            {/* ── 설비 요약 — 지도의 설비 상태 단과 같은 인벤토리 ── */}
-            <aside className="rounded-inshop-lg border border-border bg-surface p-3 md:w-72 md:shrink-0">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-inshop-sm font-semibold text-foreground">
-                  {t('painting.factoryStatus.equipmentTitle')}
-                </h2>
-                <span className="font-mono text-inshop-xs tabular-nums text-foreground/68">
-                  {inventory.scadaTotal + inventory.transferredTotal}
-                </span>
               </div>
-              <ul className="space-y-1">
-                {[...inventory.scada, ...inventory.transferred].map((row) => (
-                  <li key={row.typeId} className="flex items-center gap-2 px-1 py-1 text-inshop-xs">
-                    <EquipmentSymbolChip typeId={row.typeId} size={15} />
-                    <span className="min-w-0 flex-1 truncate text-foreground/68">{row.name}</span>
-                    <span className="font-mono tabular-nums text-foreground">{row.count}</span>
-                  </li>
-                ))}
-              </ul>
-              {inventory.transferredTotal === 0 && (
-                <p className="mt-1.5 px-1 text-2xs leading-relaxed text-foreground/45">
-                  {t('painting.mapEntry.equipment.noTransferred')}
-                </p>
-              )}
-              {inventory.transferredIssues > 0 && (
-                <p className="mt-1.5 px-1 text-2xs font-medium text-status-degraded">
-                  {t('painting.mapEntry.equipment.issueCount', { count: inventory.transferredIssues })}
-                </p>
-              )}
-            </aside>
-          </div>
+              )
+            }
+          />
+        </div>
+      ) : (
+        /* 실적 갈래 — 통합실적의 조회 바로 **도장만** 찾는다(사용자 확정) */
+        <div
+          role="tabpanel"
+          aria-label={t('painting.factoryStatus.viewPerformance')}
+          className="flex min-w-0 flex-col md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1"
+        >
+          <PaintingPerformanceView />
         </div>
       )}
-      </div>
     </div>
   )
 }

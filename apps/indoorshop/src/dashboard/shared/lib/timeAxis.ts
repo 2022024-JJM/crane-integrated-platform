@@ -111,6 +111,28 @@ export function selectionOfDate(
   return { date: clamped, spanDays: span, preset: 'custom' }
 }
 
+/** 기간으로 고를 수 있는 가장 긴 창(일) — 석 달. 그보다 길면 일자별 행이 화면을 넘친다 */
+export const MAX_SPAN_DAYS = 92
+
+/**
+ * 달력에서 고른 **기간**(시작일 ~ 종료일) → 선택(사용자 확정: 날짜 구간 선택).
+ *
+ * 창은 언제나 '종료일까지 N 일' 로 담는다 — 시작일은 따로 싣지 않고 `spanDays` 가 말한다(주소도
+ * `?date=종료일&span=N` 그대로). 종료일은 오늘을 넘지 못하고, 시작일이 종료일보다 늦으면 종료일로
+ * 붙인다. 너무 긴 기간은 `MAX_SPAN_DAYS` 로 자른다(종료일 기준). 오늘까지 7일이면 '지난 7일' 이다.
+ */
+export function selectionOfRange(
+  from: string,
+  to: string,
+  today: string = todayString()
+): BaseDateSelection {
+  const end = !isValidDateString(to) || to > today ? today : to
+  const start = !isValidDateString(from) || from > end ? end : from
+  const span = Math.min(MAX_SPAN_DAYS, daysBetween(start, end) + 1)
+  if (span === 7 && end === today) return selectionOfPreset('last7', today)
+  return selectionOfDate(end, today, span)
+}
+
 /** 이 선택이 여는 조회 창 — 끝은 언제나 기준일이다(그 뒤는 아직 일어나지 않았다) */
 export function windowOf(selection: BaseDateSelection): DateWindow {
   return { from: shiftDate(selection.date, -(Math.max(1, selection.spanDays) - 1)), to: selection.date }
@@ -182,6 +204,39 @@ export function parseDateParams(
     return span > 1 ? { date: today, spanDays: span, preset: 'last7' } : defaultSelection(today)
   }
   return selectionOfDate(raw, today, span)
+}
+
+/**
+ * **마지막으로 고른 기준일** — 탭(화면) 사이에 날짜를 잇는 자리(사용자 확정: 날짜 필터는 모든 탭이 공유).
+ *
+ * 정본은 여전히 주소(`?date=`·`?span=`)다. 다만 헤더 메뉴처럼 주소에 날짜를 싣지 않는 이동으로
+ * 다른 탭에 가면 그 탭은 오늘로 선다 — 호선·블록 선택(`rememberSelection`)과 같은 이유로 한 칸 기억해
+ * 두고, **주소에 날짜가 없을 때만** 그것으로 선다. 기본은 오늘이다(기억이 없거나 오늘을 골랐으면).
+ * 모듈 상태라 새로고침하면 사라진다 — 그때는 주소가 유일한 근거다.
+ */
+let stickyDate: { date: string; spanDays: number } | null = null
+
+export function rememberDateSelection(selection: BaseDateSelection, today: string = todayString()): void {
+  stickyDate = selection.date === today && selection.spanDays === 1 ? null : { date: selection.date, spanDays: selection.spanDays }
+}
+
+/** 테스트 격리 */
+export function clearDateSelection(): void {
+  stickyDate = null
+}
+
+/** 주소의 날짜 파라미터 — 없으면 마지막으로 고른 날짜를 파라미터 모양으로 */
+export function dateParamsWithMemory(params: URLSearchParams): URLSearchParams {
+  if (params.get(DATE_PARAMS.date) || params.get(DATE_PARAMS.span) || !stickyDate) return params
+  const out = new URLSearchParams(params)
+  out.set(DATE_PARAMS.date, stickyDate.date)
+  if (stickyDate.spanDays > 1) out.set(DATE_PARAMS.span, String(stickyDate.spanDays))
+  return out
+}
+
+/** 화면이 들어설 때의 기준일 — 주소 > 마지막으로 고른 날짜 > 오늘 */
+export function entryDateSelection(params: URLSearchParams, today: string = todayString()): BaseDateSelection {
+  return parseDateParams(dateParamsWithMemory(params), today)
 }
 
 /**

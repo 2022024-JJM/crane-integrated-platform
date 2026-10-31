@@ -376,3 +376,26 @@ export function PinIcon({ className, size }: IconProps) {
     </Icon>
   )
 }
+
+/** 최근 본 화면 — 시계 둘레에 되돌아가는 화살표 */
+export function HistoryIcon({ className, size }: IconProps) {
+  return (
+    <Icon className={className} size={size}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+      <path d="M3 3.5v4h4" />
+      <path d="M12 7.5V12l3 2" />
+    </Icon>
+  )
+}
+
+/** 즐겨찾기 — 별. 켜지면 속을 채운다(테두리 굵기는 다른 아이콘과 같다) */
+export function StarIcon({ className, size, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <Icon className={className} size={size}>
+      <path
+        d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"
+        fill={filled ? 'currentColor' : 'none'}
+      />
+    </Icon>
+  )
+}

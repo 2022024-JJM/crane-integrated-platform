@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bayClickIntent,
   mapSpotlight,
   selectBay,
   selectFactory,
@@ -152,11 +151,11 @@ describe('selectBay — 지도에서 고른 베이 (한 번 클릭 = 선택, 이
     })
   })
 
-  it('같은 베이를 다시 누르면 해제된다 (토글)', () => {
+  it('같은 베이를 다시 눌러도 선택을 그대로 둔다 — 한 단계 뒤로 물러나지 않는다', () => {
     expect(selectBay({ kind: 'factory', name: 'PBS', bay: 'PBS#3' }, 'PBS#3')).toEqual({
       kind: 'factory',
       name: 'PBS',
-      bay: null,
+      bay: 'PBS#3',
     })
   })
 
@@ -195,44 +194,3 @@ describe('selectFactory — 공장이 바뀌면 그 아래 베이 선택도 사�
   })
 })
 
-describe('bayClickIntent — 같은 베이 재클릭 = 그 베이로 이동', () => {
-  const PATH = '/indoorshop/zones/assembly/asm-pbs/asm-pbs-b3'
-
-  it('처음 누른 베이는 고르기만 한다 (이동 없음)', () => {
-    expect(bayClickIntent({ kind: 'factory', name: 'PBS' }, 'PBS#3', PATH)).toEqual({
-      kind: 'select',
-      selection: { kind: 'factory', name: 'PBS', bay: 'PBS#3', location: null },
-    })
-  })
-
-  it('이미 고른 베이를 한 번 더 누르면 그 베이의 상세로 나간다', () => {
-    expect(
-      bayClickIntent({ kind: 'factory', name: 'PBS', bay: 'PBS#3' }, 'PBS#3', PATH)
-    ).toEqual({ kind: 'open', path: PATH })
-  })
-
-  it('다른 베이를 누르는 것은 갈아타기다 — 재클릭이 아니다', () => {
-    expect(
-      bayClickIntent({ kind: 'factory', name: 'PBS', bay: 'PBS#3' }, 'PBS#4', PATH)
-    ).toEqual({
-      kind: 'select',
-      selection: { kind: 'factory', name: 'PBS', bay: 'PBS#4', location: null },
-    })
-  })
-
-  it('갈 곳이 없는 베이는 재클릭도 지금까지처럼 선택 해제다', () => {
-    expect(
-      bayClickIntent({ kind: 'factory', name: 'PBS', bay: 'PBS#3' }, 'PBS#3', null)
-    ).toEqual({
-      kind: 'select',
-      selection: { kind: 'factory', name: 'PBS', bay: null },
-    })
-  })
-
-  it('공장 선택이 없으면 이동하지 않는다 — 베이 선택 자체가 서지 않는다', () => {
-    expect(bayClickIntent({ kind: 'process', process: '조립' }, 'PBS#3', PATH)).toEqual({
-      kind: 'select',
-      selection: { kind: 'process', process: '조립' },
-    })
-  })
-})

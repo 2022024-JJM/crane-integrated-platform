@@ -24,7 +24,8 @@ import {
 } from '../../performance/api/performanceApi'
 import { fetchFactoryOverviews } from '../../../model/processRegistry'
 import { drilldownHref } from '../../../lib/drilldownUrl'
-import { withEquipmentFocus } from '../../../lib/equipmentFocus'
+import { withEquipmentLanding } from '../../../lib/equipmentFocus'
+import { STATUS_TAB, withWorkspaceTab } from '../../../lib/workspaceTabUrl'
 import { useAsyncData } from '../../../lib/useAsyncData'
 import { useClock } from '../../../lib/useClock'
 import type { Alarm } from '../../../entities/alarm/model/types'
@@ -116,13 +117,16 @@ export function useRailAlarms(): RailAlarmsState {
         /* 드릴다운 URL 계약 — 베이 id 는 `{공장}#{베이}` (drilldownUrl.ts).
            **누구 때문에 왔는지도 함께 싣는다**(`?equip=`) — 도착 화면이 접는 규칙에
            가려 당사자를 못 세우는 일이 없게 (equipmentFocus.ts) */
-        return withEquipmentFocus(
+        /* 현황 축까지 싣는다 — 공정 화면의 기본 갈래는 실적이라, 축을 말하지 않으면
+           설비가 아니라 실적 조회 화면에 내려선다 */
+        return withEquipmentLanding(
           drilldownHref(`/indoorshop/zones/${zone}`, '', {
             process: null,
             factory: equipment.factory,
             bay: equipment.bay ? `${equipment.factory}#${equipment.bay}` : null,
           }),
-          equipment.id
+          equipment.id,
+          STATUS_TAB
         )
       }),
     [snapshot, zoneOfFactory]
@@ -158,7 +162,8 @@ export function useRailAlarms(): RailAlarmsState {
           zone: 'assembly',
           minutesSinceLast: latest ? minutesSinceHHMM(latest, now) : null,
           lastLabel: latest,
-          href: '/indoorshop/zones/assembly',
+          /* 수집 공백은 설비 현황에서 본다 — 기본 갈래(실적)가 아니라 현황 축으로 */
+          href: withWorkspaceTab('/indoorshop/zones/assembly', STATUS_TAB),
         },
       ],
       { nowIso: now.toISOString() }

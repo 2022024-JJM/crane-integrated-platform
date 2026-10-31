@@ -402,6 +402,16 @@
 }
 
 
+/*
+ * 기본 스크롤바를 테마에 맞춘다 — `color-scheme` 이 없으면 브라우저가 밝은(흰) 트랙을 그려서
+ * 다크 테마의 화면 오른쪽에 흰 띠가 선다. 트랙은 비워 그 자리의 배경이 그대로 보이게 하고,
+ * 막대는 글자색을 옅게 써서 밝은 · 어두운 테마 · 뷰포트 표면 어디서나 같은 결로 선다.
+ */
+.inshop-root,
+.inshop-root * {
+  scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent;
+}
+
 /* 전체 현황은 작은 정보가 밀집되어 있어 본문보다 조금 더 정교한 자간을 사용한다. */
 .dashboard-typography {
   letter-spacing: -0.012em;

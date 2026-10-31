@@ -7,13 +7,15 @@ import type { DocContent, DocMeta } from '../model/types'
  * 링크만 걸어 두면 클릭했을 때 파일을 내려받거나 GitHub 로 나가야 하는데, OT망
  * 현황판에서는 둘 다 막혀 있다 — 그래서 문서를 **번들에 담아 화면 안에서** 읽는다.
  * 문서가 늘거나 이름이 바뀌어도 이 파일을 고칠 필요는 없다 (glob 이 잡는다).
+ * 폴더 구성은 `docs/문서지도.md`를 따른다 — 정본 문서 폴더(guide·spec·interface·prd·design)만
+ * 담고, 회의록·plan(구현 기록)은 현장 화면에 내지 않는다.
  *
  * 본문을 eager 로 담는 이유: 제목·요약을 문서 첫 줄에서 뽑기 때문에 목록을 그리려면
  * 어차피 내용이 필요하다. 문서 전체가 80KB 남짓이라 청크 하나로 들고 가는 편이
  * 문서마다 동적 import 를 거는 것보다 단순하고 빠르다. (문서가 몇 배로 늘면
  * 메타만 빌드 시점에 뽑아 두고 본문은 lazy 로 돌리는 편이 낫다.)
  */
-const rawDocs: Record<string, string> = import.meta.glob('../content/*.md', {
+const rawDocs: Record<string, string> = import.meta.glob('../content/**/*.md', {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -22,19 +24,19 @@ const rawDocs: Record<string, string> = import.meta.glob('../content/*.md', {
 /**
  * glob 키를 원본 레포(ocean-inshop-process) 기준 경로로 되돌린다.
  *
- * 원본은 레포 루트의 `docs/*.md` 와 `AGENTS.md` 를 직접 glob 했다. 이식 후에는
+ * 원본은 레포 루트의 `docs/`(정본 폴더 포함)와 `AGENTS.md` 를 직접 glob 했다. 이식 후에는
  * 그 파일들이 이 패키지의 `entities/doc/content/` 로 함께 들어와 있으므로 —
  * 셸 레포의 `docs/` 는 크레인 쪽 문서라 여기서 읽을 것이 아니다 — glob 은
  * 그 폴더만 보고, 표시용 경로는 파일 이름으로 원래 위치를 되살린다.
  */
-const WEB_DASHBOARD_DOCS = new Set(['ROUTING.md'])
+const APP_DOCS = new Set(['ROUTING.md'])
 const REPO_ROOT_DOCS = new Set(['AGENTS.md'])
 
 function toRepoPath(globKey: string): string {
   const name = fileNameOf(globKey)
   if (REPO_ROOT_DOCS.has(name)) return name
-  if (WEB_DASHBOARD_DOCS.has(name)) return `web-dashboard/${name}`
-  return `docs/${name}`
+  if (APP_DOCS.has(name)) return `apps/ot-dashboard/${name}`
+  return `docs/${globKey.replace(/^\.\.\/content\//, '')}`
 }
 
 function fileNameOf(globKey: string): string {
@@ -44,7 +46,7 @@ function fileNameOf(globKey: string): string {
 /** 문서 묶음 — 목록에서 이 이름으로 나눈다 (이름 자체는 화면이 번역한다) */
 function groupKeyOf(repoPath: string): InshopKey {
   if (repoPath.startsWith('docs/')) return 'docs.groups.design'
-  if (repoPath.startsWith('web-dashboard/')) return 'docs.groups.frontend'
+  if (repoPath.startsWith('apps/ot-dashboard/')) return 'docs.groups.frontend'
   return 'docs.groups.convention'
 }
 

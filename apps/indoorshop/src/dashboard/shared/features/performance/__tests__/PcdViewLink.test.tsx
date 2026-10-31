@@ -31,9 +31,10 @@ describe('AssemblyCard — 진행중 ASSY 줄의 PCD 뷰', () => {
         /^\/indoorshop\/zones\/assembly\/asm-[a-z0-9]+\/asm-[a-z0-9]+-b\d+\?block=2540-283&tab=viewer$/
       )
     }
-    /* 미완료 ASSY 중 소재(placement.berth) 있는 것 전부에 문이 선다 */
+    /* 화면에 선 카드(급마다 한 단 — 고른 대조·중조의 하위만 선다) 중 미완료 · 소재(placement.berth) 있는 것 전부에 문이 선다 */
     const expected = summary.assys.filter((assy) => {
       if (assy.done) return false
+      if (!document.getElementById(`assy-${assy.assyNo}`)) return false
       return pcdHrefOfAssy(assy.assyNo) != null
     })
     expect(links.length).toBe(expected.length)

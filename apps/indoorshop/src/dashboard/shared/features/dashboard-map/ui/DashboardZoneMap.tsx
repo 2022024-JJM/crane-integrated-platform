@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import {
   YardMap,
@@ -18,14 +18,16 @@ import {
   type Viewport,
 } from '../../yard-map'
 import {
-  stashCameraHandoff,
+  recallYardCamera,
+  rememberYardCamera,
   takeCameraHandoff,
 } from '../../yard-map/lib/cameraHandoff'
+import { rememberYardMapSearch } from '../../../lib/lastYardMap'
+import { fitView, project, screenToWorld } from '../../yard-map/lib/projection'
 import { performanceLinkFor, sitesOfBlock } from '../../../entities/vessel'
 import {
   loadYardParcels,
   boundsOfLots,
-  PARCEL_CATEGORY_COLORS,
   colorOfProcess,
   type YardParcels,
 } from '../../../entities/yard-parcels'
@@ -35,20 +37,13 @@ import { getProcessMapDrilldown, fetchYardMapBackdrop } from '../../../model/pro
 import type { YardMapBackdrop } from '../../../model/yardMapBackdrop'
 import {
 } from '../../../entities/zone/model/types'
-import { CloseIcon } from '../../../ui/icons'
 import { DraggableCard } from '../../../ui/atoms/DraggableCard'
-import {
-  DrilldownBreadcrumb,
-  type BreadcrumbStep,
-} from '../../../ui/atoms/DrilldownBreadcrumb'
 import { useDrilldown } from '../../../lib/useDrilldown'
 import { useBaseDate } from '../../../lib/useBaseDate'
 import { useDrilldownEscape } from '../../../lib/useDrilldownEscape'
 import { YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
-import { cn } from '../../../lib/utils'
 import type { ProcessMapLocation } from '../../../model/processMapDrilldown'
 import {
-  bayClickIntent,
   mapSpotlight,
   drilldownOfSelection,
   selectionOfDrilldown,
@@ -58,24 +53,59 @@ import {
   type DashboardMapSelection,
 } from '../lib/mapSpotlight'
 import { restyleDarkBasemap } from '../lib/darkMapRestyle'
-import { ZoneJumpButton } from './ZoneJumpButton'
-import { FactoryBayList } from './FactoryBayList'
+import { FactoryBayList, FactoryWorkSummary } from './FactoryBayList'
+import { FaultBayPanel } from './FaultBayPanel'
+import { CameraReadout, type CameraReadoutHandle } from './CameraReadout'
+import { useProcessPaletteId } from '../lib/useProcessPaletteId'
+import { MapHoverCard, type MapHoverInfo } from './MapHoverCard'
+import { FaultSpotTooltip } from './FaultSpotTooltip'
+import { FactoryNavPanel } from './FactoryNavPanel'
+import { CardTrail, type CardTrailStep } from './CardTrail'
+import { BayFaultList } from './BayFaultList'
+import { workingCountOf } from '../lib/factoryNav'
+import {
+  loadOccupantProgress,
+  occupantGroupOf,
+  occupantProgressKey,
+  type OccupantGroup,
+  type OccupantProgress,
+} from '../lib/occupantProgress'
+import { nowDate } from '../../../lib/now'
+import type { FaultBay } from '../lib/bayEquipmentFaults'
 import { BayOccupantList } from './BayOccupantList'
-import { bayOccupancyOf, factoryBayOccupancy, type BayOccupancy } from '../lib/bayOccupancy'
+import {
+  bayOccupancyOf,
+  fabricationOccupantsOf,
+  factoryBayOccupancy,
+  type BayOccupancy,
+  type BayOccupant,
+} from '../lib/bayOccupancy'
 import {
   bayCameraBounds,
   factoryCameraBoundsOf,
   overviewCameraBounds,
+  factoryOutlinePoints,
+  overviewBoundsCentered,
+  type ScreenRect,
   OVERVIEW_BOUNDS_PADDING,
 } from '../lib/overviewCamera'
-import { useMapLocations, locationsOf, type MapLocationsState } from '../lib/useMapLocations'
-import { mapLinkNote } from '../lib/mapLinkNote'
-import { DashboardMiniMap, type DashboardMiniMapHandle } from './DashboardMiniMap'
+import { useMapLocations, locationsOf } from '../lib/useMapLocations'
 import { locationOfBay, summarizeBay } from '../lib/bayDetail'
+import {
+  factoryPerformanceHref,
+  isBaylessProcess,
+  paintingBayBlocksJumpHref,
+  zoneBayJumpHref,
+  zoneJumpHref,
+  zoneTabJumpHref,
+} from '../lib/zoneJump'
+import { BLOCKS_TAB, STATUS_TAB, VIEWER_TAB, withWorkspaceTab } from '../../../lib/workspaceTabUrl'
+import { bayTabHref } from '../lib/occupantViewer'
+import { StatusJumpButton } from './StatusJumpButton'
+import { ScreenPreviewDialog, type ScreenPreview } from './ScreenPreviewDialog'
+import { withEquipmentFocus, withEquipmentLanding } from '../../../lib/equipmentFocus'
 import { bayHudTarget } from '../lib/bayHud'
 import { BayDetailCard } from './BayDetailCard'
-import { BayJumpButton } from './BayJumpButton'
-import { PerformanceBadge } from './PerformanceBadge'
 import {
   BlockSitePins,
   MapFocusCard,
@@ -152,6 +182,44 @@ const ZONE_ID_BY_PROCESS: Record<string, string> = Object.fromEntries(
  */
 const BAY_CAMERA_MIN_RATIO = 0.55
 
+/**
+ * 야드 맵 카메라 방위(도) — 야드를 -30° 돌려 본다(사용자 확정). 전경·하위 단계 모두 같은 방위라
+ * 단계를 오가도 방향 감각이 흔들리지 않는다. 사용자가 돌려 볼 수 있고, 단계를 옮기면 이 방위로 돌아온다.
+ */
+const MAP_BEARING = -48
+
+/**
+ * 야드 전경의 가장자리 여백(px) — 전경은 중심·줌을 고정하지 않고 **모든 공장이 다 보이고
+ * 한가운데에** 서도록 화면 크기에 맞춰 찾는다(사용자 확정, `overviewBoundsCentered`). 회전은
+ * `MAP_BEARING`, 기울기는 `OVERVIEW_PITCH`. 위·아래는 검색창·토글 줄과 조작 안내가 서는 자리라
+ * 넉넉히 둔다.
+ */
+const OVERVIEW_MARGIN = { x: 64, y: 144 }
+
+/** 야드 전경의 카메라 기울기(도) — 지도 기본(52°)보다 조금 낮춰 공장이 서로 덜 가리게(사용자 확정) */
+const OVERVIEW_PITCH =50
+
+/**
+ * 공정(공장 목록) 카메라의 배율 상한 — 공장이 한곳에 모인 공정(가공)은 꼭 맞추면 야드 전경의
+ * 3.6배까지 들어가, **다른 권역의 점검 필요 핀**이 화면 밖·카드 밑으로 밀려 사라진다(사용자 지적).
+ * 공장 목록은 아직 야드를 훑는 단계라 이 이상 들어가지 않는다(조립·의장·도장은 이보다 낮다).
+ */
+const PROCESS_MAX_SCALE = 90_000
+
+/** 공장·베이 단계의 카메라 기울기(도) — 0 이 바로 위. 야드 전경·공정(공장 목록)은 OVERVIEW_PITCH */
+const DRILL_PITCH = 0
+
+/**
+ * 고른 공장 칠의 공정별 세기 배율 — 네 공정 모두 조금 낮추고(0.85), 밝은 공정색(의장 주황·
+ * 도장 분홍)은 거기서 더 옅게(사용자 확정)
+ */
+const SELECTED_FILL_SCALE: Readonly<Record<string, number>> = {
+  가공: 0.45,
+  조립: 0.45,
+  의장: 0.5,
+  도장: 0.5,
+}
+
 /** 선택 — 공장 하나(클릭) 또는 공정 하나(카드 헤더 클릭). 둘 다 카메라를 움직인다 */
 type Selection = DashboardMapSelection
 
@@ -163,7 +231,6 @@ interface Loaded {
 
 export function DashboardZoneMap() {
   const { t } = useTranslation()
-  const miniMapRef = useRef<DashboardMiniMapHandle>(null)
   const hudRef = useRef<FactoryHudLabelHandle>(null)
   /*
    * 마지막으로 받은 카메라 — 떠 있는 이름패가 붙는 **첫 프레임**에 쓸 값이다. 이름패는
@@ -171,7 +238,8 @@ export function DashboardZoneMap() {
    * 들면 비행 매 프레임마다 이 화면 전체(우측 공정존 패널까지)가 다시 그려진다.
    */
   const cameraRef = useRef<FactoryHudCamera | null>(null)
-  const [navigationTarget, setNavigationTarget] = useState<{ lat: number; lon: number } | null>(null)
+  /* 지도 위 카메라 값 표시 — 카메라가 움직일 때마다 값을 밀어 넣는다(React 렌더 없이) */
+  const cameraReadoutRef = useRef<CameraReadoutHandle>(null)
 
   /*
    * 공정 맵 화면에서 넘어온 카메라 승계(1회성·TTL 3s) — 첫 렌더에서 한 번만 가져와
@@ -180,6 +248,27 @@ export function DashboardZoneMap() {
   const handoffRef = useRef<YardView | null | undefined>(undefined)
   if (handoffRef.current === undefined) handoffRef.current = takeCameraHandoff()
   const handoffView = handoffRef.current
+  /*
+   * 다른 화면에 갔다가 '야드 맵' 으로 돌아오면 **마지막 상태**로 선다(사용자 확정) — 선택은
+   * 헤더 링크가 마지막 주소(`lastYardMap`)로 데려오고, 화각은 여기서 그 주소에서 마지막으로
+   * 본 카메라로 놓는다. 승계(공정 화면 → 대문)가 있으면 그쪽이 먼저다.
+   */
+  const routeLocation = useLocation()
+  const searchRef = useRef(routeLocation.search)
+  searchRef.current = routeLocation.search
+  const restoredRef = useRef<YardView | null | undefined>(undefined)
+  if (restoredRef.current === undefined) {
+    restoredRef.current = handoffView ? null : recallYardCamera(routeLocation.search)
+  }
+  const restoredView = restoredRef.current
+  /* 돌아온 주소를 떠나기 전까지는 카메라를 붙든다 — 대문 범위가 카드 측정으로 한 번 바뀌는
+     것만으로도 비행이 시작돼, 돌아온 화각을 곧장 빼앗는다. 선택(주소)이 바뀌면 놓는다 */
+  const [holdSearch, setHoldSearch] = useState<string | null>(restoredView ? routeLocation.search : null)
+  const holdingCamera = holdSearch != null && holdSearch === routeLocation.search
+  useEffect(() => {
+    rememberYardMapSearch(routeLocation.search)
+    if (holdSearch != null && routeLocation.search !== holdSearch) setHoldSearch(null)
+  }, [routeLocation.search, holdSearch])
   /*
    * 승계로 시작한 화면은 첫 focusBounds 관찰이 "이미 본 것"으로 넘어가 카메라가 승계
    * 화각에 머문다 — 지도가 준비된 뒤 목표 범위를 **복제**해 정체성을 바꿔 주면
@@ -222,9 +311,15 @@ export function DashboardZoneMap() {
   const applySelection = useCallback(
     (next: Selection) => {
       setSelectedLocationId(next?.kind === 'factory' ? (next.location ?? null) : null)
-      drill.set(drilldownOfSelection(next))
+      /* 공장을 고르면 그 공정도 주소에 함께 싣는다 — 한 단계 뒤로(빈 곳 클릭·ESC·경로)가
+         그 공정의 공장 목록으로 오게. 뎁스: 공정 목록 › 공장 목록 › 공장 › BAY */
+      const state = drilldownOfSelection(next)
+      if (next?.kind === 'factory') {
+        state.process = data?.parcels.factories.find((f) => f.name === next.name)?.process ?? null
+      }
+      drill.set(state)
     },
-    [drill]
+    [drill, data]
   )
 
   const [hoveredFactory, setHoveredFactory] = useState<string | null>(null)
@@ -266,12 +361,6 @@ export function DashboardZoneMap() {
     }
   }, [handoffView, data])
 
-  /* 공정 화면으로 떠나는 링크가 클릭 시점의 카메라를 맡긴다 — 도착 화면이 이어받는다 */
-  const stashCamera = useCallback(() => {
-    const camera = cameraRef.current
-    if (camera) stashCameraHandoff(camera.view)
-  }, [])
-
   const focusedFactory = selection?.kind === 'factory' ? selection.name : null
 
   /*
@@ -291,7 +380,7 @@ export function DashboardZoneMap() {
     () => (focusedZoneId ? getProcessMapDrilldown(focusedZoneId) : null),
     [focusedZoneId]
   )
-  const { state: locationsState, retry: retryLocations } = useMapLocations(
+  const { state: locationsState } = useMapLocations(
     drilldown,
     focusedFactory
   )
@@ -307,10 +396,106 @@ export function DashboardZoneMap() {
    * 연다. 선택을 풀 때도 여기로 돌아온다 — 전체 야드는 이 화면의 홈이 아니다.
    * 계산은 overviewCamera 공용 — 도장 배치 화면과 같은 대문을 쓴다.
    */
-  const overviewBounds = useMemo<LatLonBounds | null>(
-    () => (parcels ? overviewCameraBounds(parcels) : null),
-    [parcels]
+  /*
+   * 패널을 지도 위에 겹칠 자리가 있는가 — 셸이 고정 뷰포트를 켜는 선(md)과 **같은 선**을
+   * 쓴다. 그보다 좁으면 셸도 문서처럼 스크롤하는데 지도만 패널을 겹쳐 두면, 좌(상세
+   * 27rem)·우(문제 BAY 23rem) 두 기둥이 서로 올라타 글자가 글자 위에 얹힌다.
+   * 좁은 화면에서는 패널을 지도 **아래**로 내려 페이지가 스크롤하게 둔다.
+   */
+  const wide = useMediaQuery('(min-width: 48rem)')
+
+  /*
+   * 대문 카메라를 **카드를 피해 최대로 확대**하려면 지도 상자 크기와 그 위를 덮은 카드 자리를
+   * 알아야 한다(사용자 확정: "양쪽 카드에 가려지지 않을 정도로만 확대"). 지도 상자 · 왼쪽 카드를
+   * 재어 둔다(오른쪽 위 점검 필요 토글 · 색 시안은 걷었다). 왼쪽 카드는 단계마다 키가 바뀌므로, 대문이 쓰는
+   * 공정 목록일 때(무선택)만 잰다 — 공장 카드를 연 채로 재면 대문이 그 키만큼 물러난다.
+   */
+  const mapBoxRef = useRef<HTMLDivElement>(null)
+  const leftCardRef = useRef<HTMLDivElement>(null)
+  const atOverviewRef = useRef(true)
+  atOverviewRef.current = selection == null
+  const [overviewLayout, setOverviewLayout] = useState<{
+    width: number
+    height: number
+    obstacles: ScreenRect[]
+  } | null>(null)
+  useEffect(() => {
+    const box = mapBoxRef.current
+    if (!box || !wide) return
+    const snap = (n: number) => Math.round(n / 8) * 8
+    const measure = () => {
+      /* 대문에는 왼쪽 카드가 없다(베이를 고를 때만 뜬다) — 대문일 때만 잰다 */
+      if (!atOverviewRef.current) return
+      const b = box.getBoundingClientRect()
+      if (b.width === 0 || b.height === 0) return
+      const rel = (el: Element | null | undefined): ScreenRect | null => {
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        if (r.width === 0 || r.height === 0) return null
+        return { x: snap(r.left - b.left), y: snap(r.top - b.top), width: snap(r.width), height: snap(r.height) }
+      }
+      const obstacles = [rel(leftCardRef.current?.querySelector('section'))].filter(
+        (r): r is ScreenRect => r != null
+      )
+      /* 지도 크기는 반올림하지 않는다 — 계산한 화면과 실제
+         화면이 1px 이라도 다르면 도착 배율이 그만큼 어긋난다 */
+      const next = { width: Math.round(b.width), height: Math.round(b.height), obstacles }
+      setOverviewLayout((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(box)
+    if (leftCardRef.current) observer.observe(leftCardRef.current)
+    return () => observer.disconnect()
+  }, [wide, parcels, selection])
+
+  /* 카드를 피해 최대로 확대한 대문 — 잴 수 없으면(좁은 화면·첫 렌더) 군집이 꼭 맞는 범위로 */
+  const overviewOutline = useMemo(() => (parcels ? factoryOutlinePoints(parcels) : []), [parcels])
+  const avoidingBounds = useMemo<LatLonBounds | null>(
+    () =>
+      overviewLayout && wide && overviewOutline.length > 0
+        ? overviewBoundsCentered(
+            overviewOutline,
+            { width: overviewLayout.width, height: overviewLayout.height },
+            { bearing: MAP_BEARING, pitch: OVERVIEW_PITCH },
+            { project, screenToWorld },
+            OVERVIEW_MARGIN
+          )
+        : null,
+    [overviewLayout, wide, overviewOutline]
   )
+  const overviewBounds = useMemo<LatLonBounds | null>(
+    () => avoidingBounds ?? (parcels ? overviewCameraBounds(parcels, MAP_BEARING) : null),
+    [avoidingBounds, parcels]
+  )
+
+  /*
+   * 공정(공장 목록)도 대문과 **같은 계산**으로 잡는다 — 공장 목록은 대문 기울기 그대로 서므로
+   * (사용자 확정), 바로 위 시점 기준의 상자(`processBounds`)를 쓰면 기울인 원근만큼 한 번 더
+   * 물러나고 돌린 상자의 모서리까지 담느라 지나치게 줌아웃된다. 그 공정 공장들의 외곽이 카드를
+   * 피해 꼭 맞게 선다. 잴 수 없으면(좁은 화면·첫 렌더) 상자로 떨어진다.
+   */
+  const processAvoidingBounds = useMemo<LatLonBounds | null>(() => {
+    if (!parcels || selection?.kind !== 'process' || !overviewLayout || !wide) return null
+    const codes = new Set(
+      parcels.factories.filter((f) => f.process === selection.process).flatMap((f) => f.lotCodes)
+    )
+    const points = factoryOutlinePoints({ ...parcels, lots: parcels.lots.filter((lot) => codes.has(lot.lot)) })
+    if (points.length === 0) return null
+    const viewport = { width: overviewLayout.width, height: overviewLayout.height }
+    const camera = { bearing: MAP_BEARING, pitch: OVERVIEW_PITCH }
+    const fitted = overviewBoundsCentered(points, viewport, camera, { project, screenToWorld }, OVERVIEW_MARGIN)
+    if (!fitted) return null
+    /* 상한보다 깊이 들어가면 같은 중심에서 그만큼 범위를 넓힌다 */
+    const scale = fitView(fitted, viewport, 0, camera).scale
+    if (scale <= PROCESS_MAX_SCALE) return fitted
+    const k = scale / PROCESS_MAX_SCALE
+    const cLat = (fitted.minLat + fitted.maxLat) / 2
+    const cLon = (fitted.minLon + fitted.maxLon) / 2
+    const hLat = ((fitted.maxLat - fitted.minLat) / 2) * k
+    const hLon = ((fitted.maxLon - fitted.minLon) / 2) * k
+    return { minLat: cLat - hLat, maxLat: cLat + hLat, minLon: cLon - hLon, maxLon: cLon + hLon }
+  }, [parcels, selection, overviewLayout, wide])
 
   /*
    * 대시보드 전용 베이스맵 보정 — "실제 지도" 느낌. 야드 화면은 지번·블록이 주인공이라
@@ -394,20 +579,14 @@ export function DashboardZoneMap() {
     [applySelection, selection, locationById, navigate]
   )
 
-  /* 상세 카드의 해제 버튼 — 이동 없이 위치 선택만 푼다 */
-  const clearLocation = useCallback(() => {
-    applySelection(nextLocationSelection(selection, null))
-  }, [applySelection, selection])
-
   /* 공정 카드 헤더 클릭 = 스포트라이트 토글. 켤 때는 그 카드도 펴 준다(상세·목록이 바로 보이게) */
 
   const selectedLocation = selection?.kind === 'factory' ? (selection.location ?? null) : null
-  const selectedBay = selection?.kind === 'factory' ? (selection.bay ?? null) : null
-
-  /* 베이 상세의 "← 공장 이름" — 베이 선택만 풀고 공장 요약으로 돌아온다 */
-  const clearBay = useCallback(() => {
-    applySelection(nextBaySelection(selection, null))
-  }, [applySelection, selection])
+  /* 가공 공장은 베이를 고르지 않는다(사용자 확정) — 주소에 `#베이` 가 실려 와도 공장까지만 선다 */
+  const selectedBay =
+    selection?.kind === 'factory' && !isBaylessProcess(processOfFactory(selection.name))
+      ? (selection.bay ?? null)
+      : null
 
   /*
    * 지도 스포트라이트 — 공장을 고르면 그 공장의 **공정도 함께** 켠다 (FR-5 강조 문법).
@@ -416,10 +595,34 @@ export function DashboardZoneMap() {
    * 카메라(focusBounds)는 여전히 selection 원본을 쓴다 — 공장 클릭이 공정 카드를
    * 활성으로 바꾸거나 카메라를 공정 전체로 넓히지는 않는다.
    */
+  /*
+   * 공장 목록 줄에 손을 얹은 공장 — 아무것도 고르지 않은 상태에서는 그 공장을 **고른 것처럼**
+   * 미리 비춘다(그 공장 가장 진하게, 같은 공정은 남기고 나머지는 가라앉힘). 지도 호버의 한 단
+   * 밝아짐만으로는 목록에서 고른 이름이 지도 어디인지 잘 보이지 않았다(사용자 지적). 카메라·
+   * 카드·주소는 그대로다 — 비춤만 바꾼다. 지도 위 호버에는 걸지 않는다(손이 지나갈 때마다
+   * 야드 전체가 깜빡이면 지도를 훑을 수 없다).
+   */
+  const [navHoveredFactory, setNavHoveredFactory] = useState<string | null>(null)
+  /* 선택이 바뀌면(지도 클릭·뒤로가기·주소) 목록 미리 비춤은 뜻을 잃는다 — 남겨 두면 목록으로
+     돌아왔을 때 손을 얹지 않은 공장이 비춰진 채로 선다 */
+  /* 선택 객체는 렌더마다 새로 만들어질 수 있어, **값**(종류·공장·베이)이 바뀔 때만 걷는다 */
+  const selectionKey =
+    selection == null
+      ? ''
+      : selection.kind === 'factory'
+        ? `factory:${selection.name}:${selection.bay ?? ''}`
+        : `process:${selection.process}`
+  useEffect(() => {
+    setNavHoveredFactory(null)
+  }, [selectionKey])
   const spotlight = useMemo(
-    () => mapSpotlight(selection, processOfFactory),
-    [selection, processOfFactory]
+    () =>
+      (selection == null || selection.kind === 'process') && navHoveredFactory
+        ? mapSpotlight({ kind: 'factory', name: navHoveredFactory }, processOfFactory)
+        : mapSpotlight(selection, processOfFactory),
+    [selection, navHoveredFactory, processOfFactory]
   )
+
 
   /*
    * 베이 목록 — 지도가 공장 안을 나누는 칸이자, 눌러 상세를 여는 단위. 매핑(엑셀)이 있는
@@ -460,9 +663,13 @@ export function DashboardZoneMap() {
    * `지번인접여부(3m)` 그룹 구조가 그 잣대다.
    */
   /* 고른 공장의 베이 — 지도가 그 공장 안을 나누는 칸이자, 눌러 상세를 여는 단위 */
+  /* 가공 공장은 칸을 나누지 않는다 — 베이를 누르거나 짚을 수 없다(사용자 확정, `isBaylessProcess`) */
   const focusedBays = useMemo(
-    () => (focusedFactory ? factoryBays.filter((bay) => bay.factory === focusedFactory) : []),
-    [factoryBays, focusedFactory]
+    () =>
+      focusedFactory && !isBaylessProcess(processOfFactory(focusedFactory))
+        ? factoryBays.filter((bay) => bay.factory === focusedFactory)
+        : [],
+    [factoryBays, focusedFactory, processOfFactory]
   )
   /**
    * 지도의 칸이 **베이**인가, 공정 모듈이 준 작업 위치인가.
@@ -491,6 +698,111 @@ export function DashboardZoneMap() {
   }, [focusedBays, locations])
 
   /*
+   * 설비 장애 베이 — 설비 마스터·링크 상태 한 원천에서 읽는다(`bayEquipmentFaults`).
+   * 야드 전체 목록(오른쪽 패널)과 고른 공장의 베이별 수(카드·지도)가 같은 값에서 나온다.
+   * 설비 목록은 고정 데이터라 지도 베이가 서면 한 번만 센다. 동적 import 로 초기 청크를 지킨다.
+   */
+  const [faultBays, setFaultBays] = useState<readonly FaultBay[]>([])
+  useEffect(() => {
+    if (!parcels) return
+    let alive = true
+    void import('../lib/bayEquipmentFaults').then((m) => {
+      if (alive) setFaultBays(m.faultBaysOf(parcels.bays))
+    })
+    return () => {
+      alive = false
+    }
+  }, [parcels])
+  /* 지번코드 → 베이 id — 다른 공장의 칸을 눌렀을 때 그 자리의 베이로 바로 가는 데 쓴다 */
+  const bayIdOfLot = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const bay of parcels?.bays ?? []) for (const code of bay.lotCodes) map.set(code, bay.id)
+    return map
+  }, [parcels])
+  /* 지도에 늘 짚어 둘 점검 필요 베이들의 지번 묶음 */
+  const faultSpotGroups = useMemo(() => faultBays.map((bay) => bay.lotCodes), [faultBays])
+  /* 공장 → 점검 필요 BAY 수 — 왼쪽 카드의 공정·공장 줄 ⚠ 아이콘 */
+  const factoryFaultCounts = useMemo<ReadonlyMap<string, number>>(() => {
+    const counts = new Map<string, number>()
+    for (const bay of faultBays) counts.set(bay.factory, (counts.get(bay.factory) ?? 0) + 1)
+    return counts
+  }, [faultBays])
+  const equipmentFaults = useMemo<ReadonlyMap<string, number>>(
+    () => new Map(faultBays.map((bay) => [bay.bayId, bay.equipment.length])),
+    [faultBays]
+  )
+  /*
+   * 화면 창 — 카드의 3D·실적·현황은 지도를 떠나지 않고 이 창에 띄운다(`ScreenPreviewDialog`).
+   * 닫으면 지도·선택·카메라가 그대로 남아 있다.
+   */
+  const [preview, setPreview] = useState<ScreenPreview | null>(null)
+  const openPreview = useCallback((href: string, title: string) => setPreview({ href, title }), [])
+  const closePreview = useCallback(() => setPreview(null), [])
+
+  /* 오른쪽 장애 목록에 손이 얹힌 베이 — 지도가 그 칸을 짚는다(`spotLots`) */
+  const [hoveredFaultBay, setHoveredFaultBay] = useState<FaultBay | null>(null)
+  /*
+   * 점검 필요 베이의 핀 · 하이라이트 — 늘 켠다. 지도 오른쪽 위의 켜고 끄는 토글은 걷었다(사용자 확정).
+   */
+  const faultPins = true
+  const faultHighlight = true
+  /* 핀·하이라이트에 손이 얹힌 베이(묶음 번호) + 지도 상자 기준 커서 자리 — hover 카드를 띄운다 */
+  const [hoveredSpot, setHoveredSpot] = useState<{
+    index: number
+    x: number
+    y: number
+    boxWidth: number
+  } | null>(null)
+  /* 점검 필요 카드는 **핀**에 손을 얹었을 때만(사용자 확정) — 하이라이트 칸 위에서는 여느 베이처럼
+     베이 hover 카드가 뜬다 */
+  const hoverSpotGroup = useCallback(
+    (index: number | null, at: { x: number; y: number } | null, via?: 'pin' | 'highlight') => {
+      setHoveredSpot((prev) =>
+        index == null || !at || via !== 'pin'
+          ? prev && null
+          : { index, x: at.x, y: at.y, boxWidth: mapBoxRef.current?.clientWidth ?? 0 }
+      )
+    },
+    []
+  )
+  /*
+   * 장애 목록의 줄 = 그 베이의 **현황 화면을 창으로** 띄운다 — 카드의 현황·3D·실적과 같은
+   * 몸짓이다(화면을 떠나지 않는다. 닫으면 지도·선택이 그대로다).
+   *
+   * 갈 곳은 공정 모듈이 정한다(드릴다운 계약) — 작업 위치를 내는 공정(조립)이면 지번이
+   * 겹치는 작업 위치의 상세(`detailPath`, 정반현황)로, 아니면 그 공정 화면에 베이를 실어
+   * (`?bay=`) 보낸다. 어느 쪽이든 **아픈 설비**(`?equip=`, 오류 먼저)를 함께 실어 도착 화면이
+   * 그 베이·설비를 고른 채로 서게 한다(알람 딥링크와 같은 계약). 갈 곳이 아무 데도 없으면
+   * (가공 등) 지도에서 그 베이를 연다.
+   */
+  const openFaultBay = useCallback(
+    async (bay: FaultBay) => {
+      setHoveredFaultBay(null)
+      const zoneId = ZONE_ID_BY_PROCESS[bay.process]
+      const provider = zoneId ? getProcessMapDrilldown(zoneId) : null
+      let href: string | null = null
+      if (provider) {
+        const result = await provider.fetchLocations(bay.factory).catch(() => null)
+        if (result?.kind === 'ok') {
+          href = locationOfBay(result.locations, bay.lotCodes)?.detailPath ?? null
+        }
+      }
+      href ??= zoneBayJumpHref(bay.process, bay.factory, bay.bayId)
+      if (href) {
+        const culprit = bay.equipment.find((e) => e.link === 'error') ?? bay.equipment[0]
+        openPreview(
+          /* 현황 축까지 싣는다 — '페이지로 열기' 로 창 밖에 나가도 실적이 아니라 설비 현황에 선다 */
+          culprit ? withEquipmentLanding(href, culprit.id, STATUS_TAB) : withWorkspaceTab(href, STATUS_TAB),
+          t('dashboard.map.preview.statusTitle', { name: `${bay.factory} ${bay.label}` })
+        )
+        return
+      }
+      applySelection({ kind: 'factory', name: bay.factory, bay: bay.bayId, location: null })
+    },
+    [applySelection, openPreview, t]
+  )
+
+  /*
    * 지도에 넘길 칸 묶음 — 지번 낱장 대신 **한 칸**으로 그릴 단위다.
    *
    * 작업 위치를 쓸 때, 지도 연결 키(`yardLotCodes`)가 없는 위치는 여기 들어오지 않는다:
@@ -517,17 +829,11 @@ export function DashboardZoneMap() {
   const mapHoveredUnit = mapUnitIsBay
     ? (hoveredBay ?? (hoveredLocation ? (bayLinks.bayIdOfLocation.get(hoveredLocation) ?? null) : null))
     : hoveredLocation
-  /* 목록이 보는 호버 — 반대 방향. 지도에 손을 얹으면 짝지어진 줄이 밝아진다 */
-  const listHoveredLocation =
-    hoveredLocation ?? (hoveredBay ? (bayLinks.locationOfBayId.get(hoveredBay)?.id ?? null) : null)
 
   /*
-   * 지도의 칸 클릭 — 작업 위치면 지금까지처럼 곧장 상세로 가고, 베이면 **한 번은 선택,
-   * 이미 고른 베이를 한 번 더 누르면 그 베이의 상세로** 들어간다(`bayClickIntent`).
-   * 훑어보기(첫 클릭)는 그대로 두면서, 카드 안의 링크를 찾아 누르지 않고도 들어갈 수 있다.
-   *
-   * 이동 여부는 `selection` 을 읽어 정하므로 setState 갱신 함수 안에서 판단하지 않는다 —
-   * 갱신 함수는 순수해야 하고(StrictMode 에서 두 번 불린다) 그 안의 navigate 는 사고다.
+   * 지도의 칸 클릭 — 작업 위치면 지금까지처럼 곧장 상세로 가고, 베이면 **그 베이를 고른다**.
+   * 이미 고른 베이를 한 번 더 눌러도 아무 일도 하지 않는다(사용자 확정) — 예전에는 재클릭이
+   * 선택을 풀거나(한 단계 뒤로) 공정 상세 페이지로 나갔다. 상세는 베이 카드의 '현황' 이 연다.
    */
   const selectMapUnit = useCallback(
     (id: string) => {
@@ -535,15 +841,10 @@ export function DashboardZoneMap() {
         openLocation(id)
         return
       }
-      const intent = bayClickIntent(
-        selection,
-        id,
-        bayLinks.locationOfBayId.get(id)?.detailPath ?? null
-      )
-      if (intent.kind === 'open') navigate(intent.path)
-      else applySelection(intent.selection)
+      if (selection?.kind === 'factory' && selection.bay === id) return
+      applySelection(nextBaySelection(selection, id))
     },
-    [mapUnitIsBay, openLocation, applySelection, selection, bayLinks, navigate]
+    [mapUnitIsBay, openLocation, applySelection, selection]
   )
 
   const hoverMapUnit = useCallback(
@@ -565,14 +866,14 @@ export function DashboardZoneMap() {
    */
   const focusBounds = useMemo<LatLonBounds | null>(() => {
     if (!parcels || !selection) return null
-    if (selection.kind === 'process') return processBounds(parcels, selection.process)
+    if (selection.kind === 'process') return processAvoidingBounds ?? processBounds(parcels, selection.process)
     const factory = factoryCameraBoundsOf(parcels, selection.name)
     if (!factory) return null
     const bay = selection.bay ? parcels.bays.find((b) => b.id === selection.bay) : null
     if (!bay) return factory
     const around = boundsOfLots(parcels, bay.lotCodes)
     return around ? bayCameraBounds(around, factory, BAY_CAMERA_MIN_RATIO) : factory
-  }, [parcels, selection])
+  }, [parcels, selection, processAvoidingBounds])
 
   /*
    * 검색이 비추는 **자리들** — 재공 블록은 생애 단계에 따라 자리가 여럿이고(조립 중이면
@@ -627,6 +928,29 @@ export function DashboardZoneMap() {
    * 승계 화각에서 제 프레이밍으로 넘어가는 첫 비행이 여기서 시작된다.
    */
   const focusTarget = searchFocus ?? focusBounds ?? overviewBounds
+  /* 목표의 여백 — 첫 화각과 이후 비행이 같은 값을 써야 도착 프레이밍이 같다 */
+  const focusPadding = searchFocus
+    ? /* 블록 핀 주변 — 이웃 지번이 함께 남을 만큼 */
+      0.35
+    : selection?.kind === 'process'
+      ? /* 카드를 피해 계산한 범위는 그 범위 그대로(여백 0) — 대문과 같다 */
+        processAvoidingBounds
+        ? 0
+        : -0.04
+      : selection?.kind === 'factory'
+        ? /* 베이도 같은 여백을 쓴다 — 배율은 여백이 아니라 `bayCameraBounds` 의
+             범위가 묶는다(베이 크기가 제각각이라 여백으로 묶으면 널뛴다) */
+          0.12
+        : /* 카드를 피해 계산한 대문은 그 범위 그대로(여백 0) — 계산이 여백까지 이미 담았다 */
+          avoidingBounds
+          ? 0
+          : OVERVIEW_BOUNDS_PADDING
+  /*
+   * 카메라 기울기 — 야드 전경(무선택·검색 핀)과 공정(공장 목록)은 기본 기울기 그대로 건물로 서고,
+   * **공장을 고른 때부터** 위에서 내려다보는 버드뷰로 눕는다(사용자 확정). 공장·베이는 칸·베이를
+   * 짚는 단계라 지붕이 서로 가리지 않게 세워서 본다. 단계가 바뀔 때 카메라 이동과 함께 미끄러지듯 바뀐다.
+   */
+  const focusPitch = !searchFocus && selection?.kind === 'factory' ? DRILL_PITCH : OVERVIEW_PITCH
   const glidedFocusBounds = useMemo(
     () => (glideKick > 0 && focusTarget ? { ...focusTarget } : focusTarget),
     [glideKick, focusTarget]
@@ -660,6 +984,17 @@ export function DashboardZoneMap() {
     [parcels]
   )
 
+
+  /*
+   * 공정 색 시안 — 시안이 바뀌면 지도에 넘기는 색 함수의 정체성을
+   * 바꿔 다시 칠하게 한다(`colorOfProcess` 는 늘 지금 시안을 읽는다)
+   */
+  const paletteId = useProcessPaletteId()
+  const processColorOfPalette = useMemo(() => {
+    void paletteId
+    return (process: string) => colorOfProcess(process)
+  }, [paletteId])
+
   const parcelLayer = useMemo<YardParcelLayer | undefined>(() => {
     if (!parcels) return undefined
     return {
@@ -669,12 +1004,53 @@ export function DashboardZoneMap() {
       /* 샵 네비 룩: 공장 지번을 그 공정색 네온으로. 공정 카드 클릭이면 그 공정만,
        * 공장 클릭이면 그 공장(selected) + 같은 공정을 스포트라이트 (FR-5) */
       colorMode: 'process',
-      processColor: colorOfProcess,
+      processColor: processColorOfPalette,
       /* 대시보드 스포트라이트는 언제나 공정 하나 — 단일 원소 배열이 옛 단일 값과 등가다 */
       focusedProcesses: spotlight.focusedProcess ? [spotlight.focusedProcess] : null,
       focusedFactory: spotlight.focusedFactory,
-      /* 같은 공정의 다른 공장은 절반쯤 눌린 네온 — FR-5 "동일 공정 45~60%" 중간 계층 */
-      relatedDimFactor: 0.5,
+      /* 같은 공정의 다른 공장은 크게 눌린 네온 — 고른 공장과 대비가 분명해야 한다.
+         (FR-5 의 "동일 공정 45~60%" 는 고른 공장과 구분이 안 된다는 피드백으로 낮췄다) */
+      relatedDimFactor: 0.18,
+      /* 베이를 고르면 그 베이는 밝히고 같은 공장의 다른 베이는 어둡게 물린다 */
+      bayFocusDim: 0.3,
+      /* 손이 얹힌 공장·베이는 디밍을 벗고 한 단 더 밝게 — 누를 수 있는 곳이 먼저 보이게 */
+      strongHover: true,
+      /* 오른쪽 장애 목록에 손을 얹은 베이 — 어느 공장이든 그 칸을 맨 위에 짚는다 */
+      spotLots: hoveredFaultBay?.lotCodes,
+      /* 점검이 필요한 베이는 **늘** 짚어 둔다(사용자 확정) — 목록에 손을 얹을 때만 보이면
+         지도만 보는 사람은 장애 베이를 모른다. 손을 얹은 베이는 위 spotLots 가 한 번 더 */
+      spotGroups: faultSpotGroups,
+      spotPins: faultPins,
+      /* 핀 머리 주위의 고리를 깜빡인다(사용자 확정) */
+      spotPinBlink: true,
+      spotHighlight: faultHighlight,
+      onHoverSpotGroup: hoverSpotGroup,
+      /*
+       * 핀·하이라이트를 누르면 — 누른 베이가 **지금 선택된 그 베이**면 현황 화면을 창으로 띄우고,
+       * 아니면 그 베이를 고른다(지도에서 베이를 누른 것과 같은 자리: 공장 › 베이 카드, 카메라가
+       * 베이로). 다른 베이를 보던 중에 누른 핀도 먼저 그 베이로 데려간다(사용자 확정).
+       */
+      onSelectSpotGroup: (index: number) => {
+        const bay = faultBays[index]
+        if (!bay) return
+        setHoveredSpot(null)
+        if (selectedBay === bay.bayId) void openFaultBay(bay)
+        /* 가공 공장 핀은 공장까지만 고른다 — 베이로 내려가지 않는다 */
+        else if (isBaylessProcess(processOfFactory(bay.factory))) applySelection({ kind: 'factory', name: bay.factory })
+        else applySelection({ kind: 'factory', name: bay.factory, bay: bay.bayId })
+      },
+      /* 핀이 겹친 패널 밑으로 숨지 않게 — 오른쪽 장애 목록(23rem), 왼쪽 카드(목록 18rem / 상세 28rem) */
+      spotSafeArea: wide
+        ? {
+            /* 오른쪽 위의 핀·하이라이트 토글 — 높이만 피하면 된다(top) */
+            right: 24,
+            /* 왼쪽 카드 — 공장 목록은 좁게(18rem), 공장·BAY 상세는 28rem(글자를 키운 뒤에도 작업 칩이 가장 많은
+               베이 줄에 점검 필요 칩까지 한 줄에 들도록). 한 카드에서 내용만 갈아 끼워진다 */
+            /* 왼쪽 카드는 공장·베이를 골랐을 때 선다(28rem) */
+            left: focusedFactory ? 28 * 16 + 24 : 24,
+            top: 96,
+          }
+        : undefined,
       /* 지번이 나뉜 형태를 연하게 남긴다(2D·3D 공통) — 야드가 구역으로 읽히게 */
       lotOutlineOpacity: 0.1,
       /* 고른 공장 안을 나누는 칸 — 베이 매핑이 있으면 베이, 없으면 공정 모듈의 작업 위치 */
@@ -691,11 +1067,38 @@ export function DashboardZoneMap() {
       highlightedLot: searchSites.length === 1 ? (searchSites[0].lotCodes[0] ?? null) : null,
       hoveredFactory,
       /* 고른 공장의 이름은 지붕에서 일어나 떠오른다 — 캔버스는 그 자리를 비운다 */
-      floatingFocusedLabel: true,
+      floatingFocusedLabel: focusedFactory != null,
       /* 베이도 같다 — 고르면 그 이름이 지붕에서 일어나 패로 뜬다(FactoryHudLabel) */
       floatingSelectedBayLabel: true,
-      /* 빈 곳 클릭은 null 로 온다 = **한 단계만** 뒤로 — 전체 리셋은 '현 위치' 버튼의 몫 */
-      onSelectFactory: (name: string | null) => (name ? selectFactory(name) : stepBack()),
+      /* 공장 이름은 핀처럼 늘 화면 정면으로(사용자 확정) — 지도를 돌리고 기울여도 똑바로 읽힌다 */
+      billboardLabels: true,
+      /* 고른 공장 칠 — 네 공정 모두 조금 낮추고 의장(주황)·도장(분홍)은 더 옅게(사용자 확정) */
+      selectedFillScale: SELECTED_FILL_SCALE,
+      /*
+       * 빈 곳 클릭은 null 로 온다 = **한 단계만** 뒤로.
+       *
+       * 공장·베이를 고른 동안에도 **다른 공장을 누르면 그 공장으로** 간다(사용자 확정 — 공정이
+       * 달라도. 예전에는 다른 공정의 공장을 빈 곳으로 쳐서, 누른 공장이 무시되고 한 단계 뒤로
+       * 물러났다). 베이까지 내려와 있으면 누른 자리의 **베이로** 바로 간다 — 보던 깊이를 지킨다.
+       */
+      onSelectFactory: (name: string | null, lot?: string) => {
+        if (!name) {
+          stepBack()
+          return
+        }
+        /* 공정 목록(무선택)에서는 공장을 곧바로 열지 않고 **그 공장의 공정(공장 목록)으로** 간다
+           (사용자 확정) — 공정 목록 › 공장 목록 › 공장 계단을 지도 클릭도 한 칸씩 밟는다 */
+        if (selection == null) {
+          const process = processOfFactory(name)
+          if (process) {
+            applySelection({ kind: 'process', process })
+            return
+          }
+        }
+        const bayId = selectedBay && lot ? bayIdOfLot.get(lot) : undefined
+        if (bayId) applySelection({ kind: 'factory', name, bay: bayId })
+        else selectFactory(name)
+      },
       onHoverFactory: setHoveredFactory,
       onSelectLot: selectMapUnit,
       onHoverLot: hoverMapUnit,
@@ -707,13 +1110,29 @@ export function DashboardZoneMap() {
     hoveredFactory,
     selectFactory,
     stepBack,
+    bayIdOfLot,
     mapSelectedUnit,
     mapHoveredUnit,
     selectMapUnit,
     hoverMapUnit,
     lotGroups,
     factoryBays,
+    mapUnitIsBay,
+    hoveredFaultBay,
+    faultSpotGroups,
+    faultPins,
+    faultHighlight,
+    hoverSpotGroup,
+    faultBays,
+    applySelection,
+    openFaultBay,
+    processOfFactory,
+    wide,
+    selectedBay,
+    focusedFactory,
     searchSites,
+    processColorOfPalette,
+    selection,
   ])
 
   const selectedFactoryData = useMemo(() => {
@@ -722,13 +1141,84 @@ export function DashboardZoneMap() {
   }, [parcels, selection])
 
   /* 공장 상세의 본문 — 그 공장의 베이별 **재실**(P1 ①). 원천은 로스터의 자리 */
+  /* 공장 이름에만 매단다 — 베이를 골라도 공장 재실·진행 상태를 다시 읽지 않게 */
+  const selectedFactoryName = selection?.kind === 'factory' ? selection.name : null
+  /* 가공 공장 카드에는 베이 목록이 없다(사용자 확정) — 대신 그 공장에서 가공 중인 블록을 공장 단위로 */
+  const selectedFactoryOccupants = useMemo(
+    () =>
+      selectedFactoryName && isBaylessProcess(processOfFactory(selectedFactoryName))
+        ? fabricationOccupantsOf(selectedFactoryName)
+        : [],
+    [selectedFactoryName, processOfFactory]
+  )
   const selectedFactoryBays = useMemo(
     () =>
-      parcels && selection?.kind === 'factory'
-        ? factoryBayOccupancy(parcels, selection.name)
+      parcels && selectedFactoryName && !isBaylessProcess(processOfFactory(selectedFactoryName))
+        ? factoryBayOccupancy(parcels, selectedFactoryName)
         : [],
-    [parcels, selection]
+    [parcels, selectedFactoryName, processOfFactory]
   )
+
+  /*
+   * 재실의 **진행 상태** — 놓였다고 작업 중인 것은 아니다(`occupantProgress`). 공장 카드의
+   * '진행 작업' 수와 베이 카드의 상태 표식이 같은 값을 본다. 실적 배지와 같은 기준일(오늘).
+   */
+  const [occupantProgress, setOccupantProgress] = useState<ReadonlyMap<string, OccupantProgress>>(
+    () => new Map()
+  )
+  useEffect(() => {
+    let alive = true
+    setOccupantProgress(new Map())
+    const occupants = [...selectedFactoryBays.flatMap((bay) => bay.occupants), ...selectedFactoryOccupants]
+    if (occupants.length === 0) return
+    const d = nowDate()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    void loadOccupantProgress(occupants, today).then((progress) => {
+      if (alive) setOccupantProgress(progress)
+    })
+    return () => {
+      alive = false
+    }
+  }, [selectedFactoryBays, selectedFactoryOccupants])
+
+  /*
+   * 공장 목록의 줄마다 **진행 작업 수** — 공장 카드 '진행 작업' 합과 같은 규칙(`workingCountOf`).
+   * 야드 전체의 재실과 그 진행 상태를 한 번 읽는다(로스터·실적이 고정 mock 이라 지도가 설 때
+   * 한 번이면 된다). 다 읽기 전에는 목록에 수를 내지 않는다.
+   */
+  const [factoryWorkCounts, setFactoryWorkCounts] = useState<ReadonlyMap<string, number> | undefined>()
+  /* 공장 → 작업 상태별(작업 중 · 작업 전 · 작업 완료) 블록 수 — 공장 hover 카드(같은 읽기에서 센다) */
+  const [factoryGroupCounts, setFactoryGroupCounts] = useState<
+    ReadonlyMap<string, Readonly<Record<OccupantGroup, number>>> | undefined
+  >()
+  useEffect(() => {
+    if (!parcels) return
+    let alive = true
+    const mapped = new Set(parcels.bays.map((bay) => bay.factory))
+    const occupantsByFactory = new Map(
+      [...mapped].map((name) => [name, factoryBayOccupancy(parcels, name).flatMap((bay) => bay.occupants)])
+    )
+    const d = nowDate()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    void loadOccupantProgress([...occupantsByFactory.values()].flat(), today).then((progress) => {
+      if (!alive) return
+      setFactoryWorkCounts(
+        new Map([...occupantsByFactory].map(([name, occupants]) => [name, workingCountOf(occupants, progress)]))
+      )
+      setFactoryGroupCounts(
+        new Map(
+          [...occupantsByFactory].map(([name, occupants]) => {
+            const counts: Record<OccupantGroup, number> = { inProgress: 0, notStarted: 0, done: 0 }
+            for (const o of occupants) counts[occupantGroupOf(o, progress.get(occupantProgressKey(o)))] += 1
+            return [name, counts]
+          })
+        )
+      )
+    })
+    return () => {
+      alive = false
+    }
+  }, [parcels])
 
   /* 고른 베이의 재실 — 베이 상세의 본문. 공장 목록의 그 행과 같은 값이다 */
   const selectedBayOccupancy = useMemo(
@@ -742,62 +1232,27 @@ export function DashboardZoneMap() {
     [applySelection, selection]
   )
 
+  /*
+   * 왼쪽 카드의 공장 목록 줄 — 지도의 공장 클릭과 같은 동작(`selectFactory`). 목록은 그
+   * 자리에서 공장 상세로 갈아 끼워지므로, 사라진 줄에 남은 호버도 함께 걷는다.
+   */
+  const selectNavFactory = useCallback(
+    (name: string) => {
+      setHoveredFactory(null)
+      setNavHoveredFactory(null)
+      selectFactory(name)
+    },
+    [selectFactory]
+  )
+
   /* 고른 베이의 상세 — 소속 지번과 그 **원본 설명**. 매핑에 없는 베이면 null */
   const selectedBayData = useMemo(
     () => (parcels && selectedBay ? summarizeBay(parcels, selectedBay) : null),
     [parcels, selectedBay]
   )
 
-  /*
-   * 드릴다운 자취 — `야드 › 조립 › GBS › 3BAY`.
-   *
-   * 상태를 새로 들지 않는다: 조각은 전부 지금 URL 에서 나오고, 누르면 그 단계의 주소로
-   * 갈 뿐이다. 그래서 브라우저 뒤로가기와 이 줄이 어긋날 수가 없다.
-   *
-   * 총괄은 야드 전체를 보는 화면이라 '야드'가 곧 이 화면의 무선택 상태다 — 공정 화면의
-   * 자취에서 첫 조각이 여기('/')를 가리키는 것과 같은 계단을 잇는다.
-   */
-  const breadcrumbSteps = useMemo<BreadcrumbStep[]>(() => {
-    const atYard = selection == null
-    const steps: BreadcrumbStep[] = [
-      {
-        key: 'yard',
-        label: t('common.breadcrumbYard'),
-        href: atYard ? null : drill.hrefFor(YARD_DRILLDOWN),
-      },
-    ]
 
-    const process =
-      selection?.kind === 'process'
-        ? selection.process
-        : selection?.kind === 'factory'
-          ? processOfFactory(selection.name)
-          : null
-    if (process) {
-      steps.push({
-        key: 'process',
-        label: process,
-        /* 공정 단계에 서 있으면 링크가 아니다 — 지금 자리를 가리키는 링크는 거짓말이다 */
-        href:
-          selection?.kind === 'process'
-            ? null
-            : drill.hrefFor({ ...YARD_DRILLDOWN, process }),
-      })
-    }
-    if (selection?.kind === 'factory') {
-      steps.push({
-        key: 'factory',
-        label: selection.name,
-        href: selectedBayData
-          ? drill.hrefFor({ ...YARD_DRILLDOWN, factory: selection.name })
-          : null,
-      })
-      if (selectedBayData) {
-        steps.push({ key: 'bay', label: selectedBayData.label, href: null })
-      }
-    }
-    return steps
-  }, [t, drill, selection, processOfFactory, selectedBayData])
+  /* 같은 뎁스는 앱 헤더가 아니라 카드 머리(`CardTrail`)가 말한다 — 아래 `cardTrailSteps` */
 
   /*
    * 떠 있는 이름패가 설 자리 — 가로는 고른 공장의 지번 centroid, 세로는 그 공장 **실루엣
@@ -834,71 +1289,225 @@ export function DashboardZoneMap() {
   /* 이 베이로 들어가는 문의 목적지 — 지번이 겹치는 작업 위치. 짝이 없으면 문은 서지 않는다 */
   const hudBayLocation = hudBay ? (bayLinks.locationOfBayId.get(hudBay.id) ?? null) : null
 
+
+
   /*
-   * 지도 fixture 에 실제로 존재하는 지번만 골라 낸다 — 연결 키는 있는데 지도에 그 지번이
-   * 없으면 `매핑 불일치` 이고, 아예 없으면 `지도 위치 정보 없음` 이다. 둘은 사용자에게
-   * 다른 사실이라 화면에서도 다른 문구로 말한다 (PRD §7 표).
+   * 좁은 화면에서 상세 카드는 지도 아래에 선다 — 지도에서 공장을 눌렀는데 카드가 화면
+   * 밖이면 누른 것이 아무 반응도 없었던 것처럼 보인다. `nearest` 라서 이미 보이는
+   * 경우에는 화면을 흔들지 않는다.
    */
-  const knownLots = useMemo(
-    () => new Set((parcels?.lots ?? []).map((lot) => lot.lot)),
-    [parcels]
+  const stackedPanelsRef = useRef<HTMLDivElement>(null)
+  const openDetailKey = selectedBay ?? focusedFactory ?? null
+  useEffect(() => {
+    if (wide || !openDetailKey) return
+    stackedPanelsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [wide, openDetailKey])
+
+  /* 고른 베이의 현황 주소 — 짝지은 작업 위치(조립 정반현황)가 있으면 거기, 없으면 공정 화면에
+     베이를 실어(`?bay=`) 보낸다. 머리의 '현황'·점검 필요 목록·오른쪽 목록이 같은 착지다.
+     현황 축까지 싣는다 — 공정 화면의 기본 갈래는 실적이라, '페이지로 열기' 로 창 밖에 나가면
+     축을 말하지 않은 주소는 실적에 선다 */
+  const selectedBayBaseHref = selectedBayData
+    ? (bayLinks.locationOfBayId.get(selectedBayData.id)?.detailPath ??
+      zoneBayJumpHref(selectedBayData.process, selectedBayData.factory, selectedBayData.id))
+    : null
+  const selectedBayStatusHref = selectedBayBaseHref ? withWorkspaceTab(selectedBayBaseHref, STATUS_TAB) : null
+  /* 고른 공장의 현황 주소 — 베이와 같은 이유로 현황 축까지 싣는다 */
+  const selectedFactoryJumpHref = selectedFactoryData
+    ? zoneJumpHref(selectedFactoryData.process, selectedFactoryData.name)
+    : null
+  const selectedFactoryStatusHref = selectedFactoryJumpHref
+    ? withWorkspaceTab(selectedFactoryJumpHref, STATUS_TAB)
+    : null
+  /* 고른 베이의 점검 필요 설비 — 오른쪽 목록과 같은 원천(`faultBays`) */
+  const selectedBayFaults = useMemo(
+    () => (selectedBay ? (faultBays.find((bay) => bay.bayId === selectedBay)?.equipment ?? []) : []),
+    [faultBays, selectedBay]
   )
 
-  /* 세로가 빠듯한 화면(1366×768·1280×720 같은 현장 모니터) — 미니맵이 몸집을 줄인다 */
-  const shortScreen = useMediaQuery('(max-height: 900px)')
+  /*
+   * 카드 머리의 뎁스 경로 — 카드 제목까지 온 길. 앱 헤더에 잇던 것을 카드 위로 옮겼다
+   * (사용자 확정). 공정은 이제 카드 한 단계(그 공정의 공장 목록)라 누를 수 있는 조각이다.
+   * 뎁스: 공장 목록 › 조립 › PBS (제목 5BAY).
+   */
+  /*
+   * 지도의 공장·베이에 손을 얹으면 커서 옆에 그 정보를 띄운다(사용자 확정, `MapHoverCard`) —
+   * 왼쪽 카드가 펼쳐져 있어도 늘 뜬다. 베이는 고른 공장 안의 칸만 손이 닿는다(지도의 베이
+   * 호버 규칙 그대로). 점검 필요 핀·하이라이트 위에서는 그쪽 카드가 먼저다.
+   */
+  const hoverInfo = useMemo<MapHoverInfo | null>(() => {
+    if (!wide || !parcels) return null
+    if (mapUnitIsBay && hoveredBay) {
+      const bay = parcels.bays.find((b) => b.id === hoveredBay)
+      if (!bay) return null
+      const occupants = bayOccupancyOf(parcels, hoveredBay)?.occupants ?? []
+      /* 작업 상태별 블록 수 — 베이 카드의 작업 목록과 같은 규칙(작업 중 · 작업 전 · 작업 완료) */
+      const groups: Record<OccupantGroup, number> = { inProgress: 0, notStarted: 0, done: 0 }
+      for (const o of occupants) groups[occupantGroupOf(o, occupantProgress.get(occupantProgressKey(o)))] += 1
+      return {
+        kind: 'bay',
+        factory: bay.factory,
+        label: bay.label,
+        process: processOfFactory(bay.factory) ?? '',
+        groups,
+        fault: faultBays.find((f) => f.bayId === hoveredBay) ?? null,
+      }
+    }
+    if (!hoveredFactory) return null
+    return {
+      kind: 'factory',
+      name: hoveredFactory,
+      process: processOfFactory(hoveredFactory) ?? '',
+      groups: factoryGroupCounts?.get(hoveredFactory),
+      faultBays: factoryFaultCounts.get(hoveredFactory) ?? 0,
+    }
+  }, [
+    wide,
+    parcels,
+    mapUnitIsBay,
+    hoveredBay,
+    hoveredFactory,
+    occupantProgress,
+    processOfFactory,
+    faultBays,
+    factoryGroupCounts,
+    factoryFaultCounts,
+  ])
+  /* 지도 위 마지막 커서 자리 — hover 카드가 첫 프레임부터 제자리에 서게(상태가 아니라 ref) */
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
+
+  const cardTrailSteps = useMemo<CardTrailStep[]>(() => {
+    if (!selection) return []
+    const steps: CardTrailStep[] = [
+      { key: 'list', label: t('dashboard.map.factoryNav.title'), href: drill.hrefFor(YARD_DRILLDOWN) },
+    ]
+    if (selection.kind === 'process') return steps
+    const process = processOfFactory(selection.name)
+    if (process) {
+      steps.push({ key: 'process', label: process, href: drill.hrefFor({ ...YARD_DRILLDOWN, process }) })
+    }
+    if (selection.bay) {
+      steps.push({
+        key: 'factory',
+        label: selection.name,
+        href: drill.hrefFor({ ...YARD_DRILLDOWN, factory: selection.name }),
+      })
+    }
+    return steps
+  }, [selection, drill, t, processOfFactory])
 
   const detailCard = selectedBayData ? (
     <BayDetailCard
       bay={selectedBayData}
       locationNoun={drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')}
-      linkedLocation={bayLinks.locationOfBayId.get(selectedBayData.id) ?? null}
+      /* linkedLocation 을 주지 않는다 — 카드 맨 아래 '현황 열기'·'통합실적' 문은 걷었다.
+         현황은 머리의 '현황', 실적은 블록마다의 '실적' 이 맡는다 */
       /* 총괄 화면은 지번 표면을 내지 않는다 — 드릴다운은 공장→베이까지, 지번은 야드 몫 */
       showLotList={false}
       /* 면적·옥내외 같은 기준정보도 내지 않는다(P1 ①) — 이 카드의 본문은 아래 재실이다 */
       showMetrics={false}
-      onBack={clearBay}
-      onClose={() => applySelection(null)}
+      trail={<CardTrail steps={cardTrailSteps} className="mb-5.5" />}
+      /* 머리의 '현황' — 짝지은 작업 위치(조립 정반현황)가 있으면 거기, 없으면 공정 화면에
+         베이를 실어(`?bay=`) 보낸다. 문제 BAY 목록과 같은 착지 규칙이다 */
+      statusHref={selectedBayStatusHref}
+      onOpenStatus={openPreview}
+      /* 머리의 '3D'·'실적' — 블록을 고르지 않은 이 베이의 3D 탭·블록실적 탭
+         (조립 정반 / 의장 베이). 도장은 3D 축이 없어 '실적'(현황 › 블록·실적)만 선다 */
+      viewerHref={bayTabHref(
+        selectedBayOccupancy?.occupants ?? [],
+        bayLinks.locationOfBayId.get(selectedBayData.id)?.detailPath ?? null,
+        VIEWER_TAB
+      )}
+      blocksHref={
+        bayTabHref(
+          selectedBayOccupancy?.occupants ?? [],
+          bayLinks.locationOfBayId.get(selectedBayData.id)?.detailPath ?? null,
+          BLOCKS_TAB
+        ) ?? paintingBayBlocksJumpHref(selectedBayData.process, selectedBayData.factory, selectedBayData.id)
+      }
+      /* 이 베이의 설비 장애 — '현황' 옆에 (공장 카드와 같은 자리) */
+      /* 이름 옆 '점검 필요' 표시는 두지 않는다(사용자 확정) — 아래 점검 필요 목록이 말한다 */
     >
       {/* 이 베이에 서 있는 것 — 상세의 본문(P1 ①). 로스터의 자리가 원천이다 */}
-      <BayOccupantList occupants={selectedBayOccupancy?.occupants ?? []} className="mb-2" />
-      {/* 실적은 **그 공장 공정의 것만**(P1 ②) — 절점 귀속이 공장 단위 mock 이라 공장 기준 수치다 */}
-      <PerformanceBadge
-        factory={selectedBayData.factory}
-        process={selectedBayData.process}
-        className="border-b-0 px-0 py-0"
+      <BayOccupantList
+        occupants={selectedBayOccupancy?.occupants ?? []}
+        progress={occupantProgress}
+        onPreview={openPreview}
+        className="mb-2"
       />
-      {/* 공정 화면으로 나가는 문은 우상단 오버레이(FactoryFocusOverlay)가 맡는다 —
-          같은 문을 카드 안에 또 세우지 않는다 (R11) */}
+      {/* 작업 목록 아래 — 이 베이의 점검 필요 설비. 줄을 누르면 그 설비를 짚은 현황 창 */}
+      <BayFaultList
+        process={selectedBayData.process ?? ''}
+        equipment={selectedBayFaults}
+        onOpen={(equipment) => {
+          if (!selectedBayStatusHref) return
+          openPreview(
+            withEquipmentFocus(selectedBayStatusHref, equipment.id),
+            t('dashboard.map.preview.statusTitle', { name: `${selectedBayData.label} ${equipment.id}` })
+          )
+        }}
+        className="mb-2 mt-3"
+      />
+      {/* 판별 기반 실적 카드는 걷었다 — 블록마다의 '실적' 문이 통합실적으로 데려간다 */}
     </BayDetailCard>
   ) : selectedFactoryData ? (
     <FactoryDetailCard
       data={selectedFactoryData}
-      locationNoun={drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')}
-      state={locationsState}
-      knownLots={knownLots}
-      selectedLocation={selectedLocation}
-      hoveredLocation={listHoveredLocation}
-      onHoverLocation={setHoveredLocation}
-      onOpenLocation={openLocation}
-      onClearLocation={clearLocation}
-      onRetry={retryLocations}
-      onClose={() => applySelection(null)}
+      trail={<CardTrail steps={cardTrailSteps} className="mb-5.5" />}
+      statusHref={selectedFactoryStatusHref}
+      /* '3D'·'실적' — 그 공장 공정 화면의 3D 탭·블록실적 탭 (조립·의장만) */
+      viewerHref={zoneTabJumpHref(selectedFactoryData.process, selectedFactoryData.name, VIEWER_TAB)}
+      blocksHref={factoryPerformanceHref(selectedFactoryData.process, selectedFactoryData.name)}
+      onOpenStatus={openPreview}
       bays={selectedFactoryBays}
+      occupants={selectedFactoryOccupants}
+      progress={occupantProgress}
+      equipmentFaults={equipmentFaults}
       onOpenBay={openBay}
       onHoverBay={setHoveredBay}
     />
   ) : null
 
+  /* 왼쪽 카드의 앞 두 단계 — 공정 목록(무선택), 그 공정의 공장 목록(`?process=`) */
+  const selectedProcess = selection?.kind === 'process' ? selection.process : null
+  const navCard = parcels ? (
+    <FactoryNavPanel
+      factories={parcels.factories}
+      process={selectedProcess}
+      trail={<CardTrail steps={cardTrailSteps} />}
+      workCounts={factoryWorkCounts}
+      faultCounts={factoryFaultCounts}
+      onSelectProcess={(process) => applySelection({ kind: 'process', process })}
+      onSelectFactory={selectNavFactory}
+      onHoverFactory={(name) => {
+        setHoveredFactory(name)
+        setNavHoveredFactory(name)
+      }}
+    />
+  ) : null
+  /* 카드 내용의 단계 — 바뀔 때마다 새 내용이 살짝 떠오른다 */
+  const cardStep = selectedBayData
+    ? 'bay'
+    : selectedFactoryData
+      ? 'factory'
+      : selectedProcess
+        ? `process:${selectedProcess}`
+        : 'list'
+
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-3">
       {/*
-        지도 상자. 넓은 화면에서는 남은 높이를 다 쓴다. 상세 카드는 화면 폭과 무관하게 늘
-        지도 위에 뜬다 — 좁은 화면에서 지도 아래로 내리면 지도와 카드 사이가 비고 고른
-        공장과 상세가 한눈에 안 들어온다. 카드는 제 안에서 스크롤하므로 높이만 있으면 된다.
+        지도 상자. 넓은 화면에서는 남은 높이를 다 쓰고(패널이 그 위에 뜬다), 좁은 화면에서는
+        아래에 선 패널이 화면 밖으로 밀리지 않도록 높이를 덜어 준다.
       */}
       <div
+        ref={mapBoxRef}
+        onMouseMove={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect()
+          lastPointerRef.current = { x: event.clientX - rect.left, y: event.clientY - rect.top }
+        }}
         data-tour="dashboard-map"
-        className="relative min-h-0 w-full overflow-hidden rounded-inshop-xl border border-border bg-[#0b0f14] max-md:h-[min(85vh,48rem)] max-md:min-h-[30rem] md:flex-1"
+        className="relative min-h-0 w-full overflow-hidden rounded-inshop-xl border border-border bg-[#0b0f14] max-md:h-[min(60vh,34rem)] max-md:min-h-[22rem] md:flex-1"
       >
         {/* 지도 — 준비되면 붙는다. 그 전엔 패널이 먼저 서 있고 여기만 로딩 표시 */}
         {data?.backdrop && parcelLayer && basemapLayers ? (
@@ -909,7 +1518,9 @@ export function DashboardZoneMap() {
             plans={NO_PLANS}
             basemapLayers={basemapLayers}
             extent={data.backdrop.extent}
-            minScale={35_000}
+            /* 최대 축소 한도 — 대문이 지도를 돌려(-30°) 모든 공장을 카드 밖에 담으려면 35,000 보다
+               더 물러나야 해서 낮췄다(사용자 확정). 한도에 걸리면 외곽 공장이 카드 밑에 남는다 */
+            minScale={20_000}
             maxScale={900_000}
             colorOfCategory={NO_CATEGORY_COLOR}
             layers={MAP_LAYERS}
@@ -918,34 +1529,36 @@ export function DashboardZoneMap() {
             viewMode="3d"
             onViewChange={(view: YardView, viewport: Viewport) => {
               cameraRef.current = { view, viewport }
-              miniMapRef.current?.updateView(view, viewport)
+              /* 마지막 화각 — 다른 화면에 다녀오면 여기로 돌아온다 */
+              rememberYardCamera(view, searchRef.current)
+              /* 카메라가 움직이면 hover 카드가 가리키던 자리가 떠난다 — 다음 손짓이 다시 띄운다 */
+              setHoveredSpot((prev) => prev && null)
               hudRef.current?.updateView(view, viewport)
+              cameraReadoutRef.current?.updateView(view)
               searchPinRef.current?.updateView(view, viewport)
             }}
             lotOpacity={0.7}
             parcels={parcelLayer}
-            /* 대문은 공장 밀집 구역이 홈 — 선택이 없을 때도 야드 전체로 물러나지 않는다.
-             * 음수 패딩 = 범위보다 한 발 **안으로** 들어간 카메라: 외곽 공장 한둘이 살짝
-             * 잘리더라도 모델이 가깝게 서는 쪽을 대문으로 삼는다 (드래그로 언제든 나온다). */
-            initialBounds={overviewBounds}
-            initialBoundsPadding={OVERVIEW_BOUNDS_PADDING}
+            /* 첫 화각 = **지금 주소가 가리키는 자리**(카메라 목표). 선택이 없으면 대문 —
+             * 공장 밀집 구역이 홈이고, 음수 패딩은 범위보다 한 발 안으로 들어간 카메라다.
+             * 예전엔 늘 대문으로 시작했는데, YardMap 은 첫 focusBounds 를 "이미 본 것"으로
+             * 넘기므로 뒤로 가기·딥링크로 공장·베이를 연 채 들어오면 카드는 베이를 말하는데
+             * 카메라는 대문에 남았다. YardMap 이 이 값을 마운트 때 한 번만 읽으므로, 그 뒤의
+             * 선택 변경은 지금처럼 focusBounds 비행이 맡는다. */
+            initialBounds={focusTarget}
+            initialBoundsPadding={focusPadding}
+            initialPitch={focusPitch}
+            initialBearing={MAP_BEARING}
             /* 공정 맵에서 이어 온 화각 — 있으면 첫 프레임이 그 자리에서 시작한다 */
-            initialView={handoffView}
-            focusBounds={glidedFocusBounds}
-            focusBoundsPadding={
-              searchFocus
-                ? /* 블록 핀 주변 — 이웃 지번이 함께 남을 만큼 */
-                  0.35
-                : selection?.kind === 'process'
-                ? -0.04
-                : selection?.kind === 'factory'
-                  ? /* 베이도 같은 여백을 쓴다 — 배율은 여백이 아니라 `bayCameraBounds` 의
-                       범위가 묶는다(베이 크기가 제각각이라 여백으로 묶으면 널뛴다) */
-                    0.12
-                  : OVERVIEW_BOUNDS_PADDING
-            }
+            initialView={handoffView ?? restoredView}
+            /* 돌아온 화각을 붙드는 동안은 비행 목표를 비운다(위 `holdSearch`) */
+            focusBounds={holdingCamera ? null : glidedFocusBounds}
+            focusBoundsPadding={focusPadding}
+            focusBoundsPitch={focusPitch}
+            focusBoundsBearing={MAP_BEARING}
+            /* 각도는 단계가 정하고(전경 · 하위 단계 버드뷰), 그 사이에는 사용자가 돌리고 기울일 수
+               있다(사용자 확정 — 오른쪽 끌기 또는 Shift+끌기). 단계를 옮기면 그 단계 각도로 돌아간다 */
             parcelSpotlightDuration={0}
-            navigationTarget={navigationTarget}
             showFacilityLabels={false}
             className="h-full w-full"
           />
@@ -963,6 +1576,31 @@ export function DashboardZoneMap() {
             ref={searchPinRef}
             sites={searchSites}
             initialCamera={cameraRef.current}
+          />
+        )}
+
+        {/* 지도 위 가운데 — 지금 카메라 값. 누르면 JSON 으로 복사(사용자 요청) */}
+        <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center">
+          <CameraReadout ref={cameraReadoutRef} />
+        </div>
+
+        {/* 점검 필요 핀·하이라이트 hover 카드 — 베이와 점검이 필요한 장비 */}
+        {hoveredSpot && faultBays[hoveredSpot.index] && (
+          <FaultSpotTooltip
+            bay={faultBays[hoveredSpot.index]}
+            x={hoveredSpot.x}
+            y={hoveredSpot.y}
+            boxWidth={hoveredSpot.boxWidth}
+          />
+        )}
+
+        {/* 왼쪽 카드를 접어 둔 동안의 공장·베이 hover 카드 — 점검 필요 hover 카드가 먼저다 */}
+        {hoverInfo && !hoveredSpot && (
+          <MapHoverCard
+            key={hoverInfo.kind === 'bay' ? `bay:${hoverInfo.label}` : `factory:${hoverInfo.name}`}
+            info={hoverInfo}
+            boxRef={mapBoxRef}
+            initial={lastPointerRef.current}
           />
         )}
 
@@ -984,15 +1622,7 @@ export function DashboardZoneMap() {
             /* 이름패 클릭 = 드릴인 (P1 ③) — 지도 폴리곤을 누르는 것과 같은 동작.
                이미 그 공장이 열려 있어도 selectFactory 는 선택을 유지한다(전이 함수) */
             onSelect={() => selectFactory(hudFactory.factory.name)}
-            /* 패 밑의 나가는 문(R11 정정 — 인씬) — 공장을 따라 떠다니고, 가공은 문이
-               없어 이름만 남는다(ZoneJumpButton 이 스스로 비운다) */
-            action={
-              <ZoneJumpButton
-                process={hudFactory.factory.process || null}
-                factory={hudFactory.factory.name}
-                onStash={stashCamera}
-              />
-            }
+            /* 패 밑의 '공정 화면 열기' 문은 걷었다 — 카드 머리의 '현황' 이 같은 곳으로 간다 */
           />
         )}
 
@@ -1009,16 +1639,11 @@ export function DashboardZoneMap() {
             /* 공장 이름은 패가 물러났으므로 여기서 문맥을 잇는다 — 어느 공장의 몇 베이인가 */
             caption={hudBay.process ? `${hudBay.factory} · ${hudBay.process}` : hudBay.factory}
             initialCamera={cameraRef.current}
-            /* 패 클릭 = 지도에서 이 베이를 한 번 더 누르는 것과 같다(bayClickIntent 'open') —
-               갈 곳이 없으면 누를 수 없는 표식으로 남는다 */
+            /* 패 클릭 = 그 베이의 작업 위치 상세로 — 갈 곳이 없으면 누를 수 없는 표식으로 남는다 */
             onSelect={
               hudBayLocation ? () => navigate(hudBayLocation.detailPath) : undefined
             }
-            action={
-              hudBayLocation ? (
-                <BayJumpButton process={hudBay.process} location={hudBayLocation} />
-              ) : undefined
-            }
+            /* 패 밑의 '현황 열기' 문은 걷었다 — 카드 머리의 '현황' 이 같은 곳으로 간다 */
           />
         )}
 
@@ -1032,15 +1657,9 @@ export function DashboardZoneMap() {
          *
          * 왼쪽 칸은 `minmax(0,1fr)` 이라 오른쪽 패널 자리를 결코 침범하지 않는다.
          */}
-        <div className="pointer-events-none absolute inset-3 z-10 grid grid-cols-1 gap-3">
+        <div className="pointer-events-none absolute inset-3 z-10 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_23rem]">
           <div className="flex min-h-0 min-w-0 flex-col items-start gap-2.5">
-            {/* 자취는 **고정**이다 — 지금 어디인지 말하는 줄이 카드와 함께 떠다니면
-                "여기가 어디인가"를 매번 다시 찾아야 한다 */}
-            <DrilldownBreadcrumb
-              steps={breadcrumbSteps}
-              label={t('common.breadcrumbNav')}
-              className="pointer-events-auto shrink-0"
-            />
+            {/* 지도 위 자취는 걷었다 — 같은 뎁스는 왼쪽 카드 머리(`CardTrail`)가 말한다 */}
 
             {/*
               제목패('전체 현황' + '4개 공정존…')는 걷었다 (P1 ④/R21) — 헤더의 현재 위치와
@@ -1080,18 +1699,27 @@ export function DashboardZoneMap() {
                 둔다. 베이를 고르면 같은 자리를 베이 상세가 이어받는다(두 카드를 나란히
                 세우면 지도를 반쯤 덮고, 어느 쪽이 지금 이야기인지도 흐려진다).
                 남는 높이를 전부 가져가되(`flex-1`), 넘치는 내용은 카드 안에서 스크롤한다. */}
-            {detailCard && (
-              <DraggableCard
-                key={selectedBayData ? 'bay' : 'factory'}
-                cardKey="detail"
-                className="pointer-events-auto flex min-h-0 w-[19rem] max-w-full flex-1 animate-slide-up flex-col"
+            {/* 왼쪽 카드는 **공장·베이를 골랐을 때** 선다(사용자 확정 — 공장 카드를 되살렸다). 대문·공정
+                단계에는 카드가 없고, 그 단계의 정보는 지도 hover 카드(`MapHoverCard`)가 말한다. 접기·펴기도, 지금
+                단계를 적은 탭도, 닫기(×)도 두지 않는다 — 빈 곳 클릭·ESC 가 한 단계 뒤로 간다.
+                자리는 고정이다(끌어 옮기지 않는다) */}
+            {wide && parcels && detailCard && (
+              /* 이 상자는 남는 높이를 다 받는다(카드가 길면 그 안에서 스크롤하도록) — 그래서 상자
+                 자체는 클릭을 **통과**시킨다. 눈에 보이는 카드(section)만 클릭을 받고, 카드 아래
+                 빈 자리를 누르면 지도에 닿는다(사용자 지적: 카드 밑이 눌리지 않았다) */
+              <div
+                ref={leftCardRef}
+                data-yard-card="detail"
+                className="pointer-events-none flex min-h-0 w-[28rem] max-w-full flex-1 flex-col"
               >
-                {detailCard}
-              </DraggableCard>
+                <div key={cardStep} className="flex min-h-0 flex-1 flex-col animate-fade-in">
+                  {detailCard}
+                </div>
+              </div>
             )}
 
             {/*
-             * 왼쪽 아래 — 조작 안내와 전체 야드 미니맵. 위 항목들과 한 흐름이라 어떤 높이에서도
+             * 왼쪽 아래 — 조작 안내. 위 항목들과 한 흐름이라 어떤 높이에서도
              * 서로 올라타지 않는다(예전의 `bottom-[10.75rem]` 손계산은 화면이 짧아지는 순간
              * 어긋났다). 남는 높이가 없으면 자연히 아래로 붙는다.
              */}
@@ -1102,20 +1730,6 @@ export function DashboardZoneMap() {
               >
                 {t('dashboard.map.hint3d')}
               </DraggableCard>
-              {data?.backdrop && parcels && (
-                <DraggableCard cardKey="minimap" className="pointer-events-auto">
-                <DashboardMiniMap
-                  ref={miniMapRef}
-                  extent={data.backdrop.extent}
-                  parcels={parcels}
-                  /* 다시 그릴 밑천 — 접혔다 펴져도 빈 판이 서 있지 않게 한다 */
-                  initialCamera={cameraRef.current}
-                  /* 상세 카드가 열린 낮은 해상도에서는 몸집을 줄여 카드에 높이를 내준다 */
-                  compact={Boolean(detailCard) && shortScreen}
-                  onNavigate={(point) => setNavigationTarget({ ...point })}
-                />
-                </DraggableCard>
-              )}
             </div>
           </div>
 
@@ -1123,182 +1737,29 @@ export function DashboardZoneMap() {
 
       </div>
 
-    </div>
-  )
-}
+      {/*
+        좁은 화면 — 겹칠 자리가 없으므로 패널을 지도 아래 문서 흐름에 세운다. 지도에서 공장을
+        고르면 그 상세가 여기 열리는데, 화면 밖이면 아무 일도 없었던 것처럼 보이므로
+        스크롤로 데려온다.
+      */}
+      {preview && <ScreenPreviewDialog preview={preview} onClose={closePreview} />}
 
-/* ── 작업 위치 (공정 → 공장 다음 단계) ── */
-
-/**
- * 조회 상태별 안내 한 줄 — 로딩·빈 값·오류·매핑 없음·미제공을 **각각 다른 말로** 한다
- * (PRD FR-5, §7 표). 목록이 있는 `ready` 는 여기서 null 을 내고 호출부가 목록을 그린다.
- */
-function LocationNotice({
-  state,
-  locationNoun,
-  onRetry,
-}: {
-  state: MapLocationsState
-  locationNoun: string
-  /** 없으면 재시도 버튼을 두지 않는다 — 같은 조회에 재시도 버튼이 둘일 이유가 없다 */
-  onRetry?: () => void
-}) {
-  const { t } = useTranslation()
-
-  if (state.kind === 'loading') {
-    /* 로딩 자리를 스켈레톤으로 잡아 둔다 — 앞 공장의 목록이 남아 오인되지 않게 (FR-5) */
-    return (
-      <div className="space-y-1" aria-live="polite" aria-busy="true">
-        <span className="sr-only">{t('dashboard.map.locationsLoading')}</span>
-        {[0, 1, 2].map((row) => (
-          <div key={row} className="h-7 animate-pulse rounded-inshop-md bg-white/[0.06]" />
-        ))}
-      </div>
-    )
-  }
-
-  const message =
-    state.kind === 'error'
-      ? t('dashboard.map.locationsError')
-      : state.kind === 'unmapped'
-        ? t('dashboard.map.locationsUnmapped')
-        : state.kind === 'unsupported'
-          ? t('dashboard.map.locationsUnsupported')
-          : state.kind === 'idle'
-            ? t('dashboard.map.locationsIdle', { noun: locationNoun })
-            : t('dashboard.map.locationsEmpty', { noun: locationNoun })
-
-  return (
-    <div className="flex items-center justify-between gap-2 px-1 py-1.5" aria-live="polite">
-      <p className="min-w-0 text-2xs leading-relaxed text-white/55">{message}</p>
-      {state.kind === 'error' && onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="shrink-0 rounded-inshop-md border border-white/15 px-2 py-1 text-2xs text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        >
-          {t('dashboard.map.retry')}
-        </button>
+      {!wide && (
+        <div ref={stackedPanelsRef} className="flex flex-col gap-3">
+          {(detailCard ?? navCard) && (
+            <div key={cardStep} className="animate-slide-up">
+              {detailCard ?? navCard}
+            </div>
+          )}
+          <FaultBayPanel
+            bays={faultBays}
+            selectedBayId={selectedBay}
+            onOpenBay={openFaultBay}
+            onHoverBay={setHoveredFaultBay}
+          />
+        </div>
       )}
     </div>
-  )
-}
-
-/**
- * 공장 상세 카드의 작업 위치 목록 — 한 줄에 이름 + 운영 코드(정반코드) + 상태.
- *
- * 항목은 **링크**다: 누르면 그 위치의 상세 화면으로 곧장 가고(즉시 이동 확정, PRD
- * 열린 결정 3), 손을 얹거나 포커스만 줘도 지도의 그 칸이 켜져 "어디인지"를 먼저 보여
- * 준다. 링크라서 키보드·새 탭·스크린리더가 전부 그대로 동작한다 (FR-6).
- *
- * 값이 없는 보조 정보(코드·상태)는 가짜 기본값을 만들지 않고 그 줄을 생략한다.
- * 지도에 걸 자리가 없으면 `지도 위치 정보 없음`을 그 자리에 말한다 (PRD §5.4).
- */
-function LocationSection({
-  state,
-  color,
-  knownLots,
-  locationNoun,
-  selectedLocation,
-  hoveredLocation,
-  onHoverLocation,
-  onOpenLocation,
-  onRetry,
-}: {
-  state: MapLocationsState
-  color: string
-  knownLots: Set<string>
-  locationNoun: string
-  selectedLocation: string | null
-  hoveredLocation: string | null
-  onHoverLocation: (id: string | null) => void
-  onOpenLocation: (id: string) => void
-  onRetry: () => void
-}) {
-  const { t } = useTranslation()
-  /* 목록이 아직/아예 없으면 그 사정을 말한다. 엘리먼트는 언제나 truthy 라 상태로 가른다 */
-  if (state.kind !== 'ready' || state.locations.length === 0) {
-    return <LocationNotice state={state} locationNoun={locationNoun} onRetry={onRetry} />
-  }
-  const locations = state.locations
-
-  return (
-    <>
-      {/* min-h 는 화면이 낮아도 목록이 완전히 접히지 않게 두세 줄을 보장한다 */}
-      <ul className="scroll-thin max-h-64 min-h-20 space-y-1 overflow-y-auto pr-0.5">
-        {locations.map((location) => {
-          const isActive = location.id === selectedLocation
-          const isHovered = !isActive && location.id === hoveredLocation
-          const mapNote = mapLinkNote(location, knownLots)
-          return (
-            <li key={location.id}>
-              <Link
-                to={location.detailPath}
-                onClick={(event) => {
-                  /* 새 탭·다운로드 같은 브라우저 기본 동작은 가로채지 않는다 */
-                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
-                  event.preventDefault()
-                  onOpenLocation(location.id)
-                }}
-                onMouseEnter={() => onHoverLocation(location.id)}
-                onMouseLeave={() => onHoverLocation(null)}
-                onFocus={() => onHoverLocation(location.id)}
-                onBlur={() => onHoverLocation(null)}
-                aria-current={isActive ? 'true' : undefined}
-                style={
-                  isActive
-                    ? { backgroundColor: `${color}2b`, boxShadow: `inset 0 0 0 1px ${color}73` }
-                    : isHovered
-                      ? { backgroundColor: `${color}17` }
-                      : undefined
-                }
-                className={cn(
-                  'flex items-center gap-2 rounded-inshop-md px-2 py-1.5 transition-colors duration-150',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70',
-                  isActive ? 'text-white' : 'text-white/78 hover:text-white'
-                )}
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className="min-w-0 truncate text-inshop-xs font-medium">
-                      {location.displayName}
-                    </span>
-                    {location.locationCode && (
-                      <span
-                        className="shrink-0 rounded border px-1 py-px font-mono text-2xs leading-4 text-white/62"
-                        style={{ borderColor: `${color}4d` }}
-                        title={t('dashboard.map.locationCode')}
-                      >
-                        {location.locationCode}
-                      </span>
-                    )}
-                  </span>
-                  {(location.statusLabelKey || mapNote) && (
-                    <span className="mt-0.5 flex items-center gap-1.5 text-2xs text-white/48">
-                      {location.statusLabelKey && <span>{t(location.statusLabelKey)}</span>}
-                      {location.statusLabelKey && mapNote && <span aria-hidden="true">·</span>}
-                      {mapNote && <span>{t(mapNote)}</span>}
-                    </span>
-                  )}
-                </span>
-                <span aria-hidden="true" className="shrink-0 text-2xs text-white/45">
-                  →
-                </span>
-                <span className="sr-only">{t('dashboard.map.openLocationDetail')}</span>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-      {state.kind === 'ready' && state.facilityPath && (
-        <Link
-          to={state.facilityPath}
-          className="mt-1.5 inline-flex shrink-0 self-start rounded-inshop-sm px-1 py-0.5 text-2xs font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        >
-          {t('dashboard.map.openFacility')}
-        </Link>
-      )}
-    </>
   )
 }
 
@@ -1307,50 +1768,46 @@ function LocationSection({
 interface FactorySummary {
   name: string
   process: string | null
-  lotCount: number
-  area: number
-  indoor: number
-  outdoor: number
-  categories: { category: string; count: number }[]
 }
 
 function FactoryDetailCard({
   data,
-  locationNoun,
-  state,
-  knownLots,
-  selectedLocation,
-  hoveredLocation,
-  onHoverLocation,
-  onOpenLocation,
-  onClearLocation,
-  onRetry,
-  onClose,
+  trail,
+  statusHref,
+  viewerHref,
+  blocksHref,
+  onOpenStatus,
   bays,
+  occupants,
+  equipmentFaults,
+  progress,
   onOpenBay,
   onHoverBay,
 }: {
   data: FactorySummary
-  /** 이 공정이 작업 위치를 부르는 말 — 공정 모듈이 준다 (PRD FR-3 locationNounKey) */
-  locationNoun: string
-  state: MapLocationsState
-  /** 지도 fixture 에 실제로 있는 지번 — 연결 키의 매핑 불일치를 가려내는 데 쓴다 */
-  knownLots: Set<string>
-  selectedLocation: string | null
-  hoveredLocation: string | null
-  onHoverLocation: (id: string | null) => void
-  onOpenLocation: (id: string) => void
-  onClearLocation: () => void
-  onRetry: () => void
-  onClose: () => void
+  /** 머리의 뎁스 경로(`공장 목록 › 조립`) — 누르면 그 단계로(공장 목록 = 같은 카드의 첫 화면) */
+  trail: ReactNode
+  /** 머리의 '현황' 문 — 이 공장의 공정 현황 화면. 없으면(가공 등) 문을 세우지 않는다 */
+  statusHref: string | null
+  /** 머리의 '3D' 문 — 이 공장 공정 화면의 3D 탭. 없으면(도장·가공) 세우지 않는다 */
+  viewerHref: string | null
+  /** 머리의 '실적' 문 — 이 공장 공정 화면의 블록·실적 탭. 없으면 세우지 않는다 */
+  blocksHref: string | null
+  /** '현황'·'3D'·'실적' 열기 — 화면 창으로 띄운다 (주소·제목을 넘긴다) */
+  onOpenStatus: (href: string, title: string) => void
   /** 이 공장의 베이별 재실(P1 ①) — 빈 배열이면 목록을 만들지 않는다 */
   bays: readonly BayOccupancy[]
+  /** 베이 없이 공장 단위로 센 재실 — 가공 공장. 있으면 베이 목록 대신 작업 현황 + 작업 목록을 세운다 */
+  occupants: readonly BayOccupant[]
+  /** 베이 id → 장애 설비 수. 장애 베이는 작업이 없어도 목록에 선다 */
+  equipmentFaults: ReadonlyMap<string, number>
+  /** 재실의 진행 상태 — 작업 전·완료는 '진행 작업' 에서 뺀다 */
+  progress: ReadonlyMap<string, OccupantProgress>
   onOpenBay: (bayId: string) => void
   onHoverBay?: (bayId: string | null) => void
 }) {
   const { t } = useTranslation()
   const processColor = data.process ? colorOfProcess(data.process) : '#9a9890'
-  const maxCategoryCount = Math.max(...data.categories.map((category) => category.count), 1)
   /*
    * 카드 머리(공장 이름·닫기)는 고정, 그 아래 본문은 통째로 스크롤한다.
    *
@@ -1363,109 +1820,77 @@ function FactoryDetailCard({
     <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-inshop-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: processColor }} />
       {/* 머리글이 이 카드의 드래그 손잡이 — 아래 본문은 스크롤이 제 일이라 잡히지 않는다 */}
-      <div data-drag-handle className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-4">
+      <div data-drag-handle className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-3">
         <div className="min-w-0 space-y-1.5">
-          <div className="flex items-center gap-2 text-2xs font-medium text-white/52">
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: processColor }} />
-            <span>{data.process || t('dashboard.map.noProcess')}</span>
+          {trail}
+          {/* 제목 옆이 '현황' 의 자리 — 무엇의 현황인지가 바로 옆 이름이다 */}
+          {/* 제목 줄 — 제목은 잘리지 않는다 */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2">
+            <h3 className="shrink-0 whitespace-nowrap text-inshop-2xl font-semibold leading-tight tracking-[-0.03em]">
+              {data.name}
+            </h3>
           </div>
-          <h3 className="truncate text-inshop-xl font-semibold leading-tight tracking-[-0.03em]">
-            {data.name}
-          </h3>
+          {/* 제목 아래 — 현황·3D·실적 창 열기 버튼 줄(사용자 확정) */}
+          <div className="flex flex-wrap items-center gap-2 pt-1.5">
+            {statusHref && (
+              <StatusJumpButton
+                title={t('dashboard.map.statusJump.factoryHint', { factory: data.name })}
+                onOpen={() =>
+                  onOpenStatus(statusHref, t('dashboard.map.preview.statusTitle', { name: data.name }))
+                }
+              />
+            )}
+            {viewerHref && (
+              <StatusJumpButton
+                label={t('dashboard.map.occupant.open3d')}
+                icon="viewer"
+                title={t('dashboard.map.occupant.viewerHint', { block: data.name })}
+                onOpen={() =>
+                  onOpenStatus(viewerHref, t('dashboard.map.preview.viewerTitle', { block: data.name }))
+                }
+              />
+            )}
+            {blocksHref && (
+              <StatusJumpButton
+                label={t('dashboard.map.occupant.openPerformance')}
+                icon="performance"
+                title={t('dashboard.map.preview.blocksTitle', { name: data.name })}
+                onOpen={() =>
+                  onOpenStatus(blocksHref, t('dashboard.map.preview.blocksTitle', { name: data.name }))
+                }
+              />
+            )}
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t('dashboard.map.close')}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-inshop-lg border border-white/8 text-white/48 transition-colors hover:border-white/15 hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        >
-          <CloseIcon size={16} />
-        </button>
       </div>
 
       <div className="scroll-thin scroll-shadow-y flex min-h-0 flex-1 flex-col overflow-y-auto">
       {/* 공장 드릴인의 본문은 베이별 재실 목록이다(P1 ①) — 행은 베이 상세의 축약판이고,
           누르면 그 베이로 드릴인한다. 실적·작업 위치는 이 아래로 물러난다 */}
-      <FactoryBayList bays={bays} onOpenBay={onOpenBay} onHoverBay={onHoverBay} />
+      <FactoryBayList
+        bays={bays}
+        equipmentFaults={equipmentFaults}
+        progress={progress}
+        onOpenBay={onOpenBay}
+        onHoverBay={onHoverBay}
+      />
+      {/* 가공 공장 — 베이가 없으니 공장 합계와 그 아래 블록 작업 목록(베이 카드의 본문과 같은 모양) */}
+      {bays.length === 0 && isBaylessProcess(data.process) && (
+        <div className="shrink-0 px-3 py-3">
+          <FactoryWorkSummary occupants={occupants} progress={progress} />
+          <BayOccupantList occupants={occupants} progress={progress} onPreview={onOpenStatus} />
+        </div>
+      )}
 
       {/* 면적·옥내외 같은 **기준정보는 두지 않는다**(P1 ①) — 지번 대장에서 온 그 숫자는
           어느 날 봐도 같아서, 매일 보는 화면에서 자리만 차지한다. 이 카드가 말하는 것은
           위의 베이별 재실이다. */}
 
-      {/* 절점 기반 실적 — **그 공장 공정의 것만**(P1 ②). 낼 수 없는 공정은 스스로 빠진다 */}
-      <PerformanceBadge factory={data.name} process={data.process} />
 
-      {/*
-        작업 위치 섹션 (PRD §5.3) — 이 공장의 다음 선택 단계. 이름과 운영 코드(조립:
-        정반코드)를 함께 세우고, 상태는 값이 있을 때만 보조로 붙인다. 목록이 길어질 수
-        있어 이 섹션만 따로 스크롤한다 — 카드가 지도를 덮지 않도록.
-      */}
-      {/*
-        `shrink-0` 이 중요하다 — 이 칸은 눌러도 더 이상 줄지 않는다(안의 목록이 최소
-        높이를 갖고 있어서, 칸만 줄면 목록이 칸 밖으로 **삐져나와 아래 칸 글자 위에
-        겹쳐 그려진다**). 모자란 높이는 칸을 줄여서가 아니라 바깥 본문 스크롤로 낸다.
-      */}
-      <div className="flex shrink-0 flex-col border-b border-white/8 px-3 py-3">
-        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
-          <p className="text-2xs font-medium text-white/55">
-            {locationNoun}
-            {state.kind === 'ready' && state.locations.length > 0 && (
-              <span className="ml-1.5 font-mono text-white/30">{state.locations.length}</span>
-            )}
-          </p>
-          {selectedLocation && (
-            <button
-              type="button"
-              onClick={onClearLocation}
-              className="shrink-0 rounded-inshop-sm px-1 py-0.5 text-2xs text-white/55 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            >
-              {t('dashboard.map.locationDeselect')}
-            </button>
-          )}
-        </div>
-        <LocationSection
-          state={state}
-          color={processColor}
-          knownLots={knownLots}
-          locationNoun={locationNoun}
-          selectedLocation={selectedLocation}
-          hoveredLocation={hoveredLocation}
-          onHoverLocation={onHoverLocation}
-          onOpenLocation={onOpenLocation}
-          onRetry={onRetry}
-        />
-      </div>
+      {/* 작업 위치(베이·정반) 목록·분류 구성은 걷었다 — 위의 베이별 작업 목록과 같은 칸을
+          두 번 말하거나, 매일 보는 화면에 필요 없는 기준정보였다(사용자 확정). 정반 현황으로는
+          베이 카드 머리의 '현황' 이 간다 */}
 
-      {data.categories.length > 0 && (
-        <div className="shrink-0 px-4 py-3.5">
-          <p className="text-2xs font-medium text-white/45">
-            {t('dashboard.map.categories')}
-          </p>
-          <ul className="mt-2.5 space-y-2.5">
-            {data.categories.map((c) => (
-              <li key={c.category} className="text-inshop-xs">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: PARCEL_CATEGORY_COLORS[c.category] ?? '#9a9890' }}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-white/72">{c.category}</span>
-                  <span className="shrink-0 font-mono tabular-nums text-white/48">{c.count}</span>
-                </div>
-                <div className="ml-4 mt-1.5 h-1 overflow-hidden rounded-full bg-white/7">
-                  <div
-                    className="h-full rounded-full opacity-80"
-                    style={{
-                      backgroundColor: PARCEL_CATEGORY_COLORS[c.category] ?? '#9a9890',
-                      width: `${(c.count / maxCategoryCount) * 100}%`,
-                    }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       </div>
     </section>
   )
@@ -1503,33 +1928,10 @@ function processBounds(parcels: YardParcels, process: string): LatLonBounds | nu
   return { minLat, minLon, maxLat, maxLon }
 }
 
-/** 공장 상세 카드에 필요한 집계 — 소속 지번의 수·면적·옥내외·분류 구성 */
+/** 공장 상세 카드에 필요한 것 — 이름과 공정(색·'현황' 문의 재료) */
 function summarizeFactory(parcels: YardParcels, name: string): FactorySummary {
   const factory = parcels.factories.find((f) => f.name === name) ?? null
   const codes = new Set(factory?.lotCodes ?? [])
-  const lots = parcels.lots.filter((lot) => codes.has(lot.lot) || lot.factory === name)
-
-  let area = 0
-  let indoor = 0
-  let outdoor = 0
-  const categoryCounts = new Map<string, number>()
-  for (const lot of lots) {
-    area += lot.area
-    if (lot.place === '옥내') indoor += 1
-    else if (lot.place === '옥외') outdoor += 1
-    categoryCounts.set(lot.category, (categoryCounts.get(lot.category) ?? 0) + 1)
-  }
-  const categories = [...categoryCounts]
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count)
-
-  return {
-    name,
-    process: factory?.process ?? lots[0]?.process ?? null,
-    lotCount: lots.length,
-    area,
-    indoor,
-    outdoor,
-    categories,
-  }
+  const firstLot = parcels.lots.find((lot) => codes.has(lot.lot) || lot.factory === name)
+  return { name, process: factory?.process ?? firstLot?.process ?? null }
 }

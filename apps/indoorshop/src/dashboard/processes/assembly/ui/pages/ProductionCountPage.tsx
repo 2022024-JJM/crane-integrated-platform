@@ -61,16 +61,24 @@ function WeeklyBars({ daily }: { daily: BayDailyProduction['daily'] }) {
 }
 
 export function ProductionCountPage() {
+  const { factoryId } = useParams<{ factoryId: string }>()
+  return <DailyProductionView factoryId={factoryId ?? ''} />
+}
+
+/**
+ * 일일 소조 생산 현황 본문 — 단독 페이지와 조립 화면의 오른쪽 칸(`embedded`)이 같이 쓴다.
+ * 오른쪽 칸에 들어가면 경로 표시와 '돌아가기' 링크는 뺀다 — 왼쪽 공장 목록과 탭이 그 일을 한다.
+ */
+export function DailyProductionView({ factoryId, embedded = false }: { factoryId: string; embedded?: boolean }) {
   const { t } = useTranslation()
   /* 수치가 어느 날 것인가 — 기준일과 다르면 라벨이 날짜를 박는다 (W7-7-5) */
   const collectionDay = useCollectionDay()
-  const { factoryId } = useParams<{ factoryId: string }>()
   /* 기준일 — `?date=` 를 따라온다. 통합실적에서 사흘 전을 보다 넘어오면 이 화면도 그날을 센다 */
   const { baseDate } = useBaseDate()
 
   const { data, loading, error } = useAsyncData(
     () =>
-      Promise.all([fetchFactories(), fetchDailyProduction(factoryId ?? '', baseDate)]).then(
+      Promise.all([fetchFactories(), fetchDailyProduction(factoryId, baseDate)]).then(
         ([factories, production]) => ({
           factory: factories.find((f) => f.id === factoryId) ?? null,
           production,
@@ -107,18 +115,20 @@ export function ProductionCountPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-inshop-sm text-foreground/68">
-          <Link to="/indoorshop/zones/assembly" className="hover:text-accent">
-            {t('assembly.nav.label')}
-          </Link>
-          {' > '}
-          <Link to={`/indoorshop/zones/assembly/${factory.id}`} className="hover:text-accent">
-            {factory.displayName}
-          </Link>
-          {' > '}
-          <span>{t('assembly.production.breadcrumb')}</span>
-        </p>
-        <h1 className="mt-1 text-inshop-2xl font-bold text-foreground">
+        {!embedded && (
+          <p className="text-inshop-sm text-foreground/68">
+            <Link to="/indoorshop/zones/assembly" className="hover:text-accent">
+              {t('assembly.nav.label')}
+            </Link>
+            {' > '}
+            <Link to={`/indoorshop/zones/assembly/${factory.id}`} className="hover:text-accent">
+              {factory.displayName}
+            </Link>
+            {' > '}
+            <span>{t('assembly.production.breadcrumb')}</span>
+          </p>
+        )}
+        <h1 className={cn(embedded ? 'text-inshop-lg' : 'mt-1 text-inshop-2xl', 'font-bold text-foreground')}>
           {t('assembly.production.title', { factory: factory.displayName })}
         </h1>
         <p className="mt-1 font-mono text-inshop-sm text-foreground/68">
@@ -273,12 +283,14 @@ export function ProductionCountPage() {
         </div>
       </div>
 
-      <Link
-        to={`/indoorshop/zones/assembly/${factory.id}`}
-        className="inline-block rounded-inshop-md border border-accent bg-accent/10 px-4 py-2 text-inshop-sm font-medium text-accent transition-colors hover:bg-accent/20"
-      >
-        {t('assembly.production.backToBays', { factory: factory.displayName })}
-      </Link>
+      {!embedded && (
+        <Link
+          to={`/indoorshop/zones/assembly/${factory.id}`}
+          className="inline-block rounded-inshop-md border border-accent bg-accent/10 px-4 py-2 text-inshop-sm font-medium text-accent transition-colors hover:bg-accent/20"
+        >
+          {t('assembly.production.backToBays', { factory: factory.displayName })}
+        </Link>
+      )}
     </div>
   )
 }

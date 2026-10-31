@@ -1,5 +1,6 @@
 import { blocksOfVessel, findBlock, findVessel } from './roster'
 import type { RosterBlock } from '../model/types'
+import { PAGE_VIEW_PARAM, PERFORMANCE_VIEW } from '../../../lib/workspaceTabUrl'
 
 /**
  * 호선·블록 선택의 화면 간 승계 — "옮길 때마다 다시 고르는" 일을 없앤다.
@@ -32,10 +33,16 @@ export interface BlockSelection {
    * 비면 블록 레벨 진입(종전 동작).
    */
   assys?: string[]
+  /**
+   * 지금 보고 있는 블록 탭 — `blocks` 중 하나. 통합실적·공정 실적 화면이 블록 탭을 한 벌로
+   * 맞추는 근거다(사용자 확정: 한 화면에서 고른 탭이 다른 공정 화면에서도 그대로 선다).
+   * 없거나 `blocks` 밖이면 첫 블록.
+   */
+  active?: string
 }
 
 /** 딥링크 파라미터 이름 — 화면이 직접 문자열을 적지 않도록 여기서 정한다 */
-export const SELECTION_PARAMS = { vessel: 'vessel', block: 'block', assy: 'assy' } as const
+export const SELECTION_PARAMS = { vessel: 'vessel', block: 'block', assy: 'assy', active: 'active' } as const
 
 /**
  * ASSY_NO 조합식 해석 — `PROJ-BLK-STRC+SER` (예: `2543-642-G01`).
@@ -61,12 +68,25 @@ let sticky: BlockSelection | null = null
  * 고르지도 않은 강조가 계속 살아난다. 포커스는 그 링크 한 번의 의사다.
  */
 export function rememberSelection(selection: BlockSelection): void {
-  sticky = { projNo: selection.projNo, blocks: [...selection.blocks] }
+  /* 탭은 `blocks` 안의 것일 때만 남긴다 — 없으면 읽는 쪽이 첫 블록으로 선다(`activeOf`) */
+  const active = selection.active && selection.blocks.includes(selection.active) ? selection.active : undefined
+  sticky = { projNo: selection.projNo, blocks: [...selection.blocks], ...(active ? { active } : {}) }
 }
 
 /** 마지막으로 남긴 선택 (없으면 null). 읽어도 지워지지 않는다 */
 export function recallSelection(): BlockSelection | null {
-  return sticky ? { projNo: sticky.projNo, blocks: [...sticky.blocks] } : null
+  return sticky
+    ? { projNo: sticky.projNo, blocks: [...sticky.blocks], ...(sticky.active ? { active: sticky.active } : {}) }
+    : null
+}
+
+/**
+ * 선택이 지금 보고 있는 블록 탭 — `active` 가 `blocks` 안에 있으면 그것, 아니면 첫 블록.
+ * 블록이 없으면(호선 전체) undefined.
+ */
+export function activeOf(selection: Pick<BlockSelection, 'blocks' | 'active'>): string | undefined {
+  if (selection.active && selection.blocks.includes(selection.active)) return selection.active
+  return selection.blocks[0]
 }
 
 /** 화면의 '초기화' + 테스트 격리 */
@@ -110,7 +130,9 @@ export function parseSelectionParams(params: URLSearchParams): BlockSelection | 
     .map((b) => b.trim())
     .filter((b) => known.has(b))
 
-  return { projNo, blocks: [...new Set(blocks)] }
+  const unique = [...new Set(blocks)]
+  const active = params.get(SELECTION_PARAMS.active)?.trim()
+  return { projNo, blocks: unique, ...(active && unique.includes(active) ? { active } : {}) }
 }
 
 /** 딥링크 쿼리 문자열 (앞의 `?` 없이) — 블록이 없으면 호선만 싣는다 */
@@ -121,6 +143,10 @@ export function selectionQuery(selection: BlockSelection): string {
   }
   if (selection.assys && selection.assys.length > 0) {
     params.set(SELECTION_PARAMS.assy, selection.assys.join(','))
+  }
+  /* 블록이 둘 이상일 때만 싣는다 — 하나면 그 블록이 곧 탭이다 */
+  if (selection.blocks.length > 1 && selection.active && selection.blocks.includes(selection.active)) {
+    params.set(SELECTION_PARAMS.active, selection.active)
   }
   return params.toString()
 }
@@ -141,6 +167,19 @@ export function assyFocusLinkFor(assyNos: readonly string[]): string | null {
 /** 통합실적 딥링크 — 대시보드·공정 화면이 "이 블록의 실적 보기"로 나가는 자리 */
 export function performanceLinkFor(selection: BlockSelection): string {
   return `/indoorshop/performance?${selectionQuery(selection)}`
+}
+
+/**
+ * 공정 화면 **[실적] 갈래** 딥링크 — 통합실적이 "이 공정만 따로 보기"로 나가는 자리.
+ * 조립·의장·도장 화면은 `?view=performance` 갈래로, 가공은 진입 화면이 곧 실적이라 `/indoorshop/zones/fabrication`
+ * 으로 간다 — 어느 쪽이든 이 조건(호선·블록)으로 곧바로 조회까지 선다.
+ */
+export function zonePerformanceLinkFor(
+  zone: 'fabrication' | 'assembly' | 'outfitting' | 'painting',
+  selection: BlockSelection
+): string {
+  if (zone === 'fabrication') return `/indoorshop/zones/fabrication?${selectionQuery(selection)}`
+  return `/indoorshop/zones/${zone}?${PAGE_VIEW_PARAM}=${PERFORMANCE_VIEW}&${selectionQuery(selection)}`
 }
 
 /** 로스터 블록 하나를 그대로 선택으로 (공정 화면 → 통합실적 링크의 재료) */

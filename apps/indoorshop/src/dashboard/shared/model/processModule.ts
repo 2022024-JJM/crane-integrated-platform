@@ -34,6 +34,19 @@ export interface ProcessNavEntry {
   source?: string
   /** true 면 사이드바에 표시하지 않는다 — 라우트는 살아 있고 화면 노출만 가린다 */
   hidden?: boolean
+  /**
+   * 헤더 메뉴의 하위 갈래 — 항목에 마우스를 올리면 드롭다운으로 편다(사용자 확정).
+   * 항목 자체를 누르면 `path` 로 가고, 갈래를 고르면 `path + search` 로 간다.
+   */
+  views?: ProcessNavView[]
+}
+
+/** 헤더 메뉴 드롭다운의 한 줄 — 같은 화면의 갈래(예: 현황 · 실적)를 쿼리로 고른다 */
+export interface ProcessNavView {
+  key: string
+  labelKey: InshopKey
+  /** `path` 뒤에 붙일 쿼리 (예: `?view=performance`) */
+  search: string
 }
 
 /**

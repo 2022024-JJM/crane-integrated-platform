@@ -46,8 +46,27 @@ export function takeCameraHandoff(now: number = nowMs()): YardView | null {
   return null
 }
 
+/*
+ * 야드 맵의 **마지막 화각** — 다른 화면에 갔다가 '야드 맵' 으로 돌아오면 떠날 때의 카메라로
+ * 선다(사용자 확정). 위 승계(3초·1회성)와 달리 탭이 살아 있는 동안 남는다. 어느 주소(선택)에서
+ * 본 화각인지 함께 적어, **같은 주소로 돌아올 때만** 쓴다 — 다른 공장으로 딥링크해 들어오면
+ * 그 공장의 프레이밍이 맞다.
+ */
+let remembered: { view: YardView; search: string } | null = null
+
+/** 야드 맵이 지금 화각과 그때의 주소 쿼리를 맡긴다 */
+export function rememberYardCamera(view: YardView, search: string): void {
+  remembered = { view: { ...view }, search }
+}
+
+/** 이 주소 쿼리에서 마지막으로 본 화각 — 다른 주소면 null */
+export function recallYardCamera(search: string): YardView | null {
+  return remembered && remembered.search === search ? { ...remembered.view } : null
+}
+
 /** 테스트 격리용 — 앱 코드는 부르지 않는다 */
 export function clearCameraHandoff(): void {
   slot = null
   lastTaken = null
+  remembered = null
 }

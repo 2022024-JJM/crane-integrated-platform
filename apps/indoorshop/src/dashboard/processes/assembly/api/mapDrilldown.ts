@@ -9,7 +9,7 @@ import { fetchLocations } from './assemblyApi'
 
 /**
  * 조립 어댑터 — 조립 `Location` 을 전체 현황 지도의 공통 작업 위치 계약으로 옮긴다
- * (`docs/PRD_전체현황_공정존_베이_드릴다운_개선.md` FR-4).
+ * (`docs/prd/PRD_전체현황_공정존_베이_드릴다운_개선.md` FR-4).
  *
  * | 공통 필드 | 조립 원천 | 규칙 |
  * |---|---|---|

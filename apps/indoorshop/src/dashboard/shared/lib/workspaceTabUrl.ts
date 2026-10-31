@@ -21,10 +21,32 @@
 export const WORKSPACE_TAB_PARAM = 'tab'
 
 /**
+ * 공정 화면의 맨 위 갈래 [실적 | 현황] 쿼리 키와 실적 갈래의 철자.
+ * 조립·의장·도장 화면이 `?view=performance` 면 [실적] 으로 선다 — 밖에서 실적으로 보내는
+ * 링크(통합실적·야드 맵 작업 카드)가 이 상수를 함께 본다.
+ */
+export const PAGE_VIEW_PARAM = 'view'
+export const PERFORMANCE_VIEW = 'performance'
+
+/**
+ * 현황 축의 철자 — 조립·의장·도장 화면의 첫 번째 탭 키와 같은 값이다.
+ *
+ * 공정 화면은 [실적 | 현황] 으로 나뉘어 있고, 주소가 축 탭을 말하지 않으면 기본 갈래인
+ * **실적**에 선다. 설비를 짚는 링크(알람·점검 필요)는 이 축을 실어야 설비 현황에 내려선다.
+ */
+export const STATUS_TAB = 'status'
+
+/**
  * 3D 뷰어 축의 철자 — 조립·의장 워크스페이스가 쓰는 탭 키와 같은 값이다.
  * 링크를 만드는 쪽(로스터의 PCD 뷰 경로)과 받는 쪽(워크스페이스)이 이 상수를 함께 본다.
  */
 export const VIEWER_TAB = 'viewer'
+
+/**
+ * 블록·실적 축의 철자 — 조립·의장 워크스페이스의 세 번째 탭 키와 같은 값이다.
+ * 야드 맵 공장 카드의 '실적' 문이 이 축에 내려선다.
+ */
+export const BLOCKS_TAB = 'blocks'
 
 /**
  * URL 이 실어 온 착지 탭 — 이 화면이 실제로 가진 축일 때만 돌려준다.

@@ -2,15 +2,22 @@ import type { LatLonBounds } from '../../yard-map'
 import { factoryBounds, type YardParcels } from '../../../entities/yard-parcels'
 
 /**
- * 대문 카메라 — 대시보드 전체 현황이 처음 열릴 때의 자리.
+ * 대문 카메라 — 야드 맵이 처음 열릴 때의 자리.
  *
- * 공장 밀집 구역을 화면 중앙보다 살짝 왼쪽 위에 두고(우측 상태 패널과 겹치지 않게),
- * 음수 패딩으로 범위보다 한 발 **안으로** 들어가 공장 모형이 가깝게 서게 한다.
- * 도장 배치 화면이 같은 값을 써서 두 화면의 초기 지도가 같은 자리에서 시작한다.
+ * **모든 공장이 한 화면에 다 보이게** 맞춘다(사용자 확정). 지도는 돌려 보므로
+ * (`MAP_BEARING`), 축 정렬 범위를 그대로 주면 돌린 상자가 커져 화면이 헐거워진다 — 공장
+ * 지번을 화면 방향으로 돌려 **딱 맞는 상자**를 구하고, `fitView` 가 그 상자 그대로 맞추도록
+ * 범위를 거꾸로 풀어 준다. 왼쪽에는 공정 목록 카드가 늘 떠 있으므로 그 폭만큼 왼쪽을 비운다.
  */
 
-/** 대문 카메라 여백 — 음수 = 외곽 공장 한둘이 살짝 잘리더라도 모델이 가깝게 서는 쪽 */
-export const OVERVIEW_BOUNDS_PADDING = -0.38
+/** 대문 카메라 여백 — 화면 가장자리에 공장이 닿지 않을 만큼만 */
+export const OVERVIEW_BOUNDS_PADDING = 0.03
+
+/** 화면 왼쪽에서 비워 둘 몫 — 공정 목록 카드(18rem)가 덮는 폭(1440px 기준 약 4분의 1) */
+const LEFT_RESERVE = 0.24
+
+/** 경도 1도의 지면 길이 비 — 야드 위도(34.87°)에서 (yard-map 투영과 같은 값) */
+const LON_SQUEEZE = Math.cos((34.87 * Math.PI) / 180)
 
 /**
  * 소속 공장이 있는 지번 전체를 감싸는 경계 상자 — 대문 카메라(초기·선택 해제)의 범위.
@@ -34,17 +41,81 @@ export function allFactoriesBounds(parcels: YardParcels): LatLonBounds | null {
   return { minLat, minLon, maxLat, maxLon }
 }
 
-/** 대문 카메라 범위 — 공장 군집을 살짝 왼쪽 위로 밀어 우측 패널을 피한 자리 */
-export function overviewCameraBounds(parcels: YardParcels): LatLonBounds | null {
+/**
+ * 대문 카메라 범위 — 방위 `bearingDeg` 로 돌린 화면에서 모든 공장 지번이 꼭 맞고, 왼쪽에
+ * 카드 몫(`LEFT_RESERVE`)이 비는 자리. `fitView(범위, …, bearing)` 에 그대로 넘긴다.
+ */
+export function overviewCameraBounds(
+  parcels: YardParcels,
+  bearingDeg = 0,
+  leftReserve = LEFT_RESERVE
+): LatLonBounds | null {
   const cluster = allFactoriesBounds(parcels)
   if (!cluster) return null
-  const latOffset = (cluster.maxLat - cluster.minLat) * -0.08
-  const lonOffset = (cluster.maxLon - cluster.minLon) * 0.07
+  const lat0 = (cluster.minLat + cluster.maxLat) / 2
+  const lon0 = (cluster.minLon + cluster.maxLon) / 2
+  const b = (bearingDeg * Math.PI) / 180
+  const cos = Math.cos(b)
+  const sin = Math.sin(b)
+
+  /* 1) 공장 지번 꼭짓점을 화면 방향으로 돌린 좌표(배율 1)의 상자 — yard-map flatOffset 과 같은 식 */
+  let fxMin = Infinity
+  let fxMax = -Infinity
+  let fyMin = Infinity
+  let fyMax = -Infinity
+  for (const lot of parcels.lots) {
+    if (lot.factory == null) continue
+    for (const p of lot.polygon) {
+      const ex = (p.lon - lon0) * LON_SQUEEZE
+      const ey = -(p.lat - lat0)
+      const fx = ex * cos + ey * sin
+      const fy = -ex * sin + ey * cos
+      if (fx < fxMin) fxMin = fx
+      if (fx > fxMax) fxMax = fx
+      if (fy < fyMin) fyMin = fy
+      if (fy > fyMax) fyMax = fy
+    }
+  }
+
+  /* 2) 왼쪽에 카드 몫을 비운다 — 상자를 왼쪽으로 늘리면 공장들은 화면 오른쪽에 선다 */
+  const reserve = Math.min(0.6, Math.max(0, leftReserve))
+  const width0 = fxMax - fxMin
+  fxMin -= (width0 * reserve) / (1 - reserve)
+  const W = fxMax - fxMin
+  const H = fyMax - fyMin
+
+  /* 3) 상자 중심을 위경도로 되돌린다(돌림의 역변환) */
+  const fcx = (fxMin + fxMax) / 2
+  const fcy = (fyMin + fyMax) / 2
+  const ex = fcx * cos - fcy * sin
+  const ey = fcx * sin + fcy * cos
+  const centerLon = lon0 + ex / LON_SQUEEZE
+  const centerLat = lat0 - ey
+
+  /*
+   * 4) fitView 는 축 정렬 범위를 돌린 상자(a·C + c·S, a·S + c·C)에 맞춘다(C=|cos|, S=|sin|,
+   *    a=경도 폭×squeeze, c=위도 폭). 그 상자가 W×H 가 되도록 a, c 를 푼다. 너무 길쭉해
+   *    풀이가 음수가 되면(돌림이 크면) 짧은 변을 하한으로 둔다.
+   */
+  const C = Math.abs(cos)
+  const S = Math.abs(sin)
+  const det = C * C - S * S
+  let a = W
+  let c = H
+  if (Math.abs(det) > 1e-3) {
+    a = (W * C - H * S) / det
+    c = (H * C - W * S) / det
+  }
+  const floor = Math.max(W, H) * 0.05
+  a = Math.max(floor, a)
+  c = Math.max(floor, c)
+  const halfLon = a / LON_SQUEEZE / 2
+  const halfLat = c / 2
   return {
-    minLat: cluster.minLat + latOffset,
-    maxLat: cluster.maxLat + latOffset,
-    minLon: cluster.minLon + lonOffset,
-    maxLon: cluster.maxLon + lonOffset,
+    minLat: centerLat - halfLat,
+    maxLat: centerLat + halfLat,
+    minLon: centerLon - halfLon,
+    maxLon: centerLon + halfLon,
   }
 }
 
@@ -129,4 +200,274 @@ export function bayCameraBounds(
   const [minLat, maxLat] = grow(bay.minLat, bay.maxLat, factory.minLat, factory.maxLat)
   const [minLon, maxLon] = grow(bay.minLon, bay.maxLon, factory.minLon, factory.maxLon)
   return { minLat, maxLat, minLon, maxLon }
+}
+
+/** 지도 위를 덮는 상자(카드) — 지도 상자 기준 화면 좌표(px) */
+export interface ScreenRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** 공장 하나의 외곽(볼록 껍질) 꼭짓점 — 가림 검사를 수천 점이 아니라 수백 점으로 */
+function hullOf(points: readonly { lat: number; lon: number }[]): { lat: number; lon: number }[] {
+  const pts = [...points].sort((a, b) => a.lon - b.lon || a.lat - b.lat)
+  if (pts.length <= 3) return pts
+  const cross = (o: { lat: number; lon: number }, a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
+    (a.lon - o.lon) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lon - o.lon)
+  const lower: { lat: number; lon: number }[] = []
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
+    lower.push(p)
+  }
+  const upper: { lat: number; lon: number }[] = []
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i]
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
+    upper.push(p)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+/** 가림 검사에 쓸 점 — 공장마다 외곽 꼭짓점 */
+export function factoryOutlinePoints(parcels: YardParcels): { lat: number; lon: number }[] {
+  const byFactory = new Map<string, { lat: number; lon: number }[]>()
+  for (const lot of parcels.lots) {
+    if (lot.factory == null) continue
+    const list = byFactory.get(lot.factory) ?? []
+    list.push(...lot.polygon)
+    byFactory.set(lot.factory, list)
+  }
+  return [...byFactory.values()].flatMap(hullOf)
+}
+
+/**
+ * 투영 계산 — yard-map 의 것을 주입받는다(이 파일이 렌더 엔진을 직접 끌어오지 않게).
+ */
+export interface OverviewProjection {
+  project: (view: OverviewView, viewport: { width: number; height: number }, lat: number, lon: number) => {
+    sx: number
+    sy: number
+    behind: boolean
+  }
+  screenToWorld: (view: OverviewView, viewport: { width: number; height: number }, sx: number, sy: number) => {
+    lat: number
+    lon: number
+  }
+}
+
+export interface OverviewView {
+  centerLat: number
+  centerLon: number
+  scale: number
+  pitch: number
+  bearing: number
+}
+
+/**
+ * **카드를 피해 최대로 확대한** 대문 카메라 — 모든 공장 외곽이 화면 안에 있고, 지도를 덮은
+ * 카드(왼쪽 공정 목록·오른쪽 점검 필요) 밑으로 들어가지 않는 가장 큰 배율과 그때의 중심을
+ * 찾는다(사용자 확정: "양쪽 카드에 가려지지 않을 정도로만 확대").
+ *
+ * 공장 군집이 꼭 맞는 배율에서 시작해, 배율을 조금씩 키우고(가장 큰 것부터) 그 배율마다 중심을
+ * 화면 안에서 조금씩 옮겨 가며 되는 자리를 찾는다. 처음 되는 배율이 답이다. 하나도 안 되면
+ * 꼭 맞는 배율보다 물러서며 같은 식으로 찾는다.
+ *
+ * 돌려주는 것은 YardMap 이 `fitView(범위, 여백 0, 그 기울기·방위)` 로 이 카메라를 그대로
+ * 재현하는 **범위**다.
+ */
+export function overviewBoundsAvoidingCards(
+  points: readonly { lat: number; lon: number }[],
+  viewport: { width: number; height: number },
+  obstacles: readonly ScreenRect[],
+  camera: { bearing: number; pitch: number },
+  proj: OverviewProjection,
+  margin = 12,
+  /**
+   * 배율을 이 값으로 **고정**한다(사용자 확정: 기본 확대 30,000). 그때는 배율을 찾지 않고,
+   * 그 배율에서 카드에 가리는 공장 꼭짓점이 가장 적은 중심만 찾는다.
+   */
+  fixedScale?: number
+): LatLonBounds | null {
+  if (points.length === 0 || viewport.width <= 0 || viewport.height <= 0) return null
+  const { width: w, height: h } = viewport
+
+  /* 0) 출발점 — 군집 중심, 배율은 화면 짧은 쪽에 대략 맞춘 값 */
+  let minLat = Infinity
+  let maxLat = -Infinity
+  let minLon = Infinity
+  let maxLon = -Infinity
+  for (const p of points) {
+    minLat = Math.min(minLat, p.lat)
+    maxLat = Math.max(maxLat, p.lat)
+    minLon = Math.min(minLon, p.lon)
+    maxLon = Math.max(maxLon, p.lon)
+  }
+  const base: OverviewView = {
+    centerLat: (minLat + maxLat) / 2,
+    centerLon: (minLon + maxLon) / 2,
+    scale: Math.min(w / ((maxLon - minLon) * LON_SQUEEZE), h / (maxLat - minLat)),
+    pitch: camera.pitch,
+    bearing: camera.bearing,
+  }
+
+  /** 화면 밖이거나 카드 밑인 꼭짓점 수 — 0 이면 다 보인다 */
+  const misses = (view: OverviewView, stopAt = Infinity) => {
+    let n = 0
+    for (const p of points) {
+      const { sx, sy, behind } = proj.project(view, viewport, p.lat, p.lon)
+      let bad = behind || sx < margin || sx > w - margin || sy < margin || sy > h - margin
+      if (!bad) {
+        for (const r of obstacles) {
+          if (sx > r.x - margin && sx < r.x + r.width + margin && sy > r.y - margin && sy < r.y + r.height + margin) {
+            bad = true
+            break
+          }
+        }
+      }
+      if (bad && ++n >= stopAt) return n
+    }
+    return n
+  }
+  const fits = (view: OverviewView) => misses(view, 1) === 0
+
+  /* 1) 배율 후보 — 크게(2배)부터 작게(0.3배)까지 3%씩 */
+  const shifts: [number, number][] = []
+  for (let ix = -8; ix <= 8; ix++) for (let iy = -6; iy <= 6; iy++) shifts.push([ix * 0.03 * w, iy * 0.03 * h])
+  shifts.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]))
+  let found: OverviewView | null = null
+  if (fixedScale != null) {
+    /* 배율 고정 — 가리는 꼭짓점이 가장 적은 중심(같으면 덜 옮긴 쪽) */
+    const scaled = { ...base, scale: fixedScale }
+    let best = Infinity
+    for (const [dx, dy] of shifts) {
+      const c = proj.screenToWorld(scaled, viewport, w / 2 + dx, h / 2 + dy)
+      const view = { ...scaled, centerLat: c.lat, centerLon: c.lon }
+      const n = misses(view, best)
+      if (n < best) {
+        best = n
+        found = view
+        if (n === 0) break
+      }
+    }
+  }
+  for (let k = 2; k >= 0.3 && !found; k *= 0.97) {
+    const scaled = { ...base, scale: base.scale * k }
+    for (const [dx, dy] of shifts) {
+      /* 화면에서 (dx,dy) 만큼 옮긴 자리를 새 중심으로 — 군집이 반대쪽으로 간다 */
+      const c = proj.screenToWorld(scaled, viewport, w / 2 + dx, h / 2 + dy)
+      const view = { ...scaled, centerLat: c.lat, centerLon: c.lon }
+      if (fits(view)) {
+        found = view
+        break
+      }
+    }
+  }
+  if (!found) return null
+
+  /* 2) 이 카메라를 fitView(여백 0)가 재현하는 범위로 */
+  return boundsReproducingView(found, viewport, camera)
+}
+
+/**
+ * 카메라 하나를 **fitView(여백 0)가 정확히 재현하는 범위**로 바꾼다 — fitView 의 배율식
+ * scale = min(h/spanH, w/spanW) / (1 + sin(pitch)·0.55) 를 거꾸로 풀고, 돌린 상자 폭을
+ * 축 정렬 범위로 되돌린다(overviewCameraBounds 와 같은 풀이). YardMap 은 범위를 받아
+ * 카메라를 맞추므로, 계산한 카메라를 넘기려면 이 범위로 바꿔 줘야 한다.
+ */
+export function boundsReproducingView(
+  view: Pick<OverviewView, 'centerLat' | 'centerLon' | 'scale'>,
+  viewport: { width: number; height: number },
+  camera: { bearing: number; pitch: number }
+): LatLonBounds {
+  const { width: w, height: h } = viewport
+  const found = view
+  const kk = found.scale * (1 + Math.sin((camera.pitch * Math.PI) / 180) * 0.55)
+  const spanW = w / kk
+  const spanH = h / kk
+  const b = (camera.bearing * Math.PI) / 180
+  const C = Math.abs(Math.cos(b))
+  const S = Math.abs(Math.sin(b))
+  const det = C * C - S * S
+  /* 위도 폭 c 는 연립해의 값(음수면 0 에 가깝게), 경도 폭 a 는 두 조건(돌린 상자 폭 ≤ spanW,
+     높이 ≤ spanH) 중 빡빡한 쪽에 꼭 맞춘다 — 한쪽이 정확히 맞아야 fitView 의 min 이 정확히
+     이 배율을 낸다(바닥값으로 부풀리면 배율이 몇 % 어긋났다) */
+  const tiny = Math.max(spanW, spanH) * 1e-6
+  let c = Math.abs(det) > 1e-3 ? (spanH * C - spanW * S) / det : spanH
+  c = Math.max(tiny, c)
+  let a = S > 1e-9 ? Math.min((spanW - c * S) / C, (spanH - c * C) / S) : spanW / C
+  if (a <= tiny) {
+    /* 화면이 아주 납작한 경우 — 경도 쪽을 바닥에 두고 위도 쪽을 맞춘다 */
+    a = tiny
+    c = Math.min((spanW - a * C) / S, (spanH - a * S) / C)
+  }
+  return {
+    minLat: found.centerLat - c / 2,
+    maxLat: found.centerLat + c / 2,
+    minLon: found.centerLon - a / LON_SQUEEZE / 2,
+    maxLon: found.centerLon + a / LON_SQUEEZE / 2,
+  }
+}
+
+/**
+ * 야드 전경 — **모든 공장이 화면 안에 다 들고, 그 묶음이 화면 한가운데**에 서는 카메라의
+ * 범위(사용자 확정). 방위·기울기는 정해진 값 그대로, 중심과 배율만 찾는다.
+ *
+ * 기울인 화면은 원근 때문에 위경도 범위의 가운데가 화면 가운데에 오지 않는다 — 그래서 화면에
+ * 비친 공장 묶음의 상자를 재어 (1) 그 상자의 가운데를 화면 가운데로 옮기고 (2) 상자가 여백 안에
+ * 꼭 맞도록 배율을 고치기를 몇 번 되풀이한다(몇 번이면 1px 안으로 모인다).
+ *
+ * `margin` 은 가장자리 여백(px) — 위쪽은 검색창·토글 줄, 아래쪽은 조작 안내가 서는 자리라
+ * 가로보다 넉넉히 둔다.
+ */
+export function overviewBoundsCentered(
+  points: readonly { lat: number; lon: number }[],
+  viewport: { width: number; height: number },
+  camera: { bearing: number; pitch: number },
+  proj: OverviewProjection,
+  margin: { x: number; y: number } = { x: 32, y: 72 }
+): LatLonBounds | null {
+  if (points.length === 0 || viewport.width <= 0 || viewport.height <= 0) return null
+  const { width: w, height: h } = viewport
+  let minLat = Infinity
+  let maxLat = -Infinity
+  let minLon = Infinity
+  let maxLon = -Infinity
+  for (const p of points) {
+    minLat = Math.min(minLat, p.lat)
+    maxLat = Math.max(maxLat, p.lat)
+    minLon = Math.min(minLon, p.lon)
+    maxLon = Math.max(maxLon, p.lon)
+  }
+  let view: OverviewView = {
+    centerLat: (minLat + maxLat) / 2,
+    centerLon: (minLon + maxLon) / 2,
+    scale: Math.min(w / ((maxLon - minLon) * LON_SQUEEZE), h / (maxLat - minLat)) * 0.5,
+    pitch: camera.pitch,
+    bearing: camera.bearing,
+  }
+  const innerW = Math.max(1, w - margin.x * 2)
+  const innerH = Math.max(1, h - margin.y * 2)
+  for (let i = 0; i < 24; i++) {
+    let x0 = Infinity
+    let x1 = -Infinity
+    let y0 = Infinity
+    let y1 = -Infinity
+    for (const p of points) {
+      const { sx, sy } = proj.project(view, viewport, p.lat, p.lon)
+      x0 = Math.min(x0, sx)
+      x1 = Math.max(x1, sx)
+      y0 = Math.min(y0, sy)
+      y1 = Math.max(y1, sy)
+    }
+    const fit = Math.min(innerW / Math.max(1e-6, x1 - x0), innerH / Math.max(1e-6, y1 - y0))
+    const off = Math.hypot((x0 + x1) / 2 - w / 2, (y0 + y1) / 2 - h / 2)
+    if (Math.abs(fit - 1) < 0.002 && off < 0.5) break
+    /* (1) 상자 가운데를 화면 가운데로 */
+    const c = proj.screenToWorld(view, viewport, (x0 + x1) / 2, (y0 + y1) / 2)
+    /* (2) 상자가 여백 안에 꼭 맞게 — 한 번에 다 고치면 원근 때문에 출렁여서 조금 눌러 고친다 */
+    view = { ...view, centerLat: c.lat, centerLon: c.lon, scale: view.scale * fit ** 0.9 }
+  }
+  return boundsReproducingView(view, viewport, camera)
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Link, Route, Routes } from 'react-router-dom'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../../../shared/lib/testing/renderWithProviders'
@@ -76,7 +76,12 @@ function Here() {
   return <output data-testid="here">{`${pathname}${search}`}</output>
 }
 
-function renderWorkspace(path: string) {
+/*
+ * 기본 갈래는 실적(빈 자리)이다 — 축 탭을 보는 검사들은 현황 갈래(`?view=status`)에서 출발한다.
+ * 기본 갈래 자체를 보는 검사만 `asIs` 로 주소를 그대로 둔다.
+ */
+function renderWorkspace(path: string, { asIs = false }: { asIs?: boolean } = {}) {
+  const route = asIs || path.includes('view=') ? path : `${path}${path.includes('?') ? '&' : '?'}view=status`
   return renderWithProviders(
     <>
       <Routes>
@@ -90,7 +95,7 @@ function renderWorkspace(path: string) {
       <Link to="/indoorshop/zones/assembly/asm-gbs?tab=viewer">다른 공장 3D</Link>
       <Here />
     </>,
-    { route: path }
+    { route }
   )
 }
 
@@ -103,13 +108,13 @@ const tabOf = (url: string) =>
  * 순서가 공정마다 다르면 화면을 옮겨 다닐 때 눈이 매번 다시 적응해야 한다.
  */
 describe('AssemblyWorkspace — 축 탭', () => {
-  it('[현황 | 3D 뷰어 | 블록·실적] 이 서고 기본은 현황이다', async () => {
+  it('[현황 | 3D 뷰어 | 블록·실적 | 일일 소조 생산 현황] 이 서고 기본은 현황이다', async () => {
     renderWorkspace('/indoorshop/zones/assembly/asm-pbs')
 
     const tablist = await screen.findByRole('tablist', { name: '화면 축 선택' })
     const tabs = [...tablist.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)
-    expect(tabs).toEqual(['현황', '3D 뷰어', '블록·실적'])
-    expect(screen.getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
+    expect(tabs).toEqual(['현황', '3D 뷰어', '블록·실적', '일일 소조 생산 현황'])
+    expect(within(screen.getByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('현황 탭은 3D 장면을 기다리지 않는다 — 공장 목록과 설비가 먼저 선다', async () => {
@@ -133,14 +138,48 @@ describe('AssemblyWorkspace — 축 탭', () => {
     expect(screen.queryByRole('link', { name: /조립4공장-OFD1/ })).not.toBeInTheDocument()
   })
 
-  it('3D 뷰어로 갈아타면 현황 보드가 물러난다 — 한 자리에 한 축만 선다', async () => {
+  it('3D 뷰어로 갈아타도 왼쪽 공장 목록은 남고, 탭 내용만 오른쪽에서 바뀐다', async () => {
     const user = userEvent.setup()
     renderWorkspace('/indoorshop/zones/assembly/asm-pbs')
     await screen.findByRole('list', { name: '공장 목록' })
 
     await user.click(screen.getByRole('tab', { name: '3D 뷰어' }))
-    expect(screen.queryByRole('list', { name: '공장 목록' })).not.toBeInTheDocument()
+    /* 공장 목록은 모든 탭에 남는다(사용자 확정) */
+    expect(screen.getByRole('list', { name: '공장 목록' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: '3D 뷰어' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  /* 화면 안의 [현황 | 실적] 탭은 걷었다(사용자 확정) — 갈래는 헤더 메뉴 드롭다운이 `?view=` 로 고른다 */
+  it('화면 안에 갈래 탭은 없고, 기본은 현황(공장 목록 · 축 탭)이다', async () => {
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs', { asIs: true })
+    expect(await screen.findByRole('list', { name: '공장 목록' })).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: '화면 축 선택' })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '화면 갈래 선택' })).not.toBeInTheDocument()
+  })
+
+  it('?view=performance 로 들어오면 실적이 서고 현황 화면(공장 목록 · 축 탭)은 통째로 빠진다', async () => {
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs?view=performance', { asIs: true })
+    expect(await screen.findByText('호선 번호를 선택하세요')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: '공장 목록' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '화면 축 선택' })).not.toBeInTheDocument()
+  })
+
+  it('3D 나 정반을 짚고 들어온 주소는 현황에 선다', async () => {
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs?tab=viewer', { asIs: true })
+    expect(await screen.findByRole('list', { name: '공장 목록' })).toBeInTheDocument()
+  })
+
+  it('일일 소조 생산 현황은 네 번째 축 탭이고, 화면을 떠나지 않고 오른쪽 칸에 뜬다', async () => {
+    const user = userEvent.setup()
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs')
+    await screen.findByRole('list', { name: '공장 목록' })
+
+    const axis = screen.getByRole('tablist', { name: '화면 축 선택' })
+    await user.click(within(axis).getByRole('tab', { name: '일일 소조 생산 현황' }))
+    expect(tabOf(here())).toBe('production')
+    expect(within(axis).getByRole('tab', { name: '일일 소조 생산 현황' })).toHaveAttribute('aria-selected', 'true')
+    /* 공장 목록은 그대로 남는다 */
+    expect(screen.getByRole('list', { name: '공장 목록' })).toBeInTheDocument()
   })
 })
 
@@ -181,7 +220,7 @@ describe('AssemblyWorkspace — PCD 뷰 착지', () => {
   it('탭을 말하지 않은 URL 은 기본 탭(현황)에 선다 — 착지 탭을 정하는 것은 URL 이다', async () => {
     renderWorkspace(href.split('&tab=')[0])
 
-    expect(await screen.findByRole('tab', { name: '현황' })).toHaveAttribute(
+    expect(within(await screen.findByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute(
       'aria-selected',
       'true'
     )
@@ -217,7 +256,7 @@ describe('AssemblyWorkspace — 뷰어 안 드릴은 축을 승계한다 (R30)',
 
     /* 현황 탭에는 3D 가 없다 — 여기서 정반으로 들어가는 문은 정반 전환 줄(3D 뷰어 탭의
        유리 도구줄)뿐이라, 이 방향의 승계는 주소에 축 키가 없다는 사실로 확인한다 */
-    expect(screen.getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(screen.getByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
     expect(tabOf(here())).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: '3D 뷰어' }))
@@ -283,18 +322,14 @@ describe('AssemblyWorkspace — 공장이 바뀌어도 축은 남는다 (R30)', 
  * 나가는 길은 브라우저 뒤로가기 하나뿐이었다.
  */
 describe('AssemblyWorkspace — 나가는 문', () => {
-  /* 문은 두 자리에 선다(머리글 · 3D 도구줄). 어느 쪽을 눌러도 같은 데로 가야 한다 —
-     둘을 한 값(`backLink`)에서 짓는 이유다. 툴팁으로 집는 것은 도구줄 칩이 3D 안에
-     있어 이름만으로는 베이 알약과 섞이기 때문이다. */
-  const doors = async (pattern: RegExp) =>
-    (await screen.findAllByTitle(pattern)).map((el) => el.getAttribute('href'))
+  /* 머리글·도구줄의 공장 칩은 없앴다(사용자 확정) — 한 계단 위로는 탭 줄의 '전체' 가 간다 */
 
-  it('공장 뷰에서 나가는 문은 머리글 하나 — 3D 안의 물러나기는 카메라다', async () => {
+  it('공장 뷰에는 공장 목록으로 나가는 문이 없다 — 3D 안의 물러나기는 카메라다', async () => {
     renderWorkspace('/indoorshop/zones/assembly/asm-pbs?tab=viewer')
 
-    /* 여기가 이미 이 공장의 '전체' 라, 한 계단 더 나가는 문은 머리글에만 선다 */
-    const hrefs = await doors(/공장 목록으로 돌아가기/)
-    expect(hrefs).toEqual(['/indoorshop/zones/assembly/list'])
+    /* 머리글 칩과 제목은 없앴다 — 공장은 왼쪽 목록이 고른다 */
+    await screen.findByRole('list', { name: '공장 목록' })
+    expect(screen.queryAllByTitle(/공장 목록으로 돌아가기/)).toEqual([])
 
     /* 도구줄의 `전체보기` 는 링크가 아니다 — 눌러도 화면을 떠나지 않는다 */
     const fitAll = await screen.findByRole('button', { name: '전체보기' })
@@ -303,12 +338,12 @@ describe('AssemblyWorkspace — 나가는 문', () => {
     expect(here()).toContain('/indoorshop/zones/assembly/asm-pbs')
   })
 
-  it('정반 뷰에서는 한 칸만 오른다 — 목록이 아니라 그 공장으로', async () => {
+  it('정반 뷰에서는 한 칸만 오른다 — 탭 줄의 「전체」가 그 공장으로(공장 칩은 뺐다)', async () => {
     renderWorkspace('/indoorshop/zones/assembly/asm-pbs/asm-pbs-b1?tab=viewer')
 
-    const hrefs = await doors(/공장으로 돌아가기/)
-    expect(hrefs.length).toBeGreaterThan(1)
+    const all = await screen.findByRole('link', { name: '전체' })
     /* 보던 축(3D)을 그대로 들고 간다 — 나가서 현황에 서면 방금 한 조작이 끊긴다 */
-    expect(new Set(hrefs)).toEqual(new Set(['/indoorshop/zones/assembly/asm-pbs?tab=viewer']))
+    expect(all.getAttribute('href')).toBe('/indoorshop/zones/assembly/asm-pbs?tab=viewer')
+    expect(screen.queryByRole('link', { name: /공장으로 돌아가기/ })).not.toBeInTheDocument()
   })
 })

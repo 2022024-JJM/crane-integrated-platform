@@ -31,6 +31,11 @@ export const paintingModule: ProcessModule = {
     labelKey: 'painting.nav.label',
     icon: PaintingIcon,
     source: 'PLC · Modbus',
+    /* 헤더 메뉴 드롭다운 — 항목을 누르면 현황(기본), 갈래를 고르면 그 갈래로 (사용자 확정) */
+    views: [
+      { key: 'status', labelKey: 'painting.factoryStatus.viewStatus', search: '?view=status' },
+      { key: 'performance', labelKey: 'painting.factoryStatus.viewPerformance', search: '?view=performance' },
+    ],
   },
   routes: [
     /* 엔트리는 **공장 현황**이다 (R22) — 맵 진입 화면을 걷었다. 공장 없이 들어오면

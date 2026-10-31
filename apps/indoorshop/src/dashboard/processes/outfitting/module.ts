@@ -38,6 +38,11 @@ export const outfittingModule: ProcessModule = {
     labelKey: 'outfitting.nav.label',
     icon: OutfittingIcon,
     source: 'LiDAR',
+    /* 헤더 메뉴 드롭다운 — 항목을 누르면 현황(기본), 갈래를 고르면 그 갈래로 (사용자 확정) */
+    views: [
+      { key: 'status', labelKey: 'outfitting.workspace.viewStatus', search: '?view=status' },
+      { key: 'performance', labelKey: 'outfitting.workspace.viewPerformance', search: '?view=performance' },
+    ],
   },
   routes: [
     /* 엔트리는 **워크스페이스**다 (R22) — 맵 진입 화면을 걷었다. 공장 없이 들어오면

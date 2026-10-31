@@ -66,4 +66,4 @@ export type { YardView, YardViewMode, Viewport, ScreenPoint } from './lib/projec
  * 위경도 → 화면 좌표 변환. YardMap 위에 DOM 오버레이(배지·라벨·설비 마커 등)를 얹으려는
  * 소비자가 캔버스와 같은 투영을 쓰도록 낸다 — 오버레이가 자기만의 좌표 계산을 들면 지도와 어긋난다.
  */
-export { visibleBounds, worldToScreen, project } from './lib/projection'
+export { visibleBounds, worldToScreen, project, TILTED_PITCH } from './lib/projection'

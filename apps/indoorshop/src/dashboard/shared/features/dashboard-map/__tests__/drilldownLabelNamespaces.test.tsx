@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
-import { renderWithProviders } from '../../../lib/testing/renderWithProviders'
-import { PerformanceBadge } from '../ui/PerformanceBadge'
 import { loadYardParcels } from '../../../entities/yard-parcels'
-import { blocksAtFactory, listBlocks } from '../../../entities/vessel'
+import { listBlocks } from '../../../entities/vessel'
 
 /*
  * 드릴다운 라벨의 **이름 공간 계약** — UX 감사 F-42 에 대한 적대적 검증(W7-6V).
+ *
+ * (실적 배지는 야드 맵에서 걷혔다. 같은 이름 공간을 지금은 베이 재실·작업 카드가 쓴다 —
+ * 로스터 공장명이 지도에 없으면 그 블록은 어느 베이 카드에도 서지 않는다.)
  *
  * 이웃한 `performanceBadgeRoster.test.tsx` 는 "배지에 뜬 블록 라벨이 로스터에 실재하고
  * 검색에도 걸린다"를 잠근다. 다만 그 테스트는 배지에 넘기는 공장 이름을 **로스터에서**
@@ -38,30 +38,5 @@ describe('드릴다운 배지 이름 공간 (지번 fixture ↔ 로스터)', () 
       orphans,
       `로스터에만 있는 공장명 — 지도가 이 이름을 넘길 수 없으니 배지가 영영 안 뜬다: ${orphans.join(', ')}`
     ).toEqual([])
-  })
-
-  it('지도가 넘기는 이름 그대로 배지를 그려도 로스터 블록이 나온다 (실제 호출 경로)', async () => {
-    const parcels = await loadYardParcels()
-
-    /* 지도 쪽 이름 중 로스터에 블록이 있는 것 — 화면에서 배지가 실제로 서는 자리 전부 */
-    const mapNamesWithBlocks = [
-      ...new Set([
-        ...parcels.factories.map((f) => f.name),
-        ...parcels.bays.map((b) => b.factory),
-      ]),
-    ].filter((name) => blocksAtFactory(name).length > 0)
-
-    expect(
-      mapNamesWithBlocks.length,
-      '지도 이름으로 배지가 서는 공장이 하나도 없다 — 두 이름 공간이 어긋났다'
-    ).toBeGreaterThan(0)
-
-    for (const name of mapNamesWithBlocks) {
-      const { unmount } = renderWithProviders(<PerformanceBadge factory={name} process="조립" />)
-      /* 지도 이름을 그대로 넘겼을 때 라벨이 실제로 서는지 — 안 서면 배지가 조용히 빈 것 */
-      const labels = await screen.findAllByText(/^\d+-\w+$/)
-      expect(labels.length, `${name}: 지도 이름으로는 배지가 비어 있다`).toBeGreaterThan(0)
-      unmount()
-    }
   })
 })

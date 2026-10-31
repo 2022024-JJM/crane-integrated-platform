@@ -57,6 +57,22 @@ export function applyBlenderMouseBindings(controls: OrbitControls): void {
 }
 
 /**
+ * OrbitControls 에 실제로 넣을 배치 — 그 안에서 Ctrl·Meta·Shift 가 눌려 있으면 회전과 이동을 **스스로
+ * 맞바꾼다**(three 의 내장 규칙). 우리 문법이 이미 수식 키를 반영한 답을 냈으므로, 그 경우엔 반대로
+ * 넣어 두어 내장 규칙이 뒤집은 결과가 우리 답과 같아지게 한다. 줌(DOLLY)은 뒤집히지 않는다.
+ */
+export function assignedFor(
+  action: THREE.MOUSE,
+  modifiers: { ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }
+): THREE.MOUSE {
+  const swaps = modifiers.ctrlKey || modifiers.metaKey || modifiers.shiftKey
+  if (!swaps) return action
+  if (action === THREE.MOUSE.PAN) return THREE.MOUSE.ROTATE
+  if (action === THREE.MOUSE.ROTATE) return THREE.MOUSE.PAN
+  return action
+}
+
+/**
  * 수식 키에 따라 가운데 버튼의 역할을 바꾼다.
  * OrbitControls 는 수식 키별 배치를 지원하지 않아 pointerdown 시점에 갈아끼운다.
  */
@@ -67,8 +83,9 @@ export function bindModifierAwareButtons(
   const handlePointerDown = (event: PointerEvent) => {
     /* 이 조합이 무슨 동작인가 — 답은 전 화면 공통 문법 하나뿐이다 */
     const action = MOUSE_OF[dragActionOf(event.button, event, 'viewer')]
-    if (event.button === 1) controls.mouseButtons.MIDDLE = action
-    else if (event.button === 0) controls.mouseButtons.LEFT = action
+    const assigned = assignedFor(action, event)
+    if (event.button === 1) controls.mouseButtons.MIDDLE = assigned
+    else if (event.button === 0) controls.mouseButtons.LEFT = assigned
   }
 
   // 가운데 버튼 드래그가 브라우저의 오토스크롤로 새지 않게 막는다
@@ -76,10 +93,15 @@ export function bindModifierAwareButtons(
     if (event.button === 1) event.preventDefault()
   }
 
-  domElement.addEventListener('pointerdown', handlePointerDown)
+  /*
+   * **캡처 단계**로 건다 — OrbitControls 도 같은 요소에 pointerdown 을 걸어 그 자리에서 버튼 배치를
+   * 읽는다. 버블 단계로 걸면 그쪽이 먼저 돌아, 이번 드래그는 **지난번** 배치로 움직이고 갈아끼운
+   * 배치는 다음 드래그에 먹는다(사용자 지적: Shift+드래그 한 번 뒤로 Shift 없이 끌어도 이동했다).
+   */
+  domElement.addEventListener('pointerdown', handlePointerDown, { capture: true })
   domElement.addEventListener('mousedown', preventAutoScroll)
   return () => {
-    domElement.removeEventListener('pointerdown', handlePointerDown)
+    domElement.removeEventListener('pointerdown', handlePointerDown, { capture: true })
     domElement.removeEventListener('mousedown', preventAutoScroll)
   }
 }

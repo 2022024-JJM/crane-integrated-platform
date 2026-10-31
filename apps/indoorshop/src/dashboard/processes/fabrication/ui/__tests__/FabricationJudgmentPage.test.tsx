@@ -181,6 +181,28 @@ describe('가공 판별 실적 현황판', () => {
     expect(screen.getByText('PS-1')).toBeInTheDocument()
   })
 
+  it('재조회 중에는 이전 화면을 그대로 둔다 — 흐려지거나 스피너로 바뀌지 않는다', async () => {
+    const { calls } = stubApi()
+    const user = userEvent.setup()
+    renderWithProviders(<FabricationJudgmentPage />, { route: '/indoorshop/zones/fabrication' })
+    const rollTable = await screen.findByRole('table', { name: 'ROLL 진행 대조' })
+    await within(rollTable).findByText('R-1')
+    const firstRoundCalls = calls.length
+
+    /* 두 번째 조회는 끝나지 않게 붙잡아 둔다 — "재조회 중" 상태를 그대로 관찰한다 */
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    await user.click(screen.getByRole('button', { name: '지금 갱신' }))
+    await screen.findByText('갱신 중')
+
+    expect(calls.length).toBe(firstRoundCalls)
+    expect(screen.getByRole('table', { name: 'ROLL 진행 대조' })).toBeInTheDocument()
+    expect(within(screen.getByRole('table', { name: 'ROLL 진행 대조' })).getByText('R-1')).toBeInTheDocument()
+    /* 본문 어디에도 투명도 전환이 없고, 스피너(role=status)도 서지 않는다 */
+    expect(document.querySelector('.opacity-70, .transition-opacity')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('button', { name: '지금 갱신' })).toBeEnabled()
+  })
+
   it('판별 서비스에 닿지 못하면 이유와 확인할 곳을 말한다', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
     renderWithProviders(<FabricationJudgmentPage />, { route: '/indoorshop/zones/fabrication' })

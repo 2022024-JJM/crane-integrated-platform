@@ -19,6 +19,15 @@ import {
 } from './types'
 
 export {
+  PROCESS_PALETTES,
+  activeProcessPalette,
+  activeProcessPaletteId,
+  setProcessPalette,
+  subscribeProcessPalette,
+  type ProcessPalette,
+} from './processPalettes'
+
+export {
   PARCEL_CATEGORY_COLORS,
   colorOfParcelCategory,
   PROCESS_COLORS,

@@ -1,5 +1,12 @@
-import type { LatLon, YardParcels } from '../../../entities/yard-parcels'
-import { listBlocks, sitesOfBlock, type ProcessZone, type RosterBlock } from '../../../entities/vessel'
+import { colorOfProcess, type LatLon, type YardParcels } from '../../../entities/yard-parcels'
+import {
+  listBlocks,
+  sitesOfBlock,
+  type AssyTier,
+  type ProcessZone,
+  type RosterBlock,
+  YARD_PROCESS_OF_ZONE,
+} from '../../../entities/vessel'
 
 /*
  * 베이에 **지금 무엇이 서 있는가** (P1 ①).
@@ -31,7 +38,7 @@ export interface BayOccupant {
   /** 이 자리의 공정 — 블록 단계와 다를 수 있다(흩어진 ASSY) */
   zone: ProcessZone
   /** 이 자리에 올라온 ASSY 들. 블록 단위 자리면 빈 배열 */
-  assys: readonly { assyNo: string; tier: string }[]
+  assys: readonly { assyNo: string; tier: AssyTier }[]
   /** 이 공정에 막 도착 — 실적이 아직 서기 전 */
   justArrived: boolean
   /** 그 블록의 공정 화면 경로 (자리가 준 것 그대로) */
@@ -147,4 +154,87 @@ export function bayOccupancyOf(parcels: YardParcels, bayId: string): BayOccupanc
   const bay = parcels.bays.find((b) => b.id === bayId)
   if (!bay) return null
   return factoryBayOccupancy(parcels, bay.factory).find((row) => row.bayId === bayId) ?? null
+}
+
+/* ── 재실 → 작업 요약 ───────────────────────────────────────────── */
+
+/**
+ * 작업 종류 — ASSY 가 올라온 자리는 그 **급**(대조·중조·소조)이 곧 작업이고, ASSY 소재가
+ * 없는 블록 단위 자리는 그 **공정**(의장 블록·도장 블록…)이 작업이다.
+ */
+export type BayWorkKind = AssyTier | ProcessZone
+
+export interface BayWork {
+  kind: BayWorkKind
+  count: number
+}
+
+/** 표시 순서 — ASSY 는 작업 흐름대로 소조 → 중조 → 대조(사용자 확정), 그다음 블록 단위 공정을 흐름 순서로 */
+const WORK_ORDER: readonly BayWorkKind[] = [
+  'sub',
+  'mid',
+  'grand',
+  'fabrication',
+  'assembly',
+  'outfitting',
+  'painting',
+]
+
+/**
+ * 재실을 "어떤 작업이 몇 개"로 접는다. 공장 카드는 블록 이름이 아니라 이 요약을 낸다 —
+ * 어느 블록인지는 베이를 눌러 들어간 상세의 몫이다. 0 인 종류는 내지 않는다.
+ *
+ * **진행 중인 것만 센다** — 갓 반입(`justArrived`)은 자리에 올라왔을 뿐 작업이 아직
+ * 서지 않았으므로 빼낸다.
+ */
+export function workSummaryOf(occupants: readonly BayOccupant[]): BayWork[] {
+  const counts = new Map<BayWorkKind, number>()
+  const add = (kind: BayWorkKind, n: number) => counts.set(kind, (counts.get(kind) ?? 0) + n)
+  for (const occupant of occupants) {
+    if (occupant.justArrived) continue
+    if (occupant.assys.length === 0) add(occupant.zone, 1)
+    else for (const assy of occupant.assys) add(assy.tier, 1)
+  }
+  return WORK_ORDER.filter((kind) => counts.has(kind)).map((kind) => ({
+    kind,
+    count: counts.get(kind)!,
+  }))
+}
+
+/**
+ * 작업 종류 색. 블록 단위 작업은 **그 공정의 색**(지도 네온과 같은 표)을 그대로 쓰고,
+ * ASSY 급은 공정색과 겹치지 않는 세 색을 따로 둔다 — 조립 공장 안에서 대조·중조·소조가
+ * 한눈에 갈려야 하므로 같은 파랑의 명암으로 묶지 않는다.
+ */
+const TIER_COLORS: Readonly<Record<AssyTier, string>> = {
+  grand: '#b98cff',
+  mid: '#2fd0e6',
+  sub: '#a6e04a',
+}
+
+export function colorOfWork(kind: BayWorkKind): string {
+  return kind in TIER_COLORS
+    ? TIER_COLORS[kind as AssyTier]
+    : colorOfProcess(YARD_PROCESS_OF_ZONE[kind as ProcessZone])
+}
+
+/**
+ * 가공 공장에서 지금 가공 중인 블록 — 베이 없이 **공장 단위**로 센다(사용자 확정).
+ *
+ * 가공은 필드 수집이 없어 블록의 자리(베이)를 알 원천이 없다(`sitesOfBlock` 이 빈 배열).
+ * 다만 로스터는 블록마다 지금 서 있는 공장을 갖고 있으므로, 그 공장 카드가 "여기서 무엇이
+ * 가공되고 있는가"를 다른 공장의 작업 목록과 같은 모양으로 말할 수 있다.
+ */
+export function fabricationOccupantsOf(factory: string): BayOccupant[] {
+  return listBlocks()
+    .filter((block) => block.zone === 'fabrication' && block.factory === factory)
+    .map((block) => ({
+      key: `${block.projNo}-${block.blockNo}`,
+      projNo: block.projNo,
+      blockNo: block.blockNo,
+      zone: block.zone,
+      assys: [],
+      justArrived: block.justArrived === true,
+      path: '/indoorshop/zones/fabrication',
+    }))
 }

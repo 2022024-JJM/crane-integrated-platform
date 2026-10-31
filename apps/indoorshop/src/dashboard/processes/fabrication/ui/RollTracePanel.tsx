@@ -4,7 +4,6 @@ import { Button } from '../../../shared/ui/atoms/Button'
 import { Spinner } from '../../../shared/ui/atoms/Spinner'
 import { StatusChip } from '../../../shared/ui/atoms/StatusChip'
 import { useAsyncData } from '../../../shared/lib/useAsyncData'
-import { cn } from '../../../shared/lib/utils'
 import { fetchRollTrace } from '../api/fabricationApi'
 import type { JudgmentRow, RollTrace, StateInfo } from '../model/dashboard'
 import { ROLL_CHECKPOINTS, codeLabel, ptnHead, stateLabel } from '../lib/labels'
@@ -57,7 +56,8 @@ export function RollTracePanel({
         </div>
       )}
       {data && (
-        <div className={cn('space-y-5 transition-opacity', loading && 'opacity-70')}>
+        /* 화면 갱신 박자에 맞춘 재조회 — 이전 근거를 그대로 둔 채 값만 바뀐다 (깜빡임 없음) */
+        <div className="space-y-5">
           <TraceBody trace={data} states={states} />
         </div>
       )}

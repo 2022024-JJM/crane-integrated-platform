@@ -8,6 +8,7 @@ import {
   pairIdOf,
   panelStatusIn,
   tiltStatusIn,
+  yardEquipmentOf,
   type EdgePcStatus,
   type EquipmentPanel,
   type EquipmentPanelStatus,
@@ -185,7 +186,13 @@ export function equipmentSummaryOf(factory: string): { total: number; issues: nu
   let issues = 0
   for (const e of YARD_EQUIPMENT) {
     if (e.factory !== factory) continue
-    if (e.typeId === 'TILT' && pairIdOf(e)) continue
+    if (e.typeId === 'TILT' && pairIdOf(e)) {
+      /* 칸은 라이다가 대표하지만 이상은 사라지지 않는다 — 라이다는 멀쩡한데 짝 틸팅만
+         끊겼으면 그 칸이 이상이다(라이다도 아프면 라이다 쪽에서 이미 셌다) */
+      const mate = yardEquipmentOf(pairIdOf(e)!)
+      if (equipmentLinkOf(e) !== 'online' && (!mate || equipmentLinkOf(mate) === 'online')) issues += 1
+      continue
+    }
     total += 1
     if (equipmentLinkOf(e) !== 'online') issues += 1
   }

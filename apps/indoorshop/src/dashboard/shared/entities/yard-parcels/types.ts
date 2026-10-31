@@ -1,3 +1,5 @@
+import { activeProcessPalette } from './processPalettes'
+
 /**
  * 야드 지번/공장 — 단일 소스 데이터 계약.
  *
@@ -141,7 +143,11 @@ export const PROCESS_COLORS: Readonly<Record<string, string>> = {
 /** 공정을 알 수 없거나 빈칸일 때의 무채색 — painting 원본의 무공정 색 */
 export const NO_PROCESS_COLOR = '#c9c4bc'
 
-/** 공정 색 — 모르는/빈 공정은 무공정 회색으로 */
+/**
+ * 공정 색 — 지금 고른 **시안**(`processPalettes`)이 먼저, 시안에 없는 공정은 기본 색표, 모르는/빈
+ * 공정은 무공정 회색으로
+ */
 export function colorOfProcess(process: string): string {
-  return PROCESS_COLORS[process] ?? NO_PROCESS_COLOR
+  const palette = activeProcessPalette().colors as Readonly<Record<string, string>>
+  return palette[process] ?? PROCESS_COLORS[process] ?? NO_PROCESS_COLOR
 }

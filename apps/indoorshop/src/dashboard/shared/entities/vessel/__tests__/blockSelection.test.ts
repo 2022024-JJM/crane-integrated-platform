@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   SELECTION_PARAMS,
+  activeOf,
   clearSelection,
   parseSelectionParams,
   performanceLinkFor,
+  zonePerformanceLinkFor,
   recallSelection,
   rememberSelection,
   resolveEntrySelection,
@@ -113,6 +115,19 @@ describe('선택 승계 — 링크 만들기', () => {
     expect(selectionQuery({ projNo: '7004', blocks: [] })).toBe(`${SELECTION_PARAMS.vessel}=7004`)
   })
 
+  it('공정 화면 [실적] 갈래 경로에 붙는다 — 갈래 키와 같은 조건을 싣는다', () => {
+    expect(zonePerformanceLinkFor('assembly', { projNo: '2540', blocks: ['281'] })).toBe(
+      '/indoorshop/zones/assembly?view=performance&vessel=2540&block=281'
+    )
+    expect(zonePerformanceLinkFor('painting', { projNo: '2540', blocks: [] })).toBe(
+      '/indoorshop/zones/painting?view=performance&vessel=2540'
+    )
+    /* 가공은 갈래가 없다 — 진입 화면이 곧 실적이다 */
+    expect(zonePerformanceLinkFor('fabrication', { projNo: '2540', blocks: ['281'] })).toBe(
+      '/indoorshop/zones/fabrication?vessel=2540&block=281'
+    )
+  })
+
   it('통합실적 경로에 붙는다', () => {
     expect(performanceLinkFor({ projNo: '2540', blocks: ['281'] })).toBe(
       '/indoorshop/performance?vessel=2540&block=281'
@@ -150,5 +165,27 @@ describe('선택 승계 — 진입 시 우선순위', () => {
 
   it('둘 다 없으면 null — 화면은 지금까지처럼 "호선을 먼저 고르세요" 자리에 선다', () => {
     expect(resolveEntrySelection(params(''))).toBeNull()
+  })
+})
+
+describe('블록 탭 싱크 — 지금 보는 탭(active)', () => {
+  beforeEach(() => clearSelection())
+
+  it('남긴 탭을 그대로 돌려준다 — 다른 공정 화면이 같은 탭으로 선다', () => {
+    rememberSelection({ projNo: '7004', blocks: ['222', '310'], active: '310' })
+    expect(recallSelection()).toEqual({ projNo: '7004', blocks: ['222', '310'], active: '310' })
+  })
+
+  it('고른 블록 밖의 탭은 남기지 않는다 — 읽는 쪽은 첫 블록으로 선다', () => {
+    rememberSelection({ projNo: '7004', blocks: ['222'], active: '310' })
+    expect(recallSelection()).toEqual({ projNo: '7004', blocks: ['222'] })
+    expect(activeOf(recallSelection()!)).toBe('222')
+  })
+
+  it('딥링크 `?active=` 는 고른 블록 안일 때만 읽고, 블록이 둘 이상일 때만 싣는다', () => {
+    expect(parseSelectionParams(new URLSearchParams('vessel=7004&block=222,310&active=310'))?.active).toBe('310')
+    expect(parseSelectionParams(new URLSearchParams('vessel=7004&block=222&active=310'))?.active).toBeUndefined()
+    expect(selectionQuery({ projNo: '7004', blocks: ['222', '310'], active: '310' })).toContain(`${SELECTION_PARAMS.active}=310`)
+    expect(selectionQuery({ projNo: '7004', blocks: ['222'], active: '222' })).not.toContain(SELECTION_PARAMS.active)
   })
 })

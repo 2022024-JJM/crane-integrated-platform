@@ -62,6 +62,8 @@ export function EventsSection({
   pendingProcess,
   scopeKey,
   window,
+  loadDetail = fetchEventDetail,
+  initialSelectedId,
 }: {
   events: CollectionEvent[]
   /** 의장·도장 필터 — 아직 범위 밖이라 준비중 안내를 낸다 */
@@ -73,6 +75,10 @@ export function EventsSection({
    * 기준일을 옮길 수 있게 된 뒤로는 이걸 적지 않으면 행이 늘거나 줄어도 왜 그런지 알 수 없다.
    */
   window: DateWindow
+  /** 행의 하위 데이터를 읽는 곳 — 가공 탭은 가공 OT API(B2 · B5)를 넘긴다. 기본은 통합실적 목업 */
+  loadDetail?: (event: CollectionEvent) => Promise<EventDetail>
+  /** 처음부터 골라 둘 행 — 하위 데이터가 곧바로 선다(세부 줄의 건수를 눌러 들어온 경우) */
+  initialSelectedId?: string
 }) {
   const { t } = useTranslation()
   /* 조립 'ASM'/도장 'PNT' 행의 단계 셀은 공정명 하나 — 하위 단계·스텝 이름은 옆의
@@ -83,7 +89,9 @@ export function EventsSection({
       : event.stage === 'PNT'
         ? t('performance.pnt.gridStage')
         : event.stage
-  const [selected, setSelected] = useState<CollectionEvent | null>(null)
+  const [selected, setSelected] = useState<CollectionEvent | null>(
+    () => events.find((e) => e.id === initialSelectedId) ?? null
+  )
   const [detail, setDetail] = useState<EventDetail | null>(null)
 
   useEffect(() => {
@@ -92,13 +100,13 @@ export function EventsSection({
       setDetail(null)
       return
     }
-    fetchEventDetail(selected).then((d) => {
+    loadDetail(selected).then((d) => {
       if (!cancelled) setDetail(d)
     })
     return () => {
       cancelled = true
     }
-  }, [selected])
+  }, [selected, loadDetail])
 
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">

@@ -4,7 +4,6 @@ import { Button } from '../../../shared/ui/atoms/Button'
 import { Spinner } from '../../../shared/ui/atoms/Spinner'
 import { StatusChip } from '../../../shared/ui/atoms/StatusChip'
 import { useAsyncData } from '../../../shared/lib/useAsyncData'
-import { cn } from '../../../shared/lib/utils'
 import { fetchCutTrace } from '../api/fabricationApi'
 import type { StateInfo } from '../model/dashboard'
 import { stateLabel } from '../lib/labels'
@@ -47,7 +46,8 @@ export function CutTracePanel({
         </div>
       )}
       {data && (
-        <div className={cn('space-y-4 transition-opacity', loading && 'opacity-70')}>
+        /* 재조회 중에도 이전 전개를 그대로 둔다 (깜빡임 없음) */
+        <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-1.5">
             <IdentityPill label={t('fabrication.judgment.cuts.bay')} value={data.cut.cut.cutBayNo} code="CUT_BAY_NO" />
             <IdentityPill label={t('fabrication.judgment.cuts.machine')} value={data.cut.cut.cutMchCode} code="CUT_MCH_CODE" />

@@ -61,11 +61,13 @@ export {
 export type { BlockSelection } from './lib/blockSelection'
 export {
   SELECTION_PARAMS,
+  activeOf,
   assyFocusLinkFor,
   clearSelection,
   parseAssyNo,
   parseSelectionParams,
   performanceLinkFor,
+  zonePerformanceLinkFor,
   recallSelection,
   rememberSelection,
   resolveEntrySelection,

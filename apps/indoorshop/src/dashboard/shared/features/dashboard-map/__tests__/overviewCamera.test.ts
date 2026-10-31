@@ -7,7 +7,12 @@ import {
   factoryCameraBounds,
   factoryCameraBoundsOf,
   FACTORY_CAMERA_MAX_RATIO,
+  overviewCameraBounds,
+  overviewBoundsAvoidingCards,
+  overviewBoundsCentered,
+  factoryOutlinePoints,
 } from '../lib/overviewCamera'
+import { fitView, project, screenToWorld } from '../../yard-map/lib/projection'
 
 /* 공장 한 채 — 위도·경도 각 0.01도. 베이는 그 안의 조각이다 */
 const factory = { minLat: 34.87, maxLat: 34.88, minLon: 128.7, maxLon: 128.71 }
@@ -101,5 +106,129 @@ describe('factoryCameraBoundsOf — 실제 야드에서 어느 공장을 눌러�
   it('지도에 없는 공장이면 null — 없는 자리로 날아가지 않는다', async () => {
     const parcels = await loadYardParcels()
     expect(factoryCameraBoundsOf(parcels, '없는 공장')).toBeNull()
+  })
+})
+
+describe('overviewCameraBounds — 돌려 본 화면에서도 모든 공장이 한 화면에 든다', () => {
+  it('돌리지 않고 카드 몫도 없으면 공장 군집 범위와 같다', async () => {
+    const parcels = await loadYardParcels()
+    const cluster = allFactoriesBounds(parcels)!
+    const b = overviewCameraBounds(parcels, 0, 0)!
+    expect(b.minLat).toBeCloseTo(cluster.minLat, 6)
+    expect(b.maxLat).toBeCloseTo(cluster.maxLat, 6)
+    expect(b.minLon).toBeCloseTo(cluster.minLon, 6)
+    expect(b.maxLon).toBeCloseTo(cluster.maxLon, 6)
+  })
+
+  it('-10° 로 돌려 맞추면 모든 공장 꼭짓점이 화면 안, 왼쪽 카드 몫(약 4분의 1)에는 들지 않는다', async () => {
+    const parcels = await loadYardParcels()
+    const viewport = { width: 1150, height: 820 }
+    const bounds = overviewCameraBounds(parcels, -10)!
+    const view = fitView(bounds, viewport, 0.03, { pitch: 0, bearing: -10 })
+    for (const lot of parcels.lots) {
+      if (lot.factory == null) continue
+      for (const p of lot.polygon) {
+        const { sx, sy } = project(view, viewport, p.lat, p.lon)
+        expect(sx).toBeGreaterThanOrEqual(viewport.width * 0.2)
+        expect(sx).toBeLessThanOrEqual(viewport.width)
+        expect(sy).toBeGreaterThanOrEqual(0)
+        expect(sy).toBeLessThanOrEqual(viewport.height)
+      }
+    }
+  })
+})
+
+describe('overviewBoundsAvoidingCards — 카드를 피해 최대로 확대한 대문', () => {
+  it('맞춘 카메라에서 모든 공장 외곽이 화면 안이고 양쪽 카드 밑에 들지 않는다', async () => {
+    const parcels = await loadYardParcels()
+    const viewport = { width: 1392, height: 816 }
+    const obstacles = [
+      { x: 0, y: 48, width: 304, height: 240 },
+      { x: 1240, y: 0, width: 152, height: 48 },
+    ]
+    const camera = { bearing: -5, pitch: 44 }
+    const points = factoryOutlinePoints(parcels)
+    const bounds = overviewBoundsAvoidingCards(points, viewport, obstacles, camera, { project, screenToWorld })!
+    expect(bounds).not.toBeNull()
+    const view = fitView(bounds, viewport, 0, camera)
+    for (const p of points) {
+      const { sx, sy } = project(view, viewport, p.lat, p.lon)
+      expect(sx).toBeGreaterThanOrEqual(0)
+      expect(sx).toBeLessThanOrEqual(viewport.width)
+      expect(sy).toBeGreaterThanOrEqual(0)
+      expect(sy).toBeLessThanOrEqual(viewport.height)
+      for (const r of obstacles) {
+        const inside = sx > r.x && sx < r.x + r.width && sy > r.y && sy < r.y + r.height
+        expect(inside).toBe(false)
+      }
+    }
+  })
+
+  it('카드가 없을 때보다 카드가 있을 때 덜 확대한다(가려지지 않을 만큼만)', async () => {
+    const parcels = await loadYardParcels()
+    const viewport = { width: 1392, height: 816 }
+    const camera = { bearing: -5, pitch: 44 }
+    const points = factoryOutlinePoints(parcels)
+    const proj = { project, screenToWorld }
+    const free = fitView(overviewBoundsAvoidingCards(points, viewport, [], camera, proj)!, viewport, 0, camera)
+    const boxed = fitView(
+      overviewBoundsAvoidingCards(points, viewport, [{ x: 0, y: 0, width: 500, height: 816 }], camera, proj)!,
+      viewport,
+      0,
+      camera
+    )
+    expect(boxed.scale).toBeLessThan(free.scale)
+  })
+
+  it('배율을 고정하면 그 배율 그대로 선다 — 중심만 카드를 피해 잡는다', async () => {
+    const parcels = await loadYardParcels()
+    const viewport = { width: 1384, height: 804 }
+    const camera = { bearing: -30, pitch: 44 }
+    const bounds = overviewBoundsAvoidingCards(
+      factoryOutlinePoints(parcels),
+      viewport,
+      [{ x: 0, y: 48, width: 304, height: 240 }],
+      camera,
+      { project, screenToWorld },
+      12,
+      30_000
+    )!
+    expect(fitView(bounds, viewport, 0, camera).scale).toBeCloseTo(30_000, 0)
+  })
+})
+
+describe('overviewBoundsCentered — 공장 전체가 다 보이고 한가운데에 서는 전경', () => {
+  it('모든 공장 외곽이 여백 안에 들고, 그 묶음의 가운데가 화면 가운데다', async () => {
+    const parcels = await loadYardParcels()
+    const viewport = { width: 1544, height: 854 }
+    const camera = { bearing: -48, pitch: 50 }
+    const margin = { x: 32, y: 72 }
+    const points = factoryOutlinePoints(parcels)
+    const bounds = overviewBoundsCentered(points, viewport, camera, { project, screenToWorld }, margin)!
+    expect(bounds).not.toBeNull()
+    const view = fitView(bounds, viewport, 0, camera)
+    let x0 = Infinity
+    let x1 = -Infinity
+    let y0 = Infinity
+    let y1 = -Infinity
+    for (const p of points) {
+      const { sx, sy } = project(view, viewport, p.lat, p.lon)
+      x0 = Math.min(x0, sx)
+      x1 = Math.max(x1, sx)
+      y0 = Math.min(y0, sy)
+      y1 = Math.max(y1, sy)
+    }
+    /* 다 보인다 — 여백 안(반올림 1px 허용) */
+    expect(x0).toBeGreaterThanOrEqual(margin.x - 1)
+    expect(x1).toBeLessThanOrEqual(viewport.width - margin.x + 1)
+    expect(y0).toBeGreaterThanOrEqual(margin.y - 1)
+    expect(y1).toBeLessThanOrEqual(viewport.height - margin.y + 1)
+    /* 한가운데 — 묶음 상자의 가운데가 화면 가운데(2px 안) */
+    expect(Math.abs((x0 + x1) / 2 - viewport.width / 2)).toBeLessThan(2)
+    expect(Math.abs((y0 + y1) / 2 - viewport.height / 2)).toBeLessThan(2)
+    /* 꼭 맞는다 — 한 축은 여백에 닿는다(쓸데없이 물러나지 않는다) */
+    const fillX = (x1 - x0) / (viewport.width - margin.x * 2)
+    const fillY = (y1 - y0) / (viewport.height - margin.y * 2)
+    expect(Math.max(fillX, fillY)).toBeGreaterThan(0.98)
   })
 })

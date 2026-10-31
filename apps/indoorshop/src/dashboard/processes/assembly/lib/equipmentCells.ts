@@ -51,6 +51,23 @@ export function meaningOfTiltMode(mode: TiltModuleStatus['mode']): StatusMeaning
   return 'done'
 }
 
+/**
+ * 틸팅 한 대의 상태 의미 — **통신이 먼저**다. 끊긴 틸팅의 모드·각도는 마지막으로 받은
+ * 값일 뿐이라, 모드(대기)만 보고 정상으로 그리면 끊긴 설비가 멀쩡해 보인다(야드 맵의 문제
+ * BAY 목록은 같은 설비를 장애로 세는데 현황 칸은 '대기'로 서던 그 어긋남).
+ */
+export function meaningOfTilt(tilt: TiltModuleStatus): StatusMeaning {
+  if (tilt.link !== 'online') return meaningOfLink(tilt.link)
+  if (tilt.motorAlarm > 0) return 'error'
+  return meaningOfTiltMode(tilt.mode)
+}
+
+/** 라이다 칸 하나가 대표하는 링크 — 라이다와 짝 틸팅 중 **더 나쁜 쪽** (오류 > 끊김 > 정상) */
+export function pairLinkOf(lidarLink: LinkState, tilt: TiltModuleStatus | null): LinkState {
+  const rank: Record<LinkState, number> = { online: 0, offline: 1, error: 2 }
+  return tilt && rank[tilt.link] > rank[lidarLink] ? tilt.link : lidarLink
+}
+
 /** 틸팅 모드의 우리말 — 셀 부기와 보조기술이 같은 말을 쓰도록 한 곳에서 정한다 */
 export const TILT_MODE_TEXT: Record<TiltModuleStatus['mode'], string> = {
   idle: '대기',
@@ -125,7 +142,8 @@ export function lidarPairCell(
   const tilt = pairOf(lidar)
   const tiltStatus = tilt ? tiltStatusIn(snapshot, tilt.id) : null
   const lidarLink = linkIn(snapshot, lidar.id) ?? 'offline'
-  const motorAlarm = (tiltStatus?.motorAlarm ?? 0) > 0
+  /* 짝 틸팅의 통신 — 끊기면 틸팅 램프와 칸의 대표 문구가 그것을 말한다 */
+  const tiltLink = tiltStatus?.link ?? 'online'
 
   /*
    * 램프는 **둘**이다. 예전의 셋째('이상')는 앞의 둘을 접은 값이라 새로 말하는 것이
@@ -139,12 +157,12 @@ export function lidarPairCell(
     { label: '링크', meaning: meaningOfLink(lidarLink), value: lidarLink },
     {
       label: '틸팅',
-      meaning: motorAlarm
-        ? 'error'
-        : tiltStatus
-          ? meaningOfTiltMode(tiltStatus.mode)
-          : 'idle',
-      value: tiltStatus ? TILT_MODE_TEXT[tiltStatus.mode] : '짝 없음',
+      meaning: tiltStatus ? meaningOfTilt(tiltStatus) : 'idle',
+      value: !tiltStatus
+        ? '짝 없음'
+        : tiltLink !== 'online'
+          ? LINK_TEXT[tiltLink]
+          : TILT_MODE_TEXT[tiltStatus.mode],
     },
   ]
 
@@ -162,7 +180,15 @@ export function lidarPairCell(
     label: lidar.id,
     group: options.group,
     lamps,
-    metric: metricOf(lidarLink, options.freshText, options.at),
+    /* 라이다가 멀쩡해도 짝 틸팅이 끊겼으면 그 사실이 칸의 대표 문구가 된다 — 이상은
+       클릭 없이 보여야 한다. 라이다 자신이 이상이면 라이다 사유가 먼저다 */
+    metric:
+      lidarLink === 'online' && tiltLink !== 'online'
+        ? {
+            text: `틸팅 ${LINK_TEXT[tiltLink]} · ${options.freshText}`,
+            meaning: meaningOfLink(tiltLink),
+          }
+        : metricOf(lidarLink, options.freshText, options.at),
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
     figure: options.figureOf?.(tiltStatus, lidarLink),
     note,
@@ -254,7 +280,10 @@ export function panelCell(input: {
       text: LINK_TEXT[input.uplink],
       meaning: meaningOfLink(input.uplink),
     },
-    severity: worstMeaning([...lamps.map((lamp) => lamp.meaning), meaningOfLink(input.uplink)]),
+    /* 판정은 **캐비닛 자신**(전원·업링크)만 — 소속 설비가 빠진 것은 램프가 앰버로 말하되
+       칸을 이상으로 세지 않는다. 그 설비는 제 칸에서 이미 이상으로 서므로, 여기서도 세면
+       장애 하나가 '점검 필요' 둘이 된다(야드 맵 문제 BAY 목록은 하나로 센다) */
+    severity: worstMeaning([lamps[0].meaning, meaningOfLink(input.uplink)]),
     figure: input.figureOf?.(lamps),
     /* 소속 대수는 이미 램프가 이름과 함께 말한다 — 부기에는 **영향 범위**만 남긴다 */
     note: input.lidarPairs > 0 ? `라이다 ${input.lidarPairs}쌍` : undefined,

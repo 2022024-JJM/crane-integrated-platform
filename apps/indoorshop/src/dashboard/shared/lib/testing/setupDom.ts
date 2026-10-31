@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeEach } from 'vitest'
+import { clearDateSelection } from '../timeAxis'
+import { clearViewHistory } from '../../features/view-history'
+import { clearFavorites } from '../../features/favorites'
+import { clearSelection } from '../../entities/vessel'
 
 /*
  * jsdom 테스트(`*.test.tsx`)의 공통 준비.
@@ -66,3 +70,14 @@ beforeEach(() => {
 
 /* 그린 것을 걷는다 — 안 걷으면 다음 테스트의 `screen` 질의가 앞 화면까지 함께 본다 */
 afterEach(cleanup)
+
+/* 마지막으로 고른 기준일(탭 간 공유)은 모듈 상태다 — 앞 검사가 고른 날짜가 다음 검사로 새지 않게 */
+afterEach(() => {
+  clearDateSelection()
+  /* 최근 본 화면도 모듈 상태 + localStorage 다 — 다음 검사로 새지 않게 */
+  clearViewHistory()
+  /* 즐겨찾기도 같다 */
+  clearFavorites()
+  /* 직전 호선·블록 선택(탭 간 공유)도 — 주소로 연 블록이 앞 검사의 탭에 합쳐지지 않게 */
+  clearSelection()
+})

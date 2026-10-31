@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   EQUIPMENT_FOCUS_PARAM,
+  bayFocusOf,
   equipmentFocusOf,
   foldExceptFocus,
   withEquipmentFocus,
@@ -64,5 +65,17 @@ describe('foldExceptFocus — 접힘의 예외는 당사자 하나뿐', () => {
 
   it('없는 id 가 와도 화면은 선다 — 규칙 그대로', () => {
     expect(foldExceptFocus(rows, fold, idOf, '없음').map(idOf)).toEqual(['LD-1'])
+  })
+})
+
+describe('bayFocusOf — 드릴다운 베이의 베이 키', () => {
+  it('`{공장}#{베이}` 에서 베이 부분을 낸다 — 현황 보드의 구획 키', () => {
+    expect(bayFocusOf('?factory=POS%201%EA%B3%B5%EC%9E%A5&bay=2')).toBe('2')
+    expect(bayFocusOf(`?factory=${encodeURIComponent('느태 도장공장')}&bay=${encodeURIComponent('느태 도장공장#NP1')}`)).toBe('NP1')
+  })
+
+  it('공장 없이 온 베이·베이 없음은 null — 뜻이 없는 초점을 만들지 않는다', () => {
+    expect(bayFocusOf('?bay=3')).toBeNull()
+    expect(bayFocusOf('?factory=3DS')).toBeNull()
   })
 })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
+import { IS_EMBEDDED } from '../../../lib/embedMode'
 import { useMediaQuery } from '../../../lib/useMediaQuery'
 import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { StatusChip } from '../../../ui/atoms/StatusChip'
@@ -11,6 +12,7 @@ import {
   type EquipmentBoardMode,
 } from '../../../lib/equipmentBoardMode'
 import { EquipmentGrid, isIssueCell, type EquipmentCell } from '../../equipment-grid'
+import { FolderPanel } from '../../../ui/atoms/FolderTabs'
 import {
   EquipmentBirdview,
   type EquipmentBirdviewProps,
@@ -146,7 +148,36 @@ export interface EquipmentStatusBoardProps {
    * 세운다. 들어온 뒤에는 보통 선택처럼 다룬다 — 다른 칸을 누르거나 ESC 로 풀 수 있다.
    */
   focusGroupKey?: string | null
+  /**
+   * **오른쪽 칸을 통째로 바꿔 끼운다** — 왼쪽 공장 목록은 그대로 두고, 버드뷰·설비 그리드 자리에
+   * 이것이 선다. 공정 화면이 3D·블록 탭에서도 공장 목록을 왼쪽에 남기고 탭 내용을 오른쪽에
+   * 세울 때 쓴다(조립 — 사용자 확정). 안 주면 지금까지처럼 버드뷰·그리드.
+   */
+  mainOverride?: React.ReactNode
+  /**
+   * 오른쪽 칸 **맨 위**에 서는 줄 — 공정 화면의 축 탭(현황 · 3D 뷰어 · 블록·실적 …)이 공장 목록
+   * 바로 오른쪽에 서도록(사용자 확정). 바꿔 끼운 칸(`mainOverride`)이든 기본 본문이든 그 위에 선다.
+   */
+  mainHeader?: React.ReactNode
+  /**
+   * 왼쪽 공장 목록을 숨긴다. 기본은 **임베드 창일 때만** 숨긴다(사용자 확정) — 야드 맵의 공장·베이
+   * 버튼이 띄운 창은 이미 그 공장을 짚고 열린 것이라, 다른 공장으로 갈아타는 목록은 자리만 차지한다.
+   * `factoryAside` 가 있으면 그것만 왼쪽에 남는다.
+   */
+  hideFactoryList?: boolean
   className?: string
+}
+
+/** 노드가 가장 가까운 스크롤 상자(없으면 창)의 보이는 영역 안에 들어와 있는가 */
+function isInScrollView(node: Element): boolean {
+  let box: Element | null = node.parentElement
+  while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement
+  const view = box
+    ? box.getBoundingClientRect()
+    : { top: 0, bottom: window.innerHeight }
+  const rect = node.getBoundingClientRect()
+  /* 위쪽 머리만이라도 보이면 된다 — 구획이 상자보다 키가 클 수 있다 */
+  return rect.top >= view.top - 1 && rect.top < view.bottom
 }
 
 export function EquipmentStatusBoard({
@@ -167,6 +198,9 @@ export function EquipmentStatusBoard({
   birdviewReplacement,
   focusEquipmentId = null,
   focusGroupKey = null,
+  mainOverride,
+  mainHeader,
+  hideFactoryList = IS_EMBEDDED,
   className,
 }: EquipmentStatusBoardProps) {
   const { t } = useTranslation()
@@ -284,24 +318,64 @@ export function EquipmentStatusBoard({
    */
   const highlightGroup = (selectedId ? cellIndex.get(selectedId)?.group.key : null) ?? activeGroup
 
-  /* 밝힌 구획을 시야로 — 순서는 그대로 두고 그 자리로 데려간다 (위 주석) */
+  /*
+   * 밝힌 구획을 시야로 — 순서는 그대로 두고 그 자리로 데려간다 (위 주석).
+   *
+   * **구획이 그려진 뒤에** 데려간다. 딥링크로 들어오면(야드 맵의 '현황', 알람) 고른 칸은
+   * 처음부터 정해져 있는데 목록은 데이터가 온 뒤에야 선다 — 칸 값만 지켜보면 그 첫 순간
+   * 노드가 없어 놓치고, 값이 다시 바뀌지 않으니 끝내 그 칸으로 가지 않는다. 그래서 목록
+   * (`groups`)이 바뀔 때도 다시 보되, **같은 칸으로는 한 번만** 데려간다 — 실시간 갱신마다
+   * 사용자가 굴려 둔 스크롤을 빼앗지 않게.
+   */
+  const scrolledToRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!highlightGroup) return
+    if (!highlightGroup) {
+      scrolledToRef.current = null
+      return
+    }
+    if (scrolledToRef.current === highlightGroup) return
     const root = rootRef.current
     if (!root) return
-    const node = root.querySelector(`[data-group="${cssEscape(highlightGroup)}"]`)
-    node?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-  }, [highlightGroup])
+    const target = highlightGroup
+    /*
+     * 노드가 있어도 **스크롤 상자의 높이가 아직 안 정해졌으면**(고정 뷰포트가 막 걸린 첫
+     * 프레임) 넘칠 것이 없어 스크롤이 헛돈다. 그래서 그려진 뒤에 데려가고, 정말 시야에
+     * 들어왔는지 확인해 안 들어왔으면 잠깐(최대 ~2초) 다시 시도한다.
+     */
+    let tries = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const attempt = () => {
+      const node = root.querySelector(`[data-group="${cssEscape(target)}"]`)
+      if (node) {
+        node.scrollIntoView({ block: 'nearest', behavior: tries === 0 ? 'smooth' : 'auto' })
+        if (isInScrollView(node)) {
+          scrolledToRef.current = target
+          return
+        }
+      }
+      tries += 1
+      if (tries < 20) timer = setTimeout(attempt, 100)
+    }
+    const frame = requestAnimationFrame(attempt)
+    return () => {
+      cancelAnimationFrame(frame)
+      if (timer) clearTimeout(timer)
+    }
+  }, [highlightGroup, groups])
 
   /* 요약 스트립 — 아래에 흐르는 것의 합계다. 그리드가 스크롤로 사라져도 이 줄은 남는다 */
   const cells = groups.flatMap((group) => group.cells)
   const issues = cells.filter(isIssueCell).length
 
+  /* 공장 목록을 숨기고 덧붙일 것도 없으면 왼쪽 열 자체를 걷는다 — 본문이 폭을 다 쓴다 */
+  const showLeftColumn = !hideFactoryList || factoryAside != null
+
   return (
     <div
       ref={rootRef}
       className={cn(
-        'grid gap-4 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
+        'grid gap-4',
+        showLeftColumn && 'md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
         /*
          * 두 열로 서면 보드가 **그릇을 그대로 채우고** 목록만 안에서 흐른다.
          *
@@ -310,289 +384,304 @@ export function EquipmentStatusBoard({
          * 읽힌다. 아예 스크롤될 것을 목록 열에만 주면 그림은 처음부터 끝까지 한 자리다.
          */
         /* 배치 전용도 그릇을 그대로 채운다 — 아래 참조(`birdviewHeight`) */
-        (columns || birdviewOnly) && 'md:h-full md:min-h-0',
+        (columns || birdviewOnly || mainOverride != null) && 'md:h-full md:min-h-0',
         className
       )}
     >
       {/* ⓐ 공장 목록 — 접힌 줄에 대수·이상이 이미 보여 열지 않고도 훑는다 */}
-      <div
-        className={cn(
-          'flex flex-col gap-2 self-start md:sticky md:top-0',
-          columns && 'md:min-h-0 md:self-stretch md:overflow-y-auto md:pr-1'
-        )}
-      >
-        <ul className="flex flex-col gap-1.5" aria-label={t('equipmentBoard.factories')}>
-          {factories.map((factory) => {
-            const selected = factory.name === selectedFactory
-            return (
-              <li key={factory.name}>
-                <button
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => onSelectFactory(factory.name)}
-                  className={cn(
-                    'w-full rounded-inshop-lg border px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                    selected
-                      ? 'border-accent bg-accent/5'
-                      : 'border-border bg-surface hover:bg-surface-secondary'
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      aria-hidden="true"
+      {showLeftColumn && (
+        <div
+          className={cn(
+            'flex flex-col gap-2 self-start md:sticky md:top-0',
+            (columns || mainOverride != null) && 'md:min-h-0 md:self-stretch md:overflow-y-auto md:pr-1'
+          )}
+        >
+          {!hideFactoryList && (
+            <ul className="flex flex-col gap-1.5" aria-label={t('equipmentBoard.factories')}>
+              {factories.map((factory) => {
+                const selected = factory.name === selectedFactory
+                return (
+                  <li key={factory.name}>
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onSelectFactory(factory.name)}
                       className={cn(
-                        'h-1.5 w-1.5 shrink-0 rounded-full',
-                        factory.issues > 0 ? 'bg-status-degraded' : 'bg-status-healthy'
+                        'w-full rounded-inshop-lg border px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                        selected
+                          ? 'border-accent bg-accent/5'
+                          : 'border-border bg-surface hover:bg-surface-secondary'
                       )}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-inshop-sm font-medium text-foreground">
-                      {factory.name}
-                    </span>
-                    <StatusChip
-                      tone={factory.issues > 0 ? 'warning' : 'good'}
-                      label={`${factory.total - factory.issues}/${factory.total}`}
-                      className="shrink-0 px-1.5 py-0.5 text-2xs"
-                    />
-                  </div>
-                  <p className="mt-0.5 flex items-center gap-2 pl-3.5 text-2xs text-foreground/55">
-                    {factory.issues > 0 ? (
-                      <span className="text-status-degraded">
-                        {t('equipmentBoard.needsCheck', { count: factory.issues })}
-                      </span>
-                    ) : (
-                      <span>{t('equipmentBoard.allHealthy')}</span>
-                    )}
-                    {factory.note && <span className="truncate">{factory.note}</span>}
-                  </p>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-        {factoryAside}
-      </div>
-
-      <div
-        className={cn(
-          'min-w-0 gap-3',
-          columns
-            ? 'grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch'
-            : 'flex flex-col',
-          /* 배치 전용 — 그림 하나뿐이니 남는 높이를 통째로 준다(잘리지 않게) */
-          birdviewOnly && 'md:min-h-0'
-        )}
-      >
-        {/*
-          ⓑ 요약 스트립 + 버드뷰 — **여기까지가 붙어 있는 자리**다(R29).
-          바탕을 깔아 두는 이유는 아래 그리드가 이 밑으로 흘러 지나가기 때문이다 —
-          투명하면 글자 위로 글자가 지나간다.
-        */}
-        <div
-          ref={headRef}
-          data-sticky-head="true"
-          className={cn(
-            'z-20 -mx-1 flex flex-col gap-2 bg-surface-secondary/95 px-1 pb-2 pt-1 backdrop-blur-sm',
-            /* 쌓았을 때만 붙인다 — 두 열에서는 흐르는 것이 목록뿐이라 붙일 것이 없다 */
-            columns ? 'min-h-0' : 'sticky top-0',
-            birdviewOnly && 'md:min-h-0 md:flex-1'
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'h-1.5 w-1.5 shrink-0 rounded-full',
+                            factory.issues > 0 ? 'bg-status-degraded' : 'bg-status-healthy'
+                          )}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-inshop-sm font-medium text-foreground">
+                          {factory.name}
+                        </span>
+                        <StatusChip
+                          tone={factory.issues > 0 ? 'warning' : 'good'}
+                          label={`${factory.total - factory.issues}/${factory.total}`}
+                          className="shrink-0 px-1.5 py-0.5 text-2xs"
+                        />
+                      </div>
+                      <p className="mt-0.5 flex items-center gap-2 pl-3.5 text-2xs text-foreground/55">
+                        {factory.issues > 0 ? (
+                          <span className="text-status-degraded">
+                            {t('equipmentBoard.needsCheck', { count: factory.issues })}
+                          </span>
+                        ) : (
+                          <span>{t('equipmentBoard.allHealthy')}</span>
+                        )}
+                        {factory.note && <span className="truncate">{factory.note}</span>}
+                      </p>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           )}
-        >
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-inshop-lg border border-border bg-surface px-3 py-1.5">
-            <span className="text-inshop-sm font-semibold text-foreground">{selectedFactory}</span>
-            <SummaryStat label={t('equipmentBoard.summaryTotal')} value={String(cells.length)} />
-            <SummaryStat
-              label={t('equipmentBoard.summaryIssues')}
-              value={String(issues)}
-              tone={issues > 0 ? 'text-status-degraded' : 'text-status-healthy'}
-            />
-            <SummaryStat label={t('equipmentBoard.summaryBays')} value={String(groups.length)} />
-            {/* 좁은 열에서는 손잡이들이 다음 줄로 내려간다 — 옆 열(목록) 위로 넘치지 않게 */}
-            <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
-              {headerExtra}
-              {/* 자리 배분 — 그림을 크게 볼 것인가, 목록과 나눌 것인가 (R40) */}
-              <Segmented<EquipmentBoardMode>
-                legend={t('equipmentBoard.modeLegend')}
-                hideLegend
-                value={mode}
-                onChange={setEquipmentBoardMode}
-                options={[
-                  { value: 'split', labelKey: 'equipmentBoard.modeSplit' },
-                  { value: 'birdview', labelKey: 'equipmentBoard.modeBirdview' },
-                ]}
-                className="shrink-0"
-              />
-              {/* 접기는 절반절반에서만 뜻이 있다 — 배치 전용에서 접으면 빈 화면이 남는다 */}
-              {!birdviewOnly && (
-                <button
-                  type="button"
-                  aria-expanded={birdviewOpen}
-                  onClick={() => setBirdviewOpen((open) => !open)}
-                  className="shrink-0 whitespace-nowrap rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {birdviewOpen
-                    ? t('equipmentBoard.collapseBirdview')
-                    : t('equipmentBoard.expandBirdview')}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {birdviewShown && (
-            <section
-              className={cn(
-                'rounded-inshop-lg border border-border bg-surface p-2',
-                (columns || birdviewOnly) && 'flex min-h-0 flex-1 flex-col'
-              )}
-            >
-              <div className="mb-1 flex shrink-0 items-center justify-between gap-2 px-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <h3 className="shrink-0 text-inshop-xs font-semibold text-foreground">
-                    {t('equipmentBoard.birdviewTitle')}
-                  </h3>
-                  {birdviewActions}
-                </div>
-                <span className="truncate text-2xs text-foreground/45">
-                  {t('equipmentBoard.birdviewHint')}
-                </span>
-              </div>
-              {birdviewReplacement ? (
-                /* 도면 자리에 선 다른 그림 — 액자(높이·여백)는 도면의 것을 그대로 쓴다 */
-                <div
-                  className={cn(
-                    'relative overflow-hidden rounded-inshop-md',
-                    birdviewHeight(birdviewOnly, colorByType, columns),
-                    columns && 'min-h-0 flex-1'
-                  )}
-                >
-                  {birdviewReplacement({
-                    activeGroupKey: highlightGroup,
-                    onSelectBay: (groupKey) => {
-                      setSelectedId(null)
-                      setActiveGroup(groupKey)
-                    },
-                    selectedId,
-                    onSelectPoint: setSelectedId,
-                  })}
-                </div>
-              ) : (
-              <EquipmentBirdview
-                bays={bays}
-                points={points}
-                /*
-                 * 그림에는 **고른 것**만 준다(호버를 접어 넣지 않는다). 접어서 주면
-                 * 심볼을 누르는 순간 그것이 이미 '고른 것'으로 보여 클릭이 해제로 뒤집히고,
-                 * 손을 떼면 아무것도 안 고른 상태가 된다 — 눌러도 고정되지 않는다.
-                 * 호버는 따로 넘기고, 둘을 합치는 일은 그림 안쪽에서 한다.
-                 */
-                selectedId={selectedId}
-                onSelectPoint={setSelectedId}
-                hoveredId={hoveredId}
-                onHoverPoint={setHoveredId}
-                onSelectBay={(groupKey) => {
-                  /* 초점이 설비에서 칸으로 옮겨 갔다 — 잡고 있던 설비는 놓는다 */
-                  setSelectedId(null)
-                  setActiveGroup(groupKey)
-                }}
-                activeGroupKey={highlightGroup}
-                cardOf={cardOf}
-                colorByType={colorByType}
-                overlay={birdviewOverlay}
-                placementOf={birdviewPlacement}
-                emptyLabel={t('equipmentBoard.birdviewEmpty')}
-                resetZoomLabel={t('equipmentBoard.birdviewResetZoom')}
-                /*
-                 * 배치 전용은 **뷰포트를 기준으로** 키운다 — 그릇이 커지면 투영이 그만큼
-                 * 크게 그리므로(1 단위 = 1px) 칸 이름과 심볼이 같이 자란다.
-                 */
-                /*
-                 * 그릇이 곧 배율이다 — 투영이 이 상자에 도면을 맞추므로(1 단위 = 1px)
-                 * 상자를 키우면 베이도 설비 줄도 그만큼 커진다. 절반절반에서 30vh 는
-                 * 너무 낮아 넓은 화면에서 그림이 가운데 손바닥만 하게 남았다(좌우는
-                 * 레터박스로 버려진다 — 도면은 비율을 지켜야 하므로 늘릴 수 없다).
-                 * 범례가 한 줄 서므로 그만큼(28px) 더한다 — 그림이 그 몫을 뺏기지 않게.
-                 */
-                className={cn('w-full', birdviewHeight(birdviewOnly, colorByType, columns))}
-              />
-              )}
-            </section>
-          )}
+          {factoryAside}
         </div>
+      )}
 
-        {/*
-          ⓒ 베이별 그리드 — 버드뷰에서 고른 베이가 있으면 그 구획을 먼저 세운다.
-          배치 전용 모드에서는 세우지 않는다(그 모드의 뜻이 "그림에 자리를 다 준다"이므로,
-          목록을 접어 두는 게 아니라 아예 안 그린다 — 스크롤 아래 숨겨 두면 그림이 그만큼
-          작아지고 모드를 고른 이유가 사라진다).
-        */}
-        {!birdviewOnly && (
+      {/* 오른쪽 칸을 바꿔 끼웠으면 그것만 — 공장 목록은 왼쪽에 그대로 남는다(`mainOverride`) */}
+      {/* 두 갈래 모두 같은 `MainColumn` 에 선다 — 축 탭(머리 줄)이 탭을 옮길 때 다시 그려지지 않게 */}
+      {mainOverride != null ? (
+        <MainColumn header={mainHeader}>
+          <div className="flex min-w-0 flex-col md:min-h-0">{mainOverride}</div>
+        </MainColumn>
+      ) : (
+        <MainColumn header={mainHeader}>
+
         <div
           className={cn(
-            'flex min-w-0 flex-col gap-3',
-            /* 흐르는 것은 여기뿐이다 — 그림은 옆에서 한 자리를 지킨다 */
-            columns && 'min-h-0 overflow-y-auto pr-1'
+            'min-w-0 gap-3',
+            columns
+              ? 'grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch'
+              : 'flex flex-col',
+            /* 배치 전용 — 그림 하나뿐이니 남는 높이를 통째로 준다(잘리지 않게) */
+            birdviewOnly && 'md:min-h-0'
           )}
         >
-          {groups.length === 0 ? (
-            <p className="rounded-inshop-lg border border-dashed border-border px-3 py-8 text-center text-inshop-sm text-foreground/55">
-              {t('equipmentBoard.empty')}
-            </p>
-          ) : (
-            groups.map((group) => (
+          {/*
+            ⓑ 요약 스트립 + 버드뷰 — **여기까지가 붙어 있는 자리**다(R29).
+            바탕을 깔아 두는 이유는 아래 그리드가 이 밑으로 흘러 지나가기 때문이다 —
+            투명하면 글자 위로 글자가 지나간다.
+          */}
+          <div
+            ref={headRef}
+            data-sticky-head="true"
+            className={cn(
+              'z-20 -mx-1 flex flex-col gap-2 bg-surface-secondary/95 px-1 pb-2 pt-1 backdrop-blur-sm',
+              /* 쌓았을 때만 붙인다 — 두 열에서는 흐르는 것이 목록뿐이라 붙일 것이 없다 */
+              columns ? 'min-h-0' : 'sticky top-0',
+              birdviewOnly && 'md:min-h-0 md:flex-1'
+            )}
+          >
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-inshop-lg border border-border bg-surface px-3 py-1.5">
+              <span className="text-inshop-sm font-semibold text-foreground">{selectedFactory}</span>
+              <SummaryStat label={t('equipmentBoard.summaryTotal')} value={String(cells.length)} />
+              <SummaryStat
+                label={t('equipmentBoard.summaryIssues')}
+                value={String(issues)}
+                tone={issues > 0 ? 'text-status-degraded' : 'text-status-healthy'}
+              />
+              <SummaryStat label={t('equipmentBoard.summaryBays')} value={String(groups.length)} />
+              {/* 좁은 열에서는 손잡이들이 다음 줄로 내려간다 — 옆 열(목록) 위로 넘치지 않게 */}
+              <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
+                {headerExtra}
+                {/* 자리 배분 — 그림을 크게 볼 것인가, 목록과 나눌 것인가 (R40) */}
+                <Segmented<EquipmentBoardMode>
+                  legend={t('equipmentBoard.modeLegend')}
+                  hideLegend
+                  value={mode}
+                  onChange={setEquipmentBoardMode}
+                  options={[
+                    { value: 'split', labelKey: 'equipmentBoard.modeSplit' },
+                    { value: 'birdview', labelKey: 'equipmentBoard.modeBirdview' },
+                  ]}
+                  className="shrink-0"
+                />
+                {/* 접기는 절반절반에서만 뜻이 있다 — 배치 전용에서 접으면 빈 화면이 남는다 */}
+                {!birdviewOnly && (
+                  <button
+                    type="button"
+                    aria-expanded={birdviewOpen}
+                    onClick={() => setBirdviewOpen((open) => !open)}
+                    className="shrink-0 whitespace-nowrap rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {birdviewOpen
+                      ? t('equipmentBoard.collapseBirdview')
+                      : t('equipmentBoard.expandBirdview')}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {birdviewShown && (
               <section
-                key={group.key}
-                data-group={group.key}
-                /* 붙어 있는 머리 뒤로 숨지 않게 — 시야로 데려올 때 그만큼 비켜 세운다 */
-                style={{ scrollMarginTop: 'var(--board-head)' }}
                 className={cn(
-                  'rounded-inshop-lg border bg-surface p-2',
-                  highlightGroup === group.key ? 'border-accent' : 'border-border'
+                  'rounded-inshop-lg border border-border bg-surface p-2',
+                  (columns || birdviewOnly) && 'flex min-h-0 flex-1 flex-col'
                 )}
               >
-                {/*
-                  구획 머리 — **그 칸 전체의 판정을 여기서 끝낸다.**
-                  대수만 적혀 있으면 "이 베이가 괜찮은가"를 알려고 아래 셀 여덟 개를
-                  일일이 훑어야 한다. 목록이 길어질수록 그 훑기가 전부이고, 머리 한 줄이
-                  답하면 훑을 이유가 있는 구획만 훑게 된다.
-                */}
-                {/*
-                  구획 머리는 **그 칸으로 가는 문**이다 (R45).
-                  지금까지 링킹은 한 방향뿐이었다 — 그림에서 칸을 누르면 목록이 따라왔지만,
-                  목록에서 "B1 이 어디냐"를 물을 길이 없어 그림을 눈으로 훑어야 했다.
-                  이제 머리를 누르면 도면은 그 칸을 밝히고, 3D 는 그 자리로 날아간다.
-                  다시 누르면 놓는다(한 번 더 누르는 것이 곧 해제라는 이 앱의 관례).
-                */}
-                <button
-                  type="button"
-                  aria-pressed={highlightGroup === group.key}
-                  onClick={() => {
+                <div className="mb-1 flex shrink-0 items-center justify-between gap-2 px-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h3 className="shrink-0 text-inshop-xs font-semibold text-foreground">
+                      {t('equipmentBoard.birdviewTitle')}
+                    </h3>
+                    {birdviewActions}
+                  </div>
+                  <span className="truncate text-2xs text-foreground/45">
+                    {t('equipmentBoard.birdviewHint')}
+                  </span>
+                </div>
+                {birdviewReplacement ? (
+                  /* 도면 자리에 선 다른 그림 — 액자(높이·여백)는 도면의 것을 그대로 쓴다 */
+                  <div
+                    className={cn(
+                      'relative overflow-hidden rounded-inshop-md',
+                      birdviewHeight(birdviewOnly, colorByType, columns),
+                      columns && 'min-h-0 flex-1'
+                    )}
+                  >
+                    {birdviewReplacement({
+                      activeGroupKey: highlightGroup,
+                      onSelectBay: (groupKey) => {
+                        setSelectedId(null)
+                        setActiveGroup(groupKey)
+                      },
+                      selectedId,
+                      onSelectPoint: setSelectedId,
+                    })}
+                  </div>
+                ) : (
+                <EquipmentBirdview
+                  bays={bays}
+                  points={points}
+                  /*
+                   * 그림에는 **고른 것**만 준다(호버를 접어 넣지 않는다). 접어서 주면
+                   * 심볼을 누르는 순간 그것이 이미 '고른 것'으로 보여 클릭이 해제로 뒤집히고,
+                   * 손을 떼면 아무것도 안 고른 상태가 된다 — 눌러도 고정되지 않는다.
+                   * 호버는 따로 넘기고, 둘을 합치는 일은 그림 안쪽에서 한다.
+                   */
+                  selectedId={selectedId}
+                  onSelectPoint={setSelectedId}
+                  hoveredId={hoveredId}
+                  onHoverPoint={setHoveredId}
+                  onSelectBay={(groupKey) => {
+                    /* 초점이 설비에서 칸으로 옮겨 갔다 — 잡고 있던 설비는 놓는다 */
                     setSelectedId(null)
-                    setActiveGroup((current) => (current === group.key ? null : group.key))
+                    setActiveGroup(groupKey)
                   }}
-                  className="mb-1.5 flex w-full items-center gap-2 rounded-inshop-md px-1 py-0.5 text-left transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <h4 className="text-inshop-sm font-semibold tracking-tight text-foreground">
-                    {group.title}
-                  </h4>
-                  <span className="font-mono text-2xs tabular-nums text-foreground/45">
-                    {group.cells.length}
-                  </span>
-                  <span className="ml-auto">
-                    <GroupVerdict cells={group.cells} />
-                  </span>
-                </button>
-                <EquipmentGrid
-                  cells={group.cells}
-                  showControls={false}
-                  namedLamps={namedLamps}
-                  selectedId={linkedId}
-                  onSelect={setSelectedId}
+                  activeGroupKey={highlightGroup}
+                  cardOf={cardOf}
+                  colorByType={colorByType}
+                  overlay={birdviewOverlay}
+                  placementOf={birdviewPlacement}
+                  emptyLabel={t('equipmentBoard.birdviewEmpty')}
+                  resetZoomLabel={t('equipmentBoard.birdviewResetZoom')}
+                  /*
+                   * 배치 전용은 **뷰포트를 기준으로** 키운다 — 그릇이 커지면 투영이 그만큼
+                   * 크게 그리므로(1 단위 = 1px) 칸 이름과 심볼이 같이 자란다.
+                   */
+                  /*
+                   * 그릇이 곧 배율이다 — 투영이 이 상자에 도면을 맞추므로(1 단위 = 1px)
+                   * 상자를 키우면 베이도 설비 줄도 그만큼 커진다. 절반절반에서 30vh 는
+                   * 너무 낮아 넓은 화면에서 그림이 가운데 손바닥만 하게 남았다(좌우는
+                   * 레터박스로 버려진다 — 도면은 비율을 지켜야 하므로 늘릴 수 없다).
+                   * 범례가 한 줄 서므로 그만큼(28px) 더한다 — 그림이 그 몫을 뺏기지 않게.
+                   */
+                  className={cn('w-full', birdviewHeight(birdviewOnly, colorByType, columns))}
                 />
+                )}
               </section>
-            ))
+            )}
+          </div>
+
+          {/*
+            ⓒ 베이별 그리드 — 버드뷰에서 고른 베이가 있으면 그 구획을 먼저 세운다.
+            배치 전용 모드에서는 세우지 않는다(그 모드의 뜻이 "그림에 자리를 다 준다"이므로,
+            목록을 접어 두는 게 아니라 아예 안 그린다 — 스크롤 아래 숨겨 두면 그림이 그만큼
+            작아지고 모드를 고른 이유가 사라진다).
+          */}
+          {!birdviewOnly && (
+          <div
+            className={cn(
+              'flex min-w-0 flex-col gap-3',
+              /* 흐르는 것은 여기뿐이다 — 그림은 옆에서 한 자리를 지킨다 */
+              columns && 'min-h-0 overflow-y-auto pr-1'
+            )}
+          >
+            {groups.length === 0 ? (
+              <p className="rounded-inshop-lg border border-dashed border-border px-3 py-8 text-center text-inshop-sm text-foreground/55">
+                {t('equipmentBoard.empty')}
+              </p>
+            ) : (
+              groups.map((group) => (
+                <section
+                  key={group.key}
+                  data-group={group.key}
+                  /* 붙어 있는 머리 뒤로 숨지 않게 — 시야로 데려올 때 그만큼 비켜 세운다 */
+                  style={{ scrollMarginTop: 'var(--board-head)' }}
+                  className={cn(
+                    'rounded-inshop-lg border bg-surface p-2',
+                    highlightGroup === group.key ? 'border-accent' : 'border-border'
+                  )}
+                >
+                  {/*
+                    구획 머리 — **그 칸 전체의 판정을 여기서 끝낸다.**
+                    대수만 적혀 있으면 "이 베이가 괜찮은가"를 알려고 아래 셀 여덟 개를
+                    일일이 훑어야 한다. 목록이 길어질수록 그 훑기가 전부이고, 머리 한 줄이
+                    답하면 훑을 이유가 있는 구획만 훑게 된다.
+                  */}
+                  {/*
+                    구획 머리는 **그 칸으로 가는 문**이다 (R45).
+                    지금까지 링킹은 한 방향뿐이었다 — 그림에서 칸을 누르면 목록이 따라왔지만,
+                    목록에서 "B1 이 어디냐"를 물을 길이 없어 그림을 눈으로 훑어야 했다.
+                    이제 머리를 누르면 도면은 그 칸을 밝히고, 3D 는 그 자리로 날아간다.
+                    다시 누르면 놓는다(한 번 더 누르는 것이 곧 해제라는 이 앱의 관례).
+                  */}
+                  <button
+                    type="button"
+                    aria-pressed={highlightGroup === group.key}
+                    onClick={() => {
+                      setSelectedId(null)
+                      setActiveGroup((current) => (current === group.key ? null : group.key))
+                    }}
+                    className="mb-1.5 flex w-full items-center gap-2 rounded-inshop-md px-1 py-0.5 text-left transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <h4 className="text-inshop-sm font-semibold tracking-tight text-foreground">
+                      {group.title}
+                    </h4>
+                    <span className="font-mono text-2xs tabular-nums text-foreground/45">
+                      {group.cells.length}
+                    </span>
+                    <span className="ml-auto">
+                      <GroupVerdict cells={group.cells} />
+                    </span>
+                  </button>
+                  <EquipmentGrid
+                    cells={group.cells}
+                    showControls={false}
+                    namedLamps={namedLamps}
+                    selectedId={linkedId}
+                    onSelect={setSelectedId}
+                  />
+                </section>
+              ))
+            )}
+          </div>
           )}
         </div>
-        )}
-      </div>
+        </MainColumn>
+      )}
     </div>
   )
 }
@@ -689,3 +778,20 @@ function SummaryStat({ label, value, tone }: { label: string; value: string; ton
  * 가장 가까운 만큼만 굴린다(`block: 'nearest'`). 머리 높이는 `--board-head` 가 알고
  * 있으므로 그만큼 비켜 세워 잘리지 않는다.
  */
+
+/**
+ * 기본 본문 칸 — 머리 줄(`mainHeader`)이 있으면 그 아래로 본문을 세운다. 없으면 본문 그대로라
+ * 지금까지의 배치(그리드 열 · 붙임)가 그대로 산다.
+ */
+function MainColumn({ header, children }: { header?: React.ReactNode; children: React.ReactNode }) {
+  if (header == null) return <>{children}</>
+  /* 머리 줄(폴더 탭)과 본문이 한 테두리로 이어진다 — 탭 줄이 윗변, `FolderPanel` 이 나머지 세 변 */
+  return (
+    <div className="flex min-w-0 flex-col md:min-h-0">
+      {header}
+      {/* 본문은 칸의 남는 높이를 다 받는다 — 3D 뷰어·배치 그림은 높이를 부모에게서 받으므로, 여기서
+          끊기면 높이 0 으로 접혀 장면이 보이지 않는다 */}
+      <FolderPanel className="md:min-h-0 md:flex-1 md:[&>*]:min-h-0 md:[&>*]:flex-1">{children}</FolderPanel>
+    </div>
+  )
+}

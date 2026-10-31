@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { carryWorkspaceTab, WORKSPACE_TAB_PARAM, workspaceTabOf } from './workspaceTabUrl'
 
@@ -14,8 +14,12 @@ import { carryWorkspaceTab, WORKSPACE_TAB_PARAM, workspaceTabOf } from './worksp
  * 히스토리에 쌓으면 뒤로가기가 탭 사이를 오가느라 화면을 못 떠난다 — 드릴다운(공장·베이)
  * 이 `push` 인 것과 정확히 반대 이유다.
  *
- * 방향성은 그대로다: URL 이 원본이고 화면은 그것을 읽는다. 화면 안 state 사본을 두지
- * 않으므로 둘이 어긋날 자리가 없다.
+ * 방향성은 그대로다: URL 이 원본이고 화면은 그것을 읽는다.
+ *
+ * 다만 누른 탭은 **즉시** 선다(사용자 지적: 탭 전환 딜레이). 라우터는 주소 변경을 트랜지션
+ * (급하지 않은 업데이트)으로 그리므로, 새 탭의 무거운 내용(3D 장면·배치 그림)을 다 그릴 때까지
+ * 화면이 이전 탭에 머문다. 그래서 누른 값을 잠깐 화면 안에 들고(`pending`) 그 값으로 곧바로
+ * 그린 뒤, 주소가 따라오면 내려놓는다 — 원본은 여전히 주소다.
  */
 
 export interface WorkspaceTabApi<T extends string> {
@@ -31,10 +35,15 @@ export function useWorkspaceTab<T extends string>(
 ): WorkspaceTabApi<T> {
   const [searchParams, setSearchParams] = useSearchParams()
   const raw = searchParams.get(WORKSPACE_TAB_PARAM)
-  const tab = useMemo(() => workspaceTabOf(raw, allowed) ?? fallback, [raw, allowed, fallback])
+  const urlTab = useMemo(() => workspaceTabOf(raw, allowed) ?? fallback, [raw, allowed, fallback])
+  /* 누른 탭 — 주소가 따라올 때까지만 든다 (주소가 바뀌면 내려놓는다: 뒤로가기·링크 이동도 주소가 이긴다) */
+  const [pending, setPending] = useState<T | null>(null)
+  useEffect(() => setPending(null), [raw])
+  const tab = pending ?? urlTab
 
   const setTab = useCallback(
     (next: T) => {
+      setPending(next)
       setSearchParams(
         (previous) => {
           const params = new URLSearchParams(previous)

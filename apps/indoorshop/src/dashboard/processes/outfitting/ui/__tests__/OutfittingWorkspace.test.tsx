@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Link, Route, Routes } from 'react-router-dom'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../../../shared/lib/testing/renderWithProviders'
@@ -64,7 +64,12 @@ function Here() {
   return <output data-testid="here">{`${pathname}${search}`}</output>
 }
 
-function renderWorkspace(path: string) {
+/*
+ * 기본 갈래는 실적이다 — 축 탭을 보는 검사들은 현황 갈래(`?view=status`)에서 출발한다.
+ * 기본 갈래 자체를 보는 검사만 `asIs` 로 주소를 그대로 둔다.
+ */
+function renderWorkspace(path: string, { asIs = false }: { asIs?: boolean } = {}) {
+  const route = asIs || path.includes('view=') ? path : `${path}${path.includes('?') ? '&' : '?'}view=status`
   return renderWithProviders(
     <>
       <Routes>
@@ -78,7 +83,7 @@ function renderWorkspace(path: string) {
       <Link to="/indoorshop/zones/outfitting/ofit-bos1?tab=viewer">다른 공장 3D</Link>
       <Here />
     </>,
-    { route: path }
+    { route }
   )
 }
 
@@ -98,6 +103,40 @@ async function openViewer(user: ReturnType<typeof userEvent.setup>) {
  * 축 탭 3개, 3D 공장 뷰(전 베이), 현황·블록 탭의 콘텐츠 이동을 지킨다.
  */
 describe('OutfittingWorkspace', () => {
+  /* 화면 안의 [현황 | 실적] 탭은 걷었다(사용자 확정) — 갈래는 헤더 메뉴 드롭다운이 `?view=` 로 고른다 */
+  it('화면 안에 갈래 탭은 없고, 기본은 현황(축 탭 화면), ?view=performance 는 의장 공정만', async () => {
+    const { unmount } = renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1', { asIs: true })
+    expect(await screen.findByRole('tablist', { name: '화면 축 선택' })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '화면 갈래 선택' })).not.toBeInTheDocument()
+    unmount()
+
+    /* 실적은 조회 조건부터 — 축 탭은 서지 않는다 */
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1?view=performance', { asIs: true })
+    expect(await screen.findByText('호선 번호를 선택하세요')).toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: '화면 축 선택' })).not.toBeInTheDocument()
+  })
+
+  it('3D·블록 탭에서도 왼쪽 공장 목록은 남고, 탭 내용은 오른쪽 칸에 선다 (조립과 같은 배치)', async () => {
+    const user = userEvent.setup()
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1')
+    await openViewer(user)
+    expect(screen.getByRole('list', { name: '공장 목록' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '블록·실적' }))
+    await screen.findByRole('heading', { name: /블록 현황/ })
+    expect(screen.getByRole('list', { name: '공장 목록' })).toBeInTheDocument()
+  })
+
+  it('실적 갈래 — 주소에 실린 호선·블록으로 곧바로 의장 블록 판별을 낸다', async () => {
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1?view=performance&vessel=7004&block=222')
+    expect(await screen.findByRole('heading', { name: /의장 — 블록 판별/ })).toBeInTheDocument()
+  })
+
+  it('베이를 짚고 들어온 주소는 현황에 선다', async () => {
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1/ofit-pos1-b1', { asIs: true })
+    expect(await screen.findByRole('list', { name: '공장 목록' })).toBeInTheDocument()
+  })
+
   it('축 탭 [현황|3D 뷰어|블록·실적] 이 서고, 기본은 현황이다 (P4)', async () => {
     const user = userEvent.setup()
     renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1')
@@ -106,7 +145,7 @@ describe('OutfittingWorkspace', () => {
     const tabs = [...tablist.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)
     expect(tabs).toEqual(['현황', '3D 뷰어', '블록·실적'])
     /* 처음 서는 것은 현황 — 3D 는 눌러서 들어간다 */
-    expect(screen.getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(screen.getByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByTestId('viewer')).not.toBeInTheDocument()
 
     /* 공장 전체 뷰 — POS 1공장 7베이 전부가 한 장면에 */
@@ -189,8 +228,6 @@ describe('OutfittingWorkspace', () => {
     const viewer = await openViewer(user)
     await waitFor(() => expect(viewer.dataset.mode).toBe('bay'))
     expect(viewer.dataset.bays).toBe('1')
-    /* 머리글이 베이 이름을 말한다 */
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('1BAY')
   })
 })
 
@@ -221,7 +258,7 @@ describe('OutfittingWorkspace — PCD 뷰 착지', () => {
   it('탭을 말하지 않은 URL 은 기본 탭(현황)에 선다 — 착지 탭을 정하는 것은 URL 이다', async () => {
     renderWorkspace(href.split('&tab=')[0])
 
-    expect(await screen.findByRole('tab', { name: '현황' })).toHaveAttribute(
+    expect(within(await screen.findByRole('tablist', { name: '화면 축 선택' })).getByRole('tab', { name: '현황' })).toHaveAttribute(
       'aria-selected',
       'true'
     )
@@ -257,7 +294,10 @@ describe('OutfittingWorkspace — 뷰어 안 드릴은 축을 승계한다 (R30)
 
     /* 베이 → 공장 복귀 ('전체') — 되돌아와도 보던 축에 선다 */
     await user.click(await screen.findByRole('link', { name: '전체' }))
-    expect(here()).toBe(`/indoorshop/zones/outfitting/ofit-pos1?${WORKSPACE_TAB_PARAM}=viewer`)
+    expect(here().split('?')[0]).toBe('/indoorshop/zones/outfitting/ofit-pos1')
+    expect(tabOf(here())).toBe('viewer')
+    /* 갈래도 현황에 남는다 — 공장 주소는 기본 갈래가 실적이다 */
+    expect(new URLSearchParams(here().split('?')[1]).get('view')).toBe('status')
   })
 })
 
@@ -304,26 +344,27 @@ describe('OutfittingWorkspace — 공장이 바뀌어도 축은 남는다 (R30)'
  * 나오는 길이 있어야 하고, 그 길이 안 보이면 조작자는 들어가기를 주저한다.
  */
 describe('OutfittingWorkspace — 나가는 문', () => {
-  /* 문은 두 자리에 선다(머리글 · 3D 도구줄) — 어느 쪽을 눌러도 같은 데로 가야 한다 */
-  const doors = async (pattern: RegExp) =>
-    (await screen.findAllByTitle(pattern)).map((el) => el.getAttribute('href'))
+  /* 머리글·도구줄의 공장 칩은 없앴다(사용자 확정) — 한 계단 위로는 탭 줄의 '전체' 가 간다 */
 
-  it('공장 뷰에서 나가는 문은 머리글 하나 — 3D 안의 물러나기는 카메라다', async () => {
+  it('공장 뷰에는 공장 목록으로 나가는 문이 없다 — 머리글에서 뺐고(사용자 확정), 3D 안의 물러나기는 카메라다', async () => {
     renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1?tab=viewer')
-
-    const hrefs = await doors(/공장 목록으로 돌아가기/)
-    expect(hrefs).toEqual(['/indoorshop/zones/outfitting/list'])
+    await screen.findByTestId('viewer')
+    expect(screen.queryAllByTitle(/공장 목록으로 돌아가기/)).toHaveLength(0)
 
     /* 도구줄의 `전체보기` 는 링크가 아니다 — 눌러도 화면을 떠나지 않는다 */
     const fitAll = await screen.findByRole('button', { name: '전체보기' })
     expect(fitAll.tagName).toBe('BUTTON')
   })
 
-  it('베이 뷰에서는 한 칸만 오른다 — 보던 축을 들고 그 공장으로', async () => {
+  it('베이 뷰에서는 한 칸만 오른다 — 탭 줄의 「전체」가 보던 축을 들고 그 공장으로(공장 칩은 뺐다)', async () => {
     renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1/ofit-pos1-b1?tab=viewer')
 
-    const hrefs = await doors(/공장으로 돌아가기/)
-    expect(hrefs.length).toBeGreaterThan(1)
-    expect(new Set(hrefs)).toEqual(new Set(['/indoorshop/zones/outfitting/ofit-pos1?tab=viewer']))
+    const all = await screen.findByRole('link', { name: '전체' })
+    const [path, query] = (all.getAttribute('href') ?? '').split('?')
+    expect(path).toBe('/indoorshop/zones/outfitting/ofit-pos1')
+    /* 보던 축(3D)과 갈래(현황)를 함께 들고 간다 */
+    expect(new URLSearchParams(query).get('tab')).toBe('viewer')
+    expect(new URLSearchParams(query).get('view')).toBe('status')
+    expect(screen.queryByRole('link', { name: /공장으로 돌아가기/ })).not.toBeInTheDocument()
   })
 })

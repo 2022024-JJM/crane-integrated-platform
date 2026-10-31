@@ -1,8 +1,12 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
+  DATE_PARAMS,
+  dateParamsOf,
+  dateParamsWithMemory,
   instantOf,
   parseDateParams,
+  rememberDateSelection,
   rewindDaysOf,
   todayString,
   windowOf,
@@ -21,9 +25,9 @@ import { useClock } from './useClock'
  * 이 훅은 그 문법을 **한 벌로** 만든다 — 주소가 축의 정본이고, 화면은 그 축을 읽어
  * 데이터 함수에 그대로 넘긴다. 링크를 복사하면 날짜까지 함께 간다.
  *
- * ⚠️ 여기서 축을 **쓰지는** 않는다(읽기 전용). 기준일을 바꾸는 컨트롤은 통합실적의
- *    `BaseDateControl` 하나뿐이고, 공정 화면은 그 링크를 따라올 뿐이다 — 같은 축을
- *    두 곳에서 쓰면 어느 쪽이 정본인지 사라진다.
+ * 축을 바꾸는 컨트롤(`BaseDateControl`)은 통합실적과 공정 [실적] 화면에 함께 선다(사용자 확정).
+ * 쓰는 자리가 여럿이어도 정본은 **주소 한 곳**이다 — 모두 `useBaseDateWriter` 로 같은 파라미터를
+ * 고치므로, 어느 화면에서 바꾸든 다른 화면으로 건너가면 같은 날짜로 선다.
  */
 
 export interface BaseDateAxis {
@@ -54,7 +58,8 @@ export function useBaseDate(): BaseDateAxis {
     const params = new URLSearchParams()
     if (dateParam) params.set('date', dateParam)
     if (spanParam) params.set('span', spanParam)
-    const selection = parseDateParams(params, today)
+    /* 주소에 날짜가 없으면 마지막으로 고른 날짜로 — 탭을 옮겨도 날짜가 이어진다 */
+    const selection = parseDateParams(dateParamsWithMemory(params), today)
     return {
       selection,
       baseDate: selection.date,
@@ -78,4 +83,31 @@ export function useAxisNow(intervalMs = 30_000): Date {
   const live = useClock(intervalMs)
   const frozen = useMemo(() => new Date(instantOf(baseDate)), [baseDate])
   return isToday ? live : frozen
+}
+
+/**
+ * 기준일을 **주소에** 적는다 — 상태와 URL 을 따로 두지 않는다(`useBaseDate` 가 읽는 그 자리).
+ *
+ * 기본값(오늘 하루)이면 파라미터를 **지운다** — 오늘 날짜가 박힌 링크는 내일 거짓이 된다.
+ * 기록은 `replace` 다: 날짜는 조회 조건이지 다른 자리로의 이동이 아니다.
+ */
+export function useBaseDateWriter(): (next: BaseDateSelection) => void {
+  const [, setSearchParams] = useSearchParams()
+  const today = useMemo(() => todayString(), [])
+  return useCallback(
+    (next: BaseDateSelection) => {
+      rememberDateSelection(next, today)
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev)
+          params.delete(DATE_PARAMS.date)
+          params.delete(DATE_PARAMS.span)
+          for (const [key, value] of Object.entries(dateParamsOf(next, today))) params.set(key, value)
+          return params
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams, today]
+  )
 }

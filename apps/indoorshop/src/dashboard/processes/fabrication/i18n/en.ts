@@ -27,6 +27,7 @@ export const fabricationEn: typeof fabricationKo = {
       autoRefresh: 'Auto refresh 5 s',
       refreshNow: 'Refresh now',
       fetchedAt: 'Fetched {{time}}',
+      refreshing: 'Refreshing',
       loading: 'Loading judgments',
       apiUnreachable: 'Cannot reach the judgment query API.',
       apiHint:

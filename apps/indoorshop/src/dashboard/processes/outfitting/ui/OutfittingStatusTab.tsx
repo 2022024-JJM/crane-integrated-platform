@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { bayFocusOf, equipmentFocusOf } from '../../../shared/lib/equipmentFocus'
 import { useAsyncData } from '../../../shared/lib/useAsyncData'
 import { useClock } from '../../../shared/lib/useClock'
 import { loadYardParcels } from '../../../shared/entities/yard-parcels'
@@ -42,6 +43,8 @@ export function OutfittingStatusTab({
   headerExtra,
   factoryAside,
   focusBay = null,
+  mainOverride,
+  mainHeader,
   className,
 }: {
   /** 지금 보고 있는 공장 — 탭 사이에서 공유되는 선택 */
@@ -63,9 +66,20 @@ export function OutfittingStatusTab({
   headerExtra?: ReactNode
   /** 공장 목록 위에 덧붙는 것 — 설비 관제 화면의 '도면 보기' */
   factoryAside?: ReactNode
+  /**
+   * 오른쪽 칸에 대신 세울 것 — 3D·블록 탭의 내용. 왼쪽 공장 목록은 그대로 남는다(조립과 같은
+   * 배치 — 사용자 확정). 안 주면 설비 현황(버드뷰·그리드)
+   */
+  mainOverride?: ReactNode
+  /** 오른쪽 칸 맨 위 줄 — 축 탭이 공장 목록 바로 오른쪽에 선다 */
+  mainHeader?: ReactNode
 }) {
   const { t } = useTranslation()
   const typeLabelOf = useEquipmentTypeLabel()
+  /* 딥링크 승계 — 야드 맵의 문제 BAY·알람이 실어 보낸 베이·설비. 경로의 베이가 우선이다 */
+  const [searchParams] = useSearchParams()
+  const focusEquipmentId = equipmentFocusOf(searchParams)
+  const urlFocusBay = bayFocusOf(searchParams)
   const { snapshot } = useFactoryEquipmentStatus(selectedFactory)
   /* 신선도가 흐르도록 — 셀 안의 경과는 셀이 직접 흘리고, 여기서는 문구 계산에만 쓴다 */
   const now = useClock(30_000)
@@ -152,7 +166,10 @@ export function OutfittingStatusTab({
       sideBySide
       factoryAside={factoryAside}
       /* 베이에서 건너왔으면 그 구획을 골라 둔 채로 (베이 → 현황 승계) */
-      focusGroupKey={focusBay}
+      focusGroupKey={focusBay ?? urlFocusBay}
+      focusEquipmentId={focusEquipmentId}
+      mainOverride={mainOverride}
+      mainHeader={mainHeader}
       className={className}
       headerExtra={
         headerExtra ?? (

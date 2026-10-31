@@ -1,8 +1,8 @@
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
 import {
-  selectionOfDate,
   selectionOfPreset,
+  selectionOfRange,
   todayString,
   windowOf,
   type BaseDateSelection,
@@ -13,8 +13,8 @@ import {
  *
  * 별도 화면을 두지 않기로 했으므로(사용자 확정) 이 컨트롤이 곧 시간축 UI 전부다.
  * 그래서 두 가지를 한 줄에 담는다 — 자주 쓰는 세 자리(오늘·어제·지난 7일)를 버튼으로,
- * 그 밖의 하루는 달력으로. 프리셋만 두면 "저번 주 화요일"을 못 보고, 달력만 두면 가장
- * 흔한 세 동작에 매번 달력을 연다.
+ * 그 밖은 **기간 달력**(시작일 ~ 종료일, 사용자 확정)으로. 하루만 보려면 두 칸을 같은 날로 둔다.
+ * 프리셋만 두면 "저번 주 화요일"을 못 보고, 달력만 두면 가장 흔한 세 동작에 매번 달력을 연다.
  *
  * 판단 둘:
  *  · **달력의 max 는 오늘이다.** 미래 실적은 없다 — 고를 수 없어야 고르고 나서 빈 화면을
@@ -29,6 +29,9 @@ const PRESETS = [
   { preset: 'yesterday', labelKey: 'performance.dateRange.yesterday' },
   { preset: 'last7', labelKey: 'performance.dateRange.last7' },
 ] as const
+
+const DATE_INPUT =
+  'rounded-inshop-md border border-border bg-surface px-2 py-1 text-[11px] tabular-nums text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent'
 
 export interface BaseDateControlProps {
   selection: BaseDateSelection
@@ -73,24 +76,36 @@ export function BaseDateControl({
         ))}
       </div>
 
-      <label className="flex items-center gap-1.5 text-[11px] text-foreground/55">
+      {/* 기간 — 시작일이 종료일을 넘으면 종료일을 따라 옮기고, 종료일이 시작일보다 앞서면 시작일을 당긴다 */}
+      <div role="group" aria-label={t('performance.dateRange.period')} className="flex items-center gap-1.5 text-[11px] text-foreground/55">
         <span>{t('performance.dateRange.pick')}</span>
         <input
           type="date"
-          value={selection.date}
+          aria-label={t('performance.dateRange.from')}
+          value={range.from}
           max={today}
-          onChange={(event) => onChange(selectionOfDate(event.target.value, today))}
-          className="rounded-inshop-md border border-border bg-surface px-2 py-1 text-[11px] tabular-nums text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          onChange={(event) => {
+            const from = event.target.value
+            onChange(selectionOfRange(from, from > range.to ? from : range.to, today))
+          }}
+          className={DATE_INPUT}
         />
-      </label>
-
-      {/* 창이 하루보다 길면 그 범위를 말한다 — 기준일만 적어 두면 7일치를 보면서
-          하루치로 읽게 된다 */}
-      <span className="text-[11px] tabular-nums text-foreground/45">
-        {selection.spanDays > 1
-          ? t('performance.dateRange.window', { from: range.from, to: range.to })
-          : t('performance.baseDate', { date: selection.date })}
-      </span>
+        <span aria-hidden>~</span>
+        <input
+          type="date"
+          aria-label={t('performance.dateRange.to')}
+          value={range.to}
+          max={today}
+          onChange={(event) => {
+            const to = event.target.value
+            onChange(selectionOfRange(to < range.from ? to : range.from, to, today))
+          }}
+          className={DATE_INPUT}
+        />
+        {selection.spanDays > 1 && (
+          <span className="tabular-nums text-foreground/45">{t('performance.dateRange.days', { count: selection.spanDays })}</span>
+        )}
+      </div>
     </div>
   )
 }

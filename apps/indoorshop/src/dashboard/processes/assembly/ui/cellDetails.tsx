@@ -97,8 +97,19 @@ export function TiltDetail({ tilt }: { tilt: TiltModuleStatus | null }) {
     <dl className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px]">
       <DetailRow
         label={t('assembly.equipment.tiltHeading')}
-        value={t(`assembly.equipment.tiltMode.${tilt.mode}`)}
-        tone={tilt.mode === 'error' ? 'text-status-unhealthy' : undefined}
+        /* 끊긴 틸팅은 모드 대신 통신 상태 — 마지막 모드('대기')는 지금의 사실이 아니다 */
+        value={
+          tilt.link !== 'online'
+            ? t(`assembly.equipment.link.${tilt.link}`)
+            : t(`assembly.equipment.tiltMode.${tilt.mode}`)
+        }
+        tone={
+          tilt.link === 'error' || tilt.mode === 'error'
+            ? 'text-status-unhealthy'
+            : tilt.link === 'offline'
+              ? 'text-status-degraded'
+              : undefined
+        }
       />
       <DetailRow label="pan/tilt" value={`${tilt.panDeg}° / ${tilt.tiltDeg}°`} />
       {!tilt.atTarget && (

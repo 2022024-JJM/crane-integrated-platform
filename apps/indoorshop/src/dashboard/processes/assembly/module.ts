@@ -32,6 +32,11 @@ export const assemblyModule: ProcessModule = {
     labelKey: 'assembly.nav.label',
     icon: AssemblyIcon,
     source: 'LiDAR',
+    /* 헤더 메뉴 드롭다운 — 항목을 누르면 현황(기본), 갈래를 고르면 그 갈래로 (사용자 확정) */
+    views: [
+      { key: 'status', labelKey: 'assembly.workspace.viewStatus', search: '?view=status' },
+      { key: 'performance', labelKey: 'assembly.workspace.viewPerformance', search: '?view=performance' },
+    ],
   },
   routes: [
     /* 엔트리는 **워크스페이스**다 (R22) — 공정별 맵 진입 화면을 걷었다. 공장 없이
